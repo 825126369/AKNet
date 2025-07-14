@@ -5,10 +5,12 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-internal static partial class Interop
+namespace AKNet.Socket
 {
-    internal static partial class Kernel32
+    internal static partial class Interop
     {
+        internal static partial class Kernel32
+        {
 #if NET7_0_OR_GREATER
         [LibraryImport(Libraries.Kernel32, SetLastError = true)]
         internal static partial IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, UIntPtr CompletionKey, int NumberOfConcurrentThreads);
@@ -40,35 +42,36 @@ internal static partial class Interop
             public uint dwNumberOfBytesTransferred;
         }
 #else
-        [DllImport(Libraries.Kernel32, SetLastError = true)]
-        internal static extern IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, UIntPtr CompletionKey, int NumberOfConcurrentThreads);
+            [DllImport(Libraries.Kernel32, SetLastError = true)]
+            internal static extern IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, UIntPtr CompletionKey, int NumberOfConcurrentThreads);
 
-        [DllImport(Libraries.Kernel32, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, UIntPtr CompletionKey, IntPtr lpOverlapped);
+            [DllImport(Libraries.Kernel32, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, UIntPtr CompletionKey, IntPtr lpOverlapped);
 
-        [DllImport(Libraries.Kernel32, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out UIntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
+            [DllImport(Libraries.Kernel32, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out UIntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
 
-        [DllImport(Libraries.Kernel32, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static unsafe extern bool GetQueuedCompletionStatusEx(
-            IntPtr CompletionPort,
-            OVERLAPPED_ENTRY* lpCompletionPortEntries,
-            int ulCount,
-            out int ulNumEntriesRemoved,
-            int dwMilliseconds,
-            [MarshalAs(UnmanagedType.Bool)] bool fAlertable);
+            [DllImport(Libraries.Kernel32, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static unsafe extern bool GetQueuedCompletionStatusEx(
+                IntPtr CompletionPort,
+                OVERLAPPED_ENTRY* lpCompletionPortEntries,
+                int ulCount,
+                out int ulNumEntriesRemoved,
+                int dwMilliseconds,
+                [MarshalAs(UnmanagedType.Bool)] bool fAlertable);
 
-        [StructLayout(LayoutKind.Sequential)]
-        internal unsafe struct OVERLAPPED_ENTRY
-        {
-            public UIntPtr lpCompletionKey;
-            public NativeOverlapped* lpOverlapped;
-            public UIntPtr Internal;
-            public uint dwNumberOfBytesTransferred;
-        }
+            [StructLayout(LayoutKind.Sequential)]
+            internal unsafe struct OVERLAPPED_ENTRY
+            {
+                public UIntPtr lpCompletionKey;
+                public NativeOverlapped* lpOverlapped;
+                public UIntPtr Internal;
+                public uint dwNumberOfBytesTransferred;
+            }
 #endif
+        }
     }
 }

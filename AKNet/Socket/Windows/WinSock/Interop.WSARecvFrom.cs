@@ -7,56 +7,110 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-internal static partial class Interop
+namespace AKNet.Socket
 {
-    internal static partial class Winsock
+    internal static partial class Interop
     {
-        [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-        private static unsafe partial SocketError WSARecvFrom(
-            SafeHandle socketHandle,
-            WSABuffer* buffers,
-            int bufferCount,
-            out int bytesTransferred,
-            ref SocketFlags socketFlags,
-            IntPtr socketAddressPointer,
-            IntPtr socketAddressSizePointer,
-            NativeOverlapped* overlapped,
-            IntPtr completionRoutine);
-
-        internal static unsafe SocketError WSARecvFrom(
-            SafeHandle socketHandle,
-            ref WSABuffer buffer,
-            int bufferCount,
-            out int bytesTransferred,
-            ref SocketFlags socketFlags,
-            IntPtr socketAddressPointer,
-            IntPtr socketAddressSizePointer,
-            NativeOverlapped* overlapped,
-            IntPtr completionRoutine)
+        internal static partial class Winsock
         {
-            // We intentionally do NOT copy this back after the function completes:
-            // We don't want to cause a race in async scenarios.
-            // The WSABuffer struct should be unchanged anyway.
-            WSABuffer localBuffer = buffer;
-            return WSARecvFrom(socketHandle, &localBuffer, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
-        }
+#if NET7_0_OR_GREATER
+            [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            private static unsafe partial SocketError WSARecvFrom(
+                SafeHandle socketHandle,
+                WSABuffer* buffers,
+                int bufferCount,
+                out int bytesTransferred,
+                ref SocketFlags socketFlags,
+                IntPtr socketAddressPointer,
+                IntPtr socketAddressSizePointer,
+                NativeOverlapped* overlapped,
+                IntPtr completionRoutine);
 
-        internal static unsafe SocketError WSARecvFrom(
-            SafeHandle socketHandle,
-            WSABuffer[] buffers,
-            int bufferCount,
-            out int bytesTransferred,
-            ref SocketFlags socketFlags,
-            IntPtr socketAddressPointer,
-            IntPtr socketAddressSizePointer,
-            NativeOverlapped* overlapped,
-            IntPtr completionRoutine)
-        {
-            Debug.Assert(buffers != null && buffers.Length > 0);
-            fixed (WSABuffer* buffersPtr = &buffers[0])
+            internal static unsafe SocketError WSARecvFrom(
+                SafeHandle socketHandle,
+                ref WSABuffer buffer,
+                int bufferCount,
+                out int bytesTransferred,
+                ref SocketFlags socketFlags,
+                IntPtr socketAddressPointer,
+                IntPtr socketAddressSizePointer,
+                NativeOverlapped* overlapped,
+                IntPtr completionRoutine)
             {
-                return WSARecvFrom(socketHandle, buffersPtr, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
+                // We intentionally do NOT copy this back after the function completes:
+                // We don't want to cause a race in async scenarios.
+                // The WSABuffer struct should be unchanged anyway.
+                WSABuffer localBuffer = buffer;
+                return WSARecvFrom(socketHandle, &localBuffer, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
             }
+
+            internal static unsafe SocketError WSARecvFrom(
+                SafeHandle socketHandle,
+                WSABuffer[] buffers,
+                int bufferCount,
+                out int bytesTransferred,
+                ref SocketFlags socketFlags,
+                IntPtr socketAddressPointer,
+                IntPtr socketAddressSizePointer,
+                NativeOverlapped* overlapped,
+                IntPtr completionRoutine)
+            {
+                Debug.Assert(buffers != null && buffers.Length > 0);
+                fixed (WSABuffer* buffersPtr = &buffers[0])
+                {
+                    return WSARecvFrom(socketHandle, buffersPtr, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
+                }
+            }
+
+#else
+            [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            private static unsafe extern SocketError WSARecvFrom(
+                SafeHandle socketHandle,
+                WSABuffer* buffers,
+                int bufferCount,
+                out int bytesTransferred,
+                ref SocketFlags socketFlags,
+                IntPtr socketAddressPointer,
+                IntPtr socketAddressSizePointer,
+                NativeOverlapped* overlapped,
+                IntPtr completionRoutine);
+
+            internal static unsafe SocketError WSARecvFrom(
+                SafeHandle socketHandle,
+                ref WSABuffer buffer,
+                int bufferCount,
+                out int bytesTransferred,
+                ref SocketFlags socketFlags,
+                IntPtr socketAddressPointer,
+                IntPtr socketAddressSizePointer,
+                NativeOverlapped* overlapped,
+                IntPtr completionRoutine)
+            {
+                // We intentionally do NOT copy this back after the function completes:
+                // We don't want to cause a race in async scenarios.
+                // The WSABuffer struct should be unchanged anyway.
+                WSABuffer localBuffer = buffer;
+                return WSARecvFrom(socketHandle, &localBuffer, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
+            }
+
+            internal static unsafe SocketError WSARecvFrom(
+                SafeHandle socketHandle,
+                WSABuffer[] buffers,
+                int bufferCount,
+                out int bytesTransferred,
+                ref SocketFlags socketFlags,
+                IntPtr socketAddressPointer,
+                IntPtr socketAddressSizePointer,
+                NativeOverlapped* overlapped,
+                IntPtr completionRoutine)
+            {
+                Debug.Assert(buffers != null && buffers.Length > 0);
+                fixed (WSABuffer* buffersPtr = &buffers[0])
+                {
+                    return WSARecvFrom(socketHandle, buffersPtr, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
+                }
+            }
+#endif
         }
     }
 }

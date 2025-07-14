@@ -5,10 +5,12 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-internal static partial class Interop
+namespace AKNet.Socket
 {
-    internal static partial class Kernel32
+    internal static partial class Interop
     {
+        internal static partial class Kernel32
+        {
 #if NET7_0_OR_GREATER
         [LibraryImport(Libraries.Kernel32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -18,13 +20,14 @@ internal static partial class Interop
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static unsafe partial bool CancelIoEx(IntPtr handle, NativeOverlapped* lpOverlapped);
 #else
-        [DllImport(Libraries.Kernel32, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static unsafe extern bool CancelIoEx(SafeHandle handle, NativeOverlapped* lpOverlapped);
+            [DllImport(Libraries.Kernel32, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static unsafe extern bool CancelIoEx(SafeHandle handle, NativeOverlapped* lpOverlapped);
 
-        [DllImport(Libraries.Kernel32, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static unsafe extern bool CancelIoEx(IntPtr handle, NativeOverlapped* lpOverlapped);
+            [DllImport(Libraries.Kernel32, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static unsafe extern bool CancelIoEx(IntPtr handle, NativeOverlapped* lpOverlapped);
 #endif
+        }
     }
 }
