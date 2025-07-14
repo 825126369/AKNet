@@ -1,0 +1,92 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Diagnostics;
+using System.Threading;
+using Microsoft.Win32.SafeHandles;
+
+namespace AKNet.Socket
+{
+    public sealed partial class SafeSocketHandle : SafeHandleMinusOneIsInvalid
+    {
+        private bool _ownClose;
+        public SafeSocketHandle() : base(ownsHandle: true) => OwnsHandle = true;
+        public SafeSocketHandle(IntPtr preexistingHandle, bool ownsHandle) : base(ownsHandle: true)
+        {
+            OwnsHandle = ownsHandle; // Track if the SafesocketHandle is owning.
+            SetHandleAndValid(preexistingHandle);
+        }
+
+        internal bool OwnsHandle { get; }
+        internal bool HasShutdownSend => _hasShutdownSend;
+        private bool TryOwnClose() => !Interlocked.Exchange(ref _ownClose, true);
+        private volatile bool _released;
+        private bool _hasShutdownSend;
+
+        internal void TrackShutdown(SocketShutdown how)
+        {
+            if (how == SocketShutdown.Send ||
+                how == SocketShutdown.Both)
+            {
+                _hasShutdownSend = true;
+            }
+        }
+
+        /// <summary>Gets a value indicating whether the handle value is invalid.</summary>
+        /// <value><see langword="true"/> if the handle value is invalid; otherwise, <see langword="false"/>.</value>
+        public override bool IsInvalid => IsClosed || base.IsInvalid;
+
+        protected override bool ReleaseHandle()
+        {
+            _released = true;
+            bool shouldClose = TryOwnClose();
+            if (shouldClose)
+            {
+                CloseHandle(abortive: true, canceledOperations: false);
+            }
+            return true;
+        }
+
+        internal void CloseAsIs(bool abortive)
+        {
+            bool shouldClose = TryOwnClose();
+            Dispose();
+            if (shouldClose)
+            {
+                bool canceledOperations = false;
+                SpinWait sw = default;
+                while (!_released)
+                {
+                    canceledOperations |= TryUnblockSocket(abortive);
+                    sw.SpinOnce();
+                }
+                CloseHandle(abortive, canceledOperations);
+            }
+        }
+
+        private bool CloseHandle(bool abortive, bool canceledOperations)
+        {
+            bool ret = false;
+            canceledOperations |= OnHandleClose();
+            if (canceledOperations && !_hasShutdownSend)
+            {
+                abortive = true;
+            }
+
+            ret = !OwnsHandle || DoCloseHandle(abortive) == SocketError.Success;
+            return ret;
+        }
+
+        private void SetHandleAndValid(IntPtr handle)
+        {
+            Debug.Assert(!IsClosed);
+            base.SetHandle(handle);
+            if (IsInvalid)
+            {
+                TryOwnClose();
+                SetHandleAsInvalid();
+            }
+        }
+    }
+}
