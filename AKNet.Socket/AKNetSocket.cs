@@ -34,7 +34,7 @@ namespace AKNet.Socket
         private bool _receivingPacketInformation = false;
 
         private int _closeTimeout = AKNetSocket.DefaultCloseTimeout;
-        private bool _disposed;
+        private int _disposed;
         
         public AKNetSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
         {
@@ -189,15 +189,8 @@ namespace AKNet.Socket
             get
             {
                 ThrowIfDisposed();
-
                 int argp;
-
-                // This may throw ObjectDisposedException.
                 SocketError errorCode = SocketPal.GetAvailable(_handle, out argp);
-
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetAvailable returns errorCode:{errorCode}");
-
-                // Throw an appropriate SocketException if the native call fails.
                 if (errorCode != SocketError.Success)
                 {
                     UpdateStatusAfterSocketErrorAndThrowException(errorCode);
@@ -213,9 +206,7 @@ namespace AKNet.Socket
             get
             {
                 ThrowIfDisposed();
-
                 CheckNonBlockingConnectCompleted();
-
                 if (_rightEndPoint == null)
                 {
                     return null;
@@ -230,7 +221,6 @@ namespace AKNet.Socket
                     {
                         fixed (byte* ptr = &MemoryMarshal.GetReference(buffer))
                         {
-                            // This may throw ObjectDisposedException.
                             SocketError errorCode = SocketPal.GetSockName(_handle, ptr, &size);
                             if (errorCode != SocketError.Success)
                             {
@@ -261,11 +251,9 @@ namespace AKNet.Socket
             get
             {
                 ThrowIfDisposed();
-
                 if (_remoteEndPoint == null)
                 {
                     CheckNonBlockingConnectCompleted();
-
                     if (_rightEndPoint == null || !_isConnected)
                     {
                         return null;
@@ -273,11 +261,7 @@ namespace AKNet.Socket
 
                     Span<byte> buffer = stackalloc byte[SocketAddress.GetMaximumAddressSize(_addressFamily)];
                     int size = buffer.Length;
-                    // This may throw ObjectDisposedException.
-                    SocketError errorCode = SocketPal.GetPeerName(
-                        _handle,
-                        buffer,
-                        ref size);
+                    SocketError errorCode = SocketPal.GetPeerName( _handle, buffer, ref size);
                     if (errorCode != SocketError.Success)
                     {
                         UpdateStatusAfterSocketErrorAndThrowException(errorCode);
@@ -317,60 +301,30 @@ namespace AKNet.Socket
         }
 
         internal SafeSocketHandle InternalSafeHandle => _handle; // returns _handle without calling SetExposed.
-
-        // Gets and sets the blocking mode of a socket.
         public bool Blocking
         {
             get
             {
-                // Return the user's desired blocking behaviour (not the actual win32 state).
                 return _willBlock;
             }
             set
             {
                 ThrowIfDisposed();
-
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"value:{value} willBlock:{_willBlock} willBlockInternal:{_willBlockInternal}");
-
                 bool current;
-
                 SocketError errorCode = InternalSetBlocking(value, out current);
-
                 if (errorCode != SocketError.Success)
                 {
                     UpdateStatusAfterSocketErrorAndThrowException(errorCode);
                 }
-
-                // The native call succeeded, update the user's desired state.
                 _willBlock = current;
             }
         }
-
-        // On .NET Framework, this property functions as a socket-level switch between IOCP-based and Win32 event based async IO.
-        // On that platform, setting UseOnlyOverlappedIO = true prevents assigning a completion port to the socket,
-        // allowing calls to DuplicateAndClose() even after performing asynchronous IO.
-        // .NET (Core) Windows sockets are entirely IOCP-based, and the concept of "overlapped IO"
-        // does not exist on other platforms, therefore UseOnlyOverlappedIO is a dummy, compat-only property.
-        [Obsolete("UseOnlyOverlappedIO has been deprecated and is not supported.")]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool UseOnlyOverlappedIO
-        {
-            get { return false; }
-            set { }
-        }
-
-        // Gets the connection state of the Socket. This property will return the latest
-        // known state of the Socket. When it returns false, the Socket was either never connected
-        // or it is not connected anymore. When it returns true, though, there's no guarantee that the Socket
-        // is still connected, but only that it was connected at the time of the last IO operation.
+            
         public bool Connected
         {
             get
             {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"_isConnected:{_isConnected}");
-
                 CheckNonBlockingConnectCompleted();
-
                 return _isConnected;
             }
         }
@@ -410,347 +364,33 @@ namespace AKNet.Socket
             }
         }
 
-        public bool ExclusiveAddressUse
-        {
-            get
-            {
-                return (int)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse)! != 0 ? true : false;
-            }
-            set
-            {
-                if (IsBound)
-                {
-                    throw new InvalidOperationException(SR.net_sockets_mustnotbebound);
-                }
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, value ? 1 : 0);
-            }
-        }
-
-        public int ReceiveBufferSize
-        {
-            get
-            {
-                return (int)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer)!;
-            }
-            set
-            {
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, value);
-            }
-        }
-
-        public int SendBufferSize
-        {
-            get
-            {
-                return (int)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer)!;
-            }
-
-            set
-            {
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, value);
-            }
-        }
-
-        public int ReceiveTimeout
-        {
-            get
-            {
-                if (OperatingSystem.IsWasi()) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-                return (int)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout)!;
-            }
-            set
-            {
-                if (OperatingSystem.IsWasi()) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-                ArgumentOutOfRangeException.ThrowIfLessThan(value, -1);
-                if (value == -1)
-                {
-                    value = 0;
-                }
-
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, value);
-            }
-        }
-
-        public int SendTimeout
-        {
-            get
-            {
-                if (OperatingSystem.IsWasi()) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-                return (int)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout)!;
-            }
-
-            set
-            {
-                if (OperatingSystem.IsWasi()) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-                ArgumentOutOfRangeException.ThrowIfLessThan(value, -1);
-                if (value == -1)
-                {
-                    value = 0;
-                }
-
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, value);
-            }
-        }
-
-        [DisallowNull]
-        public LingerOption? LingerState
-        {
-            get
-            {
-                if (OperatingSystem.IsWasi()) return new LingerOption(false, 0);
-
-                return (LingerOption?)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger);
-            }
-            set
-            {
-                if (OperatingSystem.IsWasi()) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, value!);
-            }
-        }
-
-        public bool NoDelay
-        {
-            get
-            {
-                return (int)GetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay)! != 0 ? true : false;
-            }
-            set
-            {
-                SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, value ? 1 : 0);
-            }
-        }
-
-        public short Ttl
-        {
-            get
-            {
-                if (_addressFamily == AddressFamily.InterNetwork)
-                {
-                    return (short)(int)GetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive)!;
-                }
-                else if (_addressFamily == AddressFamily.InterNetworkV6)
-                {
-                    return (short)(int)GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IpTimeToLive)!;
-                }
-                else
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-            }
-
-            set
-            {
-                // Valid values are from 0 to 255 since TTL is really just a byte value on the wire.
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 255);
-
-                if (_addressFamily == AddressFamily.InterNetwork)
-                {
-                    SetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive, value);
-                }
-
-                else if (_addressFamily == AddressFamily.InterNetworkV6)
-                {
-                    SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IpTimeToLive, value);
-                }
-                else
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-            }
-        }
-
-        public bool DontFragment
-        {
-            get
-            {
-                if (OperatingSystem.IsWasi()) return false;
-
-                if (_addressFamily == AddressFamily.InterNetwork || (_addressFamily == AddressFamily.InterNetworkV6 && DualMode))
-                {
-                    return (int)GetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment)! != 0 ? true : false;
-                }
-                else
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-            }
-
-            set
-            {
-                if (OperatingSystem.IsWasi() && value) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-                if (_addressFamily == AddressFamily.InterNetwork || (_addressFamily == AddressFamily.InterNetworkV6 && DualMode))
-                {
-                    SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, value ? 1 : 0);
-                }
-                else
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-            }
-        }
-
-        public bool MulticastLoopback
-        {
-            get
-            {
-                if (OperatingSystem.IsWasi())
-                {
-                    return false;
-                }
-                if (_addressFamily == AddressFamily.InterNetwork)
-                {
-                    return (int)GetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback)! != 0 ? true : false;
-                }
-                else if (_addressFamily == AddressFamily.InterNetworkV6)
-                {
-                    return (int)GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastLoopback)! != 0 ? true : false;
-                }
-                else
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-            }
-
-            set
-            {
-                if (OperatingSystem.IsWasi() && value) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-                if (_addressFamily == AddressFamily.InterNetwork)
-                {
-                    SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, value ? 1 : 0);
-                }
-
-                else if (_addressFamily == AddressFamily.InterNetworkV6)
-                {
-                    SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastLoopback, value ? 1 : 0);
-                }
-                else
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-            }
-        }
-
-        public bool EnableBroadcast
-        {
-            get
-            {
-                if (OperatingSystem.IsWasi() || SocketType == SocketType.Stream)
-                {
-                    return false;
-                }
-                return (int)GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast)! != 0 ? true : false;
-            }
-            set
-            {
-                if (OperatingSystem.IsWasi() && value) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-                SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, value ? 1 : 0);
-            }
-        }
-
-        // NOTE: on *nix, the OS IP stack changes a dual-mode socket back to a
-        //       normal IPv6 socket once the socket is bound to an IPv6-specific
-        //       address. This can cause behavioral differences in code that checks
-        //       the value of DualMode (e.g. the checks in CanTryAddressFamily).
-        public bool DualMode
-        {
-            get
-            {
-                if (AddressFamily != AddressFamily.InterNetworkV6)
-                {
-                    return false;
-                }
-                if (!OSSupportsIPv6DualMode)
-                {
-                    return false;
-                }
-                return ((int)GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only)! == 0);
-            }
-            set
-            {
-                if (AddressFamily != AddressFamily.InterNetworkV6)
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-
-                if (!OSSupportsIPv6DualMode && value) throw new PlatformNotSupportedException();
-
-                SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, value ? 0 : 1);
-            }
-        }
-
-        private bool IsDualMode
-        {
-            get
-            {
-                return AddressFamily == AddressFamily.InterNetworkV6 && DualMode;
-            }
-        }
-
         internal bool CanTryAddressFamily(AddressFamily family)
         {
             return (family == _addressFamily) || (family == AddressFamily.InterNetwork && IsDualMode);
         }
-
-        //
-        // Public Methods
-        //
-
-        // Associates a socket with an end point.
+        
         public void Bind(EndPoint localEP)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, localEP);
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(localEP);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"localEP:{localEP}");
-
             SocketAddress socketAddress = Serialize(ref localEP);
             DoBind(localEP, socketAddress);
         }
 
         private void DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
         {
-            // Mitigation for Blue Screen of Death (Win7, maybe others).
             IPEndPoint? ipEndPoint = endPointSnapshot as IPEndPoint;
-            if (!OSSupportsIPv4 && ipEndPoint != null && ipEndPoint.Address.IsIPv4MappedToIPv6)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(SocketError.InvalidArgument);
-            }
-
-            // This may throw ObjectDisposedException.
-            SocketError errorCode = SocketPal.Bind(
-                _handle,
-                _protocolType,
-                socketAddress.Buffer.Span.Slice(0, socketAddress.Size));
-
-            // Throw an appropriate SocketException if the native call fails.
+            SocketError errorCode = SocketPal.Bind( _handle, _protocolType, socketAddress.Buffer.Span.Slice(0, socketAddress.Size));
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketErrorAndThrowException(errorCode);
             }
-
-            // Save a copy of the EndPoint so we can use it for Create().
-            // For UnixDomainSocketEndPoint, track the file to delete on Dispose.
-            _rightEndPoint = endPointSnapshot is UnixDomainSocketEndPoint unixEndPoint ?
-                                unixEndPoint.CreateBoundEndPoint() :
-                                endPointSnapshot;
+            
+            _rightEndPoint = endPointSnapshot is UnixDomainSocketEndPoint unixEndPoint ? unixEndPoint.CreateBoundEndPoint() : endPointSnapshot;
         }
-
-        // Establishes a connection to a remote system.
+        
         public void Connect(EndPoint remoteEP)
         {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(remoteEP);
-
             if (_isDisconnected)
             {
                 throw new InvalidOperationException(SR.net_sockets_disconnectedConnect);
@@ -762,10 +402,7 @@ namespace AKNet.Socket
             }
 
             ThrowIfConnectedStreamSocket();
-
             ValidateBlockingMode();
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"DST:{remoteEP}");
 
             DnsEndPoint? dnsEP = remoteEP as DnsEndPoint;
             if (dnsEP != null)
@@ -792,47 +429,24 @@ namespace AKNet.Socket
 
         public void Connect(IPAddress address, int port)
         {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(address);
-
-            if (!TcpValidationHelpers.ValidatePortNumber(port))
-            {
-                throw new ArgumentOutOfRangeException(nameof(port));
-            }
-
             ThrowIfConnectedStreamSocket();
-
-            ValidateForMultiConnect(isMultiEndpoint: false); // needs to come before CanTryAddressFamily call
-
+            ValidateForMultiConnect(isMultiEndpoint: false);
             if (!CanTryAddressFamily(address.AddressFamily))
             {
-                throw new NotSupportedException(SR.net_invalidversion);
+                throw new NotSupportedException();
             }
-
             IPEndPoint remoteEP = new IPEndPoint(address, port);
             Connect(remoteEP);
         }
 
         public void Connect(string host, int port)
         {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(host);
-
-            if (!TcpValidationHelpers.ValidatePortNumber(port))
-            {
-                throw new ArgumentOutOfRangeException(nameof(port));
-            }
             if (_addressFamily != AddressFamily.InterNetwork && _addressFamily != AddressFamily.InterNetworkV6)
             {
-                throw new NotSupportedException(SR.net_invalidversion);
+                throw new NotSupportedException();
             }
-
-            // No need to call ValidateForMultiConnect(), as the validation
-            // will be handled by the delegated Connect overloads.
 
             IPAddress? parsedAddress;
             if (IPAddress.TryParse(host, out parsedAddress))
@@ -848,27 +462,19 @@ namespace AKNet.Socket
 
         public void Connect(IPAddress[] addresses, int port)
         {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(addresses);
-
             if (addresses.Length == 0)
             {
-                throw new ArgumentException(SR.net_sockets_invalid_ipaddress_length, nameof(addresses));
+                throw new ArgumentException();
             }
-            if (!TcpValidationHelpers.ValidatePortNumber(port))
-            {
-                throw new ArgumentOutOfRangeException(nameof(port));
-            }
+            
             if (_addressFamily != AddressFamily.InterNetwork && _addressFamily != AddressFamily.InterNetworkV6)
             {
-                throw new NotSupportedException(SR.net_invalidversion);
+                throw new NotSupportedException();
             }
 
             ThrowIfConnectedStreamSocket();
-
-            ValidateForMultiConnect(isMultiEndpoint: true); // needs to come before CanTryAddressFamily call
+            ValidateForMultiConnect(isMultiEndpoint: true);
 
             ExceptionDispatchInfo? lastex = null;
             foreach (IPAddress address in addresses)
@@ -889,1097 +495,23 @@ namespace AKNet.Socket
             }
 
             lastex?.Throw();
-
-            // If we're not connected, then we didn't get a valid ipaddress in the list.
             if (!Connected)
             {
-                throw new ArgumentException(SR.net_invalidAddressList, nameof(addresses));
+                throw new ArgumentException();
             }
         }
 
-        public void Close()
+        public void Close(int timeout = 0)
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"timeout = {_closeTimeout}");
-            Dispose();
-        }
-
-        public void Close(int timeout)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(timeout, -1);
-
             _closeTimeout = timeout;
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"timeout = {_closeTimeout}");
-
             Dispose();
-        }
-
-        /// <summary>
-        /// Places a <see cref="AKNetSocket"/> in a listening state.
-        /// </summary>
-        /// <remarks>
-        /// The maximum length of the pending connections queue will be determined automatically.
-        /// </remarks>
-        public void Listen() => Listen(int.MaxValue);
-
-        /// <summary>
-        /// Places a <see cref="AKNetSocket"/> in a listening state.
-        /// </summary>
-        /// <param name="backlog">The maximum length of the pending connections queue.</param>
-        public void Listen(int backlog)
-        {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, backlog);
-            ThrowIfDisposed();
-
-            // This may throw ObjectDisposedException.
-            SocketError errorCode = SocketPal.Listen(_handle, backlog);
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-            _isListening = true;
-        }
-
-        // Creates a new Sockets.Socket instance to handle an incoming connection.
-        public AKNetSocket Accept()
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            if (_rightEndPoint == null)
-            {
-                throw new InvalidOperationException(SR.net_sockets_mustbind);
-            }
-
-            if (!_isListening)
-            {
-                throw new InvalidOperationException(SR.net_sockets_mustlisten);
-            }
-
-            if (_isDisconnected)
-            {
-                throw new InvalidOperationException(SR.net_sockets_disconnectedAccept);
-            }
-
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC:{LocalEndPoint}");
-
-            SocketAddress socketAddress = new SocketAddress(_addressFamily);
-
-            if (SocketsTelemetry.Log.IsEnabled()) SocketsTelemetry.Log.AcceptStart(socketAddress);
-
-            // This may throw ObjectDisposedException.
-            SafeSocketHandle acceptedSocketHandle;
-            SocketError errorCode;
-            int socketAddressLen;
-            try
-            {
-                errorCode = SocketPal.Accept(
-                    _handle,
-                    socketAddress.Buffer,
-                    out socketAddressLen,
-                    out acceptedSocketHandle);
-                socketAddress.Size = socketAddressLen;
-            }
-            catch (Exception ex)
-            {
-                SocketsTelemetry.Log.AfterAccept(SocketError.Interrupted, ex.Message);
-                throw;
-            }
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                Debug.Assert(acceptedSocketHandle.IsInvalid);
-                UpdateAcceptSocketErrorForDisposed(ref errorCode);
-
-                SocketsTelemetry.Log.AfterAccept(errorCode);
-
-                acceptedSocketHandle.Dispose();
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-
-            SocketsTelemetry.Log.AfterAccept(SocketError.Success);
-
-            Debug.Assert(!acceptedSocketHandle.IsInvalid);
-
-            AKNetSocket socket = CreateAcceptSocket(acceptedSocketHandle, _rightEndPoint.Create(socketAddress));
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Accepted(socket, socket.RemoteEndPoint!, socket.LocalEndPoint);
-            return socket;
-        }
-
-        // Sends a data buffer to a connected socket.
-        public int Send(byte[] buffer, int size, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Send(buffer, 0, size, socketFlags);
-        }
-
-        public int Send(byte[] buffer, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Send(buffer, 0, buffer != null ? buffer.Length : 0, socketFlags);
-        }
-
-        public int Send(byte[] buffer)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Send(buffer, 0, buffer != null ? buffer.Length : 0, SocketFlags.None);
-        }
-
-        public int Send(IList<ArraySegment<byte>> buffers)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Send(buffers, SocketFlags.None);
-        }
-
-        public int Send(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SocketError errorCode;
-            int bytesTransferred = Send(buffers, socketFlags, out errorCode);
-            if (errorCode != SocketError.Success)
-            {
-                throw new SocketException((int)errorCode);
-            }
-            return bytesTransferred;
-        }
-
-        public int Send(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(buffers);
-
-            if (buffers.Count == 0)
-            {
-                throw new ArgumentException(SR.Format(SR.net_sockets_zerolist, nameof(buffers)), nameof(buffers));
-            }
-
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC:{LocalEndPoint} DST:{RemoteEndPoint}");
-
-            int bytesTransferred;
-            errorCode = SocketPal.Send(_handle, buffers, socketFlags, out bytesTransferred);
-
-            if (errorCode != SocketError.Success)
-            {
-                UpdateSendSocketErrorForDisposed(ref errorCode);
-
-                // Update the internal state of this socket according to the error before throwing.
-                UpdateStatusAfterSocketError(errorCode);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, new SocketException((int)errorCode));
-                // Don't log transferred byte count in case of a failure.
-                return 0;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-            }
-
-            return bytesTransferred;
-        }
-
-        // Sends data to a connected socket, starting at the indicated location in the buffer.
-        public int Send(byte[] buffer, int offset, int size, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SocketError errorCode;
-            int bytesTransferred = Send(buffer, offset, size, socketFlags, out errorCode);
-            if (errorCode != SocketError.Success)
-            {
-                throw new SocketException((int)errorCode);
-            }
-            return bytesTransferred;
-        }
-
-        public int Send(byte[] buffer, int offset, int size, SocketFlags socketFlags, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            ValidateBufferArguments(buffer, offset, size);
-
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC:{LocalEndPoint} DST:{RemoteEndPoint} size:{size}");
-
-            int bytesTransferred;
-            errorCode = SocketPal.Send(_handle, buffer, offset, size, socketFlags, out bytesTransferred);
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateSendSocketErrorForDisposed(ref errorCode);
-
-                // Update the internal state of this socket according to the error before throwing.
-                UpdateStatusAfterSocketError(errorCode);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, new SocketException((int)errorCode));
-                return 0;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-            }
-
-            if (NetEventSource.Log.IsEnabled())
-            {
-                NetEventSource.Info(this, $"Send returns:{bytesTransferred}");
-                NetEventSource.DumpBuffer(this, buffer, offset, bytesTransferred);
-            }
-
-            return bytesTransferred;
-        }
-
-        public int Send(ReadOnlySpan<byte> buffer) => Send(buffer, SocketFlags.None);
-
-        public int Send(ReadOnlySpan<byte> buffer, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            int bytesTransferred = Send(buffer, socketFlags, out SocketError errorCode);
-            return errorCode == SocketError.Success ?
-                bytesTransferred :
-                throw new SocketException((int)errorCode);
-        }
-
-        public int Send(ReadOnlySpan<byte> buffer, SocketFlags socketFlags, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBlockingMode();
-
-            int bytesTransferred;
-            errorCode = SocketPal.Send(_handle, buffer, socketFlags, out bytesTransferred);
-
-            if (errorCode != SocketError.Success)
-            {
-                UpdateSendSocketErrorForDisposed(ref errorCode);
-
-                UpdateStatusAfterSocketError(errorCode);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, new SocketException((int)errorCode));
-                bytesTransferred = 0;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-            }
-
-            return bytesTransferred;
-        }
-
-        public void SendFile(string? fileName)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SendFile(fileName, ReadOnlySpan<byte>.Empty, ReadOnlySpan<byte>.Empty, TransmitFileOptions.UseDefaultWorkerThread);
-        }
-
-        /// <summary>
-        /// Sends the file <paramref name="fileName"/> and buffers of data to a connected <see cref="AKNetSocket"/> object
-        /// using the specified <see cref="TransmitFileOptions"/> value.
-        /// </summary>
-        /// <param name="fileName">
-        /// A <see cref="string"/> that contains the path and name of the file to be sent. This parameter can be <see langword="null"/>.
-        /// </param>
-        /// <param name="preBuffer">
-        /// A <see cref="byte"/> array that contains data to be sent before the file is sent. This parameter can be <see langword="null"/>.
-        /// </param>
-        /// <param name="postBuffer">
-        /// A <see cref="byte"/> array that contains data to be sent after the file is sent. This parameter can be <see langword="null"/>.
-        /// </param>
-        /// <param name="flags">
-        /// One or more of <see cref="TransmitFileOptions"/> values.
-        /// </param>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> object has been closed.</exception>
-        /// <exception cref="NotSupportedException">The <see cref="AKNetSocket"/> object is not connected to a remote host.</exception>
-        /// <exception cref="InvalidOperationException">The <see cref="AKNetSocket"/> object is not in blocking mode and cannot accept this synchronous call.</exception>
-        /// <exception cref="FileNotFoundException">The file <paramref name="fileName"/> was not found.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        public void SendFile(string? fileName, byte[]? preBuffer, byte[]? postBuffer, TransmitFileOptions flags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SendFile(fileName, preBuffer.AsSpan(), postBuffer.AsSpan(), flags);
-        }
-
-        /// <summary>
-        /// Sends the file <paramref name="fileName"/> and buffers of data to a connected <see cref="AKNetSocket"/> object
-        /// using the specified <see cref="TransmitFileOptions"/> value.
-        /// </summary>
-        /// <param name="fileName">
-        /// A <see cref="string"/> that contains the path and name of the file to be sent. This parameter can be <see langword="null"/>.
-        /// </param>
-        /// <param name="preBuffer">
-        /// A <see cref="ReadOnlySpan{T}"/> that contains data to be sent before the file is sent. This buffer can be empty.
-        /// </param>
-        /// <param name="postBuffer">
-        /// A <see cref="ReadOnlySpan{T}"/> that contains data to be sent after the file is sent. This buffer can be empty.
-        /// </param>
-        /// <param name="flags">
-        /// One or more of <see cref="TransmitFileOptions"/> values.
-        /// </param>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> object has been closed.</exception>
-        /// <exception cref="NotSupportedException">The <see cref="AKNetSocket"/> object is not connected to a remote host.</exception>
-        /// <exception cref="InvalidOperationException">The <see cref="AKNetSocket"/> object is not in blocking mode and cannot accept this synchronous call.</exception>
-        /// <exception cref="FileNotFoundException">The file <paramref name="fileName"/> was not found.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        public void SendFile(string? fileName, ReadOnlySpan<byte> preBuffer, ReadOnlySpan<byte> postBuffer, TransmitFileOptions flags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            if (!IsConnectionOriented || !Connected)
-            {
-                throw new NotSupportedException(SR.net_notconnected);
-            }
-
-            ValidateBlockingMode();
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"::SendFile() SRC:{LocalEndPoint} DST:{RemoteEndPoint} fileName:{fileName}");
-
-            SendFileInternal(fileName, preBuffer, postBuffer, flags);
-        }
-
-        // Sends data to a specific end point, starting at the indicated location in the buffer.
-        public int SendTo(byte[] buffer, int offset, int size, SocketFlags socketFlags, EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            ValidateBufferArguments(buffer, offset, size);
-            ArgumentNullException.ThrowIfNull(remoteEP);
-
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC:{LocalEndPoint} size:{size} remoteEP:{remoteEP}");
-
-            SocketAddress socketAddress = Serialize(ref remoteEP);
-
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.SendTo(_handle, buffer, offset, size, socketFlags, socketAddress.Buffer.Slice(0, socketAddress.Size), out bytesTransferred);
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateSendSocketErrorForDisposed(ref errorCode);
-
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-            }
-
-            // Save a copy of the EndPoint so we can use it for Create().
-            _rightEndPoint ??= remoteEP;
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.DumpBuffer(this, buffer, offset, size);
-            return bytesTransferred;
-        }
-
-        // Sends data to a specific end point, starting at the indicated location in the data.
-        public int SendTo(byte[] buffer, int size, SocketFlags socketFlags, EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return SendTo(buffer, 0, size, socketFlags, remoteEP);
-        }
-
-        public int SendTo(byte[] buffer, SocketFlags socketFlags, EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return SendTo(buffer, 0, buffer != null ? buffer.Length : 0, socketFlags, remoteEP);
-        }
-
-        public int SendTo(byte[] buffer, EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return SendTo(buffer, 0, buffer != null ? buffer.Length : 0, SocketFlags.None, remoteEP);
-        }
-
-        /// <summary>
-        /// Sends data to the specified endpoint.
-        /// </summary>
-        /// <param name="buffer">A span of bytes that contains the data to be sent.</param>
-        /// <param name="remoteEP">The <see cref="EndPoint"/> that represents the destination for the data.</param>
-        /// <returns>The number of bytes sent.</returns>
-        /// <exception cref="ArgumentNullException"><c>remoteEP</c> is <see langword="null" />.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public int SendTo(ReadOnlySpan<byte> buffer, EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return SendTo(buffer, SocketFlags.None, remoteEP);
-        }
-
-        /// <summary>
-        /// Sends data to a specific endpoint using the specified <see cref="SocketFlags"/>.
-        /// </summary>
-        /// <param name="buffer">A span of bytes that contains the data to be sent.</param>
-        /// <param name="socketFlags">A bitwise combination of the <see cref="SocketFlags"/> values.</param>
-        /// <param name="remoteEP">The <see cref="EndPoint"/> that represents the destination for the data.</param>
-        /// <returns>The number of bytes sent.</returns>
-        /// <exception cref="ArgumentNullException"><c>remoteEP</c> is <see langword="null" />.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public int SendTo(ReadOnlySpan<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(remoteEP);
-
-            ValidateBlockingMode();
-
-            SocketAddress socketAddress = Serialize(ref remoteEP);
-
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.SendTo(_handle, buffer, socketFlags, socketAddress.Buffer.Slice(0, socketAddress.Size), out bytesTransferred);
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateSendSocketErrorForDisposed(ref errorCode);
-
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-            }
-
-            // Save a copy of the EndPoint so we can use it for Create().
-            _rightEndPoint ??= remoteEP;
-
-            return bytesTransferred;
-        }
-
-        /// <summary>
-        /// Sends data to a specific endpoint using the specified <see cref="SocketFlags"/>.
-        /// </summary>
-        /// <param name="buffer">A span of bytes that contains the data to be sent.</param>
-        /// <param name="socketFlags">A bitwise combination of the <see cref="SocketFlags"/> values.</param>
-        /// <param name="socketAddress">The <see cref="SocketAddress"/> that represents the destination for the data.</param>
-        /// <returns>The number of bytes sent.</returns>
-        /// <exception cref="ArgumentNullException"><c>remoteEP</c> is <see langword="null" />.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public int SendTo(ReadOnlySpan<byte> buffer, SocketFlags socketFlags, SocketAddress socketAddress)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(socketAddress);
-
-            ValidateBlockingMode();
-
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.SendTo(_handle, buffer, socketFlags, socketAddress.Buffer.Slice(0, socketAddress.Size), out bytesTransferred);
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateSendSocketErrorForDisposed(ref errorCode);
-
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-            }
-
-            return bytesTransferred;
-        }
-
-        // Receives data from a connected socket.
-        public int Receive(byte[] buffer, int size, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Receive(buffer, 0, size, socketFlags);
-        }
-
-        public int Receive(byte[] buffer, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Receive(buffer, 0, buffer != null ? buffer.Length : 0, socketFlags);
-        }
-
-        public int Receive(byte[] buffer)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Receive(buffer, 0, buffer != null ? buffer.Length : 0, SocketFlags.None);
-        }
-
-        // Receives data from a connected socket into a specific location of the receive buffer.
-        public int Receive(byte[] buffer, int offset, int size, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SocketError errorCode;
-            int bytesTransferred = Receive(buffer, offset, size, socketFlags, out errorCode);
-            if (errorCode != SocketError.Success)
-            {
-                throw new SocketException((int)errorCode);
-            }
-            return bytesTransferred;
-        }
-
-        public int Receive(byte[] buffer, int offset, int size, SocketFlags socketFlags, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC:{LocalEndPoint} DST:{RemoteEndPoint} size:{size}");
-
-            int bytesTransferred;
-            errorCode = SocketPal.Receive(_handle, buffer, offset, size, socketFlags, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-
-            if (errorCode != SocketError.Success)
-            {
-                // Update the internal state of this socket according to the error before throwing.
-                UpdateStatusAfterSocketError(errorCode);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, new SocketException((int)errorCode));
-                return 0;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.DumpBuffer(this, buffer, offset, bytesTransferred);
-
-            return bytesTransferred;
-        }
-
-        public int Receive(Span<byte> buffer) => Receive(buffer, SocketFlags.None);
-
-        public int Receive(Span<byte> buffer, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            int bytesTransferred = Receive(buffer, socketFlags, out SocketError errorCode);
-            return errorCode == SocketError.Success ?
-                bytesTransferred :
-                throw new SocketException((int)errorCode);
-        }
-
-        public int Receive(Span<byte> buffer, SocketFlags socketFlags, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBlockingMode();
-
-            int bytesTransferred;
-            errorCode = SocketPal.Receive(_handle, buffer, socketFlags, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketError(errorCode);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, new SocketException((int)errorCode));
-                bytesTransferred = 0;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            return bytesTransferred;
-        }
-
-        public int Receive(IList<ArraySegment<byte>> buffers)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return Receive(buffers, SocketFlags.None);
-        }
-
-        public int Receive(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SocketError errorCode;
-            int bytesTransferred = Receive(buffers, socketFlags, out errorCode);
-            if (errorCode != SocketError.Success)
-            {
-                throw new SocketException((int)errorCode);
-            }
-            return bytesTransferred;
-        }
-
-        public int Receive(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(buffers);
-
-            if (buffers.Count == 0)
-            {
-                throw new ArgumentException(SR.Format(SR.net_sockets_zerolist, nameof(buffers)), nameof(buffers));
-            }
-
-
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC:{LocalEndPoint} DST:{RemoteEndPoint}");
-
-            int bytesTransferred;
-            errorCode = SocketPal.Receive(_handle, buffers, socketFlags, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-
-            if (errorCode != SocketError.Success)
-            {
-                // Update the internal state of this socket according to the error before throwing.
-                UpdateStatusAfterSocketError(errorCode);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, new SocketException((int)errorCode));
-                return 0;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            return bytesTransferred;
-        }
-
-        // Receives a datagram into a specific location in the data buffer and stores
-        // the end point.
-        public int ReceiveMessageFrom(byte[] buffer, int offset, int size, ref SocketFlags socketFlags, ref EndPoint remoteEP, out IPPacketInformation ipPacketInformation)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            ValidateReceiveFromEndpointAndState(remoteEP, nameof(remoteEP));
-
-            SocketPal.CheckDualModePacketInfoSupport(this);
-            ValidateBlockingMode();
-
-            // We don't do a CAS demand here because the contents of remoteEP aren't used by
-            // WSARecvMsg; all that matters is that we generate a unique-to-this-call SocketAddress
-            // with the right address family.
-            EndPoint endPointSnapshot = remoteEP;
-            SocketAddress socketAddress = Serialize(ref endPointSnapshot);
-
-            SetReceivingPacketInformation();
-
-            SocketAddress receiveAddress;
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.ReceiveMessageFrom(this, _handle, buffer, offset, size, ref socketFlags, socketAddress, out receiveAddress, out ipPacketInformation, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success && errorCode != SocketError.MessageSize)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (errorCode == SocketError.Success && SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            if (!SocketAddressExtensions.Equals(socketAddress, remoteEP))
-            {
-                try
-                {
-                    remoteEP = endPointSnapshot.Create(receiveAddress);
-                }
-                catch
-                {
-                }
-                // Save a copy of the EndPoint so we can use it for Create().
-                _rightEndPoint ??= endPointSnapshot;
-            }
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, errorCode);
-            return bytesTransferred;
-        }
-
-        /// <summary>
-        /// Receives the specified number of bytes of data into the specified location of the data buffer,
-        /// using the specified <paramref name="socketFlags"/>, and stores the endpoint and packet information.
-        /// </summary>
-        /// <param name="buffer">
-        /// An <see cref="Span{T}"/> of type <see cref="byte"/> that is the storage location for received data.
-        /// </param>
-        /// <param name="socketFlags">
-        /// A bitwise combination of the <see cref="SocketFlags"/> values.
-        /// </param>
-        /// <param name="remoteEP">
-        /// An <see cref="EndPoint"/>, passed by reference, that represents the remote server.
-        /// </param>
-        /// <param name="ipPacketInformation">
-        /// An <see cref="IPPacketInformation"/> holding address and interface information.
-        /// </param>
-        /// <returns>
-        /// The number of bytes received.
-        /// </returns>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> object has been closed.</exception>
-        /// <exception cref="ArgumentNullException">The <see cref="EndPoint"/> remoteEP is null.</exception>
-        /// <exception cref="ArgumentException">The <see cref="AddressFamily"/> of the <see cref="EndPoint"/> used in
-        /// <see cref="AKNetSocket.ReceiveMessageFrom(Span{byte}, ref SocketFlags, ref EndPoint, out IPPacketInformation)"/>
-        /// needs to match the <see cref="AddressFamily"/> of the <see cref="EndPoint"/> used in SendTo.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// <para>The <see cref="AKNetSocket"/> object is not in blocking mode and cannot accept this synchronous call.</para>
-        /// <para>You must call the Bind method before performing this operation.</para></exception>
-        public int ReceiveMessageFrom(Span<byte> buffer, ref SocketFlags socketFlags, ref EndPoint remoteEP, out IPPacketInformation ipPacketInformation)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(remoteEP);
-
-            if (!CanTryAddressFamily(remoteEP.AddressFamily))
-            {
-                throw new ArgumentException(SR.Format(SR.net_InvalidEndPointAddressFamily, remoteEP.AddressFamily, _addressFamily), nameof(remoteEP));
-            }
-            if (_rightEndPoint == null)
-            {
-                throw new InvalidOperationException(SR.net_sockets_mustbind);
-            }
-
-            SocketPal.CheckDualModePacketInfoSupport(this);
-            ValidateBlockingMode();
-
-            // We don't do a CAS demand here because the contents of remoteEP aren't used by
-            // WSARecvMsg; all that matters is that we generate a unique-to-this-call SocketAddress
-            // with the right address family.
-            EndPoint endPointSnapshot = remoteEP;
-            SocketAddress socketAddress = Serialize(ref endPointSnapshot);
-
-            SetReceivingPacketInformation();
-
-            SocketAddress receiveAddress;
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.ReceiveMessageFrom(this, _handle, buffer, ref socketFlags, socketAddress, out receiveAddress, out ipPacketInformation, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success && errorCode != SocketError.MessageSize)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (errorCode == SocketError.Success && SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            if (!SocketAddressExtensions.Equals(socketAddress, remoteEP))
-            {
-                try
-                {
-                    remoteEP = endPointSnapshot.Create(receiveAddress);
-                }
-                catch
-                {
-                }
-                // Save a copy of the EndPoint so we can use it for Create().
-                _rightEndPoint ??= endPointSnapshot;
-            }
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, errorCode);
-            return bytesTransferred;
-        }
-
-        // Receives a datagram into a specific location in the data buffer and stores
-        // the end point.
-        public int ReceiveFrom(byte[] buffer, int offset, int size, SocketFlags socketFlags, ref EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            ValidateReceiveFromEndpointAndState(remoteEP, nameof(remoteEP));
-
-            ValidateBlockingMode();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SRC{LocalEndPoint} size:{size} remoteEP:{remoteEP}");
-
-            // We don't do a CAS demand here because the contents of remoteEP aren't used by
-            // WSARecvFrom; all that matters is that we generate a unique-to-this-call SocketAddress
-            // with the right address family.
-            EndPoint endPointSnapshot = remoteEP;
-            SocketAddress socketAddress = new SocketAddress(AddressFamily);
-            if (endPointSnapshot.AddressFamily == AddressFamily.InterNetwork && IsDualMode)
-            {
-                endPointSnapshot = s_IPEndPointIPv6;
-            }
-
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.ReceiveFrom(_handle, buffer, offset, size, socketFlags, socketAddress.Buffer, out int socketAddressLength, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-            // If the native call fails we'll throw a SocketException.
-            SocketException? socketException = null;
-            if (errorCode != SocketError.Success)
-            {
-                socketException = new SocketException((int)errorCode);
-                UpdateStatusAfterSocketError(socketException);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, socketException);
-
-                if (socketException.SocketErrorCode != SocketError.MessageSize)
-                {
-                    throw socketException;
-                }
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            socketAddress.Size = socketAddressLength;
-
-            if (socketAddressLength > 0 && !socketAddress.Equals(remoteEP) || remoteEP.AddressFamily != socketAddress.Family)
-            {
-                try
-                {
-                    if (endPointSnapshot.AddressFamily == socketAddress.Family)
-                    {
-                        remoteEP = endPointSnapshot.Create(socketAddress);
-                    }
-                    //else if (socketAddress.Family == AddressFamily.InterNetworkV6 && IsDualMode)
-                    //{
-                    //    remoteEP = socketAddress.GetIPEndPoint();
-                    //}
-                    else if (AddressFamily == AddressFamily.InterNetworkV6 && socketAddress.Family == AddressFamily.InterNetwork)
-                    {
-                        // We expect IPv6 on DualMode sockets but we can also get plain old IPv4
-                        remoteEP = new IPEndPoint(socketAddress.GetIPAddress().MapToIPv6(), socketAddress.GetPort());
-                    }
-                }
-                catch
-                {
-                }
-                // Save a copy of the EndPoint so we can use it for Create().
-                _rightEndPoint ??= endPointSnapshot;
-            }
-
-            if (socketException != null)
-            {
-                throw socketException;
-            }
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.DumpBuffer(this, buffer, offset, size);
-            return bytesTransferred;
-        }
-
-        // Receives a datagram and stores the source end point.
-        public int ReceiveFrom(byte[] buffer, int size, SocketFlags socketFlags, ref EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return ReceiveFrom(buffer, 0, size, socketFlags, ref remoteEP);
-        }
-
-        public int ReceiveFrom(byte[] buffer, SocketFlags socketFlags, ref EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return ReceiveFrom(buffer, 0, buffer != null ? buffer.Length : 0, socketFlags, ref remoteEP);
-        }
-
-        public int ReceiveFrom(byte[] buffer, ref EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return ReceiveFrom(buffer, 0, buffer != null ? buffer.Length : 0, SocketFlags.None, ref remoteEP);
-        }
-
-        /// <summary>
-        /// Receives a datagram into the data buffer and stores the endpoint.
-        /// </summary>
-        /// <param name="buffer">A span of bytes that is the storage location for received data.</param>
-        /// <param name="remoteEP">An <see cref="EndPoint"/>, passed by reference, that represents the remote server.</param>
-        /// <returns>The number of bytes received.</returns>
-        /// <exception cref="ArgumentNullException"><c>remoteEP</c> is <see langword="null" />.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public int ReceiveFrom(Span<byte> buffer, ref EndPoint remoteEP)
-        {
-            return ReceiveFrom(buffer, SocketFlags.None, ref remoteEP);
-        }
-
-        /// <summary>
-        /// Receives a datagram into the data buffer, using the specified <see cref="SocketFlags"/>, and stores the endpoint.
-        /// </summary>
-        /// <param name="buffer">A span of bytes that is the storage location for received data.</param>
-        /// <param name="socketFlags">A bitwise combination of the <see cref="SocketFlags"/> values.</param>
-        /// <param name="remoteEP">An <see cref="EndPoint"/>, passed by reference, that represents the remote server.</param>
-        /// <returns>The number of bytes received.</returns>
-        /// <exception cref="ArgumentNullException"><c>remoteEP</c> is <see langword="null" />.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public int ReceiveFrom(Span<byte> buffer, SocketFlags socketFlags, ref EndPoint remoteEP)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateReceiveFromEndpointAndState(remoteEP, nameof(remoteEP));
-
-            ValidateBlockingMode();
-
-            // We don't do a CAS demand here because the contents of remoteEP aren't used by
-            // WSARecvFrom; all that matters is that we generate a unique-to-this-call SocketAddress
-            // with the right address family.
-            EndPoint endPointSnapshot = remoteEP;
-            SocketAddress socketAddress = new SocketAddress(AddressFamily);
-            if (endPointSnapshot.AddressFamily == AddressFamily.InterNetwork && IsDualMode)
-            {
-                endPointSnapshot = s_IPEndPointIPv6;
-            }
-
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.ReceiveFrom(_handle, buffer, socketFlags, socketAddress.Buffer, out int socketAddressLength, out bytesTransferred);
-
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-            // If the native call fails we'll throw a SocketException.
-            SocketException? socketException = null;
-            if (errorCode != SocketError.Success)
-            {
-                socketException = new SocketException((int)errorCode);
-                UpdateStatusAfterSocketError(socketException);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, socketException);
-
-                if (socketException.SocketErrorCode != SocketError.MessageSize)
-                {
-                    throw socketException;
-                }
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            socketAddress.Size = socketAddressLength;
-            if (socketAddressLength > 0 && !socketAddress.Equals(remoteEP) || remoteEP.AddressFamily != socketAddress.Family)
-            {
-                try
-                {
-                    if (endPointSnapshot.AddressFamily == socketAddress.Family)
-                    {
-                        remoteEP = endPointSnapshot.Create(socketAddress);
-                    }
-                    else if (endPointSnapshot.AddressFamily == AddressFamily.InterNetworkV6 && socketAddress.Family == AddressFamily.InterNetwork)
-                    {
-                        // We expect IPv6 on DalMode sockets but we can also get plain old IPv4
-                        remoteEP = new IPEndPoint(socketAddress.GetIPAddress().MapToIPv6(), socketAddress.GetPort());
-                    }
-                }
-                catch
-                {
-                }
-
-                // Save a copy of the EndPoint so we can use it for Create().
-                _rightEndPoint ??= endPointSnapshot;
-            }
-
-            if (socketException != null)
-            {
-                throw socketException;
-            }
-
-            return bytesTransferred;
-        }
-
-        /// <summary>
-        /// Receives a datagram into the data buffer, using the specified <see cref="SocketFlags"/>, and stores the endpoint.
-        /// </summary>
-        /// <param name="buffer">A span of bytes that is the storage location for received data.</param>
-        /// <param name="socketFlags">A bitwise combination of the <see cref="SocketFlags"/> values.</param>
-        /// <param name="receivedAddress">An <see cref="SocketAddress"/>, that will be updated with value of the remote peer.</param>
-        /// <returns>The number of bytes received.</returns>
-        /// <exception cref="ArgumentNullException"><c>remoteEP</c> is <see langword="null" />.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public int ReceiveFrom(Span<byte> buffer, SocketFlags socketFlags, SocketAddress receivedAddress)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(receivedAddress, nameof(receivedAddress));
-
-            if (receivedAddress.Size < SocketAddress.GetMaximumAddressSize(AddressFamily))
-            {
-                throw new ArgumentOutOfRangeException(nameof(receivedAddress), SR.net_sockets_address_small);
-            }
-
-            ValidateBlockingMode();
-
-            int bytesTransferred;
-            SocketError errorCode = SocketPal.ReceiveFrom(_handle, buffer, socketFlags, receivedAddress.Buffer, out int socketAddressSize, out bytesTransferred);
-            UpdateReceiveSocketErrorForDisposed(ref errorCode, bytesTransferred);
-            // If the native call fails we'll throw a SocketException.
-            if (errorCode != SocketError.Success)
-            {
-                SocketException socketException = new SocketException((int)errorCode);
-                UpdateStatusAfterSocketError(socketException);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, socketException);
-
-                throw socketException;
-            }
-            else if (SocketsTelemetry.Log.IsEnabled())
-            {
-                SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                if (SocketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-            }
-
-            receivedAddress.Size = socketAddressSize;
-            return bytesTransferred;
         }
 
         public int IOControl(int ioControlCode, byte[]? optionInValue, byte[]? optionOutValue)
         {
             ThrowIfDisposed();
-
             int realOptionLength;
-
-            // IOControl is used for Windows-specific IOCTL operations.  If we need to add support for IOCTLs specific
-            // to other platforms, we will likely need to add a new API, as the control codes may overlap with those
-            // from Windows.  Generally it would be preferable to add new methods/properties to abstract these across
-            // platforms, however.
             SocketError errorCode = SocketPal.WindowsIoctl(_handle, ioControlCode, optionInValue, optionOutValue, out realOptionLength);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"WindowsIoctl returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketErrorAndThrowException(errorCode);
@@ -1992,28 +524,17 @@ namespace AKNet.Socket
         {
             return IOControl(unchecked((int)ioControlCode), optionInValue, optionOutValue);
         }
-
-        // Sets the specified option to the specified value.
+        
         public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue)
         {
             ThrowIfDisposed();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"optionLevel:{optionLevel} optionName:{optionName} optionValue:{optionValue}");
-
             SetSocketOption(optionLevel, optionName, optionValue, false);
         }
 
         public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue)
         {
             ThrowIfDisposed();
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"optionLevel:{optionLevel} optionName:{optionName} optionValue:{optionValue}");
-
-            // This can throw ObjectDisposedException.
             SocketError errorCode = SocketPal.SetSockOpt(_handle, optionLevel, optionName, optionValue);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetSockOpt returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
@@ -2030,20 +551,25 @@ namespace AKNet.Socket
         public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, object optionValue)
         {
             ThrowIfDisposed();
+#if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(optionValue);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"optionLevel:{optionLevel} optionName:{optionName} optionValue:{optionValue}");
+#else
+            if(optionValue == null)
+            {
+                throw new ArgumentException();
+            }
+#endif
 
             if (optionLevel == SocketOptionLevel.Socket && optionName == SocketOptionName.Linger)
             {
                 LingerOption? lingerOption = optionValue as LingerOption;
                 if (lingerOption == null)
                 {
-                    throw new ArgumentException(SR.Format(SR.net_sockets_invalid_optionValue, "LingerOption"), nameof(optionValue));
+                    throw new ArgumentException();
                 }
                 if (lingerOption.LingerTime < 0 || lingerOption.LingerTime > (int)ushort.MaxValue)
                 {
-                    throw new ArgumentException(SR.Format(SR.ArgumentOutOfRange_Bounds_Lower_Upper_Named, 0, (int)ushort.MaxValue, "optionValue.LingerTime"), nameof(optionValue));
+                    throw new ArgumentException();
                 }
                 SetLingerOption(lingerOption);
             }
@@ -2052,52 +578,35 @@ namespace AKNet.Socket
                 MulticastOption? multicastOption = optionValue as MulticastOption;
                 if (multicastOption == null)
                 {
-                    throw new ArgumentException(SR.Format(SR.net_sockets_invalid_optionValue, "MulticastOption"), nameof(optionValue));
+                    throw new ArgumentException();
                 }
                 SetMulticastOption(optionName, multicastOption);
             }
             else if (optionLevel == SocketOptionLevel.IPv6 && (optionName == SocketOptionName.AddMembership || optionName == SocketOptionName.DropMembership))
             {
-                // IPv6 Changes: Handle IPv6 Multicast Add / Drop
                 IPv6MulticastOption? multicastOption = optionValue as IPv6MulticastOption;
                 if (multicastOption == null)
                 {
-                    throw new ArgumentException(SR.Format(SR.net_sockets_invalid_optionValue, "IPv6MulticastOption"), nameof(optionValue));
+                    throw new ArgumentException();
                 }
                 SetIPv6MulticastOption(optionName, multicastOption);
             }
             else
             {
-                throw new ArgumentException(SR.net_sockets_invalid_optionValue_all, nameof(optionValue));
+                throw new ArgumentException();
             }
         }
-
-        /// <summary>Sets a socket option value using platform-specific level and name identifiers.</summary>
-        /// <param name="optionLevel">The platform-defined option level.</param>
-        /// <param name="optionName">The platform-defined option name.</param>
-        /// <param name="optionValue">The value to which the option should be set.</param>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <remarks>
-        /// In general, the SetSocketOption method should be used whenever setting a <see cref="AKNetSocket"/> option.
-        /// The <see cref="SetRawSocketOption"/> should be used only when <see cref="SocketOptionLevel"/> and <see cref="SocketOptionName"/>
-        /// do not expose the required option.
-        /// </remarks>
+        
         public void SetRawSocketOption(int optionLevel, int optionName, ReadOnlySpan<byte> optionValue)
         {
             ThrowIfDisposed();
-
             SocketError errorCode = SocketPal.SetRawSockOpt(_handle, optionLevel, optionName, optionValue);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetSockOpt optionLevel:{optionLevel} optionName:{optionName} returns errorCode:{errorCode}");
-
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
             }
         }
 
-        // Gets the value of a socket option.
         public object? GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName)
         {
             ThrowIfDisposed();
@@ -2111,22 +620,16 @@ namespace AKNet.Socket
             }
             else if (optionLevel == SocketOptionLevel.IPv6 && (optionName == SocketOptionName.AddMembership || optionName == SocketOptionName.DropMembership))
             {
-                // Handle IPv6 case
                 return GetIPv6MulticastOpt(optionName);
             }
 
             int optionValue;
-
-            // This can throw ObjectDisposedException.
             SocketError errorCode = SocketPal.GetSockOpt(
                 _handle,
                 optionLevel,
                 optionName,
                 out optionValue);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetSockOpt returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
+            
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
@@ -2138,20 +641,14 @@ namespace AKNet.Socket
         public void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue)
         {
             ThrowIfDisposed();
-
             int optionLength = optionValue != null ? optionValue.Length : 0;
-
-            // This can throw ObjectDisposedException.
             SocketError errorCode = SocketPal.GetSockOpt(
                 _handle,
                 optionLevel,
                 optionName,
                 optionValue!,
                 ref optionLength);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetSockOpt returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
+            
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
@@ -2161,21 +658,15 @@ namespace AKNet.Socket
         public byte[] GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionLength)
         {
             ThrowIfDisposed();
-
             byte[] optionValue = new byte[optionLength];
             int realOptionLength = optionLength;
-
-            // This can throw ObjectDisposedException.
             SocketError errorCode = SocketPal.GetSockOpt(
                 _handle,
                 optionLevel,
                 optionName,
                 optionValue,
                 ref realOptionLength);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetSockOpt returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
+            
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
@@ -2190,37 +681,19 @@ namespace AKNet.Socket
 
             return optionValue;
         }
-
-        /// <summary>Gets a socket option value using platform-specific level and name identifiers.</summary>
-        /// <param name="optionLevel">The platform-defined option level.</param>
-        /// <param name="optionName">The platform-defined option name.</param>
-        /// <param name="optionValue">The span into which the retrieved option value should be stored.</param>
-        /// <returns>The number of bytes written into <paramref name="optionValue"/> for a successfully retrieved value.</returns>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <remarks>
-        /// In general, the GetSocketOption method should be used whenever getting a <see cref="AKNetSocket"/> option.
-        /// The <see cref="GetRawSocketOption"/> should be used only when <see cref="SocketOptionLevel"/> and <see cref="SocketOptionName"/>
-        /// do not expose the required option.
-        /// </remarks>
+        
         public int GetRawSocketOption(int optionLevel, int optionName, Span<byte> optionValue)
         {
             ThrowIfDisposed();
-
             int realOptionLength = optionValue.Length;
             SocketError errorCode = SocketPal.GetRawSockOpt(_handle, optionLevel, optionName, optionValue, ref realOptionLength);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetRawSockOpt optionLevel:{optionLevel} optionName:{optionName} returned errorCode:{errorCode}");
-
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
             }
-
             return realOptionLength;
         }
-
-        [SupportedOSPlatform("windows")]
+        
         public void SetIPProtectionLevel(IPProtectionLevel level)
         {
             if (level == IPProtectionLevel.Unspecified)
@@ -2242,114 +715,6 @@ namespace AKNet.Socket
             }
         }
 
-        /// <summary>Determines the status of the <see cref="AKNetSocket"/>.</summary>
-        /// <param name="microSeconds">The time to wait for a response, in microseconds.</param>
-        /// <param name="mode">One of the <see cref="SelectMode"/> values.</param>
-        /// <returns>
-        /// The status of the <see cref="AKNetSocket"/> based on the polling mode value passed in the <paramref name="mode"/> parameter.
-        /// For <see cref="SelectMode.SelectRead"/>, it returns <see langword="true"/> if <see cref="M:Listen"/> has been called and
-        /// a connection is pending, if data is available for reading, or if the connection has been closed, reset, or terminated.
-        /// For <see cref="SelectMode.SelectWrite"/>, it returns <see langword="true"/> if processing a <see cref="M:Connect"/> and
-        /// the connection has succeeded or if data can be sent.
-        /// For <see cref="SelectMode.SelectError"/>, it returns <see langword="true"/> if processing a <see cref="M:Connect"/> that
-        /// does not block and the connection has failed, or if OutOfBandInline is not set and out-of-band data is available.
-        /// Otherwise, it returns <see langword="false"/>.
-        /// </returns>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public bool Poll(int microSeconds, SelectMode mode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            bool status;
-            SocketError errorCode = SocketPal.Poll(_handle, microSeconds, mode, out status);
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"Poll returns socketCount:{(int)errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-
-            return status;
-        }
-
-        /// <summary>Determines the status of the <see cref="AKNetSocket"/>.</summary>
-        /// <param name="timeout">The time to wait for a response. <see cref="Timeout.InfiniteTimeSpan"/> indicates an infinite timeout.</param>
-        /// <param name="mode">One of the <see cref="SelectMode"/> values.</param>
-        /// <returns>
-        /// The status of the <see cref="AKNetSocket"/> based on the polling mode value passed in the <paramref name="mode"/> parameter.
-        /// For <see cref="SelectMode.SelectRead"/>, it returns <see langword="true"/> if <see cref="M:Listen"/> has been called and
-        /// a connection is pending, if data is available for reading, or if the connection has been closed, reset, or terminated.
-        /// For <see cref="SelectMode.SelectWrite"/>, it returns <see langword="true"/> if processing a <see cref="M:Connect"/> and
-        /// the connection has succeeded or if data can be sent.
-        /// For <see cref="SelectMode.SelectError"/>, it returns <see langword="true"/> if processing a <see cref="M:Connect"/> that
-        /// does not block and the connection has failed, or if OutOfBandInline is not set and out-of-band data is available.
-        /// Otherwise, it returns <see langword="false"/>.
-        /// </returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="timeout"/> was negative or greater than TimeSpan.FromMicroseconds(int.MaxValue).</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">The <see cref="AKNetSocket"/> has been closed.</exception>
-        public bool Poll(TimeSpan timeout, SelectMode mode) =>
-            Poll(ToTimeoutMicroseconds(timeout), mode);
-
-        /// <summary>Determines the status of one or more sockets.</summary>
-        /// <param name="checkRead">An <see cref="IList"/> of <see cref="AKNetSocket"/> instances to check for readability.</param>
-        /// <param name="checkWrite">An <see cref="IList"/> of <see cref="AKNetSocket"/> instances to check for writability.</param>
-        /// <param name="checkError">An <see cref="IList"/> of <see cref="AKNetSocket"/> instances to check for errors.</param>
-        /// <param name="microSeconds">The timeout value, in microseconds. A -1 value indicates an infinite timeout.</param>
-        /// <exception cref="ArgumentNullException">The <paramref name="checkRead"/>, <paramref name="checkWrite"/>, or <paramref name="checkError"/> parameter is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">The <paramref name="checkRead"/>, <paramref name="checkWrite"/>, or <paramref name="checkError"/> parameter contains too many sockets.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">One or more sockets was disposed.</exception>
-        public static void Select(IList? checkRead, IList? checkWrite, IList? checkError, int microSeconds)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            if ((checkRead == null || checkRead.Count == 0) &&
-                (checkWrite == null || checkWrite.Count == 0) &&
-                (checkError == null || checkError.Count == 0))
-            {
-                throw new ArgumentNullException(null, SR.net_sockets_empty_select);
-            }
-            const int MaxSelect = 65536;
-            if (checkRead != null && checkRead.Count > MaxSelect)
-            {
-                throw new ArgumentOutOfRangeException(nameof(checkRead), SR.Format(SR.net_sockets_toolarge_select, nameof(checkRead), MaxSelect.ToString()));
-            }
-            if (checkWrite != null && checkWrite.Count > MaxSelect)
-            {
-                throw new ArgumentOutOfRangeException(nameof(checkWrite), SR.Format(SR.net_sockets_toolarge_select, nameof(checkWrite), MaxSelect.ToString()));
-            }
-            if (checkError != null && checkError.Count > MaxSelect)
-            {
-                throw new ArgumentOutOfRangeException(nameof(checkError), SR.Format(SR.net_sockets_toolarge_select, nameof(checkError), MaxSelect.ToString()));
-            }
-
-            SocketError errorCode = SocketPal.Select(checkRead, checkWrite, checkError, microSeconds);
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                throw new SocketException((int)errorCode);
-            }
-        }
-
-        /// <summary>Determines the status of one or more sockets.</summary>
-        /// <param name="checkRead">An <see cref="IList"/> of <see cref="AKNetSocket"/> instances to check for readability.</param>
-        /// <param name="checkWrite">An <see cref="IList"/> of <see cref="AKNetSocket"/> instances to check for writability.</param>
-        /// <param name="checkError">An <see cref="IList"/> of <see cref="AKNetSocket"/> instances to check for errors.</param>
-        /// <param name="timeout">The timeout value. A value equal to <see cref="Timeout.InfiniteTimeSpan"/> indicates an infinite timeout.</param>
-        /// <exception cref="ArgumentNullException">The <paramref name="checkRead"/>, <paramref name="checkWrite"/>, or <paramref name="checkError"/> parameter is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">The <paramref name="checkRead"/>, <paramref name="checkWrite"/>, or <paramref name="checkError"/> parameter contains too many sockets.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">The <paramref name="timeout"/> was negative or greater than TimeSpan.FromMicroseconds(int.MaxValue).</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        /// <exception cref="ObjectDisposedException">One or more sockets was disposed.</exception>
-        public static void Select(IList? checkRead, IList? checkWrite, IList? checkError, TimeSpan timeout) =>
-            Select(checkRead, checkWrite, checkError, ToTimeoutMicroseconds(timeout));
-
         private static int ToTimeoutMicroseconds(TimeSpan timeout)
         {
             if (timeout == Timeout.InfiniteTimeSpan)
@@ -2363,340 +728,7 @@ namespace AKNet.Socket
 
             return (int)totalMicroseconds;
         }
-
-        public IAsyncResult BeginConnect(EndPoint remoteEP, AsyncCallback? callback, object? state) =>
-            TaskToAsyncResult.Begin(ConnectAsync(remoteEP), callback, state);
-
-        public IAsyncResult BeginConnect(string host, int port, AsyncCallback? requestCallback, object? state) =>
-            TaskToAsyncResult.Begin(ConnectAsync(host, port), requestCallback, state);
-
-        public IAsyncResult BeginConnect(IPAddress address, int port, AsyncCallback? requestCallback, object? state) =>
-            TaskToAsyncResult.Begin(ConnectAsync(address, port), requestCallback, state);
-
-        public IAsyncResult BeginConnect(IPAddress[] addresses, int port, AsyncCallback? requestCallback, object? state) =>
-            TaskToAsyncResult.Begin(ConnectAsync(addresses, port), requestCallback, state);
-
-        public void EndConnect(IAsyncResult asyncResult) => TaskToAsyncResult.End(asyncResult);
-
-        public IAsyncResult BeginDisconnect(bool reuseSocket, AsyncCallback? callback, object? state) =>
-            TaskToAsyncResult.Begin(DisconnectAsync(reuseSocket).AsTask(), callback, state);
-
-        public void Disconnect(bool reuseSocket)
-        {
-            ThrowIfDisposed();
-
-            SocketError errorCode;
-
-            // This can throw ObjectDisposedException (handle, and retrieving the delegate).
-            errorCode = SocketPal.Disconnect(this, _handle, reuseSocket);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"UnsafeNclNativeMethods.OSSOCK.DisConnectEx returns:{errorCode}");
-
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-
-            SetToDisconnected();
-            _remoteEndPoint = null;
-            _localEndPoint = null;
-        }
-
-        public void EndDisconnect(IAsyncResult asyncResult) => TaskToAsyncResult.End(asyncResult);
-
-        public IAsyncResult BeginSend(byte[] buffer, int offset, int size, SocketFlags socketFlags, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-
-            return TaskToAsyncResult.Begin(SendAsync(new ReadOnlyMemory<byte>(buffer, offset, size), socketFlags, default).AsTask(), callback, state);
-        }
-
-        public IAsyncResult? BeginSend(byte[] buffer, int offset, int size, SocketFlags socketFlags, out SocketError errorCode, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-
-            Task<int> t = SendAsync(new ReadOnlyMemory<byte>(buffer, offset, size), socketFlags, default).AsTask();
-            if (t.IsFaulted || t.IsCanceled)
-            {
-                errorCode = GetSocketErrorFromFaultedTask(t);
-                return null;
-            }
-
-            errorCode = SocketError.Success;
-            return TaskToAsyncResult.Begin(t, callback, state);
-        }
-
-        public IAsyncResult BeginSend(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            return TaskToAsyncResult.Begin(SendAsync(buffers, socketFlags), callback, state);
-        }
-
-        public IAsyncResult? BeginSend(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags, out SocketError errorCode, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            Task<int> t = SendAsync(buffers, socketFlags);
-            if (t.IsFaulted || t.IsCanceled)
-            {
-                errorCode = GetSocketErrorFromFaultedTask(t);
-                return null;
-            }
-
-            errorCode = SocketError.Success;
-            return TaskToAsyncResult.Begin(t, callback, state);
-        }
-
-        public int EndSend(IAsyncResult asyncResult) => TaskToAsyncResult.End<int>(asyncResult);
-
-        public int EndSend(IAsyncResult asyncResult, out SocketError errorCode) =>
-            EndSendReceive(asyncResult, out errorCode);
-
-        public IAsyncResult BeginSendFile(string? fileName, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            return BeginSendFile(fileName, null, null, TransmitFileOptions.UseDefaultWorkerThread, callback, state);
-        }
-
-        public IAsyncResult BeginSendFile(string? fileName, byte[]? preBuffer, byte[]? postBuffer, TransmitFileOptions flags, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-
-            if (!Connected)
-            {
-                throw new NotSupportedException(SR.net_notconnected);
-            }
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"::DoBeginSendFile() SRC:{LocalEndPoint} DST:{RemoteEndPoint} fileName:{fileName}");
-
-            return TaskToAsyncResult.Begin(SendFileAsync(fileName, preBuffer, postBuffer, flags).AsTask(), callback, state);
-        }
-
-        public void EndSendFile(IAsyncResult asyncResult) => TaskToAsyncResult.End(asyncResult);
-
-        public IAsyncResult BeginSendTo(byte[] buffer, int offset, int size, SocketFlags socketFlags, EndPoint remoteEP, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            ArgumentNullException.ThrowIfNull(remoteEP);
-
-            Task<int> t = SendToAsync(buffer.AsMemory(offset, size), socketFlags, remoteEP).AsTask();
-            return TaskToAsyncResult.Begin(t, callback, state);
-        }
-
-        public int EndSendTo(IAsyncResult asyncResult) => TaskToAsyncResult.End<int>(asyncResult);
-
-        public IAsyncResult BeginReceive(byte[] buffer, int offset, int size, SocketFlags socketFlags, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            return TaskToAsyncResult.Begin(ReceiveAsync(new ArraySegment<byte>(buffer, offset, size), socketFlags, fromNetworkStream: false, default).AsTask(), callback, state);
-        }
-
-        public IAsyncResult? BeginReceive(byte[] buffer, int offset, int size, SocketFlags socketFlags, out SocketError errorCode, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            Task<int> t = ReceiveAsync(new ArraySegment<byte>(buffer, offset, size), socketFlags, fromNetworkStream: false, default).AsTask();
-
-            if (t.IsFaulted || t.IsCanceled)
-            {
-                errorCode = GetSocketErrorFromFaultedTask(t);
-                return null;
-            }
-
-            errorCode = SocketError.Success;
-            return TaskToAsyncResult.Begin(t, callback, state);
-        }
-
-        public IAsyncResult BeginReceive(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            return TaskToAsyncResult.Begin(ReceiveAsync(buffers, socketFlags), callback, state);
-        }
-
-        public IAsyncResult? BeginReceive(IList<ArraySegment<byte>> buffers, SocketFlags socketFlags, out SocketError errorCode, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            Task<int> t = ReceiveAsync(buffers, socketFlags);
-
-            if (t.IsFaulted || t.IsCanceled)
-            {
-                errorCode = GetSocketErrorFromFaultedTask(t);
-                return null;
-            }
-
-            errorCode = SocketError.Success;
-            return TaskToAsyncResult.Begin(t, callback, state);
-        }
-
-        public int EndReceive(IAsyncResult asyncResult) => TaskToAsyncResult.End<int>(asyncResult);
-
-        public int EndReceive(IAsyncResult asyncResult, out SocketError errorCode) =>
-            EndSendReceive(asyncResult, out errorCode);
-
-        private static int EndSendReceive(IAsyncResult asyncResult, out SocketError errorCode)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            Task<int> ti = TaskToAsyncResult.Unwrap<int>(asyncResult);
-
-            ((Task)ti).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
-
-            if (ti.IsCompletedSuccessfully)
-            {
-                errorCode = SocketError.Success;
-                return ti.Result;
-            }
-
-            errorCode = GetSocketErrorFromFaultedTask(ti);
-            return 0;
-        }
-
-        public IAsyncResult BeginReceiveMessageFrom(byte[] buffer, int offset, int size, SocketFlags socketFlags, ref EndPoint remoteEP, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"size:{size}");
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            ValidateReceiveFromEndpointAndState(remoteEP, nameof(remoteEP));
-
-            Task<SocketReceiveMessageFromResult> t = ReceiveMessageFromAsync(buffer.AsMemory(offset, size), socketFlags, remoteEP).AsTask();
-            // In case of synchronous completion, ReceiveMessageFromAsync() returns a completed task.
-            // When this happens, we need to update 'remoteEP' in order to conform to the historical behavior of BeginReceiveMessageFrom().
-            if (t.IsCompletedSuccessfully)
-            {
-                EndPoint resultEp = t.Result.RemoteEndPoint;
-                if (!remoteEP.Equals(resultEp)) remoteEP = resultEp;
-            }
-            IAsyncResult asyncResult = TaskToAsyncResult.Begin(t, callback, state);
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"size:{size} returning AsyncResult:{asyncResult}");
-            return asyncResult;
-        }
-
-        public int EndReceiveMessageFrom(IAsyncResult asyncResult, ref SocketFlags socketFlags, ref EndPoint endPoint, out IPPacketInformation ipPacketInformation)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ArgumentNullException.ThrowIfNull(endPoint);
-            if (!CanTryAddressFamily(endPoint.AddressFamily))
-            {
-                throw new ArgumentException(SR.Format(SR.net_InvalidEndPointAddressFamily, endPoint.AddressFamily, _addressFamily), nameof(endPoint));
-            }
-
-            SocketReceiveMessageFromResult result = TaskToAsyncResult.End<SocketReceiveMessageFromResult>(asyncResult);
-            if (!endPoint.Equals(result.RemoteEndPoint))
-            {
-                endPoint = result.RemoteEndPoint;
-            }
-            socketFlags = result.SocketFlags;
-            ipPacketInformation = result.PacketInformation;
-            return result.ReceivedBytes;
-        }
-
-        public IAsyncResult BeginReceiveFrom(byte[] buffer, int offset, int size, SocketFlags socketFlags, ref EndPoint remoteEP, AsyncCallback? callback, object? state)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ThrowIfDisposed();
-            ValidateBufferArguments(buffer, offset, size);
-            ValidateReceiveFromEndpointAndState(remoteEP, nameof(remoteEP));
-
-            Task<SocketReceiveFromResult> t = ReceiveFromAsync(buffer.AsMemory(offset, size), socketFlags, remoteEP).AsTask();
-            // In case of synchronous completion, ReceiveFromAsync() returns a completed task.
-            // When this happens, we need to update 'remoteEP' in order to conform to the historical behavior of BeginReceiveFrom().
-            if (t.IsCompletedSuccessfully)
-            {
-                EndPoint resultEp = t.Result.RemoteEndPoint;
-                if (!remoteEP.Equals(resultEp)) remoteEP = resultEp;
-            }
-
-            return TaskToAsyncResult.Begin(t, callback, state);
-        }
-
-        public int EndReceiveFrom(IAsyncResult asyncResult, ref EndPoint endPoint)
-        {
-            if (!AKNetSocket.OSSupportsThreads) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            ArgumentNullException.ThrowIfNull(endPoint);
-            if (!CanTryAddressFamily(endPoint.AddressFamily))
-            {
-                throw new ArgumentException(SR.Format(SR.net_InvalidEndPointAddressFamily, endPoint.AddressFamily, _addressFamily), nameof(endPoint));
-            }
-
-            SocketReceiveFromResult result = TaskToAsyncResult.End<SocketReceiveFromResult>(asyncResult);
-            if (!endPoint.Equals(result.RemoteEndPoint))
-            {
-                endPoint = result.RemoteEndPoint;
-            }
-            return result.ReceivedBytes;
-        }
-
-        public IAsyncResult BeginAccept(AsyncCallback? callback, object? state) =>
-            TaskToAsyncResult.Begin(AcceptAsync(), callback, state);
-
-        public AKNetSocket EndAccept(IAsyncResult asyncResult) => TaskToAsyncResult.End<AKNetSocket>(asyncResult);
-
-        // This method provides support for legacy BeginAccept methods that take a "receiveSize" argument and
-        // allow data to be received as part of the accept operation.
-        // There's no direct equivalent of this in the Task APIs, so we mimic it here.
-        private async Task<(AKNetSocket s, byte[] buffer, int bytesReceived)> AcceptAndReceiveHelperAsync(AKNetSocket? acceptSocket, int receiveSize)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(receiveSize);
-
-            AKNetSocket s = await AcceptAsync(acceptSocket).ConfigureAwait(false);
-
-            byte[] buffer;
-            int bytesReceived;
-            if (receiveSize == 0)
-            {
-                buffer = Array.Empty<byte>();
-                bytesReceived = 0;
-            }
-            else
-            {
-                buffer = new byte[receiveSize];
-                try
-                {
-                    bytesReceived = await s.ReceiveAsync(buffer, SocketFlags.None).ConfigureAwait(false);
-                }
-                catch
-                {
-                    s.Dispose();
-                    throw;
-                }
-            }
-
-            return (s, buffer, bytesReceived);
-        }
-
-        // Disables sends and receives on a socket.
+            
         public void Shutdown(SocketShutdown how)
         {
             ThrowIfDisposed();
@@ -3017,17 +1049,7 @@ namespace AKNet.Socket
 
         protected virtual void Dispose(bool disposing)
         {
-            if (NetEventSource.Log.IsEnabled())
-            {
-                try
-                {
-                    NetEventSource.Info(this, $"disposing:{disposing} Disposed:{Disposed}");
-                }
-                catch (Exception exception) when (!ExceptionCheck.IsFatal(exception)) { }
-            }
-
-            // Make sure we're the first call to Dispose
-            if (Interlocked.Exchange(ref _disposed, true))
+            if (Interlocked.Exchange(ref _disposed, 1) > 0)
             {
                 return;
             }
@@ -3035,60 +1057,38 @@ namespace AKNet.Socket
             SetToDisconnected();
 
             SafeSocketHandle? handle = _handle;
-            if (handle is not null)
+            if (handle != null)
             {
                 if (!disposing)
                 {
-                    // When we are running on the finalizer thread, we don't call CloseAsIs
-                    // because it may lead to blocking the finalizer thread when trying
-                    // to abort on-going operations. We directly dispose the SafeHandle.
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "Calling _handle.Dispose()");
                     handle.Dispose();
                 }
                 else if (handle.OwnsHandle)
                 {
-                    // Close the handle in one of several ways depending on the timeout.
-                    // Ignore ObjectDisposedException just in case the handle somehow gets disposed elsewhere.
                     try
                     {
                         int timeout = _closeTimeout;
                         if (timeout == 0)
                         {
-                            // Abortive.
-                            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "Calling _handle.CloseAsIs()");
                             handle.CloseAsIs(abortive: true);
                         }
                         else
                         {
                             SocketError errorCode;
-
-                            // Go to blocking mode.
                             if (!_willBlock || !_willBlockInternal)
                             {
                                 bool willBlock;
-                                errorCode = SocketPal.SetBlocking(handle, false, out willBlock);
-                                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"handle:{handle} ioctlsocket(FIONBIO):{errorCode}");
+                                errorCode = SocketPal.SetBlocking(handle, false, out willBlock);                            
                             }
 
                             if (timeout < 0)
                             {
-                                // Close with existing user-specified linger option.
-                                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "Calling _handle.CloseAsIs()");
                                 handle.CloseAsIs(abortive: false);
                             }
                             else
                             {
-                                // Since our timeout is in ms and linger is in seconds, implement our own sortof linger here.
                                 errorCode = SocketPal.Shutdown(handle, _isConnected, _isDisconnected, SocketShutdown.Send);
-                                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"handle:{handle} shutdown():{errorCode}");
-
-                                // This should give us a timeout in milliseconds.
-                                errorCode = SocketPal.SetSockOpt(
-                                    handle,
-                                    SocketOptionLevel.Socket,
-                                    SocketOptionName.ReceiveTimeout,
-                                    timeout);
-                                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"handle:{handle} setsockopt():{errorCode}");
+                                errorCode = SocketPal.SetSockOpt(handle, SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, timeout);
 
                                 if (errorCode != SocketError.Success)
                                 {
@@ -3098,30 +1098,21 @@ namespace AKNet.Socket
                                 {
                                     int unused;
                                     errorCode = SocketPal.Receive(handle, Array.Empty<byte>(), 0, 0, SocketFlags.None, out unused);
-                                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"handle:{handle} recv():{errorCode}");
 
-                                    if (errorCode != (SocketError)0)
+                                    if (errorCode != 0)
                                     {
-                                        // We got a timeout - abort.
                                         handle.CloseAsIs(abortive: true);
                                     }
                                     else
                                     {
-                                        // We got a FIN or data.  Use ioctlsocket to find out which.
                                         int dataAvailable = 0;
                                         errorCode = SocketPal.GetAvailable(handle, out dataAvailable);
-                                        if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"handle:{handle} ioctlsocket(FIONREAD):{errorCode}");
-
                                         if (errorCode != SocketError.Success || dataAvailable != 0)
                                         {
-                                            // If we have data or don't know, safest thing is to reset.
                                             handle.CloseAsIs(abortive: true);
                                         }
                                         else
                                         {
-                                            // We got a FIN.  It'd be nice to block for the remainder of the timeout for the handshake to finish.
-                                            // Since there's no real way to do that, close the socket with the user's preferences.  This lets
-                                            // the user decide how best to handle this case via the linger options.
                                             handle.CloseAsIs(abortive: false);
                                         }
                                     }
@@ -3135,13 +1126,10 @@ namespace AKNet.Socket
                 }
                 else
                 {
-                    if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "Calling _handle.CloseAsIs() for non-owned handle");
                     handle.CloseAsIs(abortive: false);
                 }
-
-                // Delete file of bound UnixDomainSocketEndPoint.
-                if (_rightEndPoint is UnixDomainSocketEndPoint unixEndPoint &&
-                    unixEndPoint.BoundFileName is not null)
+                
+                if (_rightEndPoint is UnixDomainSocketEndPoint unixEndPoint && unixEndPoint.BoundFileName is not null)
                 {
                     try
                     {
@@ -3158,7 +1146,6 @@ namespace AKNet.Socket
 
         public void Dispose()
         {
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"timeout = {_closeTimeout}");
             Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -3167,8 +1154,7 @@ namespace AKNet.Socket
         {
             Dispose(false);
         }
-
-        // This version does not throw.
+        
         internal void InternalShutdown(SocketShutdown how)
         {
 
@@ -3184,61 +1170,22 @@ namespace AKNet.Socket
             catch (ObjectDisposedException) { }
         }
 
-        // Set the socket option to begin receiving packet information if it has not been
-        // set for this socket previously.
         internal void SetReceivingPacketInformation()
         {
             if (!_receivingPacketInformation)
             {
-                if (OperatingSystem.IsWasi()) return; // WASI is always set to receive PacketInformation
-
-                // DualMode: When bound to IPv6Any you must enable both socket options.
-                // When bound to an IPv4 mapped IPv6 address you must enable the IPv4 socket option.
-                IPEndPoint? ipEndPoint = _rightEndPoint as IPEndPoint;
-                IPAddress? boundAddress = ipEndPoint?.Address;
-                Debug.Assert(boundAddress != null, "Not Bound");
-                if (_addressFamily == AddressFamily.InterNetwork)
-                {
-                    SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
-                }
-
-                if ((boundAddress != null && IsDualMode && (boundAddress.IsIPv4MappedToIPv6 || boundAddress.Equals(IPAddress.IPv6Any))))
-                {
-                    SocketPal.SetReceivingDualModeIPv4PacketInformation(this);
-                }
-
-                if (_addressFamily == AddressFamily.InterNetworkV6
-                    && (boundAddress == null || !boundAddress.IsIPv4MappedToIPv6))
-                {
-                    SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                }
-
+                SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
+                SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
                 _receivingPacketInformation = true;
             }
         }
 
-        internal unsafe void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue, bool silent)
+        internal void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue, bool silent)
         {
-            // WASI is always set to receive PacketInformation
-            if (OperatingSystem.IsWasi() && optionName == SocketOptionName.PacketInformation)
-            {
-                if (optionValue == 0)
-                {
-                    UpdateStatusAfterSocketOptionErrorAndThrowException(SocketError.ProtocolOption);
-                }
-                return;
-            }
-
-            if (silent && (Disposed || _handle.IsInvalid))
-            {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "skipping the call");
-                return;
-            }
             SocketError errorCode;
             try
             {
                 errorCode = SocketPal.SetSockOpt(_handle, optionLevel, optionName, optionValue);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetSockOpt returns errorCode:{errorCode}");
             }
             catch
             {
@@ -3248,121 +1195,8 @@ namespace AKNet.Socket
                 }
                 throw;
             }
-
-            // Keep the internal state in sync if the user manually resets this.
-            if (optionName == SocketOptionName.PacketInformation && optionValue == 0 &&
-                errorCode == SocketError.Success)
-            {
-                _receivingPacketInformation = false;
-            }
-
-            if (silent)
-            {
-                return;
-            }
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
         }
-
-        private void SetMulticastOption(SocketOptionName optionName, MulticastOption MR)
-        {
-            SocketError errorCode = SocketPal.SetMulticastOption(_handle, optionName, MR);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetMulticastOption returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-        }
-
-        // IPv6 setsockopt for JOIN / LEAVE multicast group.
-        private void SetIPv6MulticastOption(SocketOptionName optionName, IPv6MulticastOption MR)
-        {
-            SocketError errorCode = SocketPal.SetIPv6MulticastOption(_handle, optionName, MR);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetIPv6MulticastOption returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-        }
-
-        private void SetLingerOption(LingerOption lref)
-        {
-            if (OperatingSystem.IsWasi() && lref.Enabled) throw new PlatformNotSupportedException(); // TODO remove with https://github.com/dotnet/runtime/pull/107185
-
-            SocketError errorCode = SocketPal.SetLingerOption(_handle, lref);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetLingerOption returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-        }
-
-        private LingerOption? GetLingerOpt()
-        {
-            if (OperatingSystem.IsWasi()) return new LingerOption(false, 0);
-
-            LingerOption? lingerOption;
-            SocketError errorCode = SocketPal.GetLingerOption(_handle, out lingerOption);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetLingerOption returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-
-            return lingerOption;
-        }
-
-        private MulticastOption? GetMulticastOpt(SocketOptionName optionName)
-        {
-            MulticastOption? multicastOption;
-            SocketError errorCode = SocketPal.GetMulticastOption(_handle, optionName, out multicastOption);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetMulticastOption returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-
-            return multicastOption;
-        }
-
-        // IPv6 getsockopt for JOIN / LEAVE multicast group.
-        private IPv6MulticastOption? GetIPv6MulticastOpt(SocketOptionName optionName)
-        {
-            IPv6MulticastOption? multicastOption;
-            SocketError errorCode = SocketPal.GetIPv6MulticastOption(_handle, optionName, out multicastOption);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"GetIPv6MulticastOption returns errorCode:{errorCode}");
-
-            // Throw an appropriate SocketException if the native call fails.
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-
-            return multicastOption;
-        }
-
-        // This method will ignore failures, but returns the win32
-        // error code, and will update internal state on success.
+        
         private SocketError InternalSetBlocking(bool desired, out bool current)
         {
             if (Disposed)
@@ -3370,8 +1204,7 @@ namespace AKNet.Socket
                 current = _willBlock;
                 return SocketError.Success;
             }
-
-            // Can we avoid this call if willBlockInternal is already correct?
+            
             bool willBlock = false;
             SocketError errorCode;
             try
@@ -3383,107 +1216,38 @@ namespace AKNet.Socket
                 errorCode = SocketError.NotSocket;
             }
 
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"SetBlocking returns errorCode:{errorCode}");
-
-            // We will update only internal state but only on successful win32 call
-            // so if the native call fails, the state will remain the same.
             if (errorCode == SocketError.Success)
             {
                 _willBlockInternal = willBlock;
             }
 
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"errorCode:{errorCode} willBlock:{_willBlock} willBlockInternal:{_willBlockInternal}");
-
             current = _willBlockInternal;
             return errorCode;
         }
-
-        // This method ignores all failures.
+        
         internal void InternalSetBlocking(bool desired)
         {
             InternalSetBlocking(desired, out _);
-        }
-
-        // CreateAcceptSocket - pulls unmanaged results and assembles them into a new Socket object.
-        internal AKNetSocket CreateAcceptSocket(SafeSocketHandle fd, EndPoint? remoteEP)
-        {
-            // Internal state of the socket is inherited from listener.
-            Debug.Assert(fd != null && !fd.IsInvalid);
-            AKNetSocket socket = new AKNetSocket(fd, loadPropertiesFromHandle: false);
-            return UpdateAcceptSocket(socket, remoteEP);
-        }
-
-        internal AKNetSocket UpdateAcceptSocket(AKNetSocket socket, EndPoint? remoteEP)
-        {
-            // Internal state of the socket is inherited from listener.
-            socket._addressFamily = _addressFamily;
-            socket._socketType = _socketType;
-            socket._protocolType = _protocolType;
-            socket._remoteEndPoint = remoteEP;
-
-            // If the _rightEndpoint tracks a UnixDomainSocketEndPoint to delete
-            // then create a new EndPoint.
-            if (_rightEndPoint is UnixDomainSocketEndPoint unixEndPoint &&
-                     unixEndPoint.BoundFileName is not null)
-            {
-                socket._rightEndPoint = unixEndPoint.CreateUnboundEndPoint();
-            }
-            else
-            {
-                socket._rightEndPoint = _rightEndPoint;
-            }
-
-            // If the listener socket was bound to a wildcard address, then the `accept` system call
-            // will assign a specific address to the accept socket's local endpoint instead of a
-            // wildcard address. In that case we should not copy listener's wildcard local endpoint.
-
-            socket._localEndPoint = !IsWildcardEndPoint(_localEndPoint) ? _localEndPoint : null;
-
-            // The socket is connected.
-            socket.SetToConnected();
-
-            // if the socket is returned by an End(), the socket might have
-            // inherited the WSAEventSelect() call from the accepting socket.
-            // we need to cancel this otherwise the socket will be in non-blocking
-            // mode and we cannot force blocking mode using the ioctlsocket() in
-            // Socket.set_Blocking(), since it fails returning 10022 as documented in MSDN.
-            // (note that the m_AsyncEvent event will not be created in this case.
-
-            socket._willBlock = _willBlock;
-
-            // We need to make sure the Socket is in the right blocking state
-            // even if we don't have to call UnsetAsyncEventSelect
-            socket.InternalSetBlocking(_willBlock);
-
-            return socket;
         }
 
         internal void SetToConnected()
         {
             if (_isConnected)
             {
-                // Socket was already connected.
                 return;
             }
 
             Debug.Assert(_nonBlockingConnectInProgress == false);
 
-            // Update the status: this socket was indeed connected at
-            // some point in time update the perf counter as well.
             _isConnected = true;
             _isDisconnected = false;
             _rightEndPoint ??= _pendingConnectRightEndPoint;
             _pendingConnectRightEndPoint = null;
             UpdateLocalEndPointOnConnect();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "now connected");
         }
 
         private void UpdateLocalEndPointOnConnect()
         {
-            // If the client socket was bound to a wildcard address, then the `connect` system call
-            // will assign a specific address to the client socket's local endpoint instead of a
-            // wildcard address. In that case we should clear the cached wildcard local endpoint.
-
             if (IsWildcardEndPoint(_localEndPoint))
             {
                 _localEndPoint = null;
@@ -3510,26 +1274,16 @@ namespace AKNet.Socket
         {
             if (!_isConnected)
             {
-                // Socket was already disconnected.
                 return;
             }
 
-            // Update the status: this socket was indeed disconnected at
-            // some point in time, clear any async select bits.
             _isConnected = false;
             _isDisconnected = true;
-
-            if (!Disposed)
-            {
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "!Disposed");
-            }
         }
 
         private void UpdateStatusAfterSocketOptionErrorAndThrowException(SocketError error, [CallerMemberName] string? callerName = null)
         {
-            // Don't disconnect socket for unknown options.
-            bool disconnectOnFailure = error != SocketError.ProtocolOption &&
-                                       error != SocketError.OperationNotSupported;
+            bool disconnectOnFailure = error != SocketError.ProtocolOption && error != SocketError.OperationNotSupported;
             UpdateStatusAfterSocketErrorAndThrowException(error, disconnectOnFailure, callerName);
         }
 
