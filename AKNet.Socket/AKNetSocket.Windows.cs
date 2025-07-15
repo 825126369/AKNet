@@ -1,27 +1,19 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
+using Microsoft.Win32.SafeHandles;
+using System;
 using System.Collections;
 using System.Diagnostics;
-using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.Versioning;
 using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Win32.SafeHandles;
 
-namespace System.Net.Sockets
+namespace AKNet.Socket
 {
-    public partial class Socket
+    internal partial class AKNetSocket
     {
         private static CachedSerializedEndPoint? s_cachedAnyEndPoint;
         private static CachedSerializedEndPoint? s_cachedAnyV6EndPoint;
         private static CachedSerializedEndPoint? s_cachedMappedAnyV6EndPoint;
-        private DynamicWinsockMethods? _dynamicWinsockMethods;
-
-#pragma warning disable CA1822
-        internal void ReplaceHandleIfNecessaryAfterFailedConnect() { /* nop on Windows */ }
-#pragma warning restore CA1822
 
         private sealed class CachedSerializedEndPoint
         {
@@ -34,9 +26,8 @@ namespace System.Net.Sockets
                 SocketAddress = IPEndPoint.Serialize();
             }
         }
-
-        [SupportedOSPlatform("windows")]
-        public Socket(SocketInformation socketInformation)
+        
+        public AKNetSocket(SocketInformation socketInformation)
         {
             SocketError errorCode = SocketPal.CreateSocket(socketInformation, out _handle,
                 ref _addressFamily, ref _socketType, ref _protocolType);
@@ -312,7 +303,7 @@ namespace System.Net.Sockets
             fileDescriptorSet[0] = (IntPtr)count;
             for (int current = 0; current < count; current++)
             {
-                if (!(socketList[current] is Socket socket))
+                if (!(socketList[current] is AKNetSocket socket))
                 {
                     throw new ArgumentException(SR.Format(SR.net_sockets_select, socketList[current]?.GetType().FullName, typeof(System.Net.Sockets.Socket).FullName), nameof(socketList));
                 }
@@ -356,7 +347,7 @@ namespace System.Net.Sockets
             {
                 for (int currentSocket = 0; currentSocket < count; currentSocket++)
                 {
-                    Socket? socket = socketList[currentSocket] as Socket;
+                    AKNetSocket? socket = socketList[currentSocket] as AKNetSocket;
                     Debug.Assert(socket != null);
 
                     // Look for the file descriptor in the array.
@@ -381,12 +372,12 @@ namespace System.Net.Sockets
             }
         }
 
-        private Socket GetOrCreateAcceptSocket(Socket? acceptSocket, bool checkDisconnected, string propertyName, out SafeSocketHandle handle)
+        private AKNetSocket GetOrCreateAcceptSocket(AKNetSocket? acceptSocket, bool checkDisconnected, string propertyName, out SafeSocketHandle handle)
         {
             // If an acceptSocket isn't specified, then we need to create one.
             if (acceptSocket == null)
             {
-                acceptSocket = new Socket(_addressFamily, _socketType, _protocolType);
+                acceptSocket = new AKNetSocket(_addressFamily, _socketType, _protocolType);
             }
             else if (acceptSocket._rightEndPoint != null && (!checkDisconnected || !acceptSocket._isDisconnected))
             {

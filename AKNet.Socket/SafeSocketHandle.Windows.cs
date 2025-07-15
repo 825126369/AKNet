@@ -39,6 +39,7 @@ namespace AKNet.Socket
                 {
                     try
                     {
+                        ThreadPool.BindHandle(this);
                         Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
                         boundHandle = ThreadPoolBoundHandle.BindHandle(this);
                     }
@@ -160,7 +161,7 @@ namespace AKNet.Socket
         }
 
         private static void ThrowSocketDisposedException(Exception? innerException = null) =>
-            throw new ObjectDisposedException(typeof(Socket).FullName, innerException);
+            throw new ObjectDisposedException(typeof(AKNetSocket).FullName, innerException);
 
         protected internal void SetHandle(IntPtr handle) => this.handle = handle;
     }

@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,7 +8,7 @@ namespace AKNet.Udp5MSQuic.Common
 {
     internal class CXPLAT_EVENTQ
     {
-
+        public IntPtr port = IntPtr.Zero;
     }
 
     internal class CXPLAT_SQE
@@ -23,8 +24,21 @@ namespace AKNet.Udp5MSQuic.Common
     {
         static bool CxPlatEventQInitialize(CXPLAT_EVENTQ queue)
         {
-            return true;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                //IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+                //IntPtr port = Interop.Kernel32.CreateIoCompletionPort(INVALID_HANDLE_VALUE, IntPtr.Zero, UIntPtr.Zero, 1);
+                //queue.port = port;
+                return true;
+            }
+
+            return false;
         }
+
+        //static unsafe bool CxPlatEventQAssociateHandle(CXPLAT_EVENTQ queue, IntPtr fileHandle)
+        //{
+        //    return queue.port == Interop.Kernel32.CreateIoCompletionPort(fileHandle, queue.port, UIntPtr.Zero, 0);
+        //}
 
         static bool CxPlatSqeInitialize(CXPLAT_EVENTQ queue, SendOrPostCallback completion, object contex, CXPLAT_SQE sqe)
         {
