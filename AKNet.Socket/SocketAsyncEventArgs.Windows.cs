@@ -414,11 +414,6 @@ namespace AKNet.Socket
 
         internal unsafe void LogBuffer(int size)
         {
-            // This should only be called if tracing is enabled. However, there is the potential for a race
-            // condition where tracing is disabled between a calling check and here, in which case the assert
-            // may fire erroneously.
-            Debug.Assert(NetEventSource.Log.IsEnabled());
-
             if (_bufferList != null)
             {
                 for (int i = 0; i < _bufferListInternal!.Count; i++)
@@ -433,7 +428,7 @@ namespace AKNet.Socket
             }
             else if (_buffer.Length != 0)
             {
-                NetEventSource.DumpBuffer(this, _buffer, _offset, size);
+                    
             }
         }
 
@@ -517,35 +512,22 @@ namespace AKNet.Socket
 
         private static readonly unsafe IOCompletionCallback s_completionPortCallback = delegate (uint errorCode, uint numBytes, NativeOverlapped* nativeOverlapped)
         {
-            Debug.Assert(OperatingSystem.IsWindows());
+            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
             var saeaBox = (StrongBox<SocketAsyncEventArgs>)(ThreadPoolBoundHandle.GetNativeOverlappedState(nativeOverlapped)!);
 
             Debug.Assert(saeaBox.Value != null);
             SocketAsyncEventArgs saea = saeaBox.Value;
 
-            // We need to coordinate with the launching thread, just in case it hasn't yet finished setting up the operation.
-            // We typically expect the launching thread to have already completed setup, in which case _asyncCompletionOwnership
-            // will be 1, so we do a fast non-synchronized check to see if it's still 0, and only if it is do we proceed to
-            // pack the results for use with an interlocked coordination with that thread.
             if (saea._asyncCompletionOwnership == 0)
             {
-                // Pack the error code and number of bytes transferred into a single ulong we can store into
-                // _asyncCompletionOwnership.  If the field was already set by the launcher, the value won't
-                // be needed, but if this callback wins the race condition and transfers ownership to the
-                // launcher to handle completion and clean up, transfering these values over prevents needing
-                // to make an additional call to WSAGetOverlappedResult.
                 Debug.Assert(numBytes <= int.MaxValue, "We rely on being able to set the top bit to ensure the whole packed result isn't 0.");
-                ulong packedResult = (1ul << 63) | ((ulong)numBytes << 32) | errorCode;
-
+                long packedResult = (long)((1ul << 63) | ((ulong)numBytes << 32) | errorCode);
                 if (Interlocked.Exchange(ref saea._asyncCompletionOwnership, packedResult) == 0)
                 {
-                    // The operation completed asynchronously so quickly that the thread launching the operation still hasn't finished setting
-                    // up the state for the operation.  Leave all cleanup and completion logic to that thread.
                     return;
                 }
             }
-
-            // This callback owns the completion and cleanup for the operation.
+            
             if ((SocketError)errorCode == SocketError.Success)
             {
                 saea.FreeNativeOverlapped(ref nativeOverlapped);
@@ -574,13 +556,11 @@ namespace AKNet.Socket
                 {
                     try
                     {
-                        // Call WSAGetOverlappedResult() so GetLastSocketError() will return the correct error.
                         Interop.Winsock.WSAGetOverlappedResult(_currentSocket.SafeHandle, nativeOverlapped, out numBytes, wait: false, out socketFlags);
                         socketError = SocketPal.GetLastSocketError();
                     }
                     catch
                     {
-                        // _currentSocket may have been disposed after the Disposed check above, in which case the P/Invoke may throw.
                         socketError = SocketError.OperationAborted;
                     }
                 }

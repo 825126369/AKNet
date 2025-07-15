@@ -3,8 +3,6 @@ using System.Net.Sockets;
 
 namespace AKNet.Socket
 {
-    // This class is used when subclassing EndPoint, and provides indication
-    // on how to format the memory buffers that the platform uses for network addresses.
     public class SocketAddress : IEquatable<SocketAddress>
     {
 #pragma warning disable CA1802 // these could be const on Windows but need to be static readonly for Unix
