@@ -197,7 +197,7 @@ namespace AKNet.Udp5MSQuic.Common
         public long ReferenceCount;
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
-        public SocketAsyncEventArgs ReceiveArgs;
+        public SSocketAsyncEventArgs ReceiveArgs;
 
         public void Reset()
         {
@@ -778,9 +778,10 @@ namespace AKNet.Udp5MSQuic.Common
                 if (SendData.Sqe == null)
                 {
                     SendData.Sqe = new SocketAsyncEventArgs();
-                    SendData.Sqe.Completed += DataPathProcessCqe;
                     SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
                 }
+
+                SendData.Sqe.Completed += DataPathProcessCqe;
             }
 
             return SendData;
@@ -800,13 +801,12 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (IoBlock.ReceiveArgs == null)
                 {
-                    IoBlock.ReceiveArgs = new SocketAsyncEventArgs();
+                    IoBlock.ReceiveArgs = new SSocketAsyncEventArgs();
                     IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
-                    IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
-
                     byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                     IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
                 }
+                IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
             }
             return IoBlock;
         }
@@ -839,6 +839,17 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
         {
+            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
+            var mWorker = IoBlock.SocketProc.Parent.Datapath.WorkerPool.Workers[IoBlock.SocketProc.DatapathProc.PartitionIndex];
+
+            arg.Completed -= DataPathProcessCqe;
+            arg.Completed += DataPathProcessCqe2;
+            mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
+        }
+
+        static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)
+        {
+            arg.Completed -= DataPathProcessCqe2;
             switch (arg.LastOperation)
             {
                 case SocketAsyncOperation.ReceiveMessageFrom:

@@ -1,6 +1,9 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
@@ -11,10 +14,12 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
 
         public Thread Thread;
-        public CXPLAT_EVENTQ EventQ = new CXPLAT_EVENTQ();
-        public CXPLAT_SQE ShutdownSqe = new CXPLAT_SQE();
-        public CXPLAT_SQE WakeSqe = new CXPLAT_SQE();
-        public CXPLAT_SQE UpdatePollSqe = new CXPLAT_SQE();
+        //public ConcurrentQueue<SocketAsyncEventArgs> EventQ = new ConcurrentQueue<SocketAsyncEventArgs>();
+        public ConcurrentQueue<SSocketAsyncEventArgs> EventQ = new ConcurrentQueue<SSocketAsyncEventArgs>();
+        public SSocketAsyncEventArgs ShutdownSqe = new SSocketAsyncEventArgs();
+        public SSocketAsyncEventArgs WakeSqe = new SSocketAsyncEventArgs();
+        public SSocketAsyncEventArgs UpdatePollSqe = new SSocketAsyncEventArgs();
+        public readonly List<SSocketAsyncEventArgs> Cqes = new List<SSocketAsyncEventArgs>();
 
         public readonly object ECLock = new object();
         public readonly CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
@@ -169,7 +174,7 @@ namespace AKNet.Udp5MSQuic.Common
             if (Worker.InitializedThread)
             {
                 Worker.StoppingThread = true;
-                CxPlatEventQEnqueue(Worker.EventQ, Worker.ShutdownSqe);
+                Worker.EventQ.Append(Worker.ShutdownSqe);
                 CxPlatThreadWait(Worker.Thread);
                 CxPlatThreadDelete(Worker.Thread);
 #if DEBUG
@@ -182,21 +187,10 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 // TODO - Handle synchronized cleanup for external event queues?
             }
-            if (Worker.InitializedUpdatePollSqe)
+
+            while (Worker.EventQ.Count > 0)
             {
-                CxPlatSqeCleanup(Worker.EventQ, Worker.UpdatePollSqe);
-            }
-            if (Worker.InitializedWakeSqe)
-            {
-                CxPlatSqeCleanup(Worker.EventQ, Worker.WakeSqe);
-            }
-            if (Worker.InitializedShutdownSqe)
-            {
-                CxPlatSqeCleanup(Worker.EventQ, Worker.ShutdownSqe);
-            }
-            if (Worker.InitializedEventQ)
-            {
-                CxPlatEventQCleanup(Worker.EventQ);
+                Worker.EventQ.TryDequeue(out _);
             }
         }
 
@@ -222,35 +216,26 @@ namespace AKNet.Udp5MSQuic.Common
             Worker.State.WaitTime = int.MaxValue;
             Worker.State.ThreadID = int.MaxValue;
 
-            if (EventQ != null)
-            {
-                Worker.EventQ = EventQ;
-            }
-            else
-            {
-                if (!CxPlatEventQInitialize(Worker.EventQ))
-                {
-                    return false;
-                }
-                Worker.InitializedEventQ = true;
-            }
+            //if (EventQ != null)
+            //{
+            //    Worker.EventQ = EventQ;
+            //}
+            //else
+            //{
 
-            if (!CxPlatSqeInitialize(Worker.EventQ, ShutdownCompletion, Worker, Worker.ShutdownSqe))
-            {
-                return false;
-            }
+            //}
+
+            Worker.ShutdownSqe.UserToken = Worker;
+            Worker.WakeSqe.UserToken = Worker;
+            Worker.UpdatePollSqe.UserToken = Worker;
+
+            Worker.ShutdownSqe.Completed += ShutdownCompletion;
+            Worker.WakeSqe.Completed += WakeCompletion;
+            Worker.UpdatePollSqe.Completed += UpdatePollCompletion;
+
+            Worker.InitializedEventQ = true;
             Worker.InitializedShutdownSqe = true;
-
-            if (!CxPlatSqeInitialize(Worker.EventQ, WakeCompletion, Worker, Worker.WakeSqe))
-            {
-                return false;
-            }
             Worker.InitializedWakeSqe = true;
-
-            if (!CxPlatSqeInitialize(Worker.EventQ, UpdatePollCompletion, Worker, Worker.UpdatePollSqe))
-            {
-                return false;
-            }
             Worker.InitializedUpdatePollSqe = true;
 
             if (ThreadConfig != null)
@@ -267,19 +252,19 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static void UpdatePollCompletion(object Cqe)
+        static void UpdatePollCompletion(object Cqe, SocketAsyncEventArgs arg)
         {
-            CXPLAT_WORKER Worker = Cqe as  CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = arg.UserToken as  CXPLAT_WORKER;
             CxPlatUpdateExecutionContexts(Worker);
         }
 
-        static void ShutdownCompletion(object Cqe)
+        static void ShutdownCompletion(object Cqe, SocketAsyncEventArgs arg)
         {
-            CXPLAT_WORKER Worker = Cqe as CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = arg.UserToken as CXPLAT_WORKER;
             Worker.StoppedThread = true;
         }
 
-        static void WakeCompletion(object Cqe)
+        static void WakeCompletion(object Cqe, SocketAsyncEventArgs arg)
         {
             
         }
@@ -289,34 +274,47 @@ namespace AKNet.Udp5MSQuic.Common
             CXPLAT_WORKER Worker = Context.CxPlatContext;
             if (!BoolOk(InterlockedFetchAndSetBoolean(ref Worker.Running)))
             {
-                CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
+                Worker.EventQ.Enqueue(Worker.WakeSqe);
             }
         }
-
+        
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
-            //InterlockedFetchAndSetBoolean(ref Worker.Running);
-            //            CXPLAT_SQE Cqes[16];
-            //            uint32_t CqeCount =
-            //                CxPlatEventQDequeue(
-            //                    &Worker->EventQ,
-            //                    Cqes,
-            //                    ARRAYSIZE(Cqes),
-            //                    Worker->State.WaitTime);
-            //            InterlockedFetchAndSetBoolean(&Worker->Running);
-            //            if (CqeCount != 0)
-            //            {
-            //#if DEBUG // Debug statistics
-            //                Worker->CqeCount += CqeCount;
-            //#endif
-            //                Worker->State.NoWorkCount = 0;
-            //                for (uint32_t i = 0; i < CqeCount; ++i)
-            //                {
-            //                    CXPLAT_SQE* Sqe = CxPlatCqeGetSqe(&Cqes[i]);
-            //                    Sqe->Completion(&Cqes[i]);
-            //                }
-            //                CxPlatEventQReturn(&Worker->EventQ, CqeCount);
-            //            }
+            var Cqes = Worker.Cqes;
+            int CqeCount = 0;
+            while (Worker.EventQ.Count > 0)
+            {
+                SSocketAsyncEventArgs mArgs = null;
+                if (Worker.EventQ.TryDequeue(out mArgs))
+                {
+                    CqeCount++;
+                    Cqes.Add(mArgs);
+                }
+                else
+                {
+                    break;
+                }
+
+                if(CqeCount >= 16)
+                {
+                    break;
+                }
+            }
+            
+            InterlockedFetchAndSetBoolean(ref Worker.Running);
+            if (CqeCount != 0)
+            {
+#if DEBUG // Debug statistics
+                Worker.CqeCount += CqeCount;
+#endif
+                Worker.State.NoWorkCount = 0;
+                for (int i = 0; i < CqeCount; ++i)
+                {
+                    SSocketAsyncEventArgs Sqe = Cqes[i];
+                    Sqe.Do();
+                }
+                Cqes.Clear();
+            }
         }
 
         static void CxPlatWorkerPoolAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
@@ -334,7 +332,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QueueEvent)
             {
-                CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
+                Worker.EventQ.Enqueue(Worker.UpdatePollSqe);
             }
         }
 

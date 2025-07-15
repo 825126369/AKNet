@@ -226,7 +226,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         private int HandleStreamEvent(ref QUIC_STREAM_EVENT streamEvent)
         {
-            NetLog.Log("Stream Event: " + streamEvent.Type.ToString());
+            //NetLog.Log("Stream Event: " + streamEvent.Type.ToString());
             switch (streamEvent.Type)
             {
                 case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_START_COMPLETE:
