@@ -15,7 +15,7 @@ namespace AKNet.Socket
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe extern SocketError getsockname(SafeSocketHandle socketHandle, byte* socketAddress, int* socketAddressSize);
+            internal static unsafe extern SocketError getsockname(SafeSocketHandle socketHandle, byte* socketAddress, out int socketAddressSize);
 #endif
         }
     }

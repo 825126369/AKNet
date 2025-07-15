@@ -26,67 +26,6 @@ namespace AKNet.Socket
                 SocketAddress = IPEndPoint.Serialize();
             }
         }
-        
-        public AKNetSocket(SocketInformation socketInformation)
-        {
-            SocketError errorCode = SocketPal.CreateSocket(socketInformation, out _handle,
-                ref _addressFamily, ref _socketType, ref _protocolType);
-
-            if (errorCode != SocketError.Success)
-            {
-                Debug.Assert(_handle.IsInvalid);
-                _handle = null!;
-
-                if (errorCode == SocketError.InvalidArgument)
-                {
-                    throw new ArgumentException(SR.net_sockets_invalid_socketinformation, nameof(socketInformation));
-                }
-
-                // Failed to create the socket, throw.
-                throw new SocketException((int)errorCode);
-            }
-
-            if (_addressFamily != AddressFamily.InterNetwork && _addressFamily != AddressFamily.InterNetworkV6)
-            {
-                _handle.Dispose();
-                _handle = null!;
-                throw new NotSupportedException(SR.net_invalidversion);
-            }
-
-            _isConnected = socketInformation.GetOption(SocketInformationOptions.Connected);
-            _willBlock = !socketInformation.GetOption(SocketInformationOptions.NonBlocking);
-            InternalSetBlocking(_willBlock);
-            _isListening = socketInformation.GetOption(SocketInformationOptions.Listening);
-
-            IPAddress tempAddress = _addressFamily == AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any;
-            IPEndPoint ep = new IPEndPoint(tempAddress, 0);
-
-            SocketAddress socketAddress = ep.Serialize();
-            int size = socketAddress.Buffer.Length;
-            unsafe
-            {
-                fixed (byte* bufferPtr = socketAddress.Buffer.Span)
-                {
-                    errorCode = SocketPal.GetSockName(_handle, bufferPtr, &size);
-                }
-            }
-
-            if (errorCode == SocketError.Success)
-            {
-                socketAddress.Size = size;
-                _rightEndPoint = ep.Create(socketAddress);
-            }
-            else if (errorCode == SocketError.InvalidArgument)
-            {
-                // Socket is not yet bound.
-            }
-            else
-            {
-                _handle.Dispose();
-                _handle = null!;
-                throw new SocketException((int)errorCode);
-            }
-        }
 
         private unsafe void LoadSocketTypeFromHandle(
             SafeSocketHandle handle, out AddressFamily addressFamily, out SocketType socketType, out ProtocolType protocolType, out bool blocking, out bool isListening, out bool isSocket)

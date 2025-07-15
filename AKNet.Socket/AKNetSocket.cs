@@ -1,13 +1,10 @@
 using Microsoft.Win32.SafeHandles;
 using System.Collections;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
 
 namespace AKNet.Socket
 {
@@ -51,124 +48,6 @@ namespace AKNet.Socket
             _protocolType = protocolType;
         }
 
-        private unsafe AKNetSocket(SafeSocketHandle handle, bool loadPropertiesFromHandle)
-        {
-            _handle = handle;
-            _addressFamily = AddressFamily.Unknown;
-            _socketType = SocketType.Unknown;
-            _protocolType = ProtocolType.Unknown;
-
-            if (!loadPropertiesFromHandle)
-            {
-                return;
-            }
-
-            try
-            {
-                // Get properties like address family and blocking mode from the OS.
-                LoadSocketTypeFromHandle(handle, out _addressFamily, out _socketType, out _protocolType, out _willBlockInternal, out _isListening, out bool isSocket);
-
-                if (isSocket)
-                {
-                    // We should change stackalloc if this ever grows too big.
-                    Debug.Assert(SocketPal.MaximumAddressSize <= 512);
-                    // Try to get the address of the socket.
-                    Span<byte> buffer = stackalloc byte[SocketPal.MaximumAddressSize];
-                    int bufferLength = buffer.Length;
-                    fixed (byte* bufferPtr = buffer)
-                    {
-                        if (SocketPal.GetSockName(handle, bufferPtr, &bufferLength) != SocketError.Success)
-                        {
-                            return;
-                        }
-                    }
-
-                    Debug.Assert(bufferLength <= buffer.Length);
-
-                    // Try to get the local end point.  That will in turn enable the remote
-                    // end point to be retrieved on-demand when the property is accessed.
-                    switch (_addressFamily)
-                    {
-                        case AddressFamily.InterNetwork:
-                            _rightEndPoint = new IPEndPoint(
-                                new IPAddress((long)SocketAddressPal.GetIPv4Address(buffer.Slice(0, bufferLength)) & 0x0FFFFFFFF),
-                                SocketAddressPal.GetPort(buffer));
-                            break;
-
-                        case AddressFamily.InterNetworkV6:
-                            Span<byte> address = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
-                            SocketAddressPal.GetIPv6Address(buffer.Slice(0, bufferLength), address, out uint scope);
-                            _rightEndPoint = new IPEndPoint(
-                                new IPAddress(address, scope),
-                                SocketAddressPal.GetPort(buffer));
-                            break;
-
-                        case AddressFamily.Unix:
-                            if (!AKNetSocket.OSSupportsUnixDomainSockets) throw new PlatformNotSupportedException();
-
-                            _rightEndPoint = new UnixDomainSocketEndPoint(buffer.Slice(0, bufferLength));
-                            break;
-                    }
-
-                    // Try to determine if we're connected, based on querying for a peer, just as we would in RemoteEndPoint,
-                    // but ignoring any failures; this is best-effort (RemoteEndPoint also does a catch-all around the Create call).
-                    if (_rightEndPoint != null)
-                    {
-                        try
-                        {
-                            // Local and remote end points may be different sizes for protocols like Unix Domain Sockets.
-                            bufferLength = buffer.Length;
-                            switch (SocketPal.GetPeerName(handle, buffer, ref bufferLength))
-                            {
-                                case SocketError.Success:
-                                    switch (_addressFamily)
-                                    {
-                                        case AddressFamily.InterNetwork:
-                                            _remoteEndPoint = new IPEndPoint(
-                                                new IPAddress((long)SocketAddressPal.GetIPv4Address(buffer.Slice(0, bufferLength)) & 0x0FFFFFFFF),
-                                                SocketAddressPal.GetPort(buffer));
-                                            break;
-
-                                        case AddressFamily.InterNetworkV6:
-                                            Span<byte> address = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
-                                            SocketAddressPal.GetIPv6Address(buffer.Slice(0, bufferLength), address, out uint scope);
-                                            _remoteEndPoint = new IPEndPoint(
-                                                new IPAddress(address, scope),
-                                                SocketAddressPal.GetPort(buffer));
-                                            break;
-
-                                        case AddressFamily.Unix:
-                                            if (!AKNetSocket.OSSupportsUnixDomainSockets) throw new PlatformNotSupportedException();
-
-                                            _remoteEndPoint = new UnixDomainSocketEndPoint(buffer.Slice(0, bufferLength));
-                                            break;
-                                    }
-
-                                    _isConnected = true;
-                                    break;
-
-                                case SocketError.InvalidArgument:
-                                    // On some OSes (e.g. macOS), EINVAL means the socket has been shut down.
-                                    // This can happen if, for example, socketpair was used and the parent
-                                    // process closed its copy of the child's socket.  Since we don't know
-                                    // whether we're actually connected or not, err on the side of saying
-                                    // we're connected.
-                                    _isConnected = true;
-                                    break;
-                            }
-                        }
-                        catch { }
-                    }
-                }
-            }
-            catch
-            {
-                _handle = null!;
-                GC.SuppressFinalize(this);
-                throw;
-            }
-        }
-
         private static SafeSocketHandle ValidateHandle(SafeSocketHandle handle)
         {
             if (handle == null)
@@ -199,8 +78,7 @@ namespace AKNet.Socket
                 return argp;
             }
         }
-
-        // Gets the local end point.
+        
         public EndPoint? LocalEndPoint
         {
             get
@@ -214,14 +92,16 @@ namespace AKNet.Socket
 
                 if (_localEndPoint == null)
                 {
-                    Span<byte> buffer = stackalloc byte[SocketAddress.GetMaximumAddressSize(_addressFamily)];
+                    Span<byte> buffer = stackalloc byte[byte.MaxValue];
                     int size = buffer.Length;
 
                     unsafe
                     {
-                        fixed (byte* ptr = &MemoryMarshal.GetReference(buffer))
+                        fixed (byte* ptr = buffer)
                         {
-                            SocketError errorCode = SocketPal.GetSockName(_handle, ptr, &size);
+                            int nLength = 0;
+                            SocketError errorCode = SocketPal.GetSockName(_handle, ptr, out nLength);
+                            buffer = buffer.Slice(0, nLength);  
                             if (errorCode != SocketError.Success)
                             {
                                 UpdateStatusAfterSocketErrorAndThrowException(errorCode);
@@ -244,8 +124,7 @@ namespace AKNet.Socket
                 return _localEndPoint;
             }
         }
-
-        // Gets the remote end point.
+        
         public EndPoint? RemoteEndPoint
         {
             get
@@ -1289,10 +1168,8 @@ namespace AKNet.Socket
 
         private void UpdateStatusAfterSocketErrorAndThrowException(SocketError error, bool disconnectOnFailure = true, [CallerMemberName] string? callerName = null)
         {
-            // Update the internal state of this socket according to the error before throwing.
             var socketException = new SocketException((int)error);
             UpdateStatusAfterSocketError(socketException, disconnectOnFailure);
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, socketException, memberName: callerName);
             throw socketException;
         }
 
@@ -1440,7 +1317,6 @@ namespace AKNet.Socket
         private static SocketError GetSocketErrorFromFaultedTask(Task t)
         {
             Debug.Assert(t.IsCanceled || t.IsFaulted);
-
             if (t.IsCanceled)
             {
                 return SocketError.OperationAborted;

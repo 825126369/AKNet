@@ -63,9 +63,9 @@ namespace AKNet.Socket
             return errorCode;
         }
 
-        public static unsafe SocketError GetSockName(SafeSocketHandle handle, byte* buffer, int* nameLen)
+        public static unsafe SocketError GetSockName(SafeSocketHandle handle, byte* buffer, out int nameLen)
         {
-            SocketError errorCode = Interop.Winsock.getsockname(handle, buffer, nameLen);
+            SocketError errorCode = Interop.Winsock.getsockname(handle, buffer, out nameLen);
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
@@ -273,6 +273,57 @@ namespace AKNet.Socket
             err = GetLastSocketError();
             Debug.Assert(err != SocketError.NotConnected || (!isConnected && !isDisconnected));
             return err;
+        }
+
+        internal static unsafe bool HasNonBlockingConnectCompleted(SafeSocketHandle handle, out bool success)
+        {
+            bool refAdded = false;
+            try
+            {
+                handle.DangerousAddRef(ref refAdded);
+
+                IntPtr rawHandle = handle.DangerousGetHandle();
+                IntPtr* writefds = stackalloc IntPtr[2] { (IntPtr)1, rawHandle };
+                IntPtr* exceptfds = stackalloc IntPtr[2] { (IntPtr)1, rawHandle };
+                Interop.Winsock.TimeValue timeout = default;
+                MicrosecondsToTimeValue(0, ref timeout);
+
+                int socketCount = Interop.Winsock.select(
+                            0,
+                            null,
+                            writefds,
+                            exceptfds,
+                            ref timeout);
+
+                if ((SocketError)socketCount == SocketError.SocketError)
+                {
+                    throw new SocketException((int)GetLastSocketError());
+                }
+
+                // Failure of the connect attempt is indicated in exceptfds.
+                if ((int)exceptfds[0] != 0 && exceptfds[1] == rawHandle)
+                {
+                    success = false;
+                    return true;
+                }
+
+                // Success is indicated in writefds.
+                if ((int)writefds[0] != 0 && writefds[1] == rawHandle)
+                {
+                    success = true;
+                    return true;
+                }
+
+                success = false;
+                return false;
+            }
+            finally
+            {
+                if (refAdded)
+                {
+                    handle.DangerousRelease();
+                }
+            }
         }
     }
 }

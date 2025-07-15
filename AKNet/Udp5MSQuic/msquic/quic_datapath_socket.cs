@@ -497,7 +497,6 @@ namespace AKNet.Udp5MSQuic.Common
                     try
                     {
                         SocketProc.Socket.Connect(MappedRemoteAddress.GetIPEndPoint());
-
                     }
                     catch (Exception e)
                     {
@@ -515,7 +514,7 @@ namespace AKNet.Udp5MSQuic.Common
                         NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
                     }
                 }
-                
+
             }
         Skip:
 
