@@ -482,43 +482,11 @@ namespace AKNet.Socket
             switch (_completedOperation)
             {
                 case SocketAsyncOperation.Accept:
-                    // Get the endpoint.
-                    SocketAddress remoteSocketAddress = _currentSocket!._rightEndPoint!.Serialize();
-
-                    socketError = FinishOperationAccept(remoteSocketAddress);
-
-                    if (socketError == SocketError.Success)
-                    {
-                        _acceptSocket = _currentSocket.UpdateAcceptSocket(_acceptSocket!, _currentSocket._rightEndPoint!.Create(remoteSocketAddress));
-                    }
-                    else
-                    {
-                        SetResults(socketError, bytesTransferred, flags);
-                        _acceptSocket = null;
-                        _currentSocket.UpdateStatusAfterSocketError(socketError);
-                    }
                     break;
-
                 case SocketAsyncOperation.Connect:
-                    socketError = FinishOperationConnect();
-                    if (socketError == SocketError.Success)
-                    {
-                        // Mark socket connected.
-                        _currentSocket!.SetToConnected();
-                        _connectSocket = _currentSocket;
-                    }
-                    else
-                    {
-                        SetResults(socketError, bytesTransferred, flags);
-                        _currentSocket!.UpdateStatusAfterSocketError(socketError);
-                    }
                     break;
-
-                case SocketAsyncOperation.Disconnect:
-                    _currentSocket!.SetToDisconnected();
-                    _currentSocket._remoteEndPoint = null;
+                case SocketAsyncOperation.Disconnect:;
                     break;
-
                 case SocketAsyncOperation.ReceiveFrom:
                     UpdateReceivedSocketAddress(_socketAddress!);
                     if (_remoteEndPoint == null)
@@ -580,8 +548,6 @@ namespace AKNet.Socket
             ExecutionContext? context = _context; // store context before it's cleared as part of finishing the operation
 
             FinishOperationSyncSuccess(bytesTransferred, flags);
-
-            // Raise completion event.
             if (context == null)
             {
                 OnCompletedInternal();
@@ -606,25 +572,5 @@ namespace AKNet.Socket
             }
         }
 
-        private static void LogBytesTransferEvents(SocketType? socketType, SocketAsyncOperation operation, int bytesTransferred)
-        {
-            switch (operation)
-            {
-                case SocketAsyncOperation.Receive:
-                case SocketAsyncOperation.ReceiveFrom:
-                case SocketAsyncOperation.ReceiveMessageFrom:
-                case SocketAsyncOperation.Accept:
-                    SocketsTelemetry.Log.BytesReceived(bytesTransferred);
-                    if (socketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramReceived();
-                    break;
-                case SocketAsyncOperation.Send:
-                case SocketAsyncOperation.SendTo:
-                case SocketAsyncOperation.SendPackets:
-                case SocketAsyncOperation.Connect:
-                    SocketsTelemetry.Log.BytesSent(bytesTransferred);
-                    if (socketType == SocketType.Dgram) SocketsTelemetry.Log.DatagramSent();
-                    break;
-            }
-        }
     }
 }

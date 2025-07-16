@@ -1,11 +1,12 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Socket
 {
     public class SocketAddress : IEquatable<SocketAddress>
     {
-#pragma warning disable CA1802 // these could be const on Windows but need to be static readonly for Unix
+#pragma warning disable CA1802
         internal static readonly int IPv6AddressSize = SocketAddressPal.IPv6AddressSize;
         internal static readonly int IPv4AddressSize = SocketAddressPal.IPv4AddressSize;
         internal static readonly int UdsAddressSize = SocketAddressPal.UdsAddressSize;
@@ -34,16 +35,10 @@ namespace AKNet.Socket
             }
             set
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, _buffer.Length);
-                ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
                 _size = value;
             }
         }
-
-        // Access to unmanaged serialized data. This doesn't
-        // allow access to the first 2 bytes of unmanaged memory
-        // that are supposed to contain the address family which
-        // is readonly.
+        
         public byte this[int offset]
         {
             get
@@ -78,8 +73,6 @@ namespace AKNet.Socket
 
         public SocketAddress(AddressFamily family, int size)
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(size, MinSize);
-
             _size = size;
             _buffer = new byte[size];
             _buffer[0] = (byte)_size;
@@ -87,12 +80,9 @@ namespace AKNet.Socket
             SocketAddressPal.SetAddressFamily(_buffer, family);
         }
 
-        internal SocketAddress(IPAddress ipAddress)
-            : this(ipAddress.AddressFamily,
-                ((ipAddress.AddressFamily == AddressFamily.InterNetwork) ? IPv4AddressSize : IPv6AddressSize))
+        internal SocketAddress(IPAddress ipAddress) : 
+            this(ipAddress.AddressFamily, ((ipAddress.AddressFamily == AddressFamily.InterNetwork) ? IPv4AddressSize : IPv6AddressSize))
         {
-
-            // No Port.
             SocketAddressPal.SetPort(_buffer, 0);
 
             if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
@@ -114,16 +104,11 @@ namespace AKNet.Socket
             }
         }
 
-        internal SocketAddress(IPAddress ipaddress, int port)
-            : this(ipaddress)
+        internal SocketAddress(IPAddress ipaddress, int port) : this(ipaddress)
         {
             SocketAddressPal.SetPort(_buffer, unchecked((ushort)port));
         }
-
-        /// <summary>This represents underlying memory that can be passed to native OS calls.</summary>
-        /// <remarks>
-        /// Content of the memory can be invalidated if <see cref="Size"/> is changed or if the SocketAddress is used in another receive call.
-        /// </remarks>
+        
         public Memory<byte> Buffer
         {
             get
@@ -131,42 +116,33 @@ namespace AKNet.Socket
                 return new Memory<byte>(_buffer);
             }
         }
-
-
-        public override bool Equals(object? comparand) =>
-            comparand is SocketAddress other && Equals(other);
-
+        
+        public override bool Equals(object? comparand) => comparand is SocketAddress other && Equals(other);
         public bool Equals(SocketAddress? comparand) => comparand != null && Buffer.Span.SequenceEqual(comparand.Buffer.Span);
 
         public override int GetHashCode()
         {
             HashCode hash = default;
-            hash.AddBytes(new ReadOnlySpan<byte>(_buffer, 0, _size));
+            foreach (var v in _buffer)
+            {
+                hash.Add(v);
+            }
             return hash.ToHashCode();
         }
 
         public override string ToString()
         {
-            // Get the address family string.  In almost all cases, this should be a cached string
-            // from the enum and won't actually allocate.
             string familyString = Family.ToString();
-
-            // Determine the maximum length needed to format.
-            int maxLength =
-                familyString.Length + // AddressFamily
+            int maxLength = familyString.Length + // AddressFamily
                 1 + // :
                 10 + // Size (max length for a positive Int32)
                 2 + // :{
                 (Size - DataOffset) * 4 + // at most ','+3digits per byte
                 1; // }
 
-            Span<char> result = maxLength <= 256 ? // arbitrary limit that should be large enough for the vast majority of cases
-                stackalloc char[256] :
-                new char[maxLength];
-
-            familyString.CopyTo(result);
+            Span<char> result = maxLength <= 256 ? stackalloc char[256] : new char[maxLength];
+            familyString.AsSpan().CopyTo(result);
             int length = familyString.Length;
-
             result[length++] = ':';
 
             bool formatted = Size.TryFormat(result.Slice(length), out int charsWritten);
