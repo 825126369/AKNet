@@ -162,9 +162,6 @@ namespace AKNet.Socket
                                 return false;
                             }
                             needsClosingBracket = false;
-
-                            // If there's more after the closing bracket, it must be a port.
-                            // We don't use the port, but we still validate it.
                             if (i + 1 < end && name[i + 1] != TChar.CreateTruncating(':'))
                             {
                                 return false;
