@@ -1,12 +1,10 @@
 using Microsoft.Win32.SafeHandles;
-using System;
 using System.Buffers;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace AKNet.Socket
 {
@@ -37,7 +35,7 @@ namespace AKNet.Socket
         private void InitializeInternals()
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-            _preAllocatedOverlapped = PreAllocatedOverlapped.UnsafeCreate(s_completionPortCallback, _strongThisRef, null);
+            _preAllocatedOverlapped = new PreAllocatedOverlapped(s_completionPortCallback, _strongThisRef, null);
         }
 
         private void FreeInternals()
@@ -49,7 +47,7 @@ namespace AKNet.Socket
         private unsafe NativeOverlapped* AllocateNativeOverlapped()
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-            Debug.Assert(_operating == OperationState.InProgress, $"Expected {nameof(_operating)} == {nameof(OperationState.InProgress)}, got {_operating}");
+            Debug.Assert(_operating == OperationState_InProgress, $"Expected {nameof(_operating)} == {nameof(OperationState_InProgress)}, got {_operating}");
             Debug.Assert(_currentSocket != null, "_currentSocket is null");
             Debug.Assert(_currentSocket.SafeHandle != null, "_currentSocket.SafeHandle is null");
             Debug.Assert(_preAllocatedOverlapped != null, "_preAllocatedOverlapped is null");
@@ -62,7 +60,7 @@ namespace AKNet.Socket
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
             Debug.Assert(overlapped != null, "overlapped is null");
-            Debug.Assert(_operating == OperationState.InProgress, $"Expected _operating == OperationState.InProgress, got {_operating}");
+            Debug.Assert(_operating == OperationState_InProgress, $"Expected _operating == OperationState.InProgress, got {_operating}");
             Debug.Assert(_currentSocket != null, "_currentSocket is null");
             Debug.Assert(_currentSocket.SafeHandle != null, "_currentSocket.SafeHandle is null");
             Debug.Assert(_currentSocket.SafeHandle.IOCPBoundHandle != null, "_currentSocket.SafeHandle.IOCPBoundHandle is null");
@@ -165,18 +163,18 @@ namespace AKNet.Socket
 
             if (ipv6 && (_controlBufferPinned == null || _controlBufferPinned.Length != sizeof(Interop.Winsock.ControlDataIPv6)))
             {
-                _controlBufferPinned = GC.AllocateUninitializedArray<byte>(sizeof(Interop.Winsock.ControlDataIPv6), pinned: true);
+                _controlBufferPinned = new byte[sizeof(Interop.Winsock.ControlDataIPv6)];
             }
             else if (ipv4 && (_controlBufferPinned == null || _controlBufferPinned.Length != sizeof(Interop.Winsock.ControlData)))
             {
-                _controlBufferPinned = GC.AllocateUninitializedArray<byte>(sizeof(Interop.Winsock.ControlData), pinned: true);
+                _controlBufferPinned = new byte[sizeof(Interop.Winsock.ControlData)];
             }
             
             WSABuffer[] wsaRecvMsgWSABufferArray;
             uint wsaRecvMsgWSABufferCount;
             if (_bufferList == null)
             {
-                _wsaRecvMsgWSABufferArrayPinned ??= GC.AllocateUninitializedArray<WSABuffer>(1, pinned: true);
+                _wsaRecvMsgWSABufferArrayPinned ??= new WSABuffer[1];
                 fixed (byte* bufferPtr = &MemoryMarshal.GetReference(_buffer.Span))
                 {
                     _wsaRecvMsgWSABufferArrayPinned[0].Pointer = (IntPtr)bufferPtr + _offset;
