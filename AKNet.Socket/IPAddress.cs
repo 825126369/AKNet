@@ -1,13 +1,8 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 
 #pragma warning disable SA1648 // TODO: https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/3595
 
@@ -56,14 +51,12 @@ namespace AKNet.Socket
         private int _hashCode;
 
         internal const int NumberOfLabels = IPAddressParserStatics.IPv6AddressBytes / 2;
-
-        [MemberNotNullWhen(false, nameof(_numbers))]
+        
         private bool IsIPv4
         {
             get { return _numbers == null; }
         }
 
-        [MemberNotNullWhen(true, nameof(_numbers))]
         private bool IsIPv6
         {
             get { return _numbers != null; }
@@ -684,8 +677,6 @@ namespace AKNet.Socket
         internal bool Equals(IPAddress comparand)
         {
             Debug.Assert(comparand != null);
-
-            // Compare families before address representations
             if (AddressFamily != comparand.AddressFamily)
             {
                 return false;
@@ -693,7 +684,6 @@ namespace AKNet.Socket
 
             if (IsIPv6)
             {
-                // For IPv6 addresses, we must compare the full 128-bit representation and the scope IDs.
                 ReadOnlySpan<byte> thisNumbers = MemoryMarshal.AsBytes<ushort>(_numbers);
                 ReadOnlySpan<byte> comparandNumbers = MemoryMarshal.AsBytes<ushort>(comparand._numbers);
                 return
@@ -712,8 +702,6 @@ namespace AKNet.Socket
         {
             if (_hashCode == 0)
             {
-                // For IPv4 addresses, we calculate the hashcode based on address bytes.
-                // For IPv6 addresses, we also factor in scope ID.
                 if (IsIPv6)
                 {
                     ReadOnlySpan<byte> numbers = MemoryMarshal.AsBytes<ushort>(_numbers);
@@ -732,8 +720,7 @@ namespace AKNet.Socket
 
             return _hashCode;
         }
-
-        // IPv4 192.168.1.1 maps as ::FFFF:192.168.1.1
+        
         public IPAddress MapToIPv6()
         {
             if (IsIPv6)
