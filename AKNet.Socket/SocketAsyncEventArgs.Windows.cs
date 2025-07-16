@@ -152,7 +152,7 @@ namespace AKNet.Socket
             return socketError;
         }
 
-        internal unsafe SocketError DoOperationReceiveMessageFrom(AKNetSocket socket, SafeSocketHandle handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, SafeSocketHandle handle, CancellationToken cancellationToken)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 

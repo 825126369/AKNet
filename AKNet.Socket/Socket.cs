@@ -8,7 +8,7 @@ using System.Runtime.ExceptionServices;
 
 namespace AKNet.Socket
 {
-    public partial class AKNetSocket : IDisposable
+    public partial class Socket : IDisposable
     {
         internal const int DefaultCloseTimeout = -1; // NOTE: changing this default is a breaking change.
         private static readonly IPAddress s_IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
@@ -30,10 +30,10 @@ namespace AKNet.Socket
         private ProtocolType _protocolType;
         private bool _receivingPacketInformation = false;
 
-        private int _closeTimeout = AKNetSocket.DefaultCloseTimeout;
+        private int _closeTimeout = Socket.DefaultCloseTimeout;
         private int _disposed;
         
-        public AKNetSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
+        public Socket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
         {
             SocketError errorCode = SocketPal.CreateSocket(addressFamily, socketType, protocolType, out _handle);
             if (errorCode != SocketError.Success)
@@ -611,15 +611,7 @@ namespace AKNet.Socket
         public void Shutdown(SocketShutdown how)
         {
             ThrowIfDisposed();
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"how:{how}");
-
-            // This can throw ObjectDisposedException.
             SocketError errorCode = SocketPal.Shutdown(_handle, _isConnected, _isDisconnected, how);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"Shutdown returns errorCode:{errorCode}");
-
-            // Skip good cases: success, socket already closed.
             if (errorCode != SocketError.Success && errorCode != SocketError.NotSocket)
             {
                 UpdateStatusAfterSocketErrorAndThrowException(errorCode);
@@ -983,7 +975,7 @@ namespace AKNet.Socket
             GC.SuppressFinalize(this);
         }
 
-        ~AKNetSocket()
+        ~Socket()
         {
             Dispose(false);
         }
@@ -1240,7 +1232,10 @@ namespace AKNet.Socket
 
         private void ThrowIfDisposed()
         {
-            ObjectDisposedException.ThrowIf(Disposed, this);
+            if (Disposed)
+            {
+                throw new ObjectDisposedException("Disposed");
+            }
         }
 
         private void ThrowIfConnectedStreamSocket()
@@ -1262,7 +1257,7 @@ namespace AKNet.Socket
 
             for (int i = 0; (i < socketList.Count) && (refsAdded > 0); i++)
             {
-                AKNetSocket socket = (AKNetSocket)socketList[i]!;
+                Socket socket = (Socket)socketList[i]!;
                 socket.InternalSafeHandle.DangerousRelease();
                 refsAdded--;
             }

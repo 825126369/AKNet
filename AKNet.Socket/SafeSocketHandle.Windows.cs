@@ -161,7 +161,7 @@ namespace AKNet.Socket
         }
 
         private static void ThrowSocketDisposedException(Exception? innerException = null) =>
-            throw new ObjectDisposedException(typeof(AKNetSocket).FullName, innerException);
+            throw new ObjectDisposedException(typeof(Socket).FullName, innerException);
 
         protected internal void SetHandle(IntPtr handle) => this.handle = handle;
     }

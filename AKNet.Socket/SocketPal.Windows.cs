@@ -183,7 +183,7 @@ namespace AKNet.Socket
             }
         }
 
-        public static void SetReceivingDualModeIPv4PacketInformation(AKNetSocket socket)
+        public static void SetReceivingDualModeIPv4PacketInformation(Socket socket)
         {
             socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
         }
@@ -197,7 +197,7 @@ namespace AKNet.Socket
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static void SetIPProtectionLevel(AKNetSocket socket, SocketOptionLevel optionLevel, int protectionLevel)
+        public static void SetIPProtectionLevel(Socket socket, SocketOptionLevel optionLevel, int protectionLevel)
         {
             socket.SetSocketOption(optionLevel, SocketOptionName.IPProtectionLevel, protectionLevel);
         }

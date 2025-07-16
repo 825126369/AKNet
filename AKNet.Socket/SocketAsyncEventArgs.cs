@@ -8,8 +8,8 @@ namespace AKNet.Socket
 {
     public partial class SocketAsyncEventArgs : EventArgs, IDisposable
     {
-        private AKNetSocket? _acceptSocket;
-        private AKNetSocket? _connectSocket;
+        private Socket? _acceptSocket;
+        private Socket? _connectSocket;
         private Memory<byte> _buffer;
         private int _offset;
         private int _count;
@@ -34,7 +34,7 @@ namespace AKNet.Socket
         private readonly bool _flowExecutionContext;
         private static readonly ContextCallback s_executionCallback = ExecutionCallback;
         private static ConditionalWeakTable<SocketAsyncEventArgs, Activity>? s_connectActivityTable;
-        private AKNetSocket? _currentSocket;
+        private Socket? _currentSocket;
         private bool _userSocket;
         private bool _disposeCalled;
         
@@ -417,7 +417,7 @@ namespace AKNet.Socket
             throw new InvalidOperationException();
         }
         
-        internal void StartOperationCommon(AKNetSocket? socket, SocketAsyncOperation operation)
+        internal void StartOperationCommon(Socket? socket, SocketAsyncOperation operation)
         {
             int status = Interlocked.CompareExchange(ref _operating, OperationState_InProgress, OperationState_Free);
             if (status != OperationState_Free)
@@ -439,7 +439,7 @@ namespace AKNet.Socket
         internal void FinishOperationSyncFailure(SocketError socketError, int bytesTransferred, SocketFlags flags)
         {
             SetResults(socketError, bytesTransferred, flags);
-            AKNetSocket? currentSocket = _currentSocket;
+            Socket? currentSocket = _currentSocket;
             if (currentSocket != null)
             {
                 currentSocket.UpdateStatusAfterSocketError(socketError);

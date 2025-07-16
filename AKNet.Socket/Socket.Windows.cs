@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Socket
 {
-    public partial class AKNetSocket
+    public partial class Socket
     {
         private static CachedSerializedEndPoint? s_cachedAnyEndPoint;
         private static CachedSerializedEndPoint? s_cachedAnyV6EndPoint;
@@ -240,7 +240,7 @@ namespace AKNet.Socket
             fileDescriptorSet[0] = (IntPtr)count;
             for (int current = 0; current < count; current++)
             {
-                if (!(socketList[current] is AKNetSocket socket))
+                if (!(socketList[current] is Socket socket))
                 {
                     throw new ArgumentException(SR.Format(SR.net_sockets_select, socketList[current]?.GetType().FullName, typeof(System.Net.Sockets.Socket).FullName), nameof(socketList));
                 }
@@ -284,7 +284,7 @@ namespace AKNet.Socket
             {
                 for (int currentSocket = 0; currentSocket < count; currentSocket++)
                 {
-                    AKNetSocket? socket = socketList[currentSocket] as AKNetSocket;
+                    Socket? socket = socketList[currentSocket] as Socket;
                     Debug.Assert(socket != null);
 
                     // Look for the file descriptor in the array.
@@ -309,12 +309,12 @@ namespace AKNet.Socket
             }
         }
 
-        private AKNetSocket GetOrCreateAcceptSocket(AKNetSocket? acceptSocket, bool checkDisconnected, string propertyName, out SafeSocketHandle handle)
+        private Socket GetOrCreateAcceptSocket(Socket? acceptSocket, bool checkDisconnected, string propertyName, out SafeSocketHandle handle)
         {
             // If an acceptSocket isn't specified, then we need to create one.
             if (acceptSocket == null)
             {
-                acceptSocket = new AKNetSocket(_addressFamily, _socketType, _protocolType);
+                acceptSocket = new Socket(_addressFamily, _socketType, _protocolType);
             }
             else if (acceptSocket._rightEndPoint != null && (!checkDisconnected || !acceptSocket._isDisconnected))
             {
