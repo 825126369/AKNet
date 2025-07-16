@@ -13,7 +13,7 @@ namespace AKNet.Socket
     ///     Provides an Internet Protocol (IP) address.
     ///   </para>
     /// </devdoc>
-    public class IPAddress : ISpanFormattable, ISpanParsable<IPAddress>, IUtf8SpanFormattable, IUtf8SpanParsable<IPAddress>
+    public class IPAddress
     {
         public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
         public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
@@ -107,27 +107,17 @@ namespace AKNet.Socket
                 _addressOrScopeId = value;
             }
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Initializes a new instance of the <see cref='System.Net.IPAddress'/>
-        ///     class with the specified address.
-        ///   </para>
-        /// </devdoc>
+        
         public IPAddress(long newAddress)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((ulong)newAddress, 0x00000000FFFFFFFF, nameof(newAddress));
-
+            if (newAddress > 0x00000000FFFFFFFF)
+            {
+                throw new  ArgumentOutOfRangeException();
+            }
             PrivateAddress = (uint)newAddress;
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Constructor for an IPv6 Address with a specified Scope.
-        ///   </para>
-        /// </devdoc>
-        public IPAddress(byte[] address, long scopeid) :
-            this(new ReadOnlySpan<byte>(address ?? ThrowAddressNullException()), scopeid)
+        
+        public IPAddress(byte[] address, long scopeid) : this(new ReadOnlySpan<byte>(address ?? ThrowAddressNullException()), scopeid)
         {
         }
 
@@ -135,12 +125,13 @@ namespace AKNet.Socket
         {
             if (address.Length != IPAddressParserStatics.IPv6AddressBytes)
             {
-                throw new ArgumentException(SR.dns_bad_ip_address, nameof(address));
+                throw new ArgumentException();
             }
 
-            // Consider: Since scope is only valid for link-local and site-local
-            //           addresses we could implement some more robust checking here
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((ulong)scopeid, 0x00000000FFFFFFFF, nameof(scopeid));
+            if (scopeid > 0x00000000FFFFFFFF)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
 
             _numbers = ReadUInt16NumbersFromBytes(address);
             PrivateScopeId = (uint)scopeid;
@@ -162,14 +153,8 @@ namespace AKNet.Socket
             _numbers = numbers;
             PrivateScopeId = scopeid;
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Constructor for IPv4 and IPv6 Address.
-        ///   </para>
-        /// </devdoc>
-        public IPAddress(byte[] address) :
-            this(new ReadOnlySpan<byte>(address ?? ThrowAddressNullException()))
+        
+        public IPAddress(byte[] address) : this(new ReadOnlySpan<byte>(address ?? ThrowAddressNullException()))
         {
         }
 
@@ -185,7 +170,7 @@ namespace AKNet.Socket
             }
             else
             {
-                throw new ArgumentException(SR.dns_bad_ip_address, nameof(address));
+                throw new ArgumentException();
             }
         }
 
@@ -220,13 +205,8 @@ namespace AKNet.Socket
         {
             PrivateAddress = (uint)newAddress;
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Converts an IP address string to an <see cref='System.Net.IPAddress'/> instance.
-        ///   </para>
-        /// </devdoc>
-        public static bool TryParse([NotNullWhen(true)] string? ipString, [NotNullWhen(true)] out IPAddress? address)
+        
+        public static bool TryParse(string? ipString, out IPAddress? address)
         {
             if (ipString == null)
             {
@@ -237,14 +217,8 @@ namespace AKNet.Socket
             address = IPAddressParser.Parse(ipString.AsSpan(), tryParse: true);
             return (address != null);
         }
-
-        /// <summary>
-        /// Tries to parse a span of UTF-8 characters into a value.
-        /// </summary>
-        /// <param name="utf8Text">The span of UTF-8 characters to parse.</param>
-        /// <param name="result">On return, contains the result of successfully parsing <paramref name="utf8Text"/> or an undefined value on failure.</param>
-        /// <returns><c>true</c> if <paramref name="utf8Text"/> was successfully parsed; otherwise, <c>false</c>.</returns>
-        public static bool TryParse(ReadOnlySpan<byte> utf8Text, [NotNullWhen(true)] out IPAddress? result)
+        
+        public static bool TryParse(ReadOnlySpan<char> utf8Text, [NotNullWhen(true)] out IPAddress? result)
         {
             result = IPAddressParser.Parse(utf8Text, tryParse: true);
             return (result != null);
@@ -256,24 +230,12 @@ namespace AKNet.Socket
             return (address != null);
         }
 
-        /// <inheritdoc/>
-        static bool IUtf8SpanParsable<IPAddress>.TryParse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider, [NotNullWhen(true)] out IPAddress? result) =>
-            TryParse(utf8Text, out result);
-
-        /// <inheritdoc/>
-        static bool IParsable<IPAddress>.TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [NotNullWhen(true)] out IPAddress? result) =>
-            // provider is explicitly ignored
-            TryParse(s, out result);
-
-        /// <inheritdoc/>
-        static bool ISpanParsable<IPAddress>.TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, [NotNullWhen(true)] out IPAddress? result) =>
-            // provider is explicitly ignored
-            TryParse(s, out result);
-
         public static IPAddress Parse(string ipString)
         {
-            ArgumentNullException.ThrowIfNull(ipString);
-
+            if (string.IsNullOrWhiteSpace(ipString))
+            {
+                throw new ArgumentNullException();
+            }
             return IPAddressParser.Parse(ipString.AsSpan(), tryParse: false)!;
         }
 
