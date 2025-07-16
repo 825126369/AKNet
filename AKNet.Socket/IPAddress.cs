@@ -4,15 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-#pragma warning disable SA1648 // TODO: https://github.com/DotNetAnalyzers/StyleCopAnalyzers/issues/3595
-
 namespace AKNet.Socket
 {
-    /// <devdoc>
-    ///   <para>
-    ///     Provides an Internet Protocol (IP) address.
-    ///   </para>
-    /// </devdoc>
     public class IPAddress
     {
         public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
@@ -27,27 +20,9 @@ namespace AKNet.Socket
         public static readonly IPAddress IPv6None = IPv6Any;
 
         private static readonly IPAddress s_loopbackMappedToIPv6 = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1], 0);
-
-        /// <summary>
-        /// For IPv4 addresses, this field stores the Address.
-        /// For IPv6 addresses, this field stores the ScopeId.
-        /// Instead of accessing this field directly, use the <see cref="PrivateAddress"/> or <see cref="PrivateScopeId"/> properties.
-        /// </summary>
         private uint _addressOrScopeId;
-
-        /// <summary>
-        /// This field is only used for IPv6 addresses. A null value indicates that this instance is an IPv4 address.
-        /// </summary>
         private readonly ushort[]? _numbers;
-
-        /// <summary>
-        /// A lazily initialized cache of the result of calling <see cref="ToString"/>.
-        /// </summary>
         private string? _toString;
-
-        /// <summary>
-        /// A lazily initialized cache of the <see cref="GetHashCode"/> value.
-        /// </summary>
         private int _hashCode;
 
         internal const int NumberOfLabels = IPAddressParserStatics.IPv6AddressBytes / 2;
@@ -178,29 +153,13 @@ namespace AKNet.Socket
         private static ushort[] ReadUInt16NumbersFromBytes(ReadOnlySpan<byte> address)
         {
             ushort[] numbers = new ushort[NumberOfLabels];
-            if (Vector128.IsHardwareAccelerated)
+            for (int i = 0; i < numbers.Length; i++)
             {
-                Vector128<ushort> ushorts = Vector128.LoadUnsafe(ref MemoryMarshal.GetReference(address)).AsUInt16();
-                if (BitConverter.IsLittleEndian)
-                {
-                    // Reverse endianness of each ushort
-                    ushorts = Vector128.ShiftLeft(ushorts, 8) | Vector128.ShiftRightLogical(ushorts, 8);
-                }
-                ushorts.StoreUnsafe(ref MemoryMarshal.GetArrayDataReference(numbers));
+                numbers[i] = BinaryPrimitives.ReadUInt16BigEndian(address.Slice(i * 2));
             }
-            else
-            {
-                for (int i = 0; i < numbers.Length; i++)
-                {
-                    numbers[i] = BinaryPrimitives.ReadUInt16BigEndian(address.Slice(i * 2));
-                }
-            }
-
             return numbers;
         }
-
-        // We need this internally since we need to interface with winsock,
-        // and winsock only understands Int32.
+        
         internal IPAddress(int newAddress)
         {
             PrivateAddress = (uint)newAddress;
@@ -214,19 +173,7 @@ namespace AKNet.Socket
                 return false;
             }
 
-            address = IPAddressParser.Parse(ipString.AsSpan(), tryParse: true);
-            return (address != null);
-        }
-        
-        public static bool TryParse(ReadOnlySpan<char> utf8Text, [NotNullWhen(true)] out IPAddress? result)
-        {
-            result = IPAddressParser.Parse(utf8Text, tryParse: true);
-            return (result != null);
-        }
-
-        public static bool TryParse(ReadOnlySpan<char> ipSpan, [NotNullWhen(true)] out IPAddress? address)
-        {
-            address = IPAddressParser.Parse(ipSpan, tryParse: true);
+            address = IPAddressParser.Parse(ipString, tryParse: true);
             return (address != null);
         }
 
@@ -236,38 +183,8 @@ namespace AKNet.Socket
             {
                 throw new ArgumentNullException();
             }
-            return IPAddressParser.Parse(ipString.AsSpan(), tryParse: false)!;
+            return IPAddressParser.Parse(ipString, tryParse: false)!;
         }
-
-        /// <summary>
-        /// Parses a span of UTF-8 characters into a value.
-        /// </summary>
-        /// <param name="utf8Text">The span of UTF-8 characters to parse.</param>
-        /// <returns>The result of parsing <paramref name="utf8Text"/>.</returns>
-        public static IPAddress Parse(ReadOnlySpan<byte> utf8Text)
-        {
-            return IPAddressParser.Parse(utf8Text, tryParse: false)!;
-        }
-
-        public static IPAddress Parse(ReadOnlySpan<char> ipSpan)
-        {
-            return IPAddressParser.Parse(ipSpan, tryParse: false)!;
-        }
-
-        /// <inheritdoc/>
-        static IPAddress IUtf8SpanParsable<IPAddress>.Parse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider) =>
-            // provider is explicitly ignored
-            Parse(utf8Text);
-
-        /// <inheritdoc/>
-        static IPAddress ISpanParsable<IPAddress>.Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-            // provider is explicitly ignored
-            Parse(s);
-
-        /// <inheritdoc/>
-        static IPAddress IParsable<IPAddress>.Parse(string s, IFormatProvider? provider) =>
-            // provider is explicitly ignored
-            Parse(s);
 
         public bool TryWriteBytes(Span<byte> destination, out int bytesWritten)
         {
@@ -305,18 +222,9 @@ namespace AKNet.Socket
 
             if (BitConverter.IsLittleEndian)
             {
-                if (Vector128.IsHardwareAccelerated)
+                for (int i = 0; i < numbers.Length; i++)
                 {
-                    Vector128<ushort> ushorts = Vector128.LoadUnsafe(ref MemoryMarshal.GetArrayDataReference(numbers));
-                    ushorts = Vector128.ShiftLeft(ushorts, 8) | Vector128.ShiftRightLogical(ushorts, 8);
-                    ushorts.AsByte().StoreUnsafe(ref MemoryMarshal.GetReference(destination));
-                }
-                else
-                {
-                    for (int i = 0; i < numbers.Length; i++)
-                    {
-                        BinaryPrimitives.WriteUInt16BigEndian(destination.Slice(i * 2), numbers[i]);
-                    }
+                    BinaryPrimitives.WriteUInt16BigEndian(destination.Slice(i * 2), numbers[i]);
                 }
             }
             else
@@ -329,14 +237,9 @@ namespace AKNet.Socket
         private void WriteIPv4Bytes(Span<byte> destination)
         {
             uint address = PrivateAddress;
-            MemoryMarshal.Write(destination, in address);
+            MemoryMarshal.Write(destination, ref address);
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Provides a copy of the IPAddress internals as an array of bytes.
-        ///   </para>
-        /// </devdoc>
+        
         public byte[] GetAddressBytes()
         {
             if (IsIPv6)
@@ -361,17 +264,11 @@ namespace AKNet.Socket
                 return IsIPv4 ? AddressFamily.InterNetwork : AddressFamily.InterNetworkV6;
             }
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     IPv6 Scope identifier. This is really a uint32, but that isn't CLS compliant
-        ///   </para>
-        /// </devdoc>
-        public long ScopeId
+        
+        public uint ScopeId
         {
             get
             {
-                // Not valid for IPv4 addresses
                 if (IsIPv4)
                 {
                     ThrowSocketOperationNotSupported();
@@ -381,27 +278,19 @@ namespace AKNet.Socket
             }
             set
             {
-                // Not valid for IPv4 addresses
                 if (IsIPv4)
                 {
                     ThrowSocketOperationNotSupported();
                 }
 
-                // Consider: Since scope is only valid for link-local and site-local
-                //           addresses we could implement some more robust checking here
-                ArgumentOutOfRangeException.ThrowIfNegative(value);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 0x00000000FFFFFFFF);
-
+                if(value < 0 || value > 0xFFFFFFFF)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
                 PrivateScopeId = (uint)value;
             }
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Converts the Internet address to either standard dotted quad format
-        ///     or standard IPv6 representation.
-        ///   </para>
-        /// </devdoc>
+        
         public override string ToString()
         {
             string? toString = _toString;
@@ -415,67 +304,6 @@ namespace AKNet.Socket
             }
 
             return toString;
-        }
-
-        /// <inheritdoc/>
-        string IFormattable.ToString(string? format, IFormatProvider? formatProvider) =>
-            // format and provider are explicitly ignored
-            ToString();
-
-        public bool TryFormat(Span<char> destination, out int charsWritten) =>
-            TryFormatCore(destination, out charsWritten);
-
-        /// <summary>Tries to format the current IP address into the provided span.</summary>
-        /// <param name="utf8Destination">When this method returns, the IP address as a span of UTF-8 bytes.</param>
-        /// <param name="bytesWritten">When this method returns, the number of bytes written into the <paramref name="utf8Destination"/>.</param>
-        /// <returns><see langword="true" /> if the formatting was successful; otherwise, <see langword="false" />.</returns>
-        public bool TryFormat(Span<byte> utf8Destination, out int bytesWritten) =>
-            TryFormatCore(utf8Destination, out bytesWritten);
-
-        /// <inheritdoc/>
-        bool ISpanFormattable.TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider) =>
-            // format and provider are explicitly ignored
-            TryFormatCore(destination, out charsWritten);
-
-        /// <inheritdoc/>
-        bool IUtf8SpanFormattable.TryFormat(Span<byte> utf8Destination, out int bytesWritten, ReadOnlySpan<char> format, IFormatProvider? provider) =>
-            // format and provider are explicitly ignored
-            TryFormatCore(utf8Destination, out bytesWritten);
-
-        private bool TryFormatCore<TChar>(Span<TChar> destination, out int charsWritten) where TChar : unmanaged, IBinaryInteger<TChar>
-        {
-            if (IsIPv4)
-            {
-                if (destination.Length >= IPAddressParser.MaxIPv4StringLength)
-                {
-                    charsWritten = IPAddressParser.FormatIPv4Address(_addressOrScopeId, destination);
-                    return true;
-                }
-            }
-            else
-            {
-                if (destination.Length >= IPAddressParser.MaxIPv6StringLength)
-                {
-                    charsWritten = IPAddressParser.FormatIPv6Address(_numbers, _addressOrScopeId, destination);
-                    return true;
-                }
-            }
-
-            Span<TChar> tmpDestination = stackalloc TChar[IPAddressParser.MaxIPv6StringLength];
-            Debug.Assert(tmpDestination.Length >= IPAddressParser.MaxIPv4StringLength);
-
-            int written = IsIPv4 ?
-                IPAddressParser.FormatIPv4Address(PrivateAddress, tmpDestination) :
-                IPAddressParser.FormatIPv6Address(_numbers, PrivateScopeId, tmpDestination);
-
-            if (tmpDestination.Slice(0, written).TryCopyTo(destination))
-            {
-                charsWritten = written;
-                return true;
-            }
-
-            charsWritten = 0;
-            return false;
         }
 
         public static long HostToNetworkOrder(long host)
@@ -510,11 +338,13 @@ namespace AKNet.Socket
 
         public static bool IsLoopback(IPAddress address)
         {
-            ArgumentNullException.ThrowIfNull(address);
+            if (address == null)
+            {
+               throw new ArgumentNullException();
+            }
 
             if (address.IsIPv6)
             {
-                // Do Equals test for IPv6 addresses
                 return address.Equals(IPv6Loopback) || address.Equals(s_loopbackMappedToIPv6);
             }
             else
@@ -523,12 +353,7 @@ namespace AKNet.Socket
                 return ((address.PrivateAddress & LoopbackMask) == (Loopback.PrivateAddress & LoopbackMask));
             }
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Determines if an address is an IPv6 Multicast address
-        ///   </para>
-        /// </devdoc>
+        
         public bool IsIPv6Multicast
         {
             get
@@ -536,12 +361,7 @@ namespace AKNet.Socket
                 return IsIPv6 && ((_numbers[0] & 0xFF00) == 0xFF00);
             }
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Determines if an address is an IPv6 Link Local address
-        ///   </para>
-        /// </devdoc>
+        
         public bool IsIPv6LinkLocal
         {
             get
@@ -549,12 +369,7 @@ namespace AKNet.Socket
                 return IsIPv6 && ((_numbers[0] & 0xFFC0) == 0xFE80);
             }
         }
-
-        /// <devdoc>
-        ///   <para>
-        ///     Determines if an address is an IPv6 Site Local address
-        ///   </para>
-        /// </devdoc>
+        
         public bool IsIPv6SiteLocal
         {
             get
@@ -572,8 +387,7 @@ namespace AKNet.Socket
                        (_numbers[1] == 0);
             }
         }
-
-        /// <summary>Gets whether the address is an IPv6 Unique Local address.</summary>
+        
         public bool IsIPv6UniqueLocal
         {
             get
@@ -593,40 +407,8 @@ namespace AKNet.Socket
                 }
 
                 ReadOnlySpan<byte> numbers = MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(_numbers));
-                return
-                    MemoryMarshal.Read<ulong>(numbers) == 0 &&
+                return MemoryMarshal.Read<ulong>(numbers) == 0 &&
                     BinaryPrimitives.ReadUInt32LittleEndian(numbers.Slice(8)) == 0xFFFF0000;
-            }
-        }
-
-        [Obsolete("IPAddress.Address is address family dependent and has been deprecated. Use IPAddress.Equals to perform comparisons instead.")]
-        public long Address
-        {
-            get
-            {
-                if (AddressFamily == AddressFamily.InterNetworkV6)
-                {
-                    ThrowSocketOperationNotSupported();
-                }
-
-                return PrivateAddress;
-            }
-            set
-            {
-                if (AddressFamily == AddressFamily.InterNetworkV6)
-                {
-                    ThrowSocketOperationNotSupported();
-                }
-
-                if (PrivateAddress != value)
-                {
-                    if (this is ReadOnlyIPAddress)
-                    {
-                        ThrowSocketOperationNotSupported();
-                    }
-
-                    PrivateAddress = unchecked((uint)value);
-                }
             }
         }
 
@@ -655,7 +437,6 @@ namespace AKNet.Socket
             }
             else
             {
-                // For IPv4 addresses, compare the integer representation.
                 return comparand.PrivateAddress == PrivateAddress;
             }
         }
@@ -697,10 +478,7 @@ namespace AKNet.Socket
             labels[7] = (ushort)address;
             return new IPAddress(labels, 0);
         }
-
-        // Takes the last 4 bytes of an IPv6 address and converts it to an IPv4 address.
-        // This does not restrict to address with the ::FFFF: prefix because other types of
-        // addresses display the tail segments as IPv4 like Terado.
+        
         public IPAddress MapToIPv4()
         {
             if (IsIPv4)
