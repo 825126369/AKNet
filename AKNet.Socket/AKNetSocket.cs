@@ -8,7 +8,7 @@ using System.Runtime.ExceptionServices;
 
 namespace AKNet.Socket
 {
-    internal partial class AKNetSocket : IDisposable
+    public partial class AKNetSocket : IDisposable
     {
         internal const int DefaultCloseTimeout = -1; // NOTE: changing this default is a breaking change.
         private static readonly IPAddress s_IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
@@ -628,70 +628,33 @@ namespace AKNet.Socket
             SetToDisconnected();
             InternalSetBlocking(_willBlockInternal);
         }
-
-        /// <summary>Binds an unbound socket to "any" if necessary to support a connect.</summary>
+        
         partial void WildcardBindForConnectIfNecessary(AddressFamily addressFamily);
-
-        public static void CancelConnectAsync(SocketAsyncEventArgs e)
-        {
-            ArgumentNullException.ThrowIfNull(e);
-
-            e.CancelConnectAsync();
-        }
-
-        public bool DisconnectAsync(SocketAsyncEventArgs e) => DisconnectAsync(e, default);
-
-        private bool DisconnectAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
-        {
-            // Throw if socket disposed
-            ThrowIfDisposed();
-
-            ArgumentNullException.ThrowIfNull(e);
-
-            // Prepare for and make the native call.
-            e.StartOperationCommon(this, SocketAsyncOperation.Disconnect);
-            SocketError socketError;
-            try
-            {
-                socketError = e.DoOperationDisconnect(this, _handle, cancellationToken);
-            }
-            catch
-            {
-                // clear in-use on event arg object
-                e.Complete();
-                throw;
-            }
-
-            return socketError == SocketError.IOPending;
-        }
-
         public bool ReceiveFromAsync(SocketAsyncEventArgs e) => ReceiveFromAsync(e, default);
-
         private bool ReceiveFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
-            ArgumentNullException.ThrowIfNull(e);
+            if (e == null)
+            {
+                throw new ArgumentNullException();
+            }
             EndPoint? endPointSnapshot = e.RemoteEndPoint;
             if (e._socketAddress == null)
             {
                 if (endPointSnapshot is DnsEndPoint)
                 {
-                    throw new ArgumentException(SR.Format(SR.net_sockets_invalid_dnsendpoint, "e.RemoteEndPoint"), nameof(e));
+                    throw new ArgumentException();
                 }
 
                 if (endPointSnapshot == null)
                 {
-                    throw new ArgumentException(SR.Format(SR.InvalidNullArgument, "e.RemoteEndPoint"), nameof(e));
+                    throw new ArgumentException();
                 }
                 if (!CanTryAddressFamily(endPointSnapshot.AddressFamily))
                 {
-                    throw new ArgumentException(SR.Format(SR.net_InvalidEndPointAddressFamily, endPointSnapshot.AddressFamily, _addressFamily), nameof(e));
+                    throw new ArgumentException();
                 }
-
-                // We don't do a CAS demand here because the contents of remoteEP aren't used by
-                // WSARecvFrom; all that matters is that we generate a unique-to-this-call SocketAddress
-                // with the right address family.
 
                 if (endPointSnapshot.AddressFamily == AddressFamily.InterNetwork && IsDualMode)
                 {
@@ -699,12 +662,8 @@ namespace AKNet.Socket
                 }
                 e._socketAddress ??= new SocketAddress(AddressFamily);
             }
-
-            // DualMode sockets may have updated the endPointSnapshot, and it has to have the same AddressFamily as
-            // e.m_SocketAddres for Create to work later.
+            
             e.RemoteEndPoint = endPointSnapshot;
-
-            // Prepare for and make the native call.
             e.StartOperationCommon(this, SocketAsyncOperation.ReceiveFrom);
             SocketError socketError;
             try
@@ -713,7 +672,6 @@ namespace AKNet.Socket
             }
             catch
             {
-                // Clear in-use flag on event args object.
                 e.Complete();
                 throw;
             }
@@ -851,7 +809,7 @@ namespace AKNet.Socket
             return socketError == SocketError.IOPending;
         }
 
-        internal bool Disposed => _disposed;
+        internal bool Disposed => _disposed > 0;
 
         internal static void GetIPProtocolInformation(AddressFamily addressFamily, SocketAddress socketAddress, out bool isIPv4, out bool isIPv6)
         {
@@ -875,7 +833,7 @@ namespace AKNet.Socket
                 IPAddress addr = ip.Address;
                 if (addr.AddressFamily == AddressFamily.InterNetwork && IsDualMode)
                 {
-                    addr = addr.MapToIPv6(); // For DualMode, use an IPv6 address.
+                    addr = addr.MapToIPv6();
                     remoteEP = new IPEndPoint(addr, ip.Port);
                 }
             }
@@ -889,7 +847,6 @@ namespace AKNet.Socket
 
         private void DoConnect(EndPoint endPointSnapshot, SocketAddress socketAddress)
         {
-            Activity? activity = SocketsTelemetry.Log.ConnectStart(socketAddress, _protocolType, endPointSnapshot, keepActivityCurrent: false);
             SocketError errorCode;
             try
             {
@@ -897,15 +854,12 @@ namespace AKNet.Socket
             }
             catch (Exception ex)
             {
-                SocketsTelemetry.Log.AfterConnect(SocketError.NotSocket, activity, ex.Message);
                 throw;
             }
 
-            // Throw an appropriate SocketException if the native call fails.
             if (errorCode != SocketError.Success)
             {
                 UpdateConnectSocketErrorForDisposed(ref errorCode);
-                // Update the internal state of this socket according to the error before throwing.
                 SocketException socketException = SocketExceptionFactory.CreateSocketException((int)errorCode, endPointSnapshot);
                 UpdateStatusAfterSocketError(socketException);
                 if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, socketException);

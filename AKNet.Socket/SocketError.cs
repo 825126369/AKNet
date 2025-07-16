@@ -1,6 +1,6 @@
 ﻿namespace AKNet.Socket
 {
-    internal enum SocketError : int
+    public enum SocketError : int
     {
         Success = 0,
         SocketError = (-1),

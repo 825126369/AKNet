@@ -193,7 +193,6 @@ namespace AKNet.Socket
             
             SocketError Core()
             {
-                // Fill in WSAMessageBuffer.
                 Interop.Winsock.WSAMsg* pMessage = (Interop.Winsock.WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned, 0);
                 pMessage->socketAddress = PtrSocketAddressBuffer();
                 pMessage->addressLength = (uint)SocketAddress.GetMaximumAddressSize(_socketAddress!.Family);
@@ -296,7 +295,6 @@ namespace AKNet.Socket
             }
         }
 
-        // Ensures Overlapped object exists with appropriate multiple buffers pinned.
         private void SetupMultipleBuffers()
         {
             if (_bufferListInternal == null || _bufferListInternal.Count == 0)
@@ -309,20 +307,15 @@ namespace AKNet.Socket
             }
             else
             {
-                // Need to setup a new Overlapped.
                 FreePinHandles();
                 try
                 {
                     int bufferCount = _bufferListInternal.Count;
-
-                    // Number of things to pin is number of buffers.
-                    // Ensure we have properly sized object array.
                     if (_multipleBufferMemoryHandles == null || (_multipleBufferMemoryHandles.Length < bufferCount))
                     {
                         _multipleBufferMemoryHandles = new MemoryHandle[bufferCount];
                     }
-
-                    // Pin the buffers.
+                    
                     for (int i = 0; i < bufferCount; i++)
                     {
                         _multipleBufferMemoryHandles[i] = _bufferListInternal[i].Array.AsMemory().Pin();
@@ -330,7 +323,7 @@ namespace AKNet.Socket
 
                     if (_wsaBufferArrayPinned == null || _wsaBufferArrayPinned.Length < bufferCount)
                     {
-                        _wsaBufferArrayPinned = GC.AllocateUninitializedArray<WSABuffer>(bufferCount, pinned: true);
+                        _wsaBufferArrayPinned = new WSABuffer[bufferCount];
                     }
 
                     for (int i = 0; i < bufferCount; i++)
@@ -352,12 +345,10 @@ namespace AKNet.Socket
         
         private unsafe void AllocateSocketAddressBuffer()
         {
-            //_socketAddress!.Size = SocketAddress.GetMaximumAddressSize(_socketAddress!.Family);
             int size = SocketAddress.GetMaximumAddressSize(_socketAddress!.Family);
-
             if (_socketAddressPtr == IntPtr.Zero)
             {
-                _socketAddressPtr = (IntPtr)NativeMemory.Alloc((uint)(_socketAddress!.Size + sizeof(IntPtr)));
+                _socketAddressPtr = (IntPtr)Marshal.AllocHGlobal((int)(_socketAddress!.Size + sizeof(IntPtr)));
             }
 
             *((int*)_socketAddressPtr) = size;
@@ -374,15 +365,12 @@ namespace AKNet.Socket
             Debug.Assert(_socketAddressPtr != IntPtr.Zero);
             return _socketAddressPtr;
         }
-
-        // Cleans up any existing Overlapped object and related state variables.
+        
         private void FreeOverlapped()
         {
-            // Free the preallocated overlapped object. This in turn will unpin
-            // any pinned buffers.
             if (_preAllocatedOverlapped != null)
             {
-                Debug.Assert(OperatingSystem.IsWindows());
+                Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
                 _preAllocatedOverlapped.Dispose();
                 _preAllocatedOverlapped = null!;
             }
@@ -417,7 +405,6 @@ namespace AKNet.Socket
                 for (int i = 0; i < _bufferListInternal!.Count; i++)
                 {
                     WSABuffer wsaBuffer = _wsaBufferArrayPinned![i];
-                    NetEventSource.DumpBuffer(this, new ReadOnlySpan<byte>((byte*)wsaBuffer.Pointer, Math.Min(wsaBuffer.Length, size)));
                     if ((size -= wsaBuffer.Length) <= 0)
                     {
                         break;
@@ -440,22 +427,14 @@ namespace AKNet.Socket
 
         private void CompleteCore()
         {
-            _strongThisRef.Value = null; // null out this reference from the overlapped so this isn't kept alive artificially
-
+            _strongThisRef.Value = null;
             if (_asyncCompletionOwnership != 0)
             {
-                // If the state isn't 0, then the operation didn't complete synchronously, in which case there's state to cleanup.
                 CleanupIOCPResult();
             }
 
-            // Separate out to help inline the CompleteCore fast path, as CompleteCore is used with all operations.
-            // We want to optimize for the case where the async operation actually completes synchronously, without
-            // having registered any state yet, in particular for sends and receives.
             void CleanupIOCPResult()
             {
-                // Remove any cancellation state.  First dispose the registration
-                // to ensure that cancellation will either never fine or will have completed
-                // firing before we continue.  Only then can we safely null out the overlapped.
                 _registrationToCancelPendingIO.Dispose();
                 _registrationToCancelPendingIO = default;
                 unsafe
@@ -463,11 +442,8 @@ namespace AKNet.Socket
                     _pendingOverlappedForCancellation = null;
                 }
 
-                // Release any GC handles.
                 _singleBufferHandle.Dispose();
                 _singleBufferHandle = default;
-
-                // Finished cleanup.
                 _asyncCompletionOwnership = 0;
             }
         }
@@ -496,7 +472,6 @@ namespace AKNet.Socket
 
         private void FinishOperationSendPackets()
         {
-            // Close the files if open.
             if (_sendPacketsFileHandles != null)
             {
                 for (int i = 0; i < _sendPacketsFileHandles.Length; i++)
@@ -525,7 +500,7 @@ namespace AKNet.Socket
                     return;
                 }
             }
-            
+
             if ((SocketError)errorCode == SocketError.Success)
             {
                 saea.FreeNativeOverlapped(ref nativeOverlapped);
@@ -541,6 +516,7 @@ namespace AKNet.Socket
                 saea.FinishOperationAsyncFailure(socketError, (int)numBytes, socketFlags);
             }
         };
+        
 
         private unsafe void GetOverlappedResultOnError(ref SocketError socketError, ref uint numBytes, ref SocketFlags socketFlags, NativeOverlapped* nativeOverlapped)
         {
@@ -564,5 +540,7 @@ namespace AKNet.Socket
                 }
             }
         }
+
+
     }
 }
