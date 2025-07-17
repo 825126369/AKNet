@@ -1,5 +1,5 @@
 
-#if WINDOWS
+#if TARGET_WINDOWS
 using System.Net;
 using System.Net.Sockets;
 

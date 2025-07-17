@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+#if TARGET_WINDOWS
 using System.Buffers.Binary;
 using System.Net.Sockets;
-
 namespace AKNet.Socket
 {
     internal static class SocketAddressPal
@@ -73,3 +72,4 @@ namespace AKNet.Socket
         }
     }
 }
+#endif

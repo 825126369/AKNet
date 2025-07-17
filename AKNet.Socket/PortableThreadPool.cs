@@ -38,25 +38,22 @@ namespace AKNet.Socket
         private short _legacy_maxIOCompletionThreads;
         private int _numThreadsBeingKeptAlive;
 
-        [StructLayout(LayoutKind.Explicit, Size = Internal.PaddingHelpers.CACHE_LINE_SIZE * 6)]
+        [StructLayout(LayoutKind.Explicit, Size = PaddingHelpers.CACHE_LINE_SIZE * 6)]
         private struct CacheLineSeparated
         {
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 1)]
-            public ThreadCounts counts; // SOS's ThreadPool command depends on this name
-
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 2)]
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 1)]
+            public ThreadCounts counts;
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 2)]
             public int lastDequeueTime;
-
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 3)]
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 3)]
             public int priorCompletionCount;
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 3 + sizeof(int))]
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 3 + sizeof(int))]
             public int priorCompletedWorkRequestsTime;
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 3 + sizeof(int) * 2)]
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 3 + sizeof(int) * 2)]
             public int nextCompletedWorkRequestsTime;
-
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 4)]
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 4)]
             public volatile int numRequestedWorkers;
-            [FieldOffset(Internal.PaddingHelpers.CACHE_LINE_SIZE * 4 + sizeof(int))]
+            [FieldOffset(PaddingHelpers.CACHE_LINE_SIZE * 4 + sizeof(int))]
             public int gateThreadRunningState;
         }
 
@@ -72,7 +69,6 @@ namespace AKNet.Socket
         private long _memoryLimitBytes;
 
         private readonly LowLevelLock _threadAdjustmentLock = new LowLevelLock();
-
         private CacheLineSeparated _separated; // SOS's ThreadPool command depends on this name
 
         private PortableThreadPool()
@@ -95,16 +91,6 @@ namespace AKNet.Socket
 
             _legacy_minIOCompletionThreads = 1;
             _legacy_maxIOCompletionThreads = 1000;
-
-            if (NativeRuntimeEventSource.Log.IsEnabled())
-            {
-                NativeRuntimeEventSource.Log.ThreadPoolMinMaxThreads(
-                    (ushort)_minThreads,
-                    (ushort)_maxThreads,
-                    (ushort)_legacy_minIOCompletionThreads,
-                    (ushort)_legacy_maxIOCompletionThreads);
-            }
-
             _separated.counts.NumThreadsGoal = _minThreads;
 
 #if TARGET_WINDOWS

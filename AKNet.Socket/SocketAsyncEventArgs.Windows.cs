@@ -1,3 +1,5 @@
+#if TARGET_WINDOWS
+
 using Microsoft.Win32.SafeHandles;
 using System.Buffers;
 using System.Diagnostics;
@@ -31,7 +33,7 @@ namespace AKNet.Socket
             MultipleBuffer,
             SendPackets
         }
-        
+
         private void InitializeInternals()
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
@@ -74,7 +76,7 @@ namespace AKNet.Socket
         {
             _strongThisRef.Value = this;
         }
-        
+
         private unsafe SocketError GetIOCPResult(bool success, ref NativeOverlapped* overlapped)
         {
             if (success)
@@ -98,7 +100,7 @@ namespace AKNet.Socket
                 return SocketError.IOPending;
             }
         }
-        
+
         private unsafe SocketError ProcessIOCPResult(bool success, int bytesTransferred, ref NativeOverlapped* overlapped, Memory<byte> bufferToPin, CancellationToken cancellationToken)
         {
             SocketError socketError = GetIOCPResult(success, ref overlapped);
@@ -122,7 +124,7 @@ namespace AKNet.Socket
                             }
                             catch (ObjectDisposedException)
                             {
-                                
+
                             }
                         }
                     }, this);
@@ -131,13 +133,13 @@ namespace AKNet.Socket
                 {
                     _singleBufferHandle = bufferToPin.Pin();
                 }
-                
+
                 long packedResult = Interlocked.Exchange(ref _asyncCompletionOwnership, 1);
                 if (packedResult == 0)
                 {
                     return SocketError.IOPending;
                 }
-                
+
                 Debug.Assert(((ulong)packedResult & 0x8000000000000000) != 0, "Top bit should have been set");
                 bytesTransferred = (int)((packedResult >> 32) & 0x7FFFFFFF);
                 socketError = (SocketError)(packedResult & 0xFFFFFFFF);
@@ -147,7 +149,7 @@ namespace AKNet.Socket
                 }
                 FreeNativeOverlapped(ref overlapped);
             }
-            
+
             FinishOperationSync(socketError, bytesTransferred, socketFlags);
             return socketError;
         }
@@ -169,7 +171,7 @@ namespace AKNet.Socket
             {
                 _controlBufferPinned = new byte[sizeof(Interop.Winsock.ControlData)];
             }
-            
+
             WSABuffer[] wsaRecvMsgWSABufferArray;
             uint wsaRecvMsgWSABufferCount;
             if (_bufferList == null)
@@ -190,7 +192,7 @@ namespace AKNet.Socket
                 wsaRecvMsgWSABufferCount = (uint)_bufferListInternal.Count;
                 return Core();
             }
-            
+
             SocketError Core()
             {
                 Interop.Winsock.WSAMsg* pMessage = (Interop.Winsock.WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned, 0);
@@ -315,7 +317,7 @@ namespace AKNet.Socket
                     {
                         _multipleBufferMemoryHandles = new MemoryHandle[bufferCount];
                     }
-                    
+
                     for (int i = 0; i < bufferCount; i++)
                     {
                         _multipleBufferMemoryHandles[i] = _bufferListInternal[i].Array.AsMemory().Pin();
@@ -342,7 +344,7 @@ namespace AKNet.Socket
                 }
             }
         }
-        
+
         private unsafe void AllocateSocketAddressBuffer()
         {
             int size = SocketAddress.GetMaximumAddressSize(_socketAddress!.Family);
@@ -365,7 +367,7 @@ namespace AKNet.Socket
             Debug.Assert(_socketAddressPtr != IntPtr.Zero);
             return _socketAddressPtr;
         }
-        
+
         private void FreeOverlapped()
         {
             if (_preAllocatedOverlapped != null)
@@ -413,7 +415,7 @@ namespace AKNet.Socket
             }
             else if (_buffer.Length != 0)
             {
-                    
+
             }
         }
 
@@ -516,7 +518,7 @@ namespace AKNet.Socket
                 saea.FinishOperationAsyncFailure(socketError, (int)numBytes, socketFlags);
             }
         };
-        
+
 
         private unsafe void GetOverlappedResultOnError(ref SocketError socketError, ref uint numBytes, ref SocketFlags socketFlags, NativeOverlapped* nativeOverlapped)
         {
@@ -544,3 +546,4 @@ namespace AKNet.Socket
 
     }
 }
+#endif

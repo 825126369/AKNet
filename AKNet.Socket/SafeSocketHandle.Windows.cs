@@ -1,8 +1,7 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 
+#if TARGET_WINDOWS
 namespace AKNet.Socket
 {
     public partial class SafeSocketHandle
@@ -166,3 +165,4 @@ namespace AKNet.Socket
         protected internal void SetHandle(IntPtr handle) => this.handle = handle;
     }
 }
+#endif

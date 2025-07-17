@@ -2,13 +2,14 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+#if TARGET_WINDOWS
 namespace AKNet.Socket
 {
     internal sealed partial class PortableThreadPool
     {
-        private readonly nint[] _ioPorts = new nint[IOCompletionPortCount];
-        private uint _ioPortSelectorForRegister = unchecked((uint)-1);
-        private uint _ioPortSelectorForQueue = unchecked((uint)-1);
+        private readonly IntPtr[] _ioPorts = new IntPtr[IOCompletionPortCount];
+        private int _ioPortSelectorForRegister = int.MaxValue;
+        private int _ioPortSelectorForQueue = int.MaxValue;
         private IOCompletionPoller[]? _ioCompletionPollers;
 
         private static short DetermineIOCompletionPortCount()
@@ -65,15 +66,14 @@ namespace AKNet.Socket
         public void RegisterForIOCompletionNotifications(nint handle)
         {
             Debug.Assert(_ioPorts != null);
-
             if (_ioCompletionPollers == null)
             {
                 EnsureIOCompletionPollers();
             }
 
-            uint selectedPortIndex = IOCompletionPortCount == 1
+            int selectedPortIndex = IOCompletionPortCount == 1
                     ? 0
-                    : Interlocked.Increment(ref _ioPortSelectorForRegister) % (uint)IOCompletionPortCount;
+                    : Interlocked.Increment(ref _ioPortSelectorForRegister) % (int)IOCompletionPortCount;
 
             nint selectedPort = _ioPorts[selectedPortIndex];
             Debug.Assert(selectedPort != 0);
@@ -96,9 +96,9 @@ namespace AKNet.Socket
                 EnsureIOCompletionPollers();
             }
 
-            uint selectedPortIndex = IOCompletionPortCount == 1
+            int selectedPortIndex = IOCompletionPortCount == 1
                     ? 0
-                    : Interlocked.Increment(ref _ioPortSelectorForQueue) % (uint)IOCompletionPortCount;
+                    : Interlocked.Increment(ref _ioPortSelectorForQueue) % (int)IOCompletionPortCount;
             nint selectedPort = _ioPorts[selectedPortIndex];
             Debug.Assert(selectedPort != 0);
             if (!Interop.Kernel32.PostQueuedCompletionStatus(selectedPort, 0, UIntPtr.Zero, (IntPtr)nativeOverlapped))
@@ -161,17 +161,7 @@ namespace AKNet.Socket
                         (Interop.Kernel32.OVERLAPPED_ENTRY*)
                         NativeMemory.Alloc(NativeEventCapacity, (nuint)sizeof(Interop.Kernel32.OVERLAPPED_ENTRY));
                     _events = new ThreadPoolTypedWorkItemQueue<Event, Callback>();
-
-                    // These threads don't run user code, use a smaller stack size
                     _thread = new Thread(Poll, SmallStackSizeBytes);
-
-                    // Poller threads are typically expected to be few in number and have to compete for time slices with all
-                    // other threads that are scheduled to run. They do only a small amount of work and don't run any user code.
-                    // In situations where frequently, a large number of threads are scheduled to run, a scheduled poller thread
-                    // may be delayed artificially quite a bit. The poller threads are given higher priority than normal to
-                    // mitigate that issue. It's unlikely that these threads would starve a system because in such a situation
-                    // IO completions would stop occurring. Since the number of IO pollers is configurable, avoid having too
-                    // many poller threads at higher priority.
                     if (IOCompletionPollerCount * 4 < Environment.ProcessorCount)
                     {
                         _thread.Priority = ThreadPriority.AboveNormal;
@@ -186,9 +176,6 @@ namespace AKNet.Socket
                 _thread.IsThreadPoolThread = true;
                 _thread.IsBackground = true;
                 _thread.Name = ".NET ThreadPool IO";
-
-                // Thread pool threads must start in the default execution context without transferring the context, so
-                // using UnsafeStart() instead of Start()
                 _thread.UnsafeStart();
             }
 
@@ -292,3 +279,4 @@ namespace AKNet.Socket
         }
     }
 }
+#endif
