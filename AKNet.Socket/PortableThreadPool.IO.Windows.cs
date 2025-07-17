@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -28,26 +29,18 @@ namespace AKNet.Socket
 
         private static int DetermineIOCompletionPollerCount()
         {
-            // Named for consistency with SocketAsyncEngine.Unix.cs, this environment variable is checked to override the exact
-            // number of IO completion poller threads to use. See the comment in SocketAsyncEngine.Unix.cs about its potential
-            // uses. For this implementation, the ProcessorsPerIOPollerThread config option below may be preferable as it may be
-            // less machine-specific.
             int ioPollerCount;
-            if (uint.TryParse(Environment.GetEnvironmentVariable("DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT"), out uint count) &&
-                count != 0)
+            if (uint.TryParse(Environment.GetEnvironmentVariable("DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT"), out uint count) && count != 0)
             {
                 ioPollerCount = (int)Math.Min(count, (uint)MaxPossibleThreadCount);
             }
             else if (UnsafeInlineIOCompletionCallbacks)
             {
-                // In this mode, default to ProcessorCount pollers to ensure that all processors can be utilized if more work
-                // happens on the poller threads
                 ioPollerCount = Environment.ProcessorCount;
             }
             else
             {
-                int processorsPerPoller =
-                    AppContextConfigHelper.GetInt32Config("System.Threading.ThreadPool.ProcessorsPerIOPollerThread", 12, false);
+                int processorsPerPoller = AppContextConfigHelper.GetInt32Config("System.Threading.ThreadPool.ProcessorsPerIOPollerThread", 12, false);
                 ioPollerCount = (Environment.ProcessorCount - 1) / processorsPerPoller + 1;
             }
 
@@ -84,14 +77,12 @@ namespace AKNet.Socket
 
         private static nint CreateIOCompletionPort(int numConcurrentThreads)
         {
-            nint port =
-                Interop.Kernel32.CreateIoCompletionPort(new IntPtr(-1), IntPtr.Zero, UIntPtr.Zero, numConcurrentThreads);
+            nint port = Interop.Kernel32.CreateIoCompletionPort(new IntPtr(-1), IntPtr.Zero, UIntPtr.Zero, numConcurrentThreads);
             if (port == 0)
             {
                 int hr = Marshal.GetHRForLastWin32Error();
                 Environment.FailFast($"Failed to create an IO completion port. HR: {hr}");
             }
-
             return port;
         }
 
@@ -108,12 +99,13 @@ namespace AKNet.Socket
                 IOCompletionPortCount == 1
                     ? 0
                     : Interlocked.Increment(ref _ioPortSelectorForRegister) % (uint)IOCompletionPortCount;
+
             nint selectedPort = _ioPorts[selectedPortIndex];
             Debug.Assert(selectedPort != 0);
             IntPtr port = Interop.Kernel32.CreateIoCompletionPort(handle, selectedPort, UIntPtr.Zero, 0);
             if (port == IntPtr.Zero)
             {
-                ThrowHelper.ThrowApplicationException(Marshal.GetHRForLastWin32Error());
+                throw new Exception();
             }
 
             Debug.Assert(port == selectedPort);
@@ -129,20 +121,14 @@ namespace AKNet.Socket
                 EnsureIOCompletionPollers();
             }
 
-            if (NativeRuntimeEventSource.Log.IsEnabled())
-            {
-                NativeRuntimeEventSource.Log.ThreadPoolIOEnqueue(nativeOverlapped);
-            }
-
-            uint selectedPortIndex =
-                IOCompletionPortCount == 1
+            uint selectedPortIndex = IOCompletionPortCount == 1
                     ? 0
                     : Interlocked.Increment(ref _ioPortSelectorForQueue) % (uint)IOCompletionPortCount;
             nint selectedPort = _ioPorts[selectedPortIndex];
             Debug.Assert(selectedPort != 0);
             if (!Interop.Kernel32.PostQueuedCompletionStatus(selectedPort, 0, UIntPtr.Zero, (IntPtr)nativeOverlapped))
             {
-                ThrowHelper.ThrowApplicationException(Marshal.GetHRForLastWin32Error());
+                throw new Exception();
             }
         }
 

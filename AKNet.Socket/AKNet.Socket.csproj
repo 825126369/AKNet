@@ -2,6 +2,7 @@
 
   <PropertyGroup>
 	<TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+	<LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
@@ -25,4 +26,25 @@
 		<DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(TargetOS)' == 'browser'">
+		<!-- This doesn't run on V8 shell because https://bugs.chromium.org/p/v8/issues/detail?id=12541 -->
+		<DefineConstants>$(DefineConstants);TARGET_BROWSER</DefineConstants>
+	</PropertyGroup>
+	
+	<PropertyGroup Condition="'$(Platform)' == 'x64'">
+		<DefineConstants>TARGET_64BIT;TARGET_AMD64;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Platform)' == 'x86'">
+		<DefineConstants>TARGET_32BIT;TARGET_X86;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Platform)' == 'arm'">
+		<DefineConstants>TARGET_32BIT;TARGET_ARM;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Platform)' == 'arm64'">
+		<DefineConstants>TARGET_64BIT;TARGET_ARM64;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Platform)' == 'loongarch64'">
+		<DefineConstants>TARGET_64BIT;TARGET_LOONGARCH64;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+	
 </Project>
