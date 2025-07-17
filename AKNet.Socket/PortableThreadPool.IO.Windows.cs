@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics;
-using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -17,45 +15,23 @@ namespace AKNet.Socket
         {
             const short DefaultIOPortCount = 1;
             const short MaxIOPortCount = 1 << 10;
-
-            short ioPortCount =
-                AppContextConfigHelper.GetInt16Config(
-                    "System.Threading.ThreadPool.IOCompletionPortCount",
-                    "DOTNET_ThreadPool_IOCompletionPortCount",
-                    DefaultIOPortCount,
-                    allowNegative: false);
+            short ioPortCount = DefaultIOPortCount;
             return ioPortCount == 0 ? DefaultIOPortCount : Math.Min(ioPortCount, MaxIOPortCount);
         }
 
         private static int DetermineIOCompletionPollerCount()
         {
-            int ioPollerCount;
-            if (uint.TryParse(Environment.GetEnvironmentVariable("DOTNET_SYSTEM_NET_SOCKETS_THREAD_COUNT"), out uint count) && count != 0)
-            {
-                ioPollerCount = (int)Math.Min(count, (uint)MaxPossibleThreadCount);
-            }
-            else if (UnsafeInlineIOCompletionCallbacks)
-            {
-                ioPollerCount = Environment.ProcessorCount;
-            }
-            else
-            {
-                int processorsPerPoller = AppContextConfigHelper.GetInt32Config("System.Threading.ThreadPool.ProcessorsPerIOPollerThread", 12, false);
-                ioPollerCount = (Environment.ProcessorCount - 1) / processorsPerPoller + 1;
-            }
-
+            int ioPollerCount = Environment.ProcessorCount;
             if (IOCompletionPortCount == 1)
             {
                 return ioPollerCount;
             }
-
-            // Use at least one IO poller per port
+            
             if (ioPollerCount <= IOCompletionPortCount)
             {
                 return IOCompletionPortCount;
             }
 
-            // Use the same number of IO pollers per port, align up if necessary to make it even
             int rem = ioPollerCount % IOCompletionPortCount;
             if (rem != 0)
             {
@@ -95,8 +71,7 @@ namespace AKNet.Socket
                 EnsureIOCompletionPollers();
             }
 
-            uint selectedPortIndex =
-                IOCompletionPortCount == 1
+            uint selectedPortIndex = IOCompletionPortCount == 1
                     ? 0
                     : Interlocked.Increment(ref _ioPortSelectorForRegister) % (uint)IOCompletionPortCount;
 

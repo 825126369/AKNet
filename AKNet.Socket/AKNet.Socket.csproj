@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
 	<TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
 	<LangVersion>latest</LangVersion>
@@ -10,46 +9,16 @@
   </PropertyGroup>
 	
 	<!--//在这里定义可以自动定义宏定义啊，这样通过 dotnet build 就可以条件编译成功了-->
-	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-		<DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+	<PropertyGroup Condition="$([MSBuild]::IsOsPlatform('WINDOWS'))">
+		<DefineConstants>$(DefineConstants);TARGET_WINDOWS</DefineConstants>
 	</PropertyGroup>
-
+	
 	<PropertyGroup Condition="$([MSBuild]::IsOsPlatform('Linux'))">
-		<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+		<DefineConstants>$(DefineConstants);TARGET_LINUX</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::IsOsPlatform('OSX'))">
-		<DefineConstants>$(DefineConstants);IOS</DefineConstants>
-	</PropertyGroup>
-	
-	<PropertyGroup Condition="'$(TargetFramework)' == 'net6.0-android'">
-		<DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(TargetOS)' == 'browser'">
-		<!-- This doesn't run on V8 shell because https://bugs.chromium.org/p/v8/issues/detail?id=12541 -->
-		<DefineConstants>$(DefineConstants);TARGET_BROWSER</DefineConstants>
-	</PropertyGroup>
-	
-	<PropertyGroup Condition="'$(Platform)' == 'x64'">
-		<DefineConstants>TARGET_64BIT;TARGET_AMD64;$(DefineConstants)</DefineConstants>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Platform)' == 'x86'">
-		<DefineConstants>TARGET_32BIT;TARGET_X86;$(DefineConstants)</DefineConstants>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Platform)' == 'arm'">
-		<DefineConstants>TARGET_32BIT;TARGET_ARM;$(DefineConstants)</DefineConstants>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Platform)' == 'arm64'">
-		<DefineConstants>TARGET_64BIT;TARGET_ARM64;$(DefineConstants)</DefineConstants>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(Platform)' == 'loongarch64'">
-		<DefineConstants>TARGET_64BIT;TARGET_LOONGARCH64;$(DefineConstants)</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<DefineConstants Condition="'$(TargetsWindows)'=='true'">TARGET_WINDOWS;$(DefineConstants)</DefineConstants>
-		<DefineConstants Condition="'$(TargetsUnix)'=='true'">TARGET_UNIX;$(DefineConstants)</DefineConstants>
+		<DefineConstants>$(DefineConstants);TARGET_OSX</DefineConstants>
 	</PropertyGroup>
 	
 </Project>

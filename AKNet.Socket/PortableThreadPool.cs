@@ -8,63 +8,28 @@ namespace AKNet.Socket
     {
         private const int SmallStackSizeBytes = 256 * 1024;
         private const short MaxPossibleThreadCount = short.MaxValue;
-
-#if TARGET_BROWSER
-        private const short DefaultMaxWorkerThreadCount = 10;
-#elif TARGET_64BIT
         private const short DefaultMaxWorkerThreadCount = MaxPossibleThreadCount;
-#elif TARGET_32BIT
-        private const short DefaultMaxWorkerThreadCount = 1023; 
-#endif
-
         private const int CpuUtilizationHigh = 95;
         private const int CpuUtilizationLow = 80;
-
-#if CORECLR
-#pragma warning disable CA1823
-        private static readonly bool s_initialized = ThreadPool.EnsureConfigInitialized();
-#pragma warning restore CA1823
-#endif
-
         private static readonly short ForcedMinWorkerThreads = 0;
         private static readonly short ForcedMaxWorkerThreads = 0;
 
 #if TARGET_WINDOWS
-        // Continuations of IO completions are dispatched to the ThreadPool from IO completion poller threads. This avoids
-        // continuations blocking/stalling the IO completion poller threads. Setting UnsafeInlineIOCompletionCallbacks allows
-        // continuations to run directly on the IO completion poller thread, but is inherently unsafe due to the potential for
-        // those threads to become stalled due to blocking. Sometimes, setting this config value may yield better latency. The
-        // config value is named for consistency with SocketAsyncEngine.Unix.cs.
-        private static readonly bool UnsafeInlineIOCompletionCallbacks =
-            Environment.GetEnvironmentVariable("DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS") == "1";
-
+        private static readonly bool UnsafeInlineIOCompletionCallbacks = true;
         private static readonly short IOCompletionPortCount = DetermineIOCompletionPortCount();
         private static readonly int IOCompletionPollerCount = DetermineIOCompletionPollerCount();
 #endif
-        
         private static readonly int ThreadPoolThreadTimeoutMs = DetermineThreadPoolThreadTimeoutMs();
-
         private static int DetermineThreadPoolThreadTimeoutMs()
         {
             const int DefaultThreadPoolThreadTimeoutMs = 20 * 1000; // If you change this make sure to change the timeout times in the tests.
-
-            // The amount of time in milliseconds a thread pool thread waits without having done any work before timing out and
-            // exiting. Set to -1 to disable the timeout. Applies to worker threads and wait threads. Also see the
-            // ThreadsToKeepAlive config value for relevant information.
-            int timeoutMs =
-                AppContextConfigHelper.GetInt32Config(
-                    "System.Threading.ThreadPool.ThreadTimeoutMs",
-                    "DOTNET_ThreadPool_ThreadTimeoutMs",
-                    DefaultThreadPoolThreadTimeoutMs);
+            int timeoutMs = DefaultThreadPoolThreadTimeoutMs;
             return timeoutMs >= -1 ? timeoutMs : DefaultThreadPoolThreadTimeoutMs;
         }
 
         [ThreadStatic]
         private static object? t_completionCountObject;
-
-#pragma warning disable IDE1006 // Naming Styles
         public static readonly PortableThreadPool ThreadPoolInstance = new PortableThreadPool();
-#pragma warning restore IDE1006 // Naming Styles
 
         private int _cpuUtilization; // SOS's ThreadPool command depends on this name
         private short _minThreads;
@@ -456,7 +421,7 @@ namespace AKNet.Socket
             // Gen 2 GCs may be very infrequent in some cases. If it becomes an issue, consider updating the memory usage more
             // frequently. The memory usage is only used for fallback purposes in blocking adjustment, so an artificially higher
             // memory usage may cause blocking adjustment to fall back to slower adjustments sooner than necessary.
-            GCMemoryInfo gcMemoryInfo = GC.GetGCMemoryInfo();
+            GCMemoryInfo gcMemoryInfo = GC.get();
             _memoryLimitBytes = gcMemoryInfo.HighMemoryLoadThresholdBytes;
             _memoryUsageBytes = Math.Min(gcMemoryInfo.MemoryLoadBytes, gcMemoryInfo.HighMemoryLoadThresholdBytes);
             return true; // continue receiving gen 2 GC callbacks
@@ -470,9 +435,15 @@ namespace AKNet.Socket
              bool executeOnlyOnce,
              bool flowExecutionContext)
         {
-            ArgumentNullException.ThrowIfNull(waitObject);
-            ArgumentNullException.ThrowIfNull(callBack);
 
+            if (waitObject == null)
+            {
+                throw new ArgumentNullException();
+            }
+            if (callBack == null)
+            {
+                throw new ArgumentNullException();
+            }
             RegisteredWaitHandle registeredWaitHandle = new RegisteredWaitHandle(
                 waitObject,
                 new _ThreadPoolWaitOrTimerCallback(callBack, state, flowExecutionContext),
@@ -480,7 +451,6 @@ namespace AKNet.Socket
                 !executeOnlyOnce);
 
             PortableThreadPool.ThreadPoolInstance.RegisterWaitHandle(registeredWaitHandle);
-
             return registeredWaitHandle;
         }
     }
