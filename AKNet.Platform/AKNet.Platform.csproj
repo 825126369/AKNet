@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>x64</PlatformTarget>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<!--//在这里定义可以自动定义宏定义啊，这样通过 dotnet build 就可以条件编译成功了-->
+	<PropertyGroup Condition="$([MSBuild]::IsOsPlatform('WINDOWS'))">
+		<DefineConstants>$(DefineConstants);TARGET_WINDOWS</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::IsOsPlatform('Linux'))">
+		<DefineConstants>$(DefineConstants);TARGET_LINUX</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::IsOsPlatform('OSX'))">
+		<DefineConstants>$(DefineConstants);TARGET_OSX</DefineConstants>
+	</PropertyGroup>
+
+</Project>
