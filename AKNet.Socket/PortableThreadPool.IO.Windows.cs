@@ -221,18 +221,13 @@ namespace AKNet.Socket
                             out nint nativeOverlappedPtr,
                             Timeout.Infinite))
                     {
-                        errorCode = (uint)Marshal.GetLastPInvokeError();
+                        errorCode = (uint)Marshal.GetLastWin32Error();
                     }
 
                     var nativeOverlapped = (NativeOverlapped*)nativeOverlappedPtr;
                     if (nativeOverlapped == null) // shouldn't be null since null is not posted
                     {
                         continue;
-                    }
-
-                    if (NativeRuntimeEventSource.Log.IsEnabled())
-                    {
-                        NativeRuntimeEventSource.Log.ThreadPoolIODequeue(nativeOverlapped);
                     }
 
                     IOCompletionCallbackHelper.PerformSingleIOCompletionCallback(errorCode, bytesTransferred, nativeOverlapped);

@@ -19,7 +19,7 @@ namespace AKNet.Socket
             return true;
         }
 
-        private static bool BindHandlePortableCore(SafeHandle osHandle)
+        public static bool BindHandle(SafeHandle osHandle)
         {
             if (osHandle == null)
             {
