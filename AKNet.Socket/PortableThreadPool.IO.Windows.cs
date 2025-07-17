@@ -147,7 +147,6 @@ namespace AKNet.Socket
 
             private readonly nint _port;
             private readonly Interop.Kernel32.OVERLAPPED_ENTRY* _nativeEvents;
-            private readonly ThreadPoolTypedWorkItemQueue<Event, Callback>? _events;
             private readonly Thread _thread;
 
             public IOCompletionPoller(nint port)
@@ -160,7 +159,7 @@ namespace AKNet.Socket
                     _nativeEvents =
                         (Interop.Kernel32.OVERLAPPED_ENTRY*)
                         NativeMemory.Alloc(NativeEventCapacity, (nuint)sizeof(Interop.Kernel32.OVERLAPPED_ENTRY));
-                    _events = new ThreadPoolTypedWorkItemQueue<Event, Callback>();
+                   // _events = new ThreadPoolTypedWorkItemQueue<Event, Callback>();
                     _thread = new Thread(Poll, SmallStackSizeBytes);
                     if (IOCompletionPollerCount * 4 < Environment.ProcessorCount)
                     {
@@ -169,20 +168,16 @@ namespace AKNet.Socket
                 }
                 else
                 {
-                    // These threads may run user code, use the default stack size
                     _thread = new Thread(PollAndInlineCallbacks);
                 }
 
-                _thread.IsThreadPoolThread = true;
                 _thread.IsBackground = true;
                 _thread.Name = ".NET ThreadPool IO";
-                _thread.UnsafeStart();
             }
 
             private void Poll()
             {
                 Debug.Assert(_nativeEvents != null);
-                Debug.Assert(_events != null);
 
                 while (
                     Interop.Kernel32.GetQueuedCompletionStatusEx(
