@@ -3,7 +3,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {

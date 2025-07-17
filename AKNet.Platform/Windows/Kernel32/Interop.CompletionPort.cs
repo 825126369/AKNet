@@ -5,7 +5,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace AKNet.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
