@@ -252,15 +252,14 @@ namespace AKNet.Udp5MSQuic.Common
             int ReadableDataLeft = ContiguousLength - RecvBuffer.ReadPendingLength;
             int CurrentBufferId = 0;
 
-            QUIC_SSBuffer mTempBuf = Buffers[CurrentBufferId];
-            while (CurrentBufferId < BufferCount && ReadableDataLeft > 0 && QuicRecvChunkIteratorNext(ref Iterator, true, out mTempBuf))
+            while (CurrentBufferId < BufferCount && ReadableDataLeft > 0 && 
+                QuicRecvChunkIteratorNext(ref Iterator, true, Buffers[CurrentBufferId]))
             {
-                if (mTempBuf.Length > ReadableDataLeft)
+                if (Buffers[CurrentBufferId].Length > ReadableDataLeft)
                 {
-                    mTempBuf.Length = ReadableDataLeft;
+                    Buffers[CurrentBufferId].Length = ReadableDataLeft;
                 }
-                Buffers[CurrentBufferId].SetData(mTempBuf);
-                ReadableDataLeft -= mTempBuf.Length;
+                ReadableDataLeft -= Buffers[CurrentBufferId].Length;
                 CurrentBufferId++;
             }
 
@@ -536,8 +535,8 @@ namespace AKNet.Udp5MSQuic.Common
 
             int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
             QUIC_RECV_CHUNK_ITERATOR Iterator = QuicRecvBufferGetChunkIterator(RecvBuffer, RelativeOffset);
-            QUIC_SSBuffer Buffer;
-            while (WriteLength != 0 && QuicRecvChunkIteratorNext(ref Iterator, false, out Buffer))
+            QUIC_SSBuffer Buffer = QUIC_SSBuffer.Empty;
+            while (WriteLength != 0 && QuicRecvChunkIteratorNext(ref Iterator, false, ref Buffer))
             {
                 int CopyLength = Math.Min(Buffer.Length, WriteLength);
                 WriteBuffer.Slice(0, CopyLength).CopyTo(Buffer);
@@ -581,7 +580,15 @@ namespace AKNet.Udp5MSQuic.Common
             return Iterator;
         }
 
-        static bool QuicRecvChunkIteratorNext(ref QUIC_RECV_CHUNK_ITERATOR Iterator, bool ReferenceChunk, out QUIC_SSBuffer Buffer)
+        static bool QuicRecvChunkIteratorNext(ref QUIC_RECV_CHUNK_ITERATOR Iterator, bool ReferenceChunk, QUIC_BUFFER Buffer)
+        {
+            QUIC_SSBuffer mTempBuf = QUIC_SSBuffer.Empty;
+            bool result = QuicRecvChunkIteratorNext(ref Iterator, ReferenceChunk, ref mTempBuf);
+            Buffer.SetData(mTempBuf);
+            return result;
+        }
+
+        static bool QuicRecvChunkIteratorNext(ref QUIC_RECV_CHUNK_ITERATOR Iterator, bool ReferenceChunk, ref QUIC_SSBuffer Buffer)
         {
             Buffer = QUIC_SSBuffer.Empty;
             if (Iterator.NextChunk == null)

@@ -4958,7 +4958,7 @@ namespace AKNet.Udp5MSQuic.Common
                         Connection,
                         Ticket,
                         Connection.Configuration.AlpnList,
-                        ref ResumedTP,
+                        ResumedTP,
                         out AppData);
 
                 if (QUIC_FAILED(Status))

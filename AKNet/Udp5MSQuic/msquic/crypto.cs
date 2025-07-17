@@ -1704,7 +1704,7 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static int QuicCryptoDecodeServerTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_SSBuffer AlpnList, ref QUIC_TRANSPORT_PARAMETERS DecodedTP,
+        static int QuicCryptoDecodeServerTicket(QUIC_CONNECTION Connection, ReadOnlySpan<byte> Ticket, QUIC_SSBuffer AlpnList, QUIC_TRANSPORT_PARAMETERS DecodedTP,
             out QUIC_SSBuffer AppData)
         {
             int Status = QUIC_STATUS_INVALID_PARAMETER;
