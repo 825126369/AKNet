@@ -46,5 +46,10 @@
 	<PropertyGroup Condition="'$(Platform)' == 'loongarch64'">
 		<DefineConstants>TARGET_64BIT;TARGET_LOONGARCH64;$(DefineConstants)</DefineConstants>
 	</PropertyGroup>
+
+	<PropertyGroup>
+		<DefineConstants Condition="'$(TargetsWindows)'=='true'">TARGET_WINDOWS;$(DefineConstants)</DefineConstants>
+		<DefineConstants Condition="'$(TargetsUnix)'=='true'">TARGET_UNIX;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
 	
 </Project>

@@ -14,9 +14,7 @@ namespace AKNet.Socket
 #elif TARGET_64BIT
         private const short DefaultMaxWorkerThreadCount = MaxPossibleThreadCount;
 #elif TARGET_32BIT
-        private const short DefaultMaxWorkerThreadCount = 1023;
-#else
-        #error "Unknown platform"
+        private const short DefaultMaxWorkerThreadCount = 1023; 
 #endif
 
         private const int CpuUtilizationHigh = 95;
@@ -28,10 +26,8 @@ namespace AKNet.Socket
 #pragma warning restore CA1823
 #endif
 
-        private static readonly short ForcedMinWorkerThreads =
-            AppContextConfigHelper.GetInt16Config("System.Threading.ThreadPool.MinThreads", 0, false);
-        private static readonly short ForcedMaxWorkerThreads =
-            AppContextConfigHelper.GetInt16Config("System.Threading.ThreadPool.MaxThreads", 0, false);
+        private static readonly short ForcedMinWorkerThreads = 0;
+        private static readonly short ForcedMaxWorkerThreads = 0;
 
 #if TARGET_WINDOWS
         // Continuations of IO completions are dispatched to the ThreadPool from IO completion poller threads. This avoids
@@ -45,7 +41,7 @@ namespace AKNet.Socket
         private static readonly short IOCompletionPortCount = DetermineIOCompletionPortCount();
         private static readonly int IOCompletionPollerCount = DetermineIOCompletionPollerCount();
 #endif
-
+        
         private static readonly int ThreadPoolThreadTimeoutMs = DetermineThreadPoolThreadTimeoutMs();
 
         private static int DetermineThreadPoolThreadTimeoutMs()
@@ -67,8 +63,6 @@ namespace AKNet.Socket
         private static object? t_completionCountObject;
 
 #pragma warning disable IDE1006 // Naming Styles
-        // The singleton must be initialized after the static variables above, as the constructor may be dependent on them.
-        // SOS's ThreadPool command depends on this name.
         public static readonly PortableThreadPool ThreadPoolInstance = new PortableThreadPool();
 #pragma warning restore IDE1006 // Naming Styles
 
@@ -281,15 +275,6 @@ namespace AKNet.Socket
                 if (_separated.counts.NumThreadsGoal > newMaxThreads)
                 {
                     _separated.counts.InterlockedSetNumThreadsGoal(newMaxThreads);
-                }
-
-                if (NativeRuntimeEventSource.Log.IsEnabled())
-                {
-                    NativeRuntimeEventSource.Log.ThreadPoolMinMaxThreads(
-                        (ushort)_minThreads,
-                        (ushort)_maxThreads,
-                        (ushort)_legacy_minIOCompletionThreads,
-                        (ushort)_legacy_maxIOCompletionThreads);
                 }
                 return true;
             }
