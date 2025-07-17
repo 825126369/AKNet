@@ -1,5 +1,7 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Socket
 {
@@ -108,11 +110,11 @@ namespace AKNet.Socket
                             while (i + 1 < end)
                             {
                                 i++;
-                                if (name[i] == TChar.CreateTruncating(']'))
+                                if (name[i] == ']')
                                 {
                                     goto case ']';
                                 }
-                                else if (name[i] == TChar.CreateTruncating('/'))
+                                else if (name[i] == '/')
                                 {
                                     goto case '/';
                                 }
@@ -148,7 +150,7 @@ namespace AKNet.Socket
                                 i += 2;
                                 for (; i < end; i++)
                                 {
-                                    if (!char.IsAsciiDigit((char)IPv4AddressHelper.ToUShort(name[i])))
+                                    if (!IsAsciiDigit((char)IPv4AddressHelper.ToUShort(name[i])))
                                     {
                                         return false;
                                     }
@@ -222,20 +224,17 @@ namespace AKNet.Socket
                 !needsClosingBracket;
         }
 
-        internal static void Parse(string address, scoped Span<ushort> numbers, out int scopeId)
+        internal static void Parse(string address, scoped Span<ushort> numbers, out uint scopeId)
         {
             int number = 0;
-            int currentCh;
             int index = 0;
             int compressorIndex = -1;
             bool numberIsValid = true;
 
-            scopeId = -1;
-
-            // Skip the start '[' character, if present. Stop parsing at the end IPv6 address terminator (']').
+            scopeId = 0;
             for (int i = (address[0] == '[') ? 1 : 0; i < address.Length && address[i] != ']';)
             {
-                currentCh = IPv4AddressHelper.ToUShort(address[i]);
+                char currentCh = address[i];
                 switch (currentCh)
                 {
                     case '%':
@@ -251,7 +250,7 @@ namespace AKNet.Socket
 
                         }
 
-                        scopeId = address.Slice(scopeStart, i - scopeStart);
+                        scopeId = uint.Parse(address.AsSpan().Slice(scopeStart, i - scopeStart));
                         for (; i < address.Length && address[i] != ']'; ++i)
                         {
 
@@ -346,85 +345,6 @@ namespace AKNet.Socket
             }
         }
 
-
-        internal static string ParseCanonicalName(ReadOnlySpan<char> str, ref bool isLoopback, out ReadOnlySpan<char> scopeId)
-        {
-            Span<ushort> numbers = stackalloc ushort[NumberOfLabels];
-            numbers.Clear();
-            Parse(str, numbers, out scopeId);
-            isLoopback = IsLoopback(numbers);
-
-            // RFC 5952 Sections 4 & 5 - Compressed, lower case, with possible embedded IPv4 addresses.
-
-            // Start to finish, inclusive.  <-1, -1> for no compression
-            (int rangeStart, int rangeEnd) = FindCompressionRange(numbers);
-            bool ipv4Embedded = ShouldHaveIpv4Embedded(numbers);
-
-            Span<char> stackSpace = stackalloc char[48]; // large enough for any IPv6 string, including brackets
-            stackSpace[0] = '[';
-            int pos = 1;
-            int charsWritten;
-            bool success;
-            for (int i = 0; i < NumberOfLabels; i++)
-            {
-                if (ipv4Embedded && i == (NumberOfLabels - 2))
-                {
-                    stackSpace[pos++] = ':';
-
-                    // Write the remaining digits as an IPv4 address
-                    success = (numbers[i] >> 8).TryFormat(stackSpace.Slice(pos), out charsWritten);
-                    Debug.Assert(success);
-                    pos += charsWritten;
-
-                    stackSpace[pos++] = '.';
-                    success = (numbers[i] & 0xFF).TryFormat(stackSpace.Slice(pos), out charsWritten);
-                    Debug.Assert(success);
-                    pos += charsWritten;
-
-                    stackSpace[pos++] = '.';
-                    success = (numbers[i + 1] >> 8).TryFormat(stackSpace.Slice(pos), out charsWritten);
-                    Debug.Assert(success);
-                    pos += charsWritten;
-
-                    stackSpace[pos++] = '.';
-                    success = (numbers[i + 1] & 0xFF).TryFormat(stackSpace.Slice(pos), out charsWritten);
-                    Debug.Assert(success);
-                    pos += charsWritten;
-                    break;
-                }
-
-                // Compression; 1::1, ::1, 1::
-                if (rangeStart == i)
-                {
-                    // Start compression, add :
-                    stackSpace[pos++] = ':';
-                }
-
-                if (rangeStart <= i && rangeEnd == NumberOfLabels)
-                {
-                    // Remainder compressed; 1::
-                    stackSpace[pos++] = ':';
-                    break;
-                }
-
-                if (rangeStart <= i && i < rangeEnd)
-                {
-                    continue; // Compressed
-                }
-
-                if (i != 0)
-                {
-                    stackSpace[pos++] = ':';
-                }
-                success = numbers[i].TryFormat(stackSpace.Slice(pos), out charsWritten, format: "x");
-                Debug.Assert(success);
-                pos += charsWritten;
-            }
-
-            stackSpace[pos++] = ']';
-            return new string(stackSpace.Slice(0, pos));
-        }
-
         private static unsafe bool IsLoopback(ReadOnlySpan<ushort> numbers)
         {
             //
@@ -468,7 +388,7 @@ namespace AKNet.Socket
             int i;
             for (i = start; i < end; ++i)
             {
-                if (havePrefix ? char.IsAsciiDigit(name[i]) : char.IsAsciiHexDigit(name[i]))
+                if (havePrefix ? IsAsciiDigit(name[i]) : HexConverter.IsHexChar(name[i]))
                 {
                     ++sequenceLength;
                     expectingNumber = false;
@@ -489,10 +409,8 @@ namespace AKNet.Socket
                         case '%':
                             while (true)
                             {
-                                //accept anything in scopeID
                                 if (++i == end)
                                 {
-                                    // no closing ']', fail
                                     return false;
                                 }
                                 if (name[i] == ']')
@@ -507,7 +425,6 @@ namespace AKNet.Socket
                         case ']':
                             start = i;
                             i = end;
-                            //this will make i = end+1
                             continue;
                         case ':':
                             if ((i > 0) && (name[i - 1] == ':'))
@@ -566,18 +483,10 @@ namespace AKNet.Socket
                 }
             }
 
-            //
-            // if the last token was a prefix, check number of digits
-            //
-
             if (havePrefix && ((sequenceLength < 1) || (sequenceLength > 2)))
             {
                 return false;
             }
-
-            //
-            // these sequence counts are -1 because it is implied in end-of-sequence
-            //
 
             int expectedSequenceCount = 8 + (havePrefix ? 1 : 0);
 
@@ -594,41 +503,14 @@ namespace AKNet.Socket
             return false;
         }
 
-        //
-        // IsValid
-        //
-        //  Determine whether a name is a valid IPv6 address. Rules are:
-        //
-        //   *  8 groups of 16-bit hex numbers, separated by ':'
-        //   *  a *single* run of zeros can be compressed using the symbol '::'
-        //   *  an optional string of a ScopeID delimited by '%'
-        //   *  an optional (last) 1 or 2 character prefix length field delimited by '/'
-        //   *  the last 32 bits in an address can be represented as an IPv4 address
-        //
-        // Inputs:
-        //  <argument>  name
-        //      Domain name field of a URI to check for pattern match with
-        //      IPv6 address
-        //
-        // Outputs:
-        //  Nothing
-        //
-        // Assumes:
-        //  the correct name is terminated by  ']' character
-        //
-        // Returns:
-        //  true if <name> has IPv6 format, else false
-        //
-        // Throws:
-        //  Nothing
-        //
-
-        //  Remarks: MUST NOT be used unless all input indexes are verified and trusted.
-        //           start must be next to '[' position, or error is reported
-
         internal static unsafe bool IsValid(char* name, int start, ref int end)
         {
             return InternalIsValid(name, start, ref end, false);
+        }
+
+        static bool IsAsciiDigit(char s)
+        {
+            return s >= '0' && s <= '9';
         }
     }
 }

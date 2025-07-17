@@ -407,8 +407,7 @@ namespace AKNet.Socket
                 }
 
                 ReadOnlySpan<byte> numbers = MemoryMarshal.AsBytes(new ReadOnlySpan<ushort>(_numbers));
-                return MemoryMarshal.Read<ulong>(numbers) == 0 &&
-                    BinaryPrimitives.ReadUInt32LittleEndian(numbers.Slice(8)) == 0xFFFF0000;
+                return MemoryMarshal.Read<ulong>(numbers) == 0 && BinaryPrimitives.ReadUInt32LittleEndian(numbers.Slice(8)) == 0xFFFF0000;
             }
         }
 
