@@ -14,7 +14,7 @@ namespace AKNet.Platform
         internal const int BCRYPT_USE_SYSTEM_PREFERRED_RNG = 0x00000002;
 
         [LibraryImport(Libraries.BCrypt)]
-        public static unsafe partial NTSTATUS BCryptGenRandom(IntPtr hAlgorithm, byte* pbBuffer, int cbBuffer, int dwFlags);
+        public static unsafe partial int BCryptGenRandom(IntPtr hAlgorithm, byte* pbBuffer, int cbBuffer, int dwFlags);
     }
 #else
         internal static partial class BCrypt

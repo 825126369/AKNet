@@ -3,41 +3,32 @@ namespace AKNet.Platform
 {
     public static unsafe partial class OSPlatformFunc
     {
-        static void* CxPlatAlloc(int ByteCount, uint Tag)
+        static void* CxPlatAlloc(int ByteCount, uint Tag = 0)
         {
-#if DEBUG
-            NetLog.Assert(CxPlatform.Heap != IntPtr.Zero);
-            NetLog.Assert(ByteCount != 0);
-            uint Rand;
-            if ((CxPlatform.AllocFailDenominator > 0 && (CxPlatRandom(sizeof(Rand), &Rand), Rand % CxPlatform.AllocFailDenominator) == 1) ||
-                (CxPlatform.AllocFailDenominator < 0 && InterlockedIncrement(&CxPlatform.AllocCounter) % CxPlatform.AllocFailDenominator == 0))
-            {
-                return null;
-            }
+            return Interop.Kernel32.HeapAlloc(CxPlatform.Heap, 0, ByteCount);
+        }
 
-            void* Alloc = Interop.Kernel32.HeapAlloc(CxPlatform.Heap, 0, ByteCount + AllocOffset);
-            if (Alloc == null)
-            {
-                return null;
-            }
+        static void CxPlatFree(void* Mem, uint Tag = 0)
+        {
+            Interop.Kernel32.HeapFree(CxPlatform.Heap, 0, Mem);
+        }
 
-            *((uint32_t*)Alloc) = Tag;
-            return (void*)((uint8_t*)Alloc + AllocOffset);
-#else
-    UNREFERENCED_PARAMETER(Tag);
-    return HeapAlloc(CxPlatform.Heap, 0, ByteCount);
-#endif
+        static void CxPlatZeroMemory(void* Destination, int Length)
+        {
+            Interop.Ucrtbase.memset(Destination, 0, Length);
         }
 
         static int CxPlatRandom(int BufferLen, void* Buffer)
         {
+            const int BCRYPT_RNG_USE_ENTROPY_IN_BUFFER = 0x00000001;
+            const int BCRYPT_USE_SYSTEM_PREFERRED_RNG = 0x00000002;
+
             return (int)Interop.BCrypt.BCryptGenRandom(
-                    NULL,
-                    (uint8_t*)Buffer,
+                    IntPtr.Zero,
+                    (byte*)Buffer,
                     BufferLen,
                     BCRYPT_USE_SYSTEM_PREFERRED_RNG);
         }
     }
 }
-
 #endif

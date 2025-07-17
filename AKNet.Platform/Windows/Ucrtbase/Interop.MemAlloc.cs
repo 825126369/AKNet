@@ -1,17 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-namespace AKNet.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
 #if NET7_0_OR_GREATER
         internal static unsafe partial class Ucrtbase
         {
-#pragma warning disable CS3016 // Arrays as attribute arguments is not CLS-compliant
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
             internal static partial void* _aligned_malloc(nuint size, nuint alignment);
@@ -39,7 +37,10 @@ namespace AKNet.Socket
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
             internal static partial void* realloc(void* ptr, nuint new_size);
-#pragma warning restore CS3016 // Arrays as attribute arguments is not CLS-compliant
+
+            [LibraryImport(Libraries.Ucrtbase)]
+            [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+            internal static partial void* memset(void* ptr, int c, int n);
         }
 #else
         internal static unsafe partial class Ucrtbase
@@ -64,6 +65,8 @@ namespace AKNet.Socket
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
             internal static extern void* realloc(void* ptr, nuint new_size);
+            [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
+            internal static extern void* memset(void* ptr, int c, int n);
 #pragma warning restore CS3016 // Arrays as attribute arguments is not CLS-compliant
         }
 #endif

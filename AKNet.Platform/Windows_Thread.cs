@@ -6,6 +6,8 @@ using CXPLAT_THREAD = System.IntPtr;
 
 namespace AKNet.Platform
 {
+    public delegate int LPTHREAD_START_ROUTINE(IntPtr lpParameter);
+
     public struct CXPLAT_THREAD_CONFIG
     {
         public ushort Flags;
@@ -54,7 +56,7 @@ namespace AKNet.Platform
         public byte MaximumProcessorCount;
         public byte ActiveProcessorCount;
         public fixed byte Reserved[38];
-        public ulong* ActiveProcessorMask;
+        public ulong ActiveProcessorMask;
     }
 
     internal unsafe struct GROUP_RELATIONSHIP
@@ -69,7 +71,7 @@ namespace AKNet.Platform
         public PROCESSOR_GROUP_INFO[] GroupInfo;
     }
 
-    internal struct SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+    internal unsafe struct SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
     {
         public LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
         public int Size;
@@ -135,58 +137,56 @@ namespace AKNet.Platform
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
     }
 
+    internal unsafe struct CXPLAT_PROCESSOR_INFO
+    {
+        public int Group;  // The group number this processor is a part of
+        public int Index;   // Index in the current group
+        public int PADDING; // Here to align with PROCESSOR_NUMBER struct
+    }
+
+    internal unsafe struct CXPLAT_PROCESSOR_GROUP_INFO
+    {
+        public ulong Mask;  // Bit mask of active processors in the group
+        public int Count;  // Count of active processors in the group
+        public int Offset; // Base process index offset this group starts at
+    }
+    
     public static unsafe partial class OSPlatformFunc
     {
-        static void* CxPlatAlloc(int ByteCount, uint Tag)
-        {
-#if DEBUG
-            NetLog.Assert(CxPlatform.Heap);
-            CXPLAT_DBG_ASSERT(ByteCount != 0);
-            uint32_t Rand;
-            if ((CxPlatform.AllocFailDenominator > 0 && (CxPlatRandom(sizeof(Rand), &Rand), Rand % CxPlatform.AllocFailDenominator) == 1) ||
-                (CxPlatform.AllocFailDenominator < 0 && InterlockedIncrement(&CxPlatform.AllocCounter) % CxPlatform.AllocFailDenominator == 0))
-            {
-                return NULL;
-            }
+        static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo;
+        static CXPLAT_PROCESSOR_GROUP_INFO* CxPlatProcessorGroupInfo;
+        static int CxPlatProcessorCount;
 
-            void* Alloc = HeapAlloc(CxPlatform.Heap, 0, ByteCount + AllocOffset);
-            if (Alloc == NULL)
-            {
-                return NULL;
-            }
-            *((uint32_t*)Alloc) = Tag;
-            return (void*)((uint8_t*)Alloc + AllocOffset);
-#else
-    UNREFERENCED_PARAMETER(Tag);
-    return HeapAlloc(CxPlatform.Heap, 0, ByteCount);
-#endif
+        public static int CxPlatProcCount()
+        {
+            return CxPlatProcessorCount;
         }
 
         public static int CxPlatProcessorInfoInit()
         {
             int Status = 0;
             int InfoLength = 0;
-            IntPtr Info = NULL;
+            SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Info = null;
             int ActiveProcessorCount = 0, MaxProcessorCount = 0;
-            Status = CxPlatGetProcessorGroupInfo(RelationGroup, &Info, &InfoLength);
-            if (QUIC_FAILED(Status))
+            Status = CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup, Info, out InfoLength);
+            if (Status != 0)
             {
                 goto Error;
             }
 
             NetLog.Assert(InfoLength != 0);
-            NetLog.Assert(Info.Relationship == RelationGroup);
-            NetLog.Assert(Info.Group.ActiveGroupCount != 0);
-            NetLog.Assert(Info.Group.ActiveGroupCount <= Info.Group.MaximumGroupCount);
-            if (Info.Group.ActiveGroupCount == 0)
+            NetLog.Assert(Info->Relationship == LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup);
+            NetLog.Assert(Info->DUMMYUNIONNAME.Group.ActiveGroupCount != 0);
+            NetLog.Assert(Info->DUMMYUNIONNAME.Group.ActiveGroupCount <= Info->DUMMYUNIONNAME.Group.MaximumGroupCount);
+            if (Info->DUMMYUNIONNAME.Group.ActiveGroupCount == 0)
             {
                 goto Error;
             }
 
-            for (int i = 0; i < Info.Group.ActiveGroupCount; ++i)
+            for (int i = 0; i < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++i)
             {
-                ActiveProcessorCount += Info.Group.GroupInfo[i].ActiveProcessorCount;
-                MaxProcessorCount += Info.Group.GroupInfo[i].MaximumProcessorCount;
+                ActiveProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
+                MaxProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].MaximumProcessorCount;
             }
 
             NetLog.Assert(ActiveProcessorCount > 0);
@@ -196,119 +196,90 @@ namespace AKNet.Platform
                 goto Error;
             }
 
-            QuicTraceLogInfo(
-                WindowsUserProcessorStateV3,
-                "[ dll] Processors: (%u active, %u max), Groups: (%hu active, %hu max)",
+            NetLog.Log(string.Format("[ dll] Processors: ({0} active, {1} max), Groups: ({2} active, {3} max)",
                 ActiveProcessorCount,
                 MaxProcessorCount,
-                Info->Group.ActiveGroupCount,
-                Info->Group.MaximumGroupCount);
+                Info->DUMMYUNIONNAME.Group.ActiveGroupCount,
+                Info->DUMMYUNIONNAME.Group.MaximumGroupCount));
 
-            CXPLAT_FRE_ASSERT(CxPlatProcessorInfo == NULL);
-            CxPlatProcessorInfo =
-                CXPLAT_ALLOC_NONPAGED(
-                    ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO),
-                    QUIC_POOL_PLATFORM_PROC);
-            if (CxPlatProcessorInfo == NULL)
+            NetLog.Assert(CxPlatProcessorInfo == null);
+            CxPlatProcessorInfo = (CXPLAT_PROCESSOR_INFO*)CxPlatAlloc(ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO));
+            if (CxPlatProcessorInfo == null)
             {
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)",
-                    "CxPlatProcessorInfo",
-                    ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO));
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
             }
+
             CxPlatZeroMemory(
                 CxPlatProcessorInfo,
                 ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO));
 
-            CXPLAT_DBG_ASSERT(CxPlatProcessorGroupInfo == NULL);
-            CxPlatProcessorGroupInfo =
-                CXPLAT_ALLOC_NONPAGED(
-                    Info->Group.ActiveGroupCount * sizeof(CXPLAT_PROCESSOR_GROUP_INFO),
-                    QUIC_POOL_PLATFORM_PROC);
-            if (CxPlatProcessorGroupInfo == NULL)
+            NetLog.Assert(CxPlatProcessorGroupInfo == null);
+            CxPlatProcessorGroupInfo = (CXPLAT_PROCESSOR_GROUP_INFO*)CxPlatAlloc(
+                    Info->DUMMYUNIONNAME.Group.ActiveGroupCount * sizeof(CXPLAT_PROCESSOR_GROUP_INFO));
+
+            if (CxPlatProcessorGroupInfo == null)
             {
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)",
-                    "CxPlatProcessorGroupInfo",
-                    Info->Group.ActiveGroupCount * sizeof(CXPLAT_PROCESSOR_GROUP_INFO));
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Error;
             }
 
             CxPlatProcessorCount = 0;
-            for (WORD i = 0; i < Info->Group.ActiveGroupCount; ++i)
+            for (int i = 0; i < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++i)
             {
-                CxPlatProcessorGroupInfo[i].Mask = Info->Group.GroupInfo[i].ActiveProcessorMask;
-                CxPlatProcessorGroupInfo[i].Count = Info->Group.GroupInfo[i].ActiveProcessorCount;
+                CxPlatProcessorGroupInfo[i].Mask = Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorMask;
+                CxPlatProcessorGroupInfo[i].Count = Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
                 CxPlatProcessorGroupInfo[i].Offset = CxPlatProcessorCount;
-                CxPlatProcessorCount += Info->Group.GroupInfo[i].ActiveProcessorCount;
+                CxPlatProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
             }
 
-            for (uint32_t Proc = 0; Proc < ActiveProcessorCount; ++Proc)
+            for (int Proc = 0; Proc < ActiveProcessorCount; ++Proc)
             {
-                for (WORD Group = 0; Group < Info->Group.ActiveGroupCount; ++Group)
+                for (int Group = 0; Group < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++Group)
                 {
                     if (Proc >= CxPlatProcessorGroupInfo[Group].Offset &&
-                        Proc < CxPlatProcessorGroupInfo[Group].Offset + Info->Group.GroupInfo[Group].ActiveProcessorCount)
+                        Proc < CxPlatProcessorGroupInfo[Group].Offset + Info->DUMMYUNIONNAME.Group.GroupInfo[Group].ActiveProcessorCount)
                     {
                         CxPlatProcessorInfo[Proc].Group = Group;
-                        CXPLAT_DBG_ASSERT(Proc - CxPlatProcessorGroupInfo[Group].Offset <= UINT8_MAX);
-                        CxPlatProcessorInfo[Proc].Index = (uint8_t)(Proc - CxPlatProcessorGroupInfo[Group].Offset);
-#pragma warning(push)
-#pragma warning(disable:6385) // Reading invalid data from 'CxPlatProcessorInfo' (FALSE POSITIVE)
-                        QuicTraceLogInfo(
-                            ProcessorInfoV3,
-                            "[ dll] Proc[%u] Group[%hu] Index[%hhu] Active=%hhu",
-                            Proc,
-                            (uint16_t)Group,
-                            CxPlatProcessorInfo[Proc].Index,
-                            (uint8_t)!!(CxPlatProcessorGroupInfo[Group].Mask & (1ULL << CxPlatProcessorInfo[Proc].Index)));
-#pragma warning(pop)
-            break;
+                        NetLog.Assert(Proc - CxPlatProcessorGroupInfo[Group].Offset <= byte.MaxValue);
+                        CxPlatProcessorInfo[Proc].Index = (byte)(Proc - CxPlatProcessorGroupInfo[Group].Offset);
+                        break;
+                    }
+                }
+            }
+
+            if (Info != null)
+            {
+                CxPlatFree(Info);
+            }
+
+            return 0;
+        Error:
+            if (Info != null)
+            {
+                CxPlatFree(Info);
+            }
+            if (CxPlatProcessorGroupInfo != null)
+            {
+                CxPlatFree(CxPlatProcessorGroupInfo);
+                CxPlatProcessorGroupInfo = null;
+            }
+            if (CxPlatProcessorInfo != null)
+            {
+                CxPlatFree(CxPlatProcessorInfo);
+                CxPlatProcessorInfo = null;
+            }
+            return 1;
         }
-    }
-}
-
-Status = QUIC_STATUS_SUCCESS;
-
-Error:
-
-if (Info)
-{
-    CXPLAT_FREE(Info, QUIC_POOL_PLATFORM_TMP_ALLOC);
-}
-
-if (QUIC_FAILED(Status))
-{
-    if (CxPlatProcessorGroupInfo)
-    {
-        CXPLAT_FREE(CxPlatProcessorGroupInfo, QUIC_POOL_PLATFORM_PROC);
-        CxPlatProcessorGroupInfo = NULL;
-    }
-    if (CxPlatProcessorInfo)
-    {
-        CXPLAT_FREE(CxPlatProcessorInfo, QUIC_POOL_PLATFORM_PROC);
-        CxPlatProcessorInfo = NULL;
-    }
-}
-
-return Status;
-}
 
 static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Buffer, out int BufferLength)
 {
     BufferLength = 0;
-    Interop.GetLogicalProcessorInformationEx(Relationship, IntPtr.Zero, out BufferLength);
+    Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, null, out BufferLength);
     if (BufferLength == 0)
     {
-        return Interop.GetLastError();
+        return Interop.Kernel32.GetLastError();
     }
 
-    *Buffer = CXPLAT_ALLOC_NONPAGED(*BufferLength, QUIC_POOL_PLATFORM_TMP_ALLOC);
+    *Buffer = CXPLAT_ALLOC(*BufferLength, QUIC_POOL_PLATFORM_TMP_ALLOC);
     if (*Buffer == NULL)
     {
         QuicTraceEvent(

@@ -31,8 +31,6 @@ namespace AKNet.Platform
 #else
         internal static partial class Kernel32
         {
-            public delegate int LPTHREAD_START_ROUTINE(IntPtr lpParameter);
-
             [DllImport("kernel32.dll")]
             public static extern int GetLastError();
 
