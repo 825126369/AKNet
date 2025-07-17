@@ -1,6 +1,4 @@
 ﻿#if TARGET_WINDOWS
-using AKNet.Platform;
-using System;
 using System.Runtime.InteropServices;
 using CXPLAT_THREAD = System.IntPtr;
 
@@ -139,7 +137,7 @@ namespace AKNet.Platform
 
     internal unsafe struct CXPLAT_PROCESSOR_INFO
     {
-        public int Group;  // The group number this processor is a part of
+        public ushort Group;  // The group number this processor is a part of
         public int Index;   // Index in the current group
         public int PADDING; // Here to align with PROCESSOR_NUMBER struct
     }
@@ -270,7 +268,7 @@ namespace AKNet.Platform
             return 1;
         }
 
-static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Buffer, out int BufferLength)
+static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX** Buffer, out int BufferLength)
 {
     BufferLength = 0;
     Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, null, out BufferLength);
@@ -279,32 +277,18 @@ static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationsh
         return Interop.Kernel32.GetLastError();
     }
 
-    *Buffer = CXPLAT_ALLOC(*BufferLength, QUIC_POOL_PLATFORM_TMP_ALLOC);
-    if (*Buffer == NULL)
+    *Buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)CxPlatAlloc(BufferLength);
+    if (*Buffer == null)
     {
-        QuicTraceEvent(
-            AllocFailure,
-            "Allocation of '%s' failed. (%llu bytes)",
-            "PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX",
-            *BufferLength);
-        return QUIC_STATUS_OUT_OF_MEMORY;
+        return 1;
     }
 
-    if (!GetLogicalProcessorInformationEx(
-            Relationship,
-            *Buffer,
-            BufferLength))
+    if (!Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, *Buffer, out BufferLength))
     {
-        QuicTraceEvent(
-            LibraryErrorStatus,
-            "[ lib] ERROR, %u, %s.",
-            GetLastError(),
-            "GetLogicalProcessorInformationEx failed");
-        CXPLAT_FREE(*Buffer, QUIC_POOL_PLATFORM_TMP_ALLOC);
-        return HRESULT_FROM_WIN32(GetLastError());
+        CxPlatFree(*Buffer);
+        return Interop.Kernel32.GetLastError();
     }
-
-    return QUIC_STATUS_SUCCESS;
+    return 0;
 }
 
 public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THREAD Thread)
@@ -343,32 +327,28 @@ public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THR
                 return Error;
             }
 #else // CXPLAT_USE_CUSTOM_THREAD_CONTEXT
-            Thread = Interop.CreateThread(
-                    IntPtr.Zero,
-                    IntPtr.Zero,
-                    Config.Callback,
-                    Config.Context,
-                    0,
-                    out _);
+
+            Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, Config.Callback, Config.Context, 0, out _);
             if (Thread == IntPtr.Zero)
             {
-                int Error = Interop.GetLastError();
+                int Error = Interop.Kernel32.GetLastError();
                 NetLog.LogError(Error);
                 return Error;
             }
 #endif
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
-            const CXPLAT_PROCESSOR_INFO* ProcInfo = &CxPlatProcessorInfo[Config->IdealProcessor];
-            GROUP_AFFINITY Group = { 0 };
-            if (Config->Flags & CXPLAT_THREAD_FLAG_SET_AFFINITIZE)
+            CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
+            GROUP_AFFINITY Group;
+            if (Config.Flags & CXPLAT_THREAD_FLAG_SET_AFFINITIZE)
             {
                 Group.Mask = (KAFFINITY)(1ull << ProcInfo->Index);          // Fixed processor
             }
             else
             {
-                Group.Mask = CxPlatProcessorGroupInfo[ProcInfo->Group].Mask;
+                Group.Mask = CxPlatProcessorGroupInfo[ProcInfo.Group].Mask;
             }
-            Group.Group = ProcInfo->Group;
+
+            Group.Group = ProcInfo.Group;
             if (!SetThreadGroupAffinity(*Thread, &Group, NULL))
             {
                 QuicTraceEvent(

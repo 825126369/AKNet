@@ -34,7 +34,7 @@ namespace AKNet.Platform
             [DllImport("kernel32.dll")]
             public static extern int GetLastError();
 
-            [DllImport("kernel32.dll"]
+            [DllImport("kernel32.dll")]
             public static extern IntPtr CreateThread(
                    IntPtr lpThreadAttributes,
                    IntPtr dwStackSize,
