@@ -339,9 +339,9 @@ public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THR
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
             GROUP_AFFINITY Group;
-            if (Config.Flags & CXPLAT_THREAD_FLAG_SET_AFFINITIZE)
+            if (HasFlag(Config.Flags, (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE))
             {
-                Group.Mask = (KAFFINITY)(1ull << ProcInfo->Index);          // Fixed processor
+                Group.Mask = (ulong)(1ul << ProcInfo.Index);          // Fixed processor
             }
             else
             {
