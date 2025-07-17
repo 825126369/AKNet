@@ -1,4 +1,5 @@
 ﻿#if TARGET_WINDOWS
+using System;
 using System.Runtime.InteropServices;
 using CXPLAT_THREAD = System.IntPtr;
 
@@ -138,8 +139,8 @@ namespace AKNet.Platform
     internal unsafe struct CXPLAT_PROCESSOR_INFO
     {
         public ushort Group;  // The group number this processor is a part of
-        public int Index;   // Index in the current group
-        public int PADDING; // Here to align with PROCESSOR_NUMBER struct
+        public byte Index;   // Index in the current group
+        public byte PADDING; // Here to align with PROCESSOR_NUMBER struct
     }
 
     internal unsafe struct CXPLAT_PROCESSOR_GROUP_INFO
@@ -148,7 +149,28 @@ namespace AKNet.Platform
         public int Count;  // Count of active processors in the group
         public int Offset; // Base process index offset this group starts at
     }
-    
+
+    internal struct PROCESSOR_NUMBER
+    {
+        public ushort Group;
+        public byte Number;
+        public byte Reserved;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public static unsafe partial class OSPlatformFunc
     {
         static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo;
@@ -349,33 +371,22 @@ public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THR
             }
 
             Group.Group = ProcInfo.Group;
-            if (!SetThreadGroupAffinity(*Thread, &Group, NULL))
+            if (!Interop.Kernel32.SetThreadGroupAffinity(Thread, &Group, null))
             {
-                QuicTraceEvent(
-                    LibraryErrorStatus,
-                    "[ lib] ERROR, %u, %s.",
-                    GetLastError(),
-                    "SetThreadGroupAffinity");
+                NetLog.LogError("SetThreadGroupAffinity");
             }
-            if (Config->Flags & CXPLAT_THREAD_FLAG_SET_IDEAL_PROC &&
-                !SetThreadIdealProcessorEx(*Thread, (PROCESSOR_NUMBER*)ProcInfo, NULL))
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) && 
+                !Interop.Kernel32.SetThreadIdealProcessorEx(Thread, (PROCESSOR_NUMBER*)&ProcInfo, null))
             {
-                QuicTraceEvent(
-                    LibraryErrorStatus,
-                    "[ lib] ERROR, %u, %s.",
-                    GetLastError(),
-                    "SetThreadIdealProcessorEx");
+                NetLog.LogError("SetThreadIdealProcessorEx");
             }
-            if (Config->Flags & CXPLAT_THREAD_FLAG_HIGH_PRIORITY &&
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY &&
                 !SetThreadPriority(*Thread, THREAD_PRIORITY_HIGHEST))
             {
-                QuicTraceEvent(
-                    LibraryErrorStatus,
-                    "[ lib] ERROR, %u, %s.",
-                    GetLastError(),
-                    "SetThreadPriority");
+                NetLog.LogError("SetThreadPriority");
             }
-            if (Config->Name)
+
+            if (Config.Name != null)
             {
                 WCHAR WideName[64] = L"";
                 size_t WideNameLength;
