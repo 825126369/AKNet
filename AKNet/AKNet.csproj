@@ -5,4 +5,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AKNet.Platform\AKNet.Platform.csproj" />
+  </ItemGroup>
 </Project>

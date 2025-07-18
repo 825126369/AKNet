@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Platform
 {
@@ -22,7 +23,20 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
+        public static long CxPlatTotalMemory;
         static readonly CX_PLATFORM CxPlatform = new CX_PLATFORM();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool STATUS_FAILED(int Status)
+        {
+            return Status > 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool STATUS_SUCCEEDED(int Status)
+        {
+            return Status <= 0;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool BoolOk(long q)

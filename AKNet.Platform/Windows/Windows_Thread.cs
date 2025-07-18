@@ -305,6 +305,14 @@ namespace AKNet.Platform
             return 1;
         }
 
+        static void CxPlatProcessorInfoUnInit()
+        {
+            CxPlatFree(CxPlatProcessorGroupInfo);
+            CxPlatProcessorGroupInfo = null;
+            CxPlatFree(CxPlatProcessorInfo);
+            CxPlatProcessorInfo = null;
+        }
+
         static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX** Buffer, out int BufferLength)
         {
             BufferLength = 0;
