@@ -9,7 +9,7 @@ namespace AKNet.Platform
     internal static partial class Interop
     {
 #if NET7_0_OR_GREATER
-        internal static partial class Kernel32
+        internal static unsafe partial class Kernel32
         {
             [LibraryImport("kernel32.dll")]
             public static partial int GetLastError();
@@ -33,7 +33,10 @@ namespace AKNet.Platform
             public static unsafe partial bool SetThreadGroupAffinity(IntPtr hThread, GROUP_AFFINITY* GroupAffinity, GROUP_AFFINITY* PreviousGroupAffinity);
             [LibraryImport("kernel32.dll")]
             public static unsafe partial bool SetThreadIdealProcessorEx(IntPtr hThread, PROCESSOR_NUMBER* lpIdealProcessor, PROCESSOR_NUMBER* lpPreviousIdealProcessor);
-
+            [LibraryImport("kernel32.dll")]
+            public static unsafe partial bool SetThreadPriority(IntPtr hThread, int nPriority);
+            [LibraryImport("kernel32.dll")]
+            public static unsafe partial long SetThreadDescription(IntPtr hThread, string lpThreadDescription);
         }
 #else
         internal static partial class Kernel32
@@ -58,6 +61,10 @@ namespace AKNet.Platform
             public static unsafe extern bool SetThreadGroupAffinity(IntPtr hThread, GROUP_AFFINITY* GroupAffinity, GROUP_AFFINITY* PreviousGroupAffinity);
             [DllImport("kernel32.dll")]
             public static unsafe extern bool SetThreadIdealProcessorEx(IntPtr hThread, PROCESSOR_NUMBER* lpIdealProcessor, PROCESSOR_NUMBER* lpPreviousIdealProcessor);
+            [DllImport("kernel32.dll")]
+            public static unsafe extern bool SetThreadPriority(IntPtr hThread, int nPriority);
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+            public static unsafe extern long SetThreadDescription(IntPtr hThread, string lpThreadDescription);
         }
 
 #endif

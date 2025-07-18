@@ -173,6 +173,21 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
+        public const int MAXLONG = 0x7fffffff;
+        public const int THREAD_DYNAMIC_CODE_ALLOW = 1;     // Opt-out of dynamic code generation.
+        public const int THREAD_BASE_PRIORITY_LOWRT = 15;  // value that gets a thread to LowRealtime-1
+        public const int THREAD_BASE_PRIORITY_MAX = 2;   // maximum thread base priority boost
+        public const int THREAD_BASE_PRIORITY_MIN = (-2);  // minimum thread base priority boost
+        public const int THREAD_BASE_PRIORITY_IDLE = (-15); // value that gets a thread to idle
+        public const int THREAD_PRIORITY_LOWEST = THREAD_BASE_PRIORITY_MIN;
+        public const int THREAD_PRIORITY_BELOW_NORMAL = (THREAD_PRIORITY_LOWEST + 1);
+        public const int THREAD_PRIORITY_NORMAL = 0;
+        public const int THREAD_PRIORITY_HIGHEST = THREAD_BASE_PRIORITY_MAX;
+        public const int THREAD_PRIORITY_ABOVE_NORMAL = (THREAD_PRIORITY_HIGHEST - 1);
+        public const int THREAD_PRIORITY_ERROR_RETURN = (MAXLONG);
+        public const int THREAD_PRIORITY_TIME_CRITICAL = THREAD_BASE_PRIORITY_LOWRT;
+        public const int THREAD_PRIORITY_IDLE = THREAD_BASE_PRIORITY_IDLE;
+
         static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo;
         static CXPLAT_PROCESSOR_GROUP_INFO* CxPlatProcessorGroupInfo;
         static int CxPlatProcessorCount;
@@ -258,7 +273,7 @@ namespace AKNet.Platform
                     if (Proc >= CxPlatProcessorGroupInfo[Group].Offset &&
                         Proc < CxPlatProcessorGroupInfo[Group].Offset + Info->DUMMYUNIONNAME.Group.GroupInfo[Group].ActiveProcessorCount)
                     {
-                        CxPlatProcessorInfo[Proc].Group = Group;
+                        CxPlatProcessorInfo[Proc].Group = (ushort)Group;
                         NetLog.Assert(Proc - CxPlatProcessorGroupInfo[Group].Offset <= byte.MaxValue);
                         CxPlatProcessorInfo[Proc].Index = (byte)(Proc - CxPlatProcessorGroupInfo[Group].Offset);
                         break;
@@ -290,66 +305,31 @@ namespace AKNet.Platform
             return 1;
         }
 
-static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX** Buffer, out int BufferLength)
-{
-    BufferLength = 0;
-    Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, null, out BufferLength);
-    if (BufferLength == 0)
-    {
-        return Interop.Kernel32.GetLastError();
-    }
-
-    *Buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)CxPlatAlloc(BufferLength);
-    if (*Buffer == null)
-    {
-        return 1;
-    }
-
-    if (!Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, *Buffer, out BufferLength))
-    {
-        CxPlatFree(*Buffer);
-        return Interop.Kernel32.GetLastError();
-    }
-    return 0;
-}
-
-public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THREAD Thread)
+        static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX** Buffer, out int BufferLength)
         {
-#if CXPLAT_USE_CUSTOM_THREAD_CONTEXT
-            CXPLAT_THREAD_CUSTOM_CONTEXT* CustomContext =
-                CXPLAT_ALLOC_NONPAGED(sizeof(CXPLAT_THREAD_CUSTOM_CONTEXT), QUIC_POOL_CUSTOM_THREAD);
-            if (CustomContext == NULL)
+            BufferLength = 0;
+            Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, null, out BufferLength);
+            if (BufferLength == 0)
             {
-                QuicTraceEvent(
-                    AllocFailure,
-                    "Allocation of '%s' failed. (%llu bytes)",
-                    "Custom thread context",
-                    sizeof(CXPLAT_THREAD_CUSTOM_CONTEXT));
-                return QUIC_STATUS_OUT_OF_MEMORY;
+                return Interop.Kernel32.GetLastError();
             }
-            CustomContext->Callback = Config->Callback;
-            CustomContext->Context = Config->Context;
-            *Thread =
-                CreateThread(
-                    NULL,
-                    0,
-                    CxPlatThreadCustomStart,
-                    CustomContext,
-                    0,
-                    NULL);
-            if (*Thread == NULL)
-            {
-                CXPLAT_FREE(CustomContext, QUIC_POOL_CUSTOM_THREAD);
-                DWORD Error = GetLastError();
-                QuicTraceEvent(
-                    LibraryErrorStatus,
-                    "[ lib] ERROR, %u, %s.",
-                    Error,
-                    "CreateThread");
-                return Error;
-            }
-#else // CXPLAT_USE_CUSTOM_THREAD_CONTEXT
 
+            *Buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)CxPlatAlloc(BufferLength);
+            if (*Buffer == null)
+            {
+                return 1;
+            }
+
+            if (!Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, *Buffer, out BufferLength))
+            {
+                CxPlatFree(*Buffer);
+                return Interop.Kernel32.GetLastError();
+            }
+            return 0;
+        }
+
+        public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THREAD Thread)
+        {
             Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, Config.Callback, Config.Context, 0, out _);
             if (Thread == IntPtr.Zero)
             {
@@ -357,7 +337,7 @@ public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THR
                 NetLog.LogError(Error);
                 return Error;
             }
-#endif
+
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
             GROUP_AFFINITY Group;
@@ -375,40 +355,22 @@ public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THR
             {
                 NetLog.LogError("SetThreadGroupAffinity");
             }
-            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) && 
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) &&
                 !Interop.Kernel32.SetThreadIdealProcessorEx(Thread, (PROCESSOR_NUMBER*)&ProcInfo, null))
             {
                 NetLog.LogError("SetThreadIdealProcessorEx");
             }
-            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY &&
-                !SetThreadPriority(*Thread, THREAD_PRIORITY_HIGHEST))
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY) &&
+                !Interop.Kernel32.SetThreadPriority(Thread, THREAD_PRIORITY_HIGHEST))
             {
                 NetLog.LogError("SetThreadPriority");
             }
 
             if (Config.Name != null)
             {
-                WCHAR WideName[64] = L"";
-                size_t WideNameLength;
-                mbstowcs_s(
-                    &WideNameLength,
-                    WideName,
-                    ARRAYSIZE(WideName) - 1,
-                    Config->Name,
-                    _TRUNCATE);
-#if defined(QUIC_RESTRICTED_BUILD)
-        SetThreadDescription(*Thread, WideName);
-#else
-                THREAD_NAME_INFORMATION_PRIVATE ThreadNameInfo;
-                RtlInitUnicodeString(&ThreadNameInfo.ThreadName, WideName);
-                NtSetInformationThread(
-                    *Thread,
-                    ThreadNameInformationPrivate,
-                    &ThreadNameInfo,
-                    sizeof(ThreadNameInfo));
-#endif
+                Interop.Kernel32.SetThreadDescription(Thread, Config.Name);
             }
-            return QUIC_STATUS_SUCCESS;
+            return 0;
         }
     }
 }
