@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
@@ -31,7 +32,7 @@ namespace AKNet.Platform.Socket
 
             if (cancellationToken.IsCancellationRequested)
             {
-                return ValueTask.FromCanceled<SocketReceiveFromResult>(cancellationToken);
+                return new ValueTask<SocketReceiveFromResult>(Task.FromCanceled<SocketReceiveFromResult>(cancellationToken));
             }
 
             AwaitableSocketAsyncEventArgs saea =
@@ -47,35 +48,30 @@ namespace AKNet.Platform.Socket
             {
                 saea.RemoteEndPoint = s_IPEndPointIPv6;
             }
+
             saea.WrapExceptionsForNetworkStream = false;
             return saea.ReceiveFromAsync(this, cancellationToken);
         }
-
-        /// <summary>
-        /// Receives data and returns the endpoint of the sending host.
-        /// </summary>
-        /// <param name="buffer">The buffer for the received data.</param>
-        /// <param name="socketFlags">A bitwise combination of SocketFlags values that will be used when receiving the data.</param>
-        /// <param name="receivedAddress">An <see cref="SocketAddress"/>, that will be updated with value of the remote peer.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to signal the asynchronous operation should be canceled.</param>
-        /// <returns>An asynchronous task that completes with a <see cref="SocketReceiveFromResult"/> containing the number of bytes received and the endpoint of the sending host.</returns>
+            
         public ValueTask<int> ReceiveFromAsync(Memory<byte> buffer, SocketFlags socketFlags, SocketAddress receivedAddress, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(receivedAddress, nameof(receivedAddress));
-
+            if (receivedAddress == null)
+            {
+                throw new ArgumentNullException();
+            }
+            
             if (receivedAddress.Size < SocketAddress.GetMaximumAddressSize(AddressFamily))
             {
-                throw new ArgumentOutOfRangeException(nameof(receivedAddress), SR.net_sockets_address_small);
+                throw new ArgumentOutOfRangeException();
             }
 
             if (cancellationToken.IsCancellationRequested)
             {
-                return ValueTask.FromCanceled<int>(cancellationToken);
+                return new ValueTask<int>(Task.FromCanceled<int>(cancellationToken));
             }
 
-            AwaitableSocketAsyncEventArgs saea =
-                Interlocked.Exchange(ref _singleBufferReceiveEventArgs, null) ??
+            AwaitableSocketAsyncEventArgs saea = Interlocked.Exchange(ref _singleBufferReceiveEventArgs, null) ?? 
                 new AwaitableSocketAsyncEventArgs(this, isReceiveForCaching: true);
 
             Debug.Assert(saea.BufferList == null);
@@ -86,57 +82,28 @@ namespace AKNet.Platform.Socket
             saea.WrapExceptionsForNetworkStream = false;
             return saea.ReceiveFromSocketAddressAsync(this, cancellationToken);
         }
-
-        /// <summary>
-        /// Receives data and returns additional information about the sender of the message.
-        /// </summary>
-        /// <param name="buffer">The buffer for the received data.</param>
-        /// <param name="remoteEndPoint">An endpoint of the same type as the endpoint of the remote host.</param>
-        /// <returns>An asynchronous task that completes with a <see cref="SocketReceiveMessageFromResult"/> containing the number of bytes received and additional information about the sending host.</returns>
+        
         public Task<SocketReceiveMessageFromResult> ReceiveMessageFromAsync(ArraySegment<byte> buffer, EndPoint remoteEndPoint) =>
             ReceiveMessageFromAsync(buffer, SocketFlags.None, remoteEndPoint);
-
-        /// <summary>
-        /// Receives data and returns additional information about the sender of the message.
-        /// </summary>
-        /// <param name="buffer">The buffer for the received data.</param>
-        /// <param name="socketFlags">A bitwise combination of SocketFlags values that will be used when receiving the data.</param>
-        /// <param name="remoteEndPoint">An endpoint of the same type as the endpoint of the remote host.</param>
-        /// <returns>An asynchronous task that completes with a <see cref="SocketReceiveMessageFromResult"/> containing the number of bytes received and additional information about the sending host.</returns>
+        
         public Task<SocketReceiveMessageFromResult> ReceiveMessageFromAsync(ArraySegment<byte> buffer, SocketFlags socketFlags, EndPoint remoteEndPoint)
         {
             ValidateBuffer(buffer);
             return ReceiveMessageFromAsync(buffer, socketFlags, remoteEndPoint, default).AsTask();
         }
-
-        /// <summary>
-        /// Receives data and returns additional information about the sender of the message.
-        /// </summary>
-        /// <param name="buffer">The buffer for the received data.</param>
-        /// <param name="remoteEndPoint">An endpoint of the same type as the endpoint of the remote host.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to signal the asynchronous operation should be canceled.</param>
-        /// <returns>An asynchronous task that completes with a <see cref="SocketReceiveMessageFromResult"/> containing the number of bytes received and additional information about the sending host.</returns>
+        
         public ValueTask<SocketReceiveMessageFromResult> ReceiveMessageFromAsync(Memory<byte> buffer, EndPoint remoteEndPoint, CancellationToken cancellationToken = default) =>
             ReceiveMessageFromAsync(buffer, SocketFlags.None, remoteEndPoint, cancellationToken);
-
-        /// <summary>
-        /// Receives data and returns additional information about the sender of the message.
-        /// </summary>
-        /// <param name="buffer">The buffer for the received data.</param>
-        /// <param name="socketFlags">A bitwise combination of SocketFlags values that will be used when receiving the data.</param>
-        /// <param name="remoteEndPoint">An endpoint of the same type as the endpoint of the remote host.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to signal the asynchronous operation should be canceled.</param>
-        /// <returns>An asynchronous task that completes with a <see cref="SocketReceiveMessageFromResult"/> containing the number of bytes received and additional information about the sending host.</returns>
+        
         public ValueTask<SocketReceiveMessageFromResult> ReceiveMessageFromAsync(Memory<byte> buffer, SocketFlags socketFlags, EndPoint remoteEndPoint, CancellationToken cancellationToken = default)
         {
             ValidateReceiveFromEndpointAndState(remoteEndPoint, nameof(remoteEndPoint));
             if (cancellationToken.IsCancellationRequested)
             {
-                return ValueTask.FromCanceled<SocketReceiveMessageFromResult>(cancellationToken);
+                return new ValueTask<SocketReceiveMessageFromResult>(Task.FromCanceled<SocketReceiveMessageFromResult>(cancellationToken));
             }
 
-            AwaitableSocketAsyncEventArgs saea =
-                Interlocked.Exchange(ref _singleBufferReceiveEventArgs, null) ??
+            AwaitableSocketAsyncEventArgs saea = Interlocked.Exchange(ref _singleBufferReceiveEventArgs, null) ??
                 new AwaitableSocketAsyncEventArgs(this, isReceiveForCaching: true);
 
             Debug.Assert(saea.BufferList == null);
@@ -146,54 +113,29 @@ namespace AKNet.Platform.Socket
             saea.WrapExceptionsForNetworkStream = false;
             return saea.ReceiveMessageFromAsync(this, cancellationToken);
         }
-
-        /// <summary>
-        /// Sends data to the specified remote host.
-        /// </summary>
-        /// <param name="buffer">The buffer for the data to send.</param>
-        /// <param name="remoteEP">The remote host to which to send the data.</param>
-        /// <returns>An asynchronous task that completes with the number of bytes sent.</returns>
+        
         public Task<int> SendToAsync(ArraySegment<byte> buffer, EndPoint remoteEP) =>
             SendToAsync(buffer, SocketFlags.None, remoteEP);
-
-        /// <summary>
-        /// Sends data to the specified remote host.
-        /// </summary>
-        /// <param name="buffer">The buffer for the data to send.</param>
-        /// <param name="socketFlags">A bitwise combination of SocketFlags values that will be used when sending the data.</param>
-        /// <param name="remoteEP">The remote host to which to send the data.</param>
-        /// <returns>An asynchronous task that completes with the number of bytes sent.</returns>
+        
         public Task<int> SendToAsync(ArraySegment<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
         {
             ValidateBuffer(buffer);
             return SendToAsync(buffer, socketFlags, remoteEP, default).AsTask();
         }
-
-        /// <summary>
-        /// Sends data to the specified remote host.
-        /// </summary>
-        /// <param name="buffer">The buffer for the data to send.</param>
-        /// <param name="remoteEP">The remote host to which to send the data.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes with the number of bytes sent.</returns>
+        
         public ValueTask<int> SendToAsync(ReadOnlyMemory<byte> buffer, EndPoint remoteEP, CancellationToken cancellationToken = default) =>
             SendToAsync(buffer, SocketFlags.None, remoteEP, cancellationToken);
-
-        /// <summary>
-        /// Sends data to the specified remote host.
-        /// </summary>
-        /// <param name="buffer">The buffer for the data to send.</param>
-        /// <param name="socketFlags">A bitwise combination of SocketFlags values that will be used when sending the data.</param>
-        /// <param name="remoteEP">The remote host to which to send the data.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes with the number of bytes sent.</returns>
+        
         public ValueTask<int> SendToAsync(ReadOnlyMemory<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(remoteEP);
+            if (remoteEP == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             if (cancellationToken.IsCancellationRequested)
             {
-                return ValueTask.FromCanceled<int>(cancellationToken);
+                return new ValueTask<int>(Task.FromCanceled<int>(cancellationToken));
             }
 
             AwaitableSocketAsyncEventArgs saea =
@@ -207,23 +149,18 @@ namespace AKNet.Platform.Socket
             saea.WrapExceptionsForNetworkStream = false;
             return saea.SendToAsync(this, cancellationToken);
         }
-
-        /// <summary>
-        /// Sends data to the specified remote host.
-        /// </summary>
-        /// <param name="buffer">The buffer for the data to send.</param>
-        /// <param name="socketFlags">A bitwise combination of SocketFlags values that will be used when sending the data.</param>
-        /// <param name="socketAddress">The remote host to which to send the data.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <returns>An asynchronous task that completes with the number of bytes sent.</returns>
+        
         public ValueTask<int> SendToAsync(ReadOnlyMemory<byte> buffer, SocketFlags socketFlags, SocketAddress socketAddress, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
-            ArgumentNullException.ThrowIfNull(socketAddress);
+            if (socketAddress == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             if (cancellationToken.IsCancellationRequested)
             {
-                return ValueTask.FromCanceled<int>(cancellationToken);
+                return new ValueTask<int>(Task.FromCanceled<int>(cancellationToken));
             }
 
             AwaitableSocketAsyncEventArgs saea =
@@ -236,35 +173,24 @@ namespace AKNet.Platform.Socket
             saea._socketAddress = socketAddress;
             saea.RemoteEndPoint = null;
             saea.WrapExceptionsForNetworkStream = false;
+
             try
             {
                 return saea.SendToAsync(this, cancellationToken);
             }
             finally
             {
-                // detach user provided SA so we do not accidentally stomp on it later.
                 saea._socketAddress = null;
             }
         }
-
-        /// <summary>
-        /// Sends the file <paramref name="fileName"/> to a connected <see cref="Socket"/> object.
-        /// </summary>
-        /// <param name="fileName">A <see cref="string"/> that contains the path and name of the file to be sent. This parameter can be <see langword="null"/>.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
-        /// <exception cref="ObjectDisposedException">The <see cref="Socket"/> object has been closed.</exception>
-        /// <exception cref="NotSupportedException">The <see cref="Socket"/> object is not connected to a remote host.</exception>
-        /// <exception cref="FileNotFoundException">The file <paramref name="fileName"/> was not found.</exception>
-        /// <exception cref="SocketException">An error occurred when attempting to access the socket.</exception>
-        public ValueTask SendFileAsync(string? fileName, CancellationToken cancellationToken = default)
-        {
-            return SendFileAsync(fileName, default, default, TransmitFileOptions.UseDefaultWorkerThread, cancellationToken);
-        }
-
-        /// <summary>Validates the supplied array segment, throwing if its array or indices are null or out-of-bounds, respectively.</summary>
+        
         private static void ValidateBuffer(ArraySegment<byte> buffer)
         {
-            ArgumentNullException.ThrowIfNull(buffer.Array, nameof(buffer.Array));
+            if (buffer.Array != null)
+            {
+                throw new ArgumentNullException();
+            }
+
             if ((uint)buffer.Offset > (uint)buffer.Array.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(buffer.Offset));
@@ -274,15 +200,17 @@ namespace AKNet.Platform.Socket
                 throw new ArgumentOutOfRangeException(nameof(buffer.Count));
             }
         }
-
-        /// <summary>Validates the supplied buffer list, throwing if it's null or empty.</summary>
+        
         private static void ValidateBuffersList(IList<ArraySegment<byte>> buffers)
         {
-            ArgumentNullException.ThrowIfNull(buffers);
+            if (buffers == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             if (buffers.Count == 0)
             {
-                throw new ArgumentException(SR.Format(SR.net_sockets_zerolist, nameof(buffers)), nameof(buffers));
+                throw new ArgumentException();
             }
         }
         
@@ -356,8 +284,7 @@ namespace AKNet.Platform.Socket
                 saea.Dispose();
             }
         }
-
-        /// <summary>Dispose of any cached <see cref="TaskSocketAsyncEventArgs{TResult}"/> instances.</summary>
+        
         private void DisposeCachedTaskSocketAsyncEventArgs()
         {
             Interlocked.Exchange(ref _multiBufferReceiveEventArgs, null)?.Dispose();
@@ -397,7 +324,7 @@ namespace AKNet.Platform.Socket
             private CancellationToken _cancellationToken;
             
             public AwaitableSocketAsyncEventArgs(Socket owner, bool isReceiveForCaching) :
-                base(unsafeSuppressExecutionContextFlow: true) // avoid flowing context at lower layers as we only expose ValueTask, which handles it
+                base(unsafeSuppressExecutionContextFlow: true)
             {
                 _owner = owner;
                 _isReadForCaching = isReceiveForCaching;
@@ -439,7 +366,7 @@ namespace AKNet.Platform.Socket
 
                 return error == SocketError.Success ?
                     new ValueTask<SocketReceiveFromResult>(new SocketReceiveFromResult() { ReceivedBytes = bytesTransferred, RemoteEndPoint = remoteEndPoint }) :
-                    ValueTask.FromException<SocketReceiveFromResult>(CreateException(error));
+                    new ValueTask<SocketReceiveFromResult>(Task.FromException<SocketReceiveFromResult>(CreateException(error)));
             }
 
             internal ValueTask<int> ReceiveFromSocketAddressAsync(Socket socket, CancellationToken cancellationToken)
@@ -457,7 +384,7 @@ namespace AKNet.Platform.Socket
 
                 return error == SocketError.Success ?
                     new ValueTask<int>(bytesTransferred) :
-                    ValueTask.FromException<int>(CreateException(error));
+                    new ValueTask<int>(Task.FromException<int>(CreateException(error)));
             }
 
             public ValueTask<SocketReceiveMessageFromResult> ReceiveMessageFromAsync(Socket socket, CancellationToken cancellationToken)
@@ -478,7 +405,7 @@ namespace AKNet.Platform.Socket
 
                 return error == SocketError.Success ?
                     new ValueTask<SocketReceiveMessageFromResult>(new SocketReceiveMessageFromResult() { ReceivedBytes = bytesTransferred, RemoteEndPoint = remoteEndPoint, SocketFlags = socketFlags, PacketInformation = packetInformation }) :
-                    ValueTask.FromException<SocketReceiveMessageFromResult>(CreateException(error));
+                    new ValueTask<SocketReceiveMessageFromResult>(Task.FromException<SocketReceiveMessageFromResult>(CreateException(error)));
             }
 
             public ValueTask<int> SendToAsync(Socket socket, CancellationToken cancellationToken)
@@ -493,23 +420,7 @@ namespace AKNet.Platform.Socket
                 SocketError error = SocketError;
 
                 ReleaseForSyncCompletion();
-
-                return error == SocketError.Success ?
-                    new ValueTask<int>(bytesTransferred) :
-                    ValueTask.FromException<int>(CreateException(error));
-            }
-
-            public ValueTask DisconnectAsync(Socket socket, CancellationToken cancellationToken)
-            {
-                if (socket.DisconnectAsync(this, cancellationToken))
-                {
-                    _cancellationToken = cancellationToken;
-                    return new ValueTask(this, _mrvtsc.Version);
-                }
-
-                SocketError error = SocketError;
-                ReleaseForSyncCompletion();
-                return error == SocketError.Success ? ValueTask.CompletedTask : ValueTask.FromException(CreateException(error));
+                return error == SocketError.Success ? new ValueTask<int>(bytesTransferred) : new ValueTask(CreateException(error));
             }
                 
             public ValueTaskSourceStatus GetStatus(short token) => _mrvtsc.GetStatus(token);
