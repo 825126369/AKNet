@@ -268,7 +268,7 @@ namespace AKNet.Platform.Socket
         
         private static Exception GetException(SocketError error, bool wrapExceptionsInIOExceptions = false)
         {
-            Exception e = ExceptionDispatchInfo.SetCurrentStackTrace(new SocketException((int)error));
+            Exception e = ExceptionDispatchInfo.Capture(new SocketException((int)error));
             return wrapExceptionsInIOExceptions ? new IOException() : e;
         }
         

@@ -1,9 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace AKNet.Platform
 {
@@ -13,15 +11,15 @@ namespace AKNet.Platform
         {
 #if NET7_0_OR_GREATER
         [LibraryImport(Libraries.Kernel32, SetLastError = true)]
-        internal static partial IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, UIntPtr CompletionKey, int NumberOfConcurrentThreads);
+        internal static partial IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, IntPtr CompletionKey, int NumberOfConcurrentThreads);
 
         [LibraryImport(Libraries.Kernel32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, UIntPtr CompletionKey, IntPtr lpOverlapped);
+        internal static partial bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, IntPtr CompletionKey, IntPtr lpOverlapped);
 
         [LibraryImport(Libraries.Kernel32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static partial bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out UIntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
+        internal static partial bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out IntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
 
         [LibraryImport(Libraries.Kernel32, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -43,15 +41,15 @@ namespace AKNet.Platform
         }
 #else
             [DllImport(Libraries.Kernel32, SetLastError = true)]
-            internal static extern IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, UIntPtr CompletionKey, int NumberOfConcurrentThreads);
+            internal static extern IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, IntPtr CompletionKey, int NumberOfConcurrentThreads);
 
             [DllImport(Libraries.Kernel32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            internal static extern bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, UIntPtr CompletionKey, IntPtr lpOverlapped);
+            internal static extern bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, IntPtr CompletionKey, IntPtr lpOverlapped);
 
             [DllImport(Libraries.Kernel32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            internal static extern bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out UIntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
+            internal static extern bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out IntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
 
             [DllImport(Libraries.Kernel32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
@@ -71,7 +69,25 @@ namespace AKNet.Platform
                 public UIntPtr Internal;
                 public uint dwNumberOfBytesTransferred;
             }
-#endif
-        }
+
+//            internal struct OVERLAPPED
+//            {
+//                public ulong* Internal;
+//                public ulong* InternalHigh;
+//                union {
+//                    struct {
+//                                DWORD Offset;
+//                                DWORD OffsetHigh;
+//                     }
+//                 DUMMYSTRUCTNAME;
+//                 PVOID Pointer;
+//                }
+//                DUMMYUNIONNAME;
+
+//                HANDLE hEvent;
+//                    }
+//        OVERLAPPED, *LPOVERLAPPED;
+//#endif
+//        }
     }
 }

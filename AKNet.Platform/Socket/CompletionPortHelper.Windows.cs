@@ -1,4 +1,6 @@
+
 using System.Runtime.InteropServices;
+
 namespace AKNet.Platform.Socket
 {
     internal static class CompletionPortHelper
@@ -11,7 +13,6 @@ namespace AKNet.Platform.Socket
         }
         
         internal static readonly bool PlatformHasUdpIssue = CheckIfPlatformHasUdpIssue();
-
         private static bool CheckIfPlatformHasUdpIssue()
         {
             Version osVersion = Environment.OSVersion.Version;

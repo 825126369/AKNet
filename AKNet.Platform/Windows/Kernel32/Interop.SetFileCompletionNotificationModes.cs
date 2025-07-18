@@ -8,7 +8,7 @@ namespace AKNet.Platform
     internal static partial class Interop
     {
 #if NET7_0_OR_GREATER
-        internal static partial class Kernel32
+        public static partial class Kernel32
         {
             [Flags]
             internal enum FileCompletionNotificationModes : byte
@@ -23,7 +23,7 @@ namespace AKNet.Platform
             internal static partial bool SetFileCompletionNotificationModes(SafeHandle handle, FileCompletionNotificationModes flags);
         }
 #else
-        internal static partial class Kernel32
+        public static partial class Kernel32
         {
             [Flags]
             internal enum FileCompletionNotificationModes : byte

@@ -1,9 +1,7 @@
 using System.ComponentModel;
-using System.Runtime.Serialization;
 
 namespace AKNet.Platform.Socket
 {
-    [Serializable]
     public partial class SocketException : Win32Exception
     {
         private readonly SocketError _errorCode;
@@ -12,18 +10,16 @@ namespace AKNet.Platform.Socket
             
         }
 
-        /// <summary>Initializes a new instance of the <see cref='System.Net.Sockets.SocketException'/> class with the specified error code and optional message.</summary>
         public SocketException(int errorCode, string? message) : this((SocketError)errorCode, message)
         {
+
         }
 
-        /// <summary>Creates a new instance of the <see cref='System.Net.Sockets.SocketException'/> class with the specified error code as SocketError.</summary>
         internal SocketException(SocketError socketError) : base(GetNativeErrorForSocketError(socketError))
         {
             _errorCode = socketError;
         }
 
-        /// <summary>Initializes a new instance of the <see cref='System.Net.Sockets.SocketException'/> class with the specified error code as SocketError and optional message.</summary>
         internal SocketException(SocketError socketError, string? message) : base(GetNativeErrorForSocketError(socketError), message)
         {
             _errorCode = socketError;
