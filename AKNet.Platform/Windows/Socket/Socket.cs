@@ -84,12 +84,6 @@ namespace AKNet.Platform.Socket
             get
             {
                 ThrowIfDisposed();
-                CheckNonBlockingConnectCompleted();
-                if (_rightEndPoint == null)
-                {
-                    return null;
-                }
-
                 if (_localEndPoint == null)
                 {
                     Span<byte> buffer = stackalloc byte[byte.MaxValue];
@@ -272,22 +266,17 @@ namespace AKNet.Platform.Socket
             ThrowIfDisposed();
             if (_isDisconnected)
             {
-                throw new InvalidOperationException(SR.net_sockets_disconnectedConnect);
+                throw new InvalidOperationException();
             }
 
             if (_isListening)
             {
-                throw new InvalidOperationException(SR.net_sockets_mustnotlisten);
+                throw new InvalidOperationException();
             }
-
-            ThrowIfConnectedStreamSocket();
-            ValidateBlockingMode();
 
             DnsEndPoint? dnsEP = remoteEP as DnsEndPoint;
             if (dnsEP != null)
             {
-                ValidateForMultiConnect(isMultiEndpoint: true); // needs to come before CanTryAddressFamily call
-
                 if (dnsEP.AddressFamily != AddressFamily.Unspecified && !CanTryAddressFamily(dnsEP.AddressFamily))
                 {
                     throw new NotSupportedException(SR.net_invalidversion);
@@ -296,8 +285,6 @@ namespace AKNet.Platform.Socket
                 Connect(dnsEP.Host, dnsEP.Port);
                 return;
             }
-
-            ValidateForMultiConnect(isMultiEndpoint: false);
 
             SocketAddress socketAddress = Serialize(ref remoteEP);
             _pendingConnectRightEndPoint = remoteEP;
@@ -310,7 +297,6 @@ namespace AKNet.Platform.Socket
         {
             ThrowIfDisposed();
             ThrowIfConnectedStreamSocket();
-            ValidateForMultiConnect(isMultiEndpoint: false);
             if (!CanTryAddressFamily(address.AddressFamily))
             {
                 throw new NotSupportedException();
@@ -353,8 +339,6 @@ namespace AKNet.Platform.Socket
             }
 
             ThrowIfConnectedStreamSocket();
-            ValidateForMultiConnect(isMultiEndpoint: true);
-
             ExceptionDispatchInfo? lastex = null;
             foreach (IPAddress address in addresses)
             {
@@ -419,8 +403,7 @@ namespace AKNet.Platform.Socket
                 UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
             }
         }
-
-        // Sets the specified option to the specified value.
+        
         public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, bool optionValue)
         {
             SetSocketOption(optionLevel, optionName, (optionValue ? 1 : 0));
@@ -489,19 +472,6 @@ namespace AKNet.Platform.Socket
         public object? GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName)
         {
             ThrowIfDisposed();
-            if (optionLevel == SocketOptionLevel.Socket && optionName == SocketOptionName.Linger)
-            {
-                return GetLingerOpt();
-            }
-            else if (optionLevel == SocketOptionLevel.IP && (optionName == SocketOptionName.AddMembership || optionName == SocketOptionName.DropMembership))
-            {
-                return GetMulticastOpt(optionName);
-            }
-            else if (optionLevel == SocketOptionLevel.IPv6 && (optionName == SocketOptionName.AddMembership || optionName == SocketOptionName.DropMembership))
-            {
-                return GetIPv6MulticastOpt(optionName);
-            }
-
             int optionValue;
             SocketError errorCode = SocketPal.GetSockOpt(
                 _handle,
@@ -577,7 +547,7 @@ namespace AKNet.Platform.Socket
         {
             if (level == IPProtectionLevel.Unspecified)
             {
-                throw new ArgumentException(SR.net_sockets_invalid_optionValue_all, nameof(level));
+                throw new ArgumentException();
             }
 
             if (_addressFamily == AddressFamily.InterNetworkV6)
@@ -621,7 +591,6 @@ namespace AKNet.Platform.Socket
             InternalSetBlocking(_willBlockInternal);
         }
         
-        partial void WildcardBindForConnectIfNecessary(AddressFamily addressFamily);
         public bool ReceiveFromAsync(SocketAsyncEventArgs e) => ReceiveFromAsync(e, default);
         private bool ReceiveFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
@@ -704,42 +673,6 @@ namespace AKNet.Platform.Socket
                 socketError = e.DoOperationReceiveMessageFrom(this, _handle, cancellationToken);
             }
             catch
-            {
-                e.Complete();
-                throw;
-            }
-
-            return socketError == SocketError.IOPending;
-        }
-
-        public bool SendPacketsAsync(SocketAsyncEventArgs e) => SendPacketsAsync(e, default(CancellationToken));
-
-        private bool SendPacketsAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
-        {
-            ThrowIfDisposed();
-
-            if (e == null)
-            {
-                throw new  ArgumentNullException();
-            }
-
-            if (e.SendPacketsElements == null)
-            {
-                throw new ArgumentException();
-            }
-
-            if (!Connected)
-            {
-                throw new NotSupportedException();
-            }
-            
-            e.StartOperationCommon(this, SocketAsyncOperation.SendPackets);
-            SocketError socketError;
-            try
-            {
-                socketError = e.DoOperationSendPackets(this, _handle, cancellationToken);
-            }
-            catch (Exception)
             {
                 e.Complete();
                 throw;
@@ -831,7 +764,7 @@ namespace AKNet.Platform.Socket
             }
             else if (remoteEP is DnsEndPoint)
             {
-                throw new ArgumentException(SR.Format(SR.net_sockets_invalid_dnsendpoint, nameof(remoteEP)), nameof(remoteEP));
+                throw new ArgumentException();
             }
 
             return remoteEP.Serialize();
@@ -854,125 +787,12 @@ namespace AKNet.Platform.Socket
                 UpdateConnectSocketErrorForDisposed(ref errorCode);
                 SocketException socketException = SocketExceptionFactory.CreateSocketException((int)errorCode, endPointSnapshot);
                 UpdateStatusAfterSocketError(socketException);
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, socketException);
-
-                SocketsTelemetry.Log.AfterConnect(errorCode, activity);
-
                 throw socketException;
             }
 
-            SocketsTelemetry.Log.AfterConnect(SocketError.Success, activity);
-
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, $"connection to:{endPointSnapshot}");
-
-            // Update state and performance counters.
             _pendingConnectRightEndPoint = endPointSnapshot;
             _nonBlockingConnectInProgress = false;
             SetToConnected();
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Connected(this, LocalEndPoint, RemoteEndPoint);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) > 0)
-            {
-                return;
-            }
-
-            SetToDisconnected();
-
-            SafeSocketHandle? handle = _handle;
-            if (handle != null)
-            {
-                if (!disposing)
-                {
-                    handle.Dispose();
-                }
-                else if (handle.OwnsHandle)
-                {
-                    try
-                    {
-                        int timeout = _closeTimeout;
-                        if (timeout == 0)
-                        {
-                            handle.CloseAsIs(abortive: true);
-                        }
-                        else
-                        {
-                            SocketError errorCode;
-                            if (!_willBlock || !_willBlockInternal)
-                            {
-                                bool willBlock;
-                                errorCode = SocketPal.SetBlocking(handle, false, out willBlock);                            
-                            }
-
-                            if (timeout < 0)
-                            {
-                                handle.CloseAsIs(abortive: false);
-                            }
-                            else
-                            {
-                                errorCode = SocketPal.Shutdown(handle, _isConnected, _isDisconnected, SocketShutdown.Send);
-                                errorCode = SocketPal.SetSockOpt(handle, SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, timeout);
-
-                                if (errorCode != SocketError.Success)
-                                {
-                                    handle.CloseAsIs(abortive: true);
-                                }
-                                else
-                                {
-                                    int unused;
-                                    errorCode = SocketPal.Receive(handle, Array.Empty<byte>(), 0, 0, SocketFlags.None, out unused);
-
-                                    if (errorCode != 0)
-                                    {
-                                        handle.CloseAsIs(abortive: true);
-                                    }
-                                    else
-                                    {
-                                        int dataAvailable = 0;
-                                        errorCode = SocketPal.GetAvailable(handle, out dataAvailable);
-                                        if (errorCode != SocketError.Success || dataAvailable != 0)
-                                        {
-                                            handle.CloseAsIs(abortive: true);
-                                        }
-                                        else
-                                        {
-                                            handle.CloseAsIs(abortive: false);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                    }
-                }
-                else
-                {
-                    handle.CloseAsIs(abortive: false);
-                }
-                
-                if (_rightEndPoint is UnixDomainSocketEndPoint unixEndPoint && unixEndPoint.BoundFileName is not null)
-                {
-                    try
-                    {
-                        File.Delete(unixEndPoint.BoundFileName);
-                    }
-                    catch
-                    { }
-                }
-            }
-
-            // Clean up any cached data
-            DisposeCachedTaskSocketAsyncEventArgs();
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         ~Socket()
@@ -1118,10 +938,7 @@ namespace AKNet.Platform.Socket
             UpdateStatusAfterSocketError(socketException, disconnectOnFailure);
             throw socketException;
         }
-
-        // UpdateStatusAfterSocketError(socketException) - updates the status of a connected socket
-        // on which a failure occurred. it'll go to winsock and check if the connection
-        // is still open and if it needs to update our internal state.
+        
         internal void UpdateStatusAfterSocketError(SocketException socketException, bool disconnectOnFailure = true)
         {
             UpdateStatusAfterSocketError(socketException.SocketErrorCode, disconnectOnFailure);
@@ -1129,16 +946,10 @@ namespace AKNet.Platform.Socket
 
         internal void UpdateStatusAfterSocketError(SocketError errorCode, bool disconnectOnFailure = true)
         {
-            // If we already know the socket is disconnected
-            // we don't need to do anything else.
-            if (NetEventSource.Log.IsEnabled()) NetEventSource.Error(this, $"errorCode:{errorCode}, disconnectOnFailure:{disconnectOnFailure}");
-
             if (disconnectOnFailure && _isConnected && (_handle.IsInvalid || (errorCode != SocketError.WouldBlock &&
                     errorCode != SocketError.IOPending && errorCode != SocketError.NoBufferSpaceAvailable &&
                     errorCode != SocketError.TimedOut && errorCode != SocketError.OperationAborted)))
             {
-                // The socket is no longer a valid socket.
-                if (NetEventSource.Log.IsEnabled()) NetEventSource.Info(this, "Invalidating socket.");
                 SetToDisconnected();
             }
         }
@@ -1153,31 +964,25 @@ namespace AKNet.Platform.Socket
             UpdateStatusAfterSocketError(errorCode);
             return false;
         }
-
-        // Called in Receive(Message)From variants to validate 'remoteEndPoint',
-        // and check whether the socket is bound.
+        
         private void ValidateReceiveFromEndpointAndState(EndPoint remoteEndPoint, string remoteEndPointArgumentName)
         {
-            ArgumentNullException.ThrowIfNull(remoteEndPoint, remoteEndPointArgumentName);
-
             if (remoteEndPoint is DnsEndPoint)
             {
-                throw new ArgumentException(SR.Format(SR.net_sockets_invalid_dnsendpoint, remoteEndPointArgumentName), remoteEndPointArgumentName);
+                throw new ArgumentException();
             }
 
             if (!CanTryAddressFamily(remoteEndPoint.AddressFamily))
             {
-                throw new ArgumentException(SR.Format(SR.net_InvalidEndPointAddressFamily, remoteEndPoint.AddressFamily, _addressFamily), remoteEndPointArgumentName);
+                throw new ArgumentException();
             }
+
             if (_rightEndPoint == null)
             {
-                throw new InvalidOperationException(SR.net_sockets_mustbind);
+                throw new InvalidOperationException();
             }
         }
-
-        // ValidateBlockingMode - called before synchronous calls to validate
-        // the fact that we are in blocking mode (not in non-blocking mode) so the
-        // call will actually be synchronous.
+        
         private void ValidateBlockingMode()
         {
             if (_willBlock && !_willBlockInternal)
@@ -1185,21 +990,11 @@ namespace AKNet.Platform.Socket
                 throw new InvalidOperationException(SR.net_invasync);
             }
         }
-
-        // Validates that the Socket can be used to try another Connect call, in case
-        // a previous call failed and the platform does not support that.  In some cases,
-        // the call may also be able to "fix" the Socket to continue working, even if the
-        // platform wouldn't otherwise support it.  Windows always supports this.
-        partial void ValidateForMultiConnect(bool isMultiEndpoint);
-
-        // Helper for SendFile implementations
+        
         private static SafeFileHandle? OpenFileHandle(string? name) => string.IsNullOrEmpty(name) ? null : File.OpenHandle(name, FileMode.Open, FileAccess.Read);
 
         private void UpdateReceiveSocketErrorForDisposed(ref SocketError socketError, int bytesTransferred)
         {
-            // We use bytesTransferred for checking Disposed.
-            // When there is a SocketError, bytesTransferred is zero.
-            // An interrupted UDP receive on Linux returns SocketError.Success and bytesTransferred zero.
             if (bytesTransferred == 0 && Disposed)
             {
                 socketError = IsConnectionOriented ? SocketError.ConnectionAborted : SocketError.Interrupted;
@@ -1272,26 +1067,24 @@ namespace AKNet.Platform.Socket
             }
 
             Debug.Assert(t.Exception != null);
-            return t.Exception.InnerException switch
+            if (t.Exception.InnerException is SocketException)
             {
-                SocketException se => se.SocketErrorCode,
-                ObjectDisposedException => SocketError.OperationAborted,
-                OperationCanceledException => SocketError.OperationAborted,
-                _ => SocketError.SocketError
-            };
-        }
-
-        private void CheckNonBlockingConnectCompleted()
-        {
-            if (_nonBlockingConnectInProgress && SocketPal.HasNonBlockingConnectCompleted(_handle, out bool success))
+                var se = t.Exception.InnerException as SocketException;
+                return se.SocketErrorCode;
+            }
+            else if (t.Exception.InnerException is ObjectDisposedException)
             {
-                _nonBlockingConnectInProgress = false;
-
-                if (success)
-                {
-                    SetToConnected();
-                }
+                return SocketError.OperationAborted;
+            }
+            else if (t.Exception.InnerException is OperationCanceledException)
+            {
+                return SocketError.OperationAborted;
+            }
+            else
+            {
+                return SocketError.SocketError;
             }
         }
+
     }
 }

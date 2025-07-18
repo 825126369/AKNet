@@ -27,13 +27,13 @@ namespace AKNet.Platform
         static readonly CX_PLATFORM CxPlatform = new CX_PLATFORM();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool STATUS_FAILED(int Status)
+        private static bool STATUS_FAILED(int Status)
         {
             return Status > 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool STATUS_SUCCEEDED(int Status)
+        private static bool STATUS_SUCCEEDED(int Status)
         {
             return Status <= 0;
         }
@@ -51,7 +51,7 @@ namespace AKNet.Platform
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetFlag(ref ulong Flags, ulong flag, bool bEnable)
+        private static void SetFlag(ref ulong Flags, ulong flag, bool bEnable)
         {
             if (bEnable)
             {
@@ -64,13 +64,13 @@ namespace AKNet.Platform
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool HasFlag(ulong Flags, ulong flag)
+        private static bool HasFlag(ulong Flags, ulong flag)
         {
             return BoolOk(Flags & flag);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong BIT(int nr)
+        private static ulong BIT(int nr)
         {
             return (ulong)(1 << nr);
         }

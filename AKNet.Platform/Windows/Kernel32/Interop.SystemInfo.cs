@@ -7,9 +7,13 @@ namespace AKNet.Platform
         internal static unsafe partial class Kernel32
         {
             [LibraryImport("kernel32.dll")]
-            public static extern bool GlobalMemoryStatusEx(MEMORYSTATUSEX* lpBuffer);
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static partial bool GlobalMemoryStatusEx(MEMORYSTATUSEX* lpBuffer);
             [LibraryImport("kernel32.dll")]
-            public static extern bool GetSystemTimeAdjustment(out int lpTimeAdjustment, out int lpTimeIncrement, out bool lpTimeAdjustmentDisabled);
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static partial bool GetSystemTimeAdjustment(out int lpTimeAdjustment, 
+                out int lpTimeIncrement, 
+                [MarshalAs(UnmanagedType.Bool)] out bool lpTimeAdjustmentDisabled);
         }
 #else
         internal static unsafe partial class Kernel32

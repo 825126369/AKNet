@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 namespace AKNet.Platform.Socket
 {
     public static unsafe partial class NativeMemory

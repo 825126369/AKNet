@@ -37,7 +37,7 @@ namespace AKNet.Platform
             [return: MarshalAs(UnmanagedType.Bool)]
             public static unsafe partial bool SetThreadPriority(IntPtr hThread, int nPriority);
             [LibraryImport("kernel32.dll")]
-            public static unsafe partial long SetThreadDescription(IntPtr hThread, string lpThreadDescription);
+            public static unsafe partial long SetThreadDescription(IntPtr hThread, [MarshalAs(UnmanagedType.LPWStr)] string lpThreadDescription);
         }
 #else
         internal static partial class Kernel32

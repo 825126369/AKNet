@@ -5,8 +5,8 @@ namespace AKNet.Platform.Socket
     {
         private readonly IOCompletionCallback _ioCompletionCallback;
         private readonly ExecutionContext _executionContext;
-        private uint _errorCode; // Error code
-        private uint _numBytes; // No. of bytes transferred
+        private uint _errorCode;
+        private uint _numBytes;
         private NativeOverlapped* _pNativeOverlapped;
 
         public IOCompletionCallbackHelper(IOCompletionCallback ioCompletionCallback, ExecutionContext executionContext)

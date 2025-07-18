@@ -1,24 +1,17 @@
-using System;
+#if TARGET_WINDOWS
+
 using System.Diagnostics;
-using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading;
-
-#if BIGENDIAN
-using System.Buffers.Binary;
-#endif
 
 namespace AKNet.Platform.Socket
 {
     internal static class SocketPal
     {
         public const bool SupportsMultipleConnectAttempts = true;
-
         private static void MicrosecondsToTimeValue(long microseconds, ref Interop.Winsock.TimeValue socketTime)
         {
             const int microcnv = 1000000;
-
             socketTime.Seconds = (int)(microseconds / microcnv);
             socketTime.Microseconds = (int)(microseconds % microcnv);
         }
@@ -33,7 +26,6 @@ namespace AKNet.Platform.Socket
         public static SocketError CreateSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, out SafeSocketHandle socket)
         {
             Interop.Winsock.EnsureInitialized();
-
             socket = new SafeSocketHandle();
             IntPtr mPtr = Interop.Winsock.WSASocketW(addressFamily, (int)socketType, (int)protocolType, IntPtr.Zero, 0, 
                 (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_OVERLAPPED | (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_NO_HANDLE_INHERIT);
@@ -274,56 +266,6 @@ namespace AKNet.Platform.Socket
             Debug.Assert(err != SocketError.NotConnected || (!isConnected && !isDisconnected));
             return err;
         }
-
-        internal static unsafe bool HasNonBlockingConnectCompleted(SafeSocketHandle handle, out bool success)
-        {
-            bool refAdded = false;
-            try
-            {
-                handle.DangerousAddRef(ref refAdded);
-
-                IntPtr rawHandle = handle.DangerousGetHandle();
-                IntPtr* writefds = stackalloc IntPtr[2] { (IntPtr)1, rawHandle };
-                IntPtr* exceptfds = stackalloc IntPtr[2] { (IntPtr)1, rawHandle };
-                Interop.Winsock.TimeValue timeout = default;
-                MicrosecondsToTimeValue(0, ref timeout);
-
-                int socketCount = Interop.Winsock.select(
-                            0,
-                            null,
-                            writefds,
-                            exceptfds,
-                            ref timeout);
-
-                if ((SocketError)socketCount == SocketError.SocketError)
-                {
-                    throw new SocketException((int)GetLastSocketError());
-                }
-
-                // Failure of the connect attempt is indicated in exceptfds.
-                if ((int)exceptfds[0] != 0 && exceptfds[1] == rawHandle)
-                {
-                    success = false;
-                    return true;
-                }
-
-                // Success is indicated in writefds.
-                if ((int)writefds[0] != 0 && writefds[1] == rawHandle)
-                {
-                    success = true;
-                    return true;
-                }
-
-                success = false;
-                return false;
-            }
-            finally
-            {
-                if (refAdded)
-                {
-                    handle.DangerousRelease();
-                }
-            }
-        }
     }
 }
+#endif
