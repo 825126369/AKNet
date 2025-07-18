@@ -364,12 +364,6 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public void Close(int timeout = 0)
-        {
-            _closeTimeout = timeout;
-            Dispose();
-        }
-
         public int IOControl(int ioControlCode, byte[]? optionInValue, byte[]? optionOutValue)
         {
             ThrowIfDisposed();
@@ -1086,5 +1080,117 @@ namespace AKNet.Platform.Socket
             }
         }
 
+        private void Dispose(bool disposing)
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+
+            SetToDisconnected();
+
+            SafeSocketHandle? handle = _handle;
+            if (handle is not null)
+            {
+                if (!disposing)
+                {
+                    handle.Dispose();
+                }
+                else if (handle.OwnsHandle)
+                {
+                    try
+                    {
+                        int timeout = _closeTimeout;
+                        if (timeout == 0)
+                        {
+                            handle.CloseAsIs(abortive: true);
+                        }
+                        else
+                        {
+                            SocketError errorCode;
+                            if (!_willBlock || !_willBlockInternal)
+                            {
+                                bool willBlock;
+                                errorCode = SocketPal.SetBlocking(handle, false, out willBlock);
+                            }
+
+                            if (timeout < 0)
+                            {
+                                handle.CloseAsIs(abortive: false);
+                            }
+                            else
+                            {
+                                errorCode = SocketPal.Shutdown(handle, _isConnected, _isDisconnected, SocketShutdown.Send);
+                                errorCode = SocketPal.SetSockOpt(
+                                    handle,
+                                    SocketOptionLevel.Socket,
+                                    SocketOptionName.ReceiveTimeout,
+                                    timeout);
+
+                                if (errorCode != SocketError.Success)
+                                {
+                                    handle.CloseAsIs(abortive: true);
+                                }
+                                else
+                                {
+                                    int unused;
+                                    errorCode = SocketPal.Receive(handle, Array.Empty<byte>(), 0, 0, SocketFlags.None, out unused);
+
+                                    if (errorCode != (SocketError)0)
+                                    {
+                                        handle.CloseAsIs(abortive: true);
+                                    }
+                                    else
+                                    {
+                                        int dataAvailable = 0;
+                                        errorCode = SocketPal.GetAvailable(handle, out dataAvailable);
+
+                                        if (errorCode != SocketError.Success || dataAvailable != 0)
+                                        {
+                                            handle.CloseAsIs(abortive: true);
+                                        }
+                                        else
+                                        {
+                                            handle.CloseAsIs(abortive: false);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
+                else
+                {
+                    handle.CloseAsIs(abortive: false);
+                }
+            
+                if (_rightEndPoint is UnixDomainSocketEndPoint unixEndPoint && unixEndPoint.BoundFileName is not null)
+                {
+                    try
+                    {
+                        File.Delete(unixEndPoint.BoundFileName);
+                    }
+                    catch
+                    { }
+                }
+            }
+            
+            DisposeCachedTaskSocketAsyncEventArgs();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public void Close(int timeout = 0)
+        {
+            _closeTimeout = timeout;
+            Dispose();
+        }
     }
 }
