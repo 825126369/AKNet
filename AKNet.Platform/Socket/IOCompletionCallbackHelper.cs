@@ -1,5 +1,5 @@
 using System.Diagnostics;
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal sealed unsafe partial class IOCompletionCallbackHelper
     {

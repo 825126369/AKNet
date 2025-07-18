@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 #if TARGET_WINDOWS
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal sealed partial class PortableThreadPool
     {

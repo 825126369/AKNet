@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class SocketException : Win32Exception
     {

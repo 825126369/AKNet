@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class Interop
     {

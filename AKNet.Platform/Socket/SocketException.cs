@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.Serialization;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     [Serializable]
     public partial class SocketException : Win32Exception

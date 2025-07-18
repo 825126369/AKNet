@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public unsafe class Overlapped
     {

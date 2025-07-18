@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.InteropServices;
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct NativeOverlapped

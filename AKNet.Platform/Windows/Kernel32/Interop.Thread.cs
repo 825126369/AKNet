@@ -28,10 +28,13 @@ namespace AKNet.Platform
                 SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Buffer, out int ReturnedLength);
 
             [LibraryImport("kernel32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static unsafe partial bool SetThreadGroupAffinity(IntPtr hThread, GROUP_AFFINITY* GroupAffinity, GROUP_AFFINITY* PreviousGroupAffinity);
             [LibraryImport("kernel32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static unsafe partial bool SetThreadIdealProcessorEx(IntPtr hThread, PROCESSOR_NUMBER* lpIdealProcessor, PROCESSOR_NUMBER* lpPreviousIdealProcessor);
             [LibraryImport("kernel32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static unsafe partial bool SetThreadPriority(IntPtr hThread, int nPriority);
             [LibraryImport("kernel32.dll")]
             public static unsafe partial long SetThreadDescription(IntPtr hThread, string lpThreadDescription);

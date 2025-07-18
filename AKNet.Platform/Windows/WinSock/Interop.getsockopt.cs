@@ -2,7 +2,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using static Interop.Winsock;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class Interop
     {

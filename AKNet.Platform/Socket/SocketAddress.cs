@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public class SocketAddress : IEquatable<SocketAddress>
     {

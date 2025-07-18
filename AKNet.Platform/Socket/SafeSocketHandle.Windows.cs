@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 #if TARGET_WINDOWS
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class SafeSocketHandle
     {

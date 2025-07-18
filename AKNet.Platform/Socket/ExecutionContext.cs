@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public delegate void ContextCallback(object? state);
     internal delegate void ContextCallback<TState>(ref TState state);
@@ -474,7 +474,7 @@ namespace AKNet.Socket
 
             Thread.CurrentThread._executionContext =
                 (!isFlowSuppressed && AsyncLocalValueMap.IsEmpty(newValues)) ?
-                null : // No values, return to Default context
+                null :
                 new ExecutionContext(newValues, newChangeNotifications, isFlowSuppressed);
 
             if (needChangeNotifications)

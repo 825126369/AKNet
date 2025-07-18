@@ -1,5 +1,5 @@
 using System;
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class Interop
     {

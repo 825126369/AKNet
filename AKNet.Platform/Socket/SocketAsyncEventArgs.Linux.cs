@@ -5,7 +5,7 @@ using System.IO;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class SocketAsyncEventArgs : EventArgs, IDisposable
     {

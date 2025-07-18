@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Sockets;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     /// <summary>
     /// Provides an IP address.

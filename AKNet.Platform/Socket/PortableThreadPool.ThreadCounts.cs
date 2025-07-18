@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal sealed partial class PortableThreadPool
     {

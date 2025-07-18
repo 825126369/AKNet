@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public struct IPPacketInformation : IEquatable<IPPacketInformation>
     {

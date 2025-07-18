@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class SocketAddressExtensions
     {

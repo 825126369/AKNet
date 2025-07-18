@@ -3,7 +3,7 @@
 #if TARGET_WINDOWS
 using System.Buffers.Binary;
 using System.Net.Sockets;
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static class SocketAddressPal
     {

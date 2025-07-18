@@ -1,4 +1,4 @@
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public enum SocketShutdown
     {

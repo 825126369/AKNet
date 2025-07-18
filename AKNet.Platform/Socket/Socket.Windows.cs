@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class Socket
     {

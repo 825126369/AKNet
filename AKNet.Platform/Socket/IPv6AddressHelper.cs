@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class IPv6AddressHelper
     {

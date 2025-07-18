@@ -1,6 +1,6 @@
 using System;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     [Flags]
     public enum SocketFlags

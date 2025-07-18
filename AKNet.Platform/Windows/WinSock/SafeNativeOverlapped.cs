@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal sealed class SafeNativeOverlapped : SafeHandle
     {

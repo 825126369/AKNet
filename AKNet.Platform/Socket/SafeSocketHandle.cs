@@ -1,7 +1,7 @@
 using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public sealed partial class SafeSocketHandle : SafeHandleMinusOneIsInvalid
     {

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class Interop
     {

@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class Socket : IDisposable
     {

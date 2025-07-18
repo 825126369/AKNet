@@ -3,7 +3,7 @@
 
 #if LINUX
 using System.ComponentModel;
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class SocketException : Win32Exception
     {

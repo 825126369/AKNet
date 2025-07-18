@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #if TARGET_WINDOWS
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public static unsafe partial class NativeMemory
     {

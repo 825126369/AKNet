@@ -9,7 +9,7 @@ using System.Threading;
 using System.Buffers.Binary;
 #endif
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static class SocketPal
     {

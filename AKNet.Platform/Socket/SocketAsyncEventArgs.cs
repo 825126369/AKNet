@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     public partial class SocketAsyncEventArgs : EventArgs, IDisposable
     {

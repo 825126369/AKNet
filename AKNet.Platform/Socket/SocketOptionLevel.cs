@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     // Defines socket option levels for the Socket class.
     public enum SocketOptionLevel

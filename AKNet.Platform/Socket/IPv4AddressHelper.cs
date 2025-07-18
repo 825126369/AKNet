@@ -5,7 +5,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     internal static partial class IPv4AddressHelper
     {
@@ -174,7 +174,7 @@ namespace AKNet.Socket
             return res;
         }
 
-        //Ö§³Ö·Ç±ê×¼¸ñÊ½£¨Èç´óÐ¡Ð´²»Ãô¸Ð¡¢ÈßÓà×Ö·û£©
+        //Ö§ï¿½Ö·Ç±ï¿½×¼ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡Ð´ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½
         internal static unsafe long ParseNonCanonical(string name, int start, ref int end, bool notImplicitFile)
         {
             int numberBase = IPv4AddressHelper.Decimal;

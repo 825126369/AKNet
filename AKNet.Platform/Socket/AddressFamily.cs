@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace AKNet.Socket
+namespace AKNet.Platform.Socket
 {
     /// <summary>Specifies the addressing scheme that an instance of the Socket class can use.</summary>
     public enum AddressFamily
