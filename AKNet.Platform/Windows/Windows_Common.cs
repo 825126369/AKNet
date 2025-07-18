@@ -1,5 +1,4 @@
 ﻿#if TARGET_WINDOWS
-using AKNet.Platform.Socket;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -87,6 +86,13 @@ namespace AKNet.Platform
             return Status;
         }
 
+        static void CxPlatUninitialize()
+        {
+            NetLog.Assert(CxPlatform.Heap != IntPtr.Zero);
+            CxPlatProcessorInfoUnInit();
+            Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
+            CxPlatform.Heap = IntPtr.Zero;
+        }
 
         //得到内存状态
         private static MEMORYSTATUSEX GlobalMemoryStatusEx()
