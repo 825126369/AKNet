@@ -40,7 +40,7 @@ namespace AKNet.Platform
             NetLog.Assert(!sqe.IsQueued);
 #endif
             CxPlatZeroMemory(sqe.Overlapped, sizeof(sqe.Overlapped));
-            return PostQueuedCompletionStatus(queue, 0, 0, &sqe.Overlapped) != 0;
+            return PostQueuedCompletionStatus(queue, 0, IntPtr.Zero, sqe.Overlapped);
         }
 
         static bool CxPlatEventQEnqueueEx(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe, int num_bytes)
@@ -48,9 +48,10 @@ namespace AKNet.Platform
 #if DEBUG
             NetLog.Assert(!sqe.IsQueued);
 #endif
-            CxPlatZeroMemory(&sqe->Overlapped, sizeof(sqe->Overlapped));
-            return PostQueuedCompletionStatus(*queue, num_bytes, 0, &sqe->Overlapped) != 0;
+            CxPlatZeroMemory(sqe.Overlapped, sizeof(sqe.Overlapped));
+            return PostQueuedCompletionStatus(queue, (uint)num_bytes, IntPtr.Zero, sqe.Overlapped);
         }
+
         static int CxPlatEventQDequeue(CXPLAT_EVENTQ queue, CXPLAT_CQE[] events, int count, int wait_time)
         {
             int out_count = 0;
@@ -101,9 +102,9 @@ namespace AKNet.Platform
 
         }
 
-        static CXPLAT_SQE* CxPlatCqeGetSqe(CXPLAT_CQE* cqe)
+        static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE* cqe)
         {
-            return CXPLAT_CONTAINING_RECORD<CXPLAT_SQE>(cqe.lpOverlapped, "Overlapped");
+            return *CXPLAT_CONTAINING_RECORD<CXPLAT_SQE>(cqe.lpOverlapped, "Overlapped");
         }
     }
 }
