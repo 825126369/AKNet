@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace AKNet.Platform
 {
@@ -23,9 +22,8 @@ namespace AKNet.Platform
                    uint dwCreationFlags,
                    out int lpThreadId);
 
-            public delegate uint LPTHREAD_START_ROUTINE(IntPtr lpParameter);
-
             [LibraryImport("kernel32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static unsafe partial bool GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP RelationshipType,
                 SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Buffer, out int ReturnedLength);
 
