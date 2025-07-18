@@ -12,6 +12,7 @@ namespace AKNet.Platform
             [LibraryImport("kernel32.dll")]
             public static partial IntPtr HeapCreate(uint flOptions, int dwInitialSize, int dwMaximumSize);
             [LibraryImport("kernel32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static partial bool HeapDestroy(IntPtr hHeap);
             [LibraryImport("kernel32.dll")]
             public static partial void* HeapAlloc(IntPtr hHeap, uint dwFlags, int dwBytes);
