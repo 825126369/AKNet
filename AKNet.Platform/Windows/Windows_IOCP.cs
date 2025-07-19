@@ -1,6 +1,7 @@
 ﻿#if TARGET_WINDOWS
 namespace AKNet.Platform
 {
+    using System.Runtime.InteropServices;
     using CXPLAT_CQE = AKNet.Platform.Interop.Kernel32.OVERLAPPED_ENTRY;
 
     public class CXPLAT_EVENTQ
@@ -13,10 +14,11 @@ namespace AKNet.Platform
 
     public unsafe class CXPLAT_SQE
     {
-        internal struct CXPLAT_SQE_Inner
+        [StructLayout(LayoutKind.Sequential)]
+        internal unsafe struct CXPLAT_SQE_Inner
         {
             public const string Overlapped_FieldName = "Overlapped";
-            internal Interop.Kernel32.OVERLAPPED* Overlapped;
+            internal Interop.Kernel32.OVERLAPPED Overlapped;
             public CXPLAT_SQE parent;
 #if DEBUG
             public bool IsQueued;
@@ -51,8 +53,8 @@ namespace AKNet.Platform
 #if DEBUG
             NetLog.Assert(!sqe.sqePtr->IsQueued);
 #endif
-            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
-            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, 0, IntPtr.Zero, sqe.sqePtr->Overlapped);
+            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, 0, IntPtr.Zero, &sqe.sqePtr->Overlapped);
         }
 
         public static bool CxPlatEventQEnqueueEx(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe, int num_bytes)
@@ -60,8 +62,8 @@ namespace AKNet.Platform
 #if DEBUG
             NetLog.Assert(!sqe.sqePtr->IsQueued);
 #endif
-            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
-            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, sqe.sqePtr->Overlapped);
+            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, &sqe.sqePtr->Overlapped);
         }
 
         public static int CxPlatEventQDequeueEx(CXPLAT_EVENTQ queue, int wait_time)
@@ -97,11 +99,12 @@ namespace AKNet.Platform
 
         }
 
-        public static bool CxPlatSqeInitialize(CXPLAT_EVENTQ queue, Action<object> completion, object contex, out CXPLAT_SQE sqe)
+        public static bool CxPlatSqeInitialize(CXPLAT_EVENTQ queue, Action<object> completion, object contex, CXPLAT_SQE sqe)
         {
-            sqe = new CXPLAT_SQE();
+            sqe.Contex = contex;
             sqe.Completion = completion;
-            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            sqe.sqePtr->parent = sqe;
+            CxPlatZeroMemory(sqe.sqePtr, sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
 #if DEBUG
             sqe.sqePtr->IsQueued = false;
 #endif
@@ -112,7 +115,7 @@ namespace AKNet.Platform
         {
             sqe = new CXPLAT_SQE();
             sqe.Completion = completion;
-            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
 #if DEBUG
             sqe.sqePtr->IsQueued = false;
 #endif

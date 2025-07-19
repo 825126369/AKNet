@@ -237,19 +237,19 @@ namespace AKNet.Udp5MSQuic.Common
                 Worker.InitializedEventQ = true;
             }
 
-            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, ShutdownCompletion, Worker, out Worker.ShutdownSqe))
+            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, ShutdownCompletion, Worker, Worker.ShutdownSqe))
             {
                 return false;
             }
             Worker.InitializedShutdownSqe = true;
 
-            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, WakeCompletion, Worker, out Worker.WakeSqe))
+            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, WakeCompletion, Worker, Worker.WakeSqe))
             {
                 return false;
             }
             Worker.InitializedWakeSqe = true;
 
-            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, UpdatePollCompletion, Worker, out Worker.UpdatePollSqe))
+            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, UpdatePollCompletion, Worker, Worker.UpdatePollSqe))
             {
                 return false;
             }
@@ -331,7 +331,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             if (QueueEvent)
             {
-                CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
+                OSPlatformFunc.CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
             }
         }
 
