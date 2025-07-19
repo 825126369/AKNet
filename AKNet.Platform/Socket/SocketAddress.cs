@@ -17,6 +17,8 @@ namespace AKNet.Platform.Socket
 
         private const int MinSize = 2;
         private const int DataOffset = 2;
+        public IPAddress ipaddress;
+        public int port;
 
         public AddressFamily Family
         {
@@ -127,6 +129,36 @@ namespace AKNet.Platform.Socket
                 hash.Add(v);
             }
             return hash.ToHashCode();
+        }
+
+        public IPAddress GetIPAddress()
+        {
+            return GetIPAddress(Buffer.Span);
+        }
+
+        public static int GetPort(this SocketAddress socketAddress)
+        {
+            Debug.Assert(socketAddress.Family == AddressFamily.InterNetwork || socketAddress.Family == AddressFamily.InterNetworkV6);
+            return (int)SocketAddressPal.GetPort(socketAddress.Buffer.Span);
+        }
+
+        public static IPEndPoint GetIPEndPoint(this SocketAddress socketAddress)
+        {
+            return new IPEndPoint(socketAddress.GetIPAddress(), socketAddress.GetPort());
+        }
+
+        public static bool Equals(this SocketAddress socketAddress, EndPoint? endPoint)
+        {
+            if (socketAddress.Family == endPoint?.AddressFamily && endPoint is IPEndPoint ipe)
+            {
+                return ipe.Equals(socketAddress.Buffer.Span);
+            }
+
+            // We could serialize other EndPoints and compare socket addresses.
+            // But that would do two allocations and is probably as expensive as
+            // allocating new EndPoint.
+            // This may change if https://github.com/dotnet/runtime/issues/78993 is done
+            return false;
         }
 
         public override string ToString()

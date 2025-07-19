@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 
 namespace AKNet.Platform.Socket
 {
@@ -20,8 +19,8 @@ namespace AKNet.Platform.Socket
         private EndPoint? _localEndPoint;
         private bool _isConnected;
         private bool _isDisconnected;
-        private bool _willBlock = false; // Desired state of the socket from the user.
-        private bool _willBlockInternal = false; // Actual state of the socket.
+        private bool _willBlock = false;
+        private bool _willBlockInternal = false;
         private bool _isListening;
         private bool _nonBlockingConnectInProgress;
         private EndPoint? _pendingConnectRightEndPoint;
@@ -46,37 +45,6 @@ namespace AKNet.Platform.Socket
             _addressFamily = addressFamily;
             _socketType = socketType;
             _protocolType = protocolType;
-        }
-
-        private static SafeSocketHandle ValidateHandle(SafeSocketHandle handle)
-        {
-            if (handle == null)
-            {
-                throw new ArgumentNullException();
-            }
-
-            if (handle.IsInvalid)
-            {
-                throw new ArgumentException();
-            }
-
-            return handle;
-        }
-        
-        public int Available
-        {
-            get
-            {
-                ThrowIfDisposed();
-                int argp;
-                SocketError errorCode = SocketPal.GetAvailable(_handle, out argp);
-                if (errorCode != SocketError.Success)
-                {
-                    UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-                }
-
-                return argp;
-            }
         }
         
         public EndPoint? LocalEndPoint
@@ -196,7 +164,6 @@ namespace AKNet.Platform.Socket
         {
             get
             {
-                CheckNonBlockingConnectCompleted();
                 return _isConnected;
             }
         }
@@ -229,8 +196,7 @@ namespace AKNet.Platform.Socket
             {
                 UpdateStatusAfterSocketErrorAndThrowException(errorCode);
             }
-            
-            _rightEndPoint = endPointSnapshot is UnixDomainSocketEndPoint unixEndPoint ? unixEndPoint.CreateBoundEndPoint() : endPointSnapshot;
+            _rightEndPoint = endPointSnapshot;
         }
         
         public void Connect(EndPoint remoteEP)
@@ -290,56 +256,6 @@ namespace AKNet.Platform.Socket
         public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, bool optionValue)
         {
             SetSocketOption(optionLevel, optionName, (optionValue ? 1 : 0));
-        }
-
-        // Sets the specified option to the specified value.
-        public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, object optionValue)
-        {
-            ThrowIfDisposed();
-#if NET5_0_OR_GREATER
-            ArgumentNullException.ThrowIfNull(optionValue);
-#else
-            if(optionValue == null)
-            {
-                throw new ArgumentException();
-            }
-#endif
-
-            if (optionLevel == SocketOptionLevel.Socket && optionName == SocketOptionName.Linger)
-            {
-                LingerOption? lingerOption = optionValue as LingerOption;
-                if (lingerOption == null)
-                {
-                    throw new ArgumentException();
-                }
-                if (lingerOption.LingerTime < 0 || lingerOption.LingerTime > (int)ushort.MaxValue)
-                {
-                    throw new ArgumentException();
-                }
-                SetLingerOption(lingerOption);
-            }
-            else if (optionLevel == SocketOptionLevel.IP && (optionName == SocketOptionName.AddMembership || optionName == SocketOptionName.DropMembership))
-            {
-                MulticastOption? multicastOption = optionValue as MulticastOption;
-                if (multicastOption == null)
-                {
-                    throw new ArgumentException();
-                }
-                SetMulticastOption(optionName, multicastOption);
-            }
-            else if (optionLevel == SocketOptionLevel.IPv6 && (optionName == SocketOptionName.AddMembership || optionName == SocketOptionName.DropMembership))
-            {
-                IPv6MulticastOption? multicastOption = optionValue as IPv6MulticastOption;
-                if (multicastOption == null)
-                {
-                    throw new ArgumentException();
-                }
-                SetIPv6MulticastOption(optionName, multicastOption);
-            }
-            else
-            {
-                throw new ArgumentException();
-            }
         }
         
         public void SetRawSocketOption(int optionLevel, int optionName, ReadOnlySpan<byte> optionValue)
@@ -443,22 +359,8 @@ namespace AKNet.Platform.Socket
             }
             else
             {
-                throw new NotSupportedException(SR.net_invalidversion);
+                throw new NotSupportedException();
             }
-        }
-
-        private static int ToTimeoutMicroseconds(TimeSpan timeout)
-        {
-            if (timeout == Timeout.InfiniteTimeSpan)
-            {
-                return -1;
-            }
-
-            ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
-            long totalMicroseconds = (long)timeout.TotalMicroseconds;
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(totalMicroseconds, int.MaxValue, nameof(timeout));
-
-            return (int)totalMicroseconds;
         }
             
         public void Shutdown(SocketShutdown how)

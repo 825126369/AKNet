@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 namespace AKNet.Platform.Socket
 {
     public struct IPPacketInformation : IEquatable<IPPacketInformation>
@@ -26,10 +24,7 @@ namespace AKNet.Platform.Socket
 
         public override bool Equals([NotNullWhen(true)] object? comparand) =>
             comparand is IPPacketInformation other && Equals(other);
-
-        /// <summary>Indicates whether the current instance is equal to another instance of the same type.</summary>
-        /// <param name="other">An instance to compare with this instance.</param>
-        /// <returns>true if the current instance is equal to the other instance; otherwise, false.</returns>
+        
         public bool Equals(IPPacketInformation other) =>
             _networkInterface == other._networkInterface &&
             (_address is null ? other._address is null : _address.Equals(other._address));

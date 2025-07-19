@@ -16,9 +16,7 @@ namespace AKNet.Platform.Socket
         internal bool HasShutdownSend => _hasShutdownSend;
         private volatile bool _released;
         private bool _hasShutdownSend;
-
-        /// <summary>Gets a value indicating whether the handle value is invalid.</summary>
-        /// <value><see langword="true"/> if the handle value is invalid; otherwise, <see langword="false"/>.</value>
+        
         public override bool IsInvalid => IsClosed || base.IsInvalid;
 
         protected override bool ReleaseHandle()

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform.Socket
 {
-    internal static class SocketPal
+    public static class SocketPal
     {
         public const bool SupportsMultipleConnectAttempts = true;
         private static void MicrosecondsToTimeValue(long microseconds, ref Interop.Winsock.TimeValue socketTime)

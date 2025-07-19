@@ -11,8 +11,7 @@ namespace AKNet.Platform.Socket
             internal static unsafe partial SocketError getsockname(
                 SafeSocketHandle socketHandle,
                 byte* socketAddress,
-                int* socketAddressSize);
-
+                out int socketAddressSize);
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             internal static unsafe extern SocketError getsockname(SafeSocketHandle socketHandle, byte* socketAddress, out int socketAddressSize);
