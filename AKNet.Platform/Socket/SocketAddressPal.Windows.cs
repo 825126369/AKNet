@@ -1,5 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
 #if TARGET_WINDOWS
 using System.Buffers.Binary;
 namespace AKNet.Platform.Socket
@@ -41,25 +39,18 @@ namespace AKNet.Platform.Socket
         public static void GetIPv6Address(ReadOnlySpan<byte> buffer, Span<byte> address, out uint scope)
         {
             buffer.Slice(8, address.Length).CopyTo(address);
-
             scope = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(24));
         }
 
         public static void SetIPv4Address(Span<byte> buffer, uint address)
         {
-            // IPv4 Address serialization
             BinaryPrimitives.WriteUInt32LittleEndian(buffer.Slice(4), address);
         }
 
         public static void SetIPv6Address(Span<byte> buffer, Span<byte> address, uint scope)
         {
-            // No handling for Flow Information
             BinaryPrimitives.WriteUInt32LittleEndian(buffer.Slice(4), 0);
-
-            // Scope serialization
             BinaryPrimitives.WriteUInt32LittleEndian(buffer.Slice(24), scope);
-
-            // Address serialization
             address.CopyTo(buffer.Slice(8));
         }
 

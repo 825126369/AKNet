@@ -53,6 +53,7 @@ namespace AKNet.Platform.Socket
             }
         }
 
+
         internal uint PrivateIPv4Address
         {
             get

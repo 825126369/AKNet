@@ -13,7 +13,6 @@ namespace AKNet.Platform.Socket
         }
 
         public IPAddress Address => _address;
-
         public int Interface => _networkInterface;
 
         public static bool operator ==(IPPacketInformation packetInformation1, IPPacketInformation packetInformation2) =>

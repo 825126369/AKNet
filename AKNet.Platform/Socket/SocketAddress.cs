@@ -1,16 +1,13 @@
 using System.Diagnostics;
-using System.Net.Sockets;
 
 namespace AKNet.Platform.Socket
 {
     public class SocketAddress : IEquatable<SocketAddress>
     {
-#pragma warning disable CA1802
         internal static readonly int IPv6AddressSize = SocketAddressPal.IPv6AddressSize;
         internal static readonly int IPv4AddressSize = SocketAddressPal.IPv4AddressSize;
         internal static readonly int UdsAddressSize = SocketAddressPal.UdsAddressSize;
         internal static readonly int MaxAddressSize = SocketAddressPal.MaxAddressSize;
-#pragma warning restore CA1802
 
         private int _size;
         private byte[] _buffer;
@@ -96,10 +93,7 @@ namespace AKNet.Platform.Socket
             }
             else
             {
-#pragma warning disable CS0618 // using Obsolete Address API because it's the more efficient option in this case
                 uint address = unchecked((uint)ipAddress.Address);
-#pragma warning restore CS0618
-
                 Debug.Assert(ipAddress.AddressFamily == AddressFamily.InterNetwork);
                 SocketAddressPal.SetIPv4Address(_buffer, address);
             }
@@ -142,9 +136,9 @@ namespace AKNet.Platform.Socket
             return (int)SocketAddressPal.GetPort(socketAddress.Buffer.Span);
         }
 
-        public static IPEndPoint GetIPEndPoint(this SocketAddress socketAddress)
+        public IPEndPoint GetIPEndPoint()
         {
-            return new IPEndPoint(socketAddress.GetIPAddress(), socketAddress.GetPort());
+            return new IPEndPoint(GetIPAddress(), GetPort());
         }
 
         public static bool Equals(this SocketAddress socketAddress, EndPoint? endPoint)
@@ -153,11 +147,6 @@ namespace AKNet.Platform.Socket
             {
                 return ipe.Equals(socketAddress.Buffer.Span);
             }
-
-            // We could serialize other EndPoints and compare socket addresses.
-            // But that would do two allocations and is probably as expensive as
-            // allocating new EndPoint.
-            // This may change if https://github.com/dotnet/runtime/issues/78993 is done
             return false;
         }
 

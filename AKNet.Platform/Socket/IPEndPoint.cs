@@ -1,75 +1,48 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Net.Sockets;
 
 namespace AKNet.Platform.Socket
 {
-    /// <summary>
-    /// Provides an IP address.
-    /// </summary>
     public class IPEndPoint : EndPoint
     {
-        /// <summary>
-        /// Specifies the minimum acceptable value for the <see cref='System.Net.IPEndPoint.Port'/> property.
-        /// </summary>
         public const int MinPort = 0x00000000;
-
-        /// <summary>
-        /// Specifies the maximum acceptable value for the <see cref='System.Net.IPEndPoint.Port'/> property.
-        /// </summary>
         public const int MaxPort = 0x0000FFFF;
-
         private IPAddress _address;
         private int _port;
 
         public override AddressFamily AddressFamily => _address.AddressFamily;
-
-        /// <summary>
-        /// Creates a new instance of the IPEndPoint class with the specified address and port.
-        /// </summary>
+        
         public IPEndPoint(long address, int port)
         {
-            if (!TcpValidationHelpers.ValidatePortNumber(port))
-            {
-                throw new ArgumentOutOfRangeException(nameof(port));
-            }
-
             _port = port;
             _address = new IPAddress(address);
         }
-
-        /// <summary>
-        /// Creates a new instance of the IPEndPoint class with the specified address and port.
-        /// </summary>
+        
         public IPEndPoint(IPAddress address, int port)
         {
-            ArgumentNullException.ThrowIfNull(address);
-
-            if (!TcpValidationHelpers.ValidatePortNumber(port))
+            if (address == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(port));
+                throw new ArgumentNullException();
             }
 
             _port = port;
             _address = address;
         }
-
-        /// <summary>
-        /// Gets or sets the IP address.
-        /// </summary>
+        
         public IPAddress Address
         {
             get => _address;
             set
             {
-                ArgumentNullException.ThrowIfNull(value);
+                if (value == null)
+                {
+                    throw new ArgumentNullException();
+                }
                 _address = value;
             }
         }
-
-        /// <summary>
-        /// Gets or sets the port.
-        /// </summary>
+        
         public int Port
         {
             get => _port;
@@ -126,8 +99,10 @@ namespace AKNet.Platform.Socket
 
         public static IPEndPoint Parse(string s)
         {
-            ArgumentNullException.ThrowIfNull(s);
-
+            if (s == null)
+            {
+                throw new ArgumentNullException();
+            }
             return Parse(s.AsSpan());
         }
 
@@ -138,29 +113,31 @@ namespace AKNet.Platform.Socket
                 return result;
             }
 
-            throw new FormatException(SR.bad_endpoint_string);
+            throw new FormatException();
         }
 
-        public override string ToString() =>
-            _address.AddressFamily == AddressFamily.InterNetworkV6 ?
-                string.Create(NumberFormatInfo.InvariantInfo, $"[{_address}]:{_port}") :
-                string.Create(NumberFormatInfo.InvariantInfo, $"{_address}:{_port}");
-
+        public override string ToString()
+        {
+            return _address.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{_address}]:{_port}" : $"{_address}:{_port}";
+        }
         public override SocketAddress Serialize() => new SocketAddress(Address, Port);
 
         public override EndPoint Create(SocketAddress socketAddress)
         {
-            ArgumentNullException.ThrowIfNull(socketAddress);
+            if (socketAddress == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             if (socketAddress.Family is not (AddressFamily.InterNetwork or AddressFamily.InterNetworkV6))
             {
-                throw new ArgumentException(SR.Format(SR.net_InvalidAddressFamily, socketAddress.Family.ToString(), GetType().FullName), nameof(socketAddress));
+                throw new ArgumentException();
             }
 
             int minSize = AddressFamily == AddressFamily.InterNetworkV6 ? SocketAddress.IPv6AddressSize : SocketAddress.IPv4AddressSize;
             if (socketAddress.Size < minSize)
             {
-                throw new ArgumentException(SR.Format(SR.net_InvalidSocketAddressSize, socketAddress.GetType().FullName, GetType().FullName), nameof(socketAddress));
+                throw new ArgumentException();
             }
 
             return socketAddress.GetIPEndPoint();
@@ -174,6 +151,81 @@ namespace AKNet.Platform.Socket
         public override int GetHashCode()
         {
             return _address.GetHashCode() ^ _port;
+        }
+
+        public static IPAddress GetIPAddress(ReadOnlySpan<byte> socketAddressBuffer)
+        {
+            AddressFamily family = SocketAddressPal.GetAddressFamily(socketAddressBuffer);
+
+            if (family == AddressFamily.InterNetworkV6)
+            {
+                Span<byte> address = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
+                uint scope;
+                SocketAddressPal.GetIPv6Address(socketAddressBuffer, address, out scope);
+                return new IPAddress(address, (address[0] == 0xFE && (address[1] & 0xC0) == 0x80) ? (long)scope : 0);
+            }
+            else if (family == AddressFamily.InterNetwork)
+            {
+                return new IPAddress((long)SocketAddressPal.GetIPv4Address(socketAddressBuffer) & 0x0FFFFFFFF);
+            }
+
+            throw new SocketException((int)SocketError.AddressFamilyNotSupported);
+        }
+
+        public static void SetIPAddress(Span<byte> socketAddressBuffer, IPAddress address)
+        {
+            SocketAddressPal.SetAddressFamily(socketAddressBuffer, address.AddressFamily);
+            SocketAddressPal.SetPort(socketAddressBuffer, 0);
+            if (address.AddressFamily == AddressFamily.InterNetwork)
+            {
+                SocketAddressPal.SetIPv4Address(socketAddressBuffer, (uint)address.Address);
+            }
+            else
+            {
+                Span<byte> addressBuffer = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
+                address.TryWriteBytes(addressBuffer, out int written);
+                Debug.Assert(written == IPAddressParserStatics.IPv6AddressBytes);
+                SocketAddressPal.SetIPv6Address(socketAddressBuffer, addressBuffer, (uint)address.ScopeId);
+            }
+        }
+
+        public static IPEndPoint CreateIPEndPoint(ReadOnlySpan<byte> socketAddressBuffer)
+        {
+            return new IPEndPoint(GetIPAddress(socketAddressBuffer), SocketAddressPal.GetPort(socketAddressBuffer));
+        }
+
+        public static void Serialize(this IPEndPoint endPoint, Span<byte> destination)
+        {
+            SocketAddressPal.SetAddressFamily(destination, endPoint.AddressFamily);
+            SetIPAddress(destination, endPoint.Address);
+            SocketAddressPal.SetPort(destination, (ushort)endPoint.Port);
+        }
+
+        public bool Equals(ReadOnlySpan<byte> socketAddressBuffer)
+        {
+            if (socketAddressBuffer.Length >= SocketAddress.GetMaximumAddressSize(AddressFamily) &&
+                AddressFamily == SocketAddressPal.GetAddressFamily(socketAddressBuffer) &&
+                Port == (int)SocketAddressPal.GetPort(socketAddressBuffer))
+            {
+                if (AddressFamily == AddressFamily.InterNetwork)
+                {
+                    return _address.PrivateAddress == (long)SocketAddressPal.GetIPv4Address(socketAddressBuffer);
+                }
+                else
+                {
+                    Span<byte> addressBuffer1 = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
+                    Span<byte> addressBuffer2 = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
+                    SocketAddressPal.GetIPv6Address(socketAddressBuffer, addressBuffer1, out uint scopeid);
+                    if (Address.ScopeId != (long)scopeid)
+                    {
+                        return false;
+                    }
+                    Address.TryWriteBytes(addressBuffer2, out _);
+                    return addressBuffer1.SequenceEqual(addressBuffer2);
+                }
+            }
+
+            return false;
         }
     }
 }
