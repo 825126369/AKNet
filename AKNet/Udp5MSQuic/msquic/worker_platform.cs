@@ -1,4 +1,5 @@
-﻿using AKNet.Common;
+﻿#if NO_HAVE_CUSTOM_IOCP
+using AKNet.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
-    internal class CXPLAT_WORKER:CXPLAT_POOL_Interface<CXPLAT_WORKER>
+    internal class CXPLAT_WORKER : CXPLAT_POOL_Interface<CXPLAT_WORKER>
     {
         public CXPLAT_POOL<CXPLAT_WORKER> mPool;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
@@ -111,14 +112,14 @@ namespace AKNet.Udp5MSQuic.Common
                 ProcessorList = null;
             }
             NetLog.Assert(ProcessorCount > 0 && ProcessorCount <= ushort.MaxValue);
-            
+
             CXPLAT_WORKER_POOL WorkerPool = new CXPLAT_WORKER_POOL(ProcessorCount);
             if (WorkerPool == null)
             {
                 return null;
             }
             WorkerPool.WorkerCount = ProcessorCount;
-            
+
             uint ThreadFlags = (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
             if (Config != null)
             {
@@ -144,7 +145,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Callback = CxPlatWorkerThread,
                 Context = null
             };
-            
+
             for (int i = 0; i < WorkerPool.WorkerCount; ++i)
             {
                 int IdealProcessor = ProcessorList != null ? ProcessorList[i] : i;
@@ -254,7 +255,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void UpdatePollCompletion(object Cqe, SocketAsyncEventArgs arg)
         {
-            CXPLAT_WORKER Worker = arg.UserToken as  CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = arg.UserToken as CXPLAT_WORKER;
             CxPlatUpdateExecutionContexts(Worker);
         }
 
@@ -266,7 +267,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void WakeCompletion(object Cqe, SocketAsyncEventArgs arg)
         {
-            
+
         }
 
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
@@ -277,7 +278,7 @@ namespace AKNet.Udp5MSQuic.Common
                 Worker.EventQ.Enqueue(Worker.WakeSqe);
             }
         }
-        
+
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
             var Cqes = Worker.Cqes;
@@ -295,12 +296,12 @@ namespace AKNet.Udp5MSQuic.Common
                     break;
                 }
 
-                if(CqeCount >= 16)
+                if (CqeCount >= 16)
                 {
                     break;
                 }
             }
-            
+
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
             {
@@ -405,7 +406,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
                 }
             }
- 
+
             Worker.Running = 0;
 #if DEBUG
             Worker.ThreadFinished = true;
@@ -478,13 +479,13 @@ namespace AKNet.Udp5MSQuic.Common
                 Worker.State.WaitTime = int.MaxValue;
             }
         }
-        
+
         static int CxPlatWorkerPoolGetCount(CXPLAT_WORKER_POOL WorkerPool)
         {
             return WorkerPool.WorkerCount;
         }
 
-        static int CxPlatWorkerPoolGetIdealProcessor(CXPLAT_WORKER_POOL WorkerPool,int Index)
+        static int CxPlatWorkerPoolGetIdealProcessor(CXPLAT_WORKER_POOL WorkerPool, int Index)
         {
             NetLog.Assert(WorkerPool != null);
             NetLog.Assert(Index < WorkerPool.WorkerCount);
@@ -519,9 +520,6 @@ namespace AKNet.Udp5MSQuic.Common
             }
             CxPlatLockRelease(Worker.ECLock);
         }
-
-
-
-
     }
 }
+#endif

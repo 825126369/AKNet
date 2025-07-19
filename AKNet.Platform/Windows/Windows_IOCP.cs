@@ -1,106 +1,132 @@
 ﻿#if TARGET_WINDOWS
-
 namespace AKNet.Platform
 {
-    using AKNet.Platform.Socket;
-    using CXPLAT_CQE = Interop.Kernel32.OVERLAPPED_ENTRY;
+    using CXPLAT_CQE = AKNet.Platform.Interop.Kernel32.OVERLAPPED_ENTRY;
 
-    public struct CXPLAT_EVENTQ
+    public class CXPLAT_EVENTQ
     {
         internal IntPtr Queue;
+        internal CXPLAT_CQE[] events_inner = new CXPLAT_CQE[13];
+        public CXPLAT_SQE[] events = new CXPLAT_SQE[13];
+        public int events_count = 0;
     }
 
-    public unsafe struct CXPLAT_SQE
+    public unsafe class CXPLAT_SQE
     {
-        internal Overlapped* Overlapped;
+        internal struct CXPLAT_SQE_Inner
+        {
+            public const string Overlapped_FieldName = "Overlapped";
+            internal Interop.Kernel32.OVERLAPPED* Overlapped;
+            public CXPLAT_SQE parent;
+#if DEBUG
+            public bool IsQueued;
+#endif
+        }
+
+        internal CXPLAT_SQE_Inner* sqePtr;
         public Action<object> Completion; //这个主要是给外部程序使用的
         public object Contex;
-#if DEBUG
-        public bool IsQueued;
-#endif
     }
 
     public static unsafe partial class OSPlatformFunc
     {
-        static bool CxPlatEventQInitialize(out CXPLAT_EVENTQ queue)
+        public static bool CxPlatEventQInitialize(CXPLAT_EVENTQ queue)
         {
-            queue.Queue = Interop.Kernel32.CreateIoCompletionPort(new IntPtr(-1), IntPtr.Zero, 0, 1);
+            queue.Queue = Interop.Kernel32.CreateIoCompletionPort(new IntPtr(-1), IntPtr.Zero, IntPtr.Zero, 1);
             return queue.Queue != IntPtr.Zero;
         }
 
-        static void CxPlatEventQCleanup(CXPLAT_EVENTQ queue)
+        public static void CxPlatEventQCleanup(CXPLAT_EVENTQ queue)
         {
             Interop.Kernel32.CloseHandle(queue.Queue);
         }
 
-        static bool CxPlatEventQAssociateHandle(CXPLAT_EVENTQ queue, IntPtr fileHandle)
+        public static bool CxPlatEventQAssociateHandle(CXPLAT_EVENTQ queue, IntPtr fileHandle)
         {
             return queue.Queue == Interop.Kernel32.CreateIoCompletionPort(fileHandle, queue.Queue, IntPtr.Zero, 0);
         }
 
-        static bool CxPlatEventQEnqueue(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
+        public static bool CxPlatEventQEnqueue(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
         {
 #if DEBUG
-            NetLog.Assert(!sqe.IsQueued);
+            NetLog.Assert(!sqe.sqePtr->IsQueued);
 #endif
-            CxPlatZeroMemory(sqe.Overlapped, sizeof(Overlapped));
-            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, 0, IntPtr.Zero, sqe.Overlapped);
+            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, 0, IntPtr.Zero, sqe.sqePtr->Overlapped);
         }
 
-        static bool CxPlatEventQEnqueueEx(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe, int num_bytes)
+        public static bool CxPlatEventQEnqueueEx(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe, int num_bytes)
         {
 #if DEBUG
-            NetLog.Assert(!sqe.IsQueued);
+            NetLog.Assert(!sqe.sqePtr->IsQueued);
 #endif
-            CxPlatZeroMemory(sqe.Overlapped, sizeof(sqe.Overlapped));
-            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, sqe.Overlapped);
+            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, sqe.sqePtr->Overlapped);
         }
 
-        static int CxPlatEventQDequeue(CXPLAT_EVENTQ queue, CXPLAT_CQE[] events, int count, int wait_time)
+        public static int CxPlatEventQDequeueEx(CXPLAT_EVENTQ queue, int wait_time)
         {
-            int out_count = 0;
-            if (!Interop.Kernel32.GetQueuedCompletionStatusEx(queue.Queue, (CXPLAT_CQE*)&events, count, out out_count, wait_time, false))
+            fixed (CXPLAT_CQE* eventPtr = queue.events_inner)
             {
-                return 0;
-            }
-
-            NetLog.Assert(out_count != 0);
-            NetLog.Assert(events[0].lpOverlapped != null || out_count == 1);
-#if DEBUG
-            if (events[0].lpOverlapped != null)
-            {
-                for (int i = 0; i < out_count; ++i)
+                int out_count = 0;
+                if (!Interop.Kernel32.GetQueuedCompletionStatusEx(queue.Queue, eventPtr, queue.events_inner.Length, out out_count, wait_time, false))
                 {
-                    CXPLAT_CONTAINING_RECORD<CXPLAT_SQE>(events[i].lpOverlapped, "Overlapped")->IsQueued = false;
+                    return 0;
                 }
-            }
+
+                NetLog.Assert(out_count != 0);
+                NetLog.Assert(queue.events_inner[0].lpOverlapped != null || out_count == 1);
+#if DEBUG
+                if (queue.events_inner[0].lpOverlapped != null)
+                {
+                    for (int i = 0; i < out_count; ++i)
+                    {
+                        CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(
+                            queue.events_inner[i].lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
+                        data->IsQueued = true;
+                        queue.events[i] = data->parent;
+                    }
+                }
 #endif
-            return events[0].lpOverlapped == null ? 0 : out_count;
+                return queue.events_inner[0].lpOverlapped == null ? 0 : out_count;
+            }
         }
 
-        static void CxPlatEventQReturn(CXPLAT_EVENTQ* queue, int count)
+        public static void CxPlatEventQReturn(CXPLAT_EVENTQ queue, int count)
         {
 
         }
 
-        static void CxPlatSqeInitializeEx(Action<object> completion, object contex, out CXPLAT_SQE sqe)
+        public static bool CxPlatSqeInitialize(CXPLAT_EVENTQ queue, Action<object> completion, object contex, out CXPLAT_SQE sqe)
         {
             sqe = new CXPLAT_SQE();
             sqe.Completion = completion;
-            CxPlatZeroMemory(sqe.Overlapped, sizeof(sqe.Overlapped));
+            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
 #if DEBUG
-            sqe.IsQueued = false;
+            sqe.sqePtr->IsQueued = false;
+#endif
+            return true;
+        }
+
+        public static void CxPlatSqeInitializeEx(Action<object> completion, object contex, out CXPLAT_SQE sqe)
+        {
+            sqe = new CXPLAT_SQE();
+            sqe.Completion = completion;
+            CxPlatZeroMemory(sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+#if DEBUG
+            sqe.sqePtr->IsQueued = false;
 #endif
         }
 
-        static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE* sqe)
+        public static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
         {
 
         }
 
-        static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE* cqe)
+        private static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE cqe)
         {
-            return *CXPLAT_CONTAINING_RECORD<CXPLAT_SQE>(cqe.lpOverlapped, "Overlapped");
+            CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(cqe.lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
+            return data->parent;
         }
     }
 }

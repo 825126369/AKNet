@@ -15,11 +15,11 @@ namespace AKNet.Platform
 
             [LibraryImport(Libraries.Kernel32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            internal static partial bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, IntPtr CompletionKey, IntPtr lpOverlapped);
+            internal static partial bool PostQueuedCompletionStatus(IntPtr CompletionPort, uint dwNumberOfBytesTransferred, IntPtr CompletionKey, OVERLAPPED* lpOverlapped);
 
             [LibraryImport(Libraries.Kernel32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            internal static partial bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out IntPtr CompletionKey, out IntPtr lpOverlapped, int dwMilliseconds);
+            internal static partial bool GetQueuedCompletionStatus(IntPtr CompletionPort, out uint lpNumberOfBytesTransferred, out IntPtr CompletionKey, OVERLAPPED* lpOverlapped, int dwMilliseconds);
 
             [LibraryImport(Libraries.Kernel32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
