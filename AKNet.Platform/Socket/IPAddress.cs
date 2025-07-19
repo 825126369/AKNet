@@ -383,9 +383,7 @@ namespace AKNet.Platform.Socket
         {
             get
             {
-                return IsIPv6 &&
-                       (_numbers[0] == 0x2001) &&
-                       (_numbers[1] == 0);
+                return IsIPv6 && (_numbers[0] == 0x2001) && (_numbers[1] == 0);
             }
         }
         
@@ -396,8 +394,7 @@ namespace AKNet.Platform.Socket
                 return IsIPv6 && ((_numbers[0] & 0xFE00) == 0xFC00);
             }
         }
-
-        // 0:0:0:0:0:FFFF:x.x.x.x
+        
         public bool IsIPv4MappedToIPv6
         {
             get

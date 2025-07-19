@@ -67,6 +67,7 @@ namespace AKNet.Platform.Socket
 
         public SocketAddress(AddressFamily family) : this(family, GetMaximumAddressSize(family))
         {
+
         }
 
         public SocketAddress(AddressFamily family, int size)
@@ -74,7 +75,6 @@ namespace AKNet.Platform.Socket
             _size = size;
             _buffer = new byte[size];
             _buffer[0] = (byte)_size;
-
             SocketAddressPal.SetAddressFamily(_buffer, family);
         }
 
@@ -82,7 +82,6 @@ namespace AKNet.Platform.Socket
             this(ipAddress.AddressFamily, ((ipAddress.AddressFamily == AddressFamily.InterNetwork) ? IPv4AddressSize : IPv6AddressSize))
         {
             SocketAddressPal.SetPort(_buffer, 0);
-
             if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
             {
                 Span<byte> addressBytes = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
