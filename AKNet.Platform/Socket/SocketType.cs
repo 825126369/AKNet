@@ -3,7 +3,7 @@
 
 namespace AKNet.Platform.Socket
 {
-    internal enum SocketType:int
+    public enum SocketType:int
     {
         Stream = 1, // stream socket
         Dgram = 2, // datagram socket

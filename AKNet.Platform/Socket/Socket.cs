@@ -13,7 +13,7 @@ namespace AKNet.Platform.Socket
         private static readonly IPAddress s_IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
         private static readonly IPEndPoint s_IPEndPointIPv6 = new IPEndPoint(s_IPAddressAnyMapToIPv6, 0);
 
-        private SafeSocketHandle _handle;
+        private IntPtr _handle;
         internal EndPoint? _rightEndPoint;
         internal EndPoint? _remoteEndPoint;
         private EndPoint? _localEndPoint;
@@ -37,11 +37,9 @@ namespace AKNet.Platform.Socket
             SocketError errorCode = SocketPal.CreateSocket(addressFamily, socketType, protocolType, out _handle);
             if (errorCode != SocketError.Success)
             {
-                Debug.Assert(_handle.IsInvalid);
                 throw new SocketException((int)errorCode);
             }
 
-            Debug.Assert(!_handle.IsInvalid);
             _addressFamily = addressFamily;
             _socketType = socketType;
             _protocolType = protocolType;
@@ -73,7 +71,7 @@ namespace AKNet.Platform.Socket
 
                     if (_addressFamily == AddressFamily.InterNetwork || _addressFamily == AddressFamily.InterNetworkV6)
                     {
-                        _localEndPoint = IPEndPointExtensions.CreateIPEndPoint(buffer.Slice(0, size));
+                        _localEndPoint = IPEndPoint.CreateIPEndPoint(buffer.Slice(0, size));
                     }
                     else
                     {
@@ -111,7 +109,7 @@ namespace AKNet.Platform.Socket
                     {
                         if (_addressFamily == AddressFamily.InterNetwork || _addressFamily == AddressFamily.InterNetworkV6)
                         {
-                            _remoteEndPoint = IPEndPointExtensions.CreateIPEndPoint(buffer.Slice(0, size));
+                            _remoteEndPoint = IPEndPoint.CreateIPEndPoint(buffer.Slice(0, size));
                         }
                         else
                         {
@@ -129,18 +127,17 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public IntPtr Handle => SafeHandle.DangerousGetHandle();
+        public IntPtr Handle => SafeHandle;
 
-        public SafeSocketHandle SafeHandle
+        public IntPtr SafeHandle
         {
             get
             {
-                _handle.SetExposed();
                 return _handle;
             }
         }
 
-        internal SafeSocketHandle InternalSafeHandle => _handle; // returns _handle without calling SetExposed.
+        internal IntPtr InternalSafeHandle => _handle; // returns _handle without calling SetExposed.
         public bool Blocking
         {
             get
@@ -175,16 +172,11 @@ namespace AKNet.Platform.Socket
                 return (_rightEndPoint != null);
             }
         }
-
-        internal bool CanTryAddressFamily(AddressFamily family)
-        {
-            return (family == _addressFamily) || (family == AddressFamily.InterNetwork && IsDualMode);
-        }
         
         public void Bind(EndPoint localEP)
         {
             ThrowIfDisposed();
-            SocketAddress socketAddress = Serialize(ref localEP);
+            SocketAddress socketAddress = Serialize(localEP);
             DoBind(localEP, socketAddress);
         }
 
@@ -212,7 +204,7 @@ namespace AKNet.Platform.Socket
                 throw new InvalidOperationException();
             }
 
-            SocketAddress socketAddress = Serialize(ref remoteEP);
+            SocketAddress socketAddress = Serialize(remoteEP);
             _pendingConnectRightEndPoint = remoteEP;
             _nonBlockingConnectInProgress = !Blocking;
 
@@ -397,16 +389,8 @@ namespace AKNet.Platform.Socket
                 {
                     throw new ArgumentException();
                 }
-                if (!CanTryAddressFamily(endPointSnapshot.AddressFamily))
-                {
-                    throw new ArgumentException();
-                }
-
-                if (endPointSnapshot.AddressFamily == AddressFamily.InterNetwork && IsDualMode)
-                {
-                    endPointSnapshot = s_IPEndPointIPv6;
-                }
-                e._socketAddress ??= new SocketAddress(AddressFamily);
+                
+                e._socketAddress ??= new SocketAddress(_addressFamily);
             }
             
             e.RemoteEndPoint = endPointSnapshot;
@@ -441,14 +425,9 @@ namespace AKNet.Platform.Socket
             {
                 throw new ArgumentException();
             }
-            if (!CanTryAddressFamily(e.RemoteEndPoint.AddressFamily))
-            {
-                throw new ArgumentException();
-            }
-
-            SocketPal.CheckDualModePacketInfoSupport(this);
+                
             EndPoint endPointSnapshot = e.RemoteEndPoint;
-            e._socketAddress = Serialize(ref endPointSnapshot);
+            e._socketAddress = Serialize(endPointSnapshot);
             e.RemoteEndPoint = endPointSnapshot;
             SetReceivingPacketInformation();
             e.StartOperationCommon(this, SocketAsyncOperation.ReceiveMessageFrom);
@@ -547,21 +526,6 @@ namespace AKNet.Platform.Socket
         {
             Dispose(false);
         }
-        
-        internal void InternalShutdown(SocketShutdown how)
-        {
-
-            if (Disposed || _handle.IsInvalid)
-            {
-                return;
-            }
-
-            try
-            {
-                SocketPal.Shutdown(_handle, _isConnected, _isDisconnected, how);
-            }
-            catch (ObjectDisposedException) { }
-        }
 
         internal void SetReceivingPacketInformation()
         {
@@ -582,7 +546,7 @@ namespace AKNet.Platform.Socket
             }
             catch
             {
-                if (silent && _handle.IsInvalid)
+                if (silent)
                 {
                     return;
                 }
@@ -694,7 +658,7 @@ namespace AKNet.Platform.Socket
 
         internal void UpdateStatusAfterSocketError(SocketError errorCode, bool disconnectOnFailure = true)
         {
-            if (disconnectOnFailure && _isConnected && (_handle.IsInvalid || (errorCode != SocketError.WouldBlock &&
+            if (disconnectOnFailure && _isConnected && (_handle == IntPtr.Zero || (errorCode != SocketError.WouldBlock &&
                     errorCode != SocketError.IOPending && errorCode != SocketError.NoBufferSpaceAvailable &&
                     errorCode != SocketError.TimedOut && errorCode != SocketError.OperationAborted)))
             {
@@ -720,11 +684,6 @@ namespace AKNet.Platform.Socket
                 throw new ArgumentException();
             }
 
-            if (!CanTryAddressFamily(remoteEndPoint.AddressFamily))
-            {
-                throw new ArgumentException();
-            }
-
             if (_rightEndPoint == null)
             {
                 throw new InvalidOperationException();
@@ -735,12 +694,10 @@ namespace AKNet.Platform.Socket
         {
             if (_willBlock && !_willBlockInternal)
             {
-                throw new InvalidOperationException(SR.net_invasync);
+                throw new InvalidOperationException();
             }
         }
         
-        private static SafeFileHandle? OpenFileHandle(string? name) => string.IsNullOrEmpty(name) ? null : File.OpenHandle(name, FileMode.Open, FileAccess.Read);
-
         private void UpdateReceiveSocketErrorForDisposed(ref SocketError socketError, int bytesTransferred)
         {
             if (bytesTransferred == 0 && Disposed)
@@ -791,21 +748,6 @@ namespace AKNet.Platform.Socket
 
         private bool IsConnectionOriented => _socketType == SocketType.Stream;
 
-        internal static void SocketListDangerousReleaseRefs(IList? socketList, ref int refsAdded)
-        {
-            if (socketList == null)
-            {
-                return;
-            }
-
-            for (int i = 0; (i < socketList.Count) && (refsAdded > 0); i++)
-            {
-                Socket socket = (Socket)socketList[i]!;
-                socket.InternalSafeHandle.DangerousRelease();
-                refsAdded--;
-            }
-        }
-
         private static SocketError GetSocketErrorFromFaultedTask(Task t)
         {
             Debug.Assert(t.IsCanceled || t.IsFaulted);
@@ -842,97 +784,10 @@ namespace AKNet.Platform.Socket
             }
 
             SetToDisconnected();
-
-            SafeSocketHandle? handle = _handle;
-            if (handle is not null)
+            if (_handle != IntPtr.Zero)
             {
-                if (!disposing)
-                {
-                    handle.Dispose();
-                }
-                else if (handle.OwnsHandle)
-                {
-                    try
-                    {
-                        int timeout = _closeTimeout;
-                        if (timeout == 0)
-                        {
-                            handle.CloseAsIs(abortive: true);
-                        }
-                        else
-                        {
-                            SocketError errorCode;
-                            if (!_willBlock || !_willBlockInternal)
-                            {
-                                bool willBlock;
-                                errorCode = SocketPal.SetBlocking(handle, false, out willBlock);
-                            }
-
-                            if (timeout < 0)
-                            {
-                                handle.CloseAsIs(abortive: false);
-                            }
-                            else
-                            {
-                                errorCode = SocketPal.Shutdown(handle, _isConnected, _isDisconnected, SocketShutdown.Send);
-                                errorCode = SocketPal.SetSockOpt(
-                                    handle,
-                                    SocketOptionLevel.Socket,
-                                    SocketOptionName.ReceiveTimeout,
-                                    timeout);
-
-                                if (errorCode != SocketError.Success)
-                                {
-                                    handle.CloseAsIs(abortive: true);
-                                }
-                                else
-                                {
-                                    int unused;
-                                    errorCode = SocketPal.Receive(handle, Array.Empty<byte>(), 0, 0, SocketFlags.None, out unused);
-
-                                    if (errorCode != (SocketError)0)
-                                    {
-                                        handle.CloseAsIs(abortive: true);
-                                    }
-                                    else
-                                    {
-                                        int dataAvailable = 0;
-                                        errorCode = SocketPal.GetAvailable(handle, out dataAvailable);
-
-                                        if (errorCode != SocketError.Success || dataAvailable != 0)
-                                        {
-                                            handle.CloseAsIs(abortive: true);
-                                        }
-                                        else
-                                        {
-                                            handle.CloseAsIs(abortive: false);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                    }
-                }
-                else
-                {
-                    handle.CloseAsIs(abortive: false);
-                }
-            
-                if (_rightEndPoint is UnixDomainSocketEndPoint unixEndPoint && unixEndPoint.BoundFileName is not null)
-                {
-                    try
-                    {
-                        File.Delete(unixEndPoint.BoundFileName);
-                    }
-                    catch
-                    { }
-                }
+                _handle = IntPtr.Zero;
             }
-            
-            DisposeCachedTaskSocketAsyncEventArgs();
         }
 
         public void Dispose()

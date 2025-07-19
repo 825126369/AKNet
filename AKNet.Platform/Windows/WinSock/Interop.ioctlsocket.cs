@@ -3,7 +3,7 @@
 
 using System;
 using System.Runtime.InteropServices;
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -11,14 +11,8 @@ namespace AKNet.Platform.Socket
         internal static partial class Winsock
         {
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial SocketError ioctlsocket(
+            internal static partial int ioctlsocket(
                 IntPtr handle,
-                int cmd,
-                ref int argp);
-
-            [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial SocketError ioctlsocket(
-                SafeSocketHandle socketHandle,
                 int cmd,
                 ref int argp);
         }
@@ -26,14 +20,8 @@ namespace AKNet.Platform.Socket
         internal static partial class Winsock
         {
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern SocketError ioctlsocket(
+            internal static extern int ioctlsocket(
                 IntPtr handle,
-                int cmd,
-                ref int argp);
-
-            [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern SocketError ioctlsocket(
-                SafeSocketHandle socketHandle,
                 int cmd,
                 ref int argp);
         }

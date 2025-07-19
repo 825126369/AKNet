@@ -1,6 +1,5 @@
 #if TARGET_WINDOWS
 
-using Microsoft.Win32.SafeHandles;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -18,7 +17,7 @@ namespace AKNet.Platform.Socket
         private byte[]? _controlBufferPinned;
         private WSABuffer[]? _wsaRecvMsgWSABufferArrayPinned;
         private IntPtr _socketAddressPtr;
-        private SafeFileHandle[]? _sendPacketsFileHandles;
+        private IntPtr[]? _sendPacketsFileHandles;
         private PreAllocatedOverlapped _preAllocatedOverlapped;
         private readonly StrongBox<SocketAsyncEventArgs?> _strongThisRef = new StrongBox<SocketAsyncEventArgs?>();
         private CancellationTokenRegistration _registrationToCancelPendingIO;
@@ -44,7 +43,7 @@ namespace AKNet.Platform.Socket
             FreeOverlapped();
         }
 
-        private unsafe NativeOverlapped* AllocateNativeOverlapped()
+        private unsafe Overlapped* AllocateNativeOverlapped()
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
             Debug.Assert(_operating == OperationState_InProgress, $"Expected {nameof(_operating)} == {nameof(OperationState_InProgress)}, got {_operating}");
@@ -52,21 +51,19 @@ namespace AKNet.Platform.Socket
             Debug.Assert(_currentSocket.SafeHandle != null, "_currentSocket.SafeHandle is null");
             Debug.Assert(_preAllocatedOverlapped != null, "_preAllocatedOverlapped is null");
 
-            ThreadPoolBoundHandle boundHandle = _currentSocket.GetOrAllocateThreadPoolBoundHandle();
-            return boundHandle.AllocateNativeOverlapped(_preAllocatedOverlapped);
+            return null;
+            //ThreadPoolBoundHandle boundHandle = _currentSocket.GetOrAllocateThreadPoolBoundHandle();
+            //return boundHandle.AllocateNativeOverlapped(_preAllocatedOverlapped);
         }
 
-        private unsafe void FreeNativeOverlapped(ref NativeOverlapped* overlapped)
+        private unsafe void FreeNativeOverlapped(ref Overlapped* overlapped)
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
             Debug.Assert(overlapped != null, "overlapped is null");
             Debug.Assert(_operating == OperationState_InProgress, $"Expected _operating == OperationState.InProgress, got {_operating}");
             Debug.Assert(_currentSocket != null, "_currentSocket is null");
             Debug.Assert(_currentSocket.SafeHandle != null, "_currentSocket.SafeHandle is null");
-            Debug.Assert(_currentSocket.SafeHandle.IOCPBoundHandle != null, "_currentSocket.SafeHandle.IOCPBoundHandle is null");
             Debug.Assert(_preAllocatedOverlapped != null, "_preAllocatedOverlapped is null");
-
-            _currentSocket.SafeHandle.IOCPBoundHandle.FreeNativeOverlapped(overlapped);
             overlapped = null;
         }
 
@@ -77,26 +74,27 @@ namespace AKNet.Platform.Socket
 
         private unsafe SocketError GetIOCPResult(bool success, ref NativeOverlapped* overlapped)
         {
-            if (success)
-            {
-                if (_currentSocket!.SafeHandle.SkipCompletionPortOnSuccess)
-                {
-                    FreeNativeOverlapped(ref overlapped);
-                    return SocketError.Success;
-                }
-                return SocketError.IOPending;
-            }
-            else
-            {
-                SocketError socketError = SocketPal.GetLastSocketError();
-                Debug.Assert(socketError != SocketError.Success);
-                if (socketError != SocketError.IOPending)
-                {
-                    FreeNativeOverlapped(ref overlapped);
-                    return socketError;
-                }
-                return SocketError.IOPending;
-            }
+            return SocketError.Success;
+            //if (success)
+            //{
+            //    if (_currentSocket!.SafeHandle)
+            //    {
+            //        FreeNativeOverlapped(ref overlapped);
+            //        return SocketError.Success;
+            //    }
+            //    return SocketError.IOPending;
+            //}
+            //else
+            //{
+            //    SocketError socketError = SocketPal.GetLastSocketError();
+            //    Debug.Assert(socketError != SocketError.Success);
+            //    if (socketError != SocketError.IOPending)
+            //    {
+            //        FreeNativeOverlapped(ref overlapped);
+            //        return socketError;
+            //    }
+            //    return SocketError.IOPending;
+            //}
         }
 
         private unsafe SocketError ProcessIOCPResult(bool success, int bytesTransferred, ref NativeOverlapped* overlapped, Memory<byte> bufferToPin, CancellationToken cancellationToken)
@@ -152,7 +150,15 @@ namespace AKNet.Platform.Socket
             return socketError;
         }
 
-        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, SafeSocketHandle handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationReceiveFrom(IntPtr handle, CancellationToken cancellationToken)
+        {
+            AllocateSocketAddressBuffer();
+            return _bufferList == null ?
+                DoOperationReceiveFromSingleBuffer(handle, cancellationToken) :
+                DoOperationReceiveFromMultiBuffer(handle);
+        }
+
+        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, IntPtr handle, CancellationToken cancellationToken)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
@@ -233,18 +239,18 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        internal unsafe SocketError DoOperationSendTo(SafeSocketHandle handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationSendTo(IntPtr handle, CancellationToken cancellationToken)
         {
             return _bufferList == null ? DoOperationSendToSingleBuffer(handle, cancellationToken) : DoOperationSendToMultiBuffer(handle);
         }
 
-        internal unsafe SocketError DoOperationSendToSingleBuffer(SafeSocketHandle handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationSendToSingleBuffer(IntPtr handle, CancellationToken cancellationToken)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
             fixed (byte* bufferPtr = &MemoryMarshal.GetReference(_buffer.Span))
             {
-                NativeOverlapped* overlapped = AllocateNativeOverlapped();
+                Overlapped* overlapped = AllocateNativeOverlapped();
                 try
                 {
                     var wsaBuffer = new WSABuffer { Length = _count, Pointer = (IntPtr)(bufferPtr + _offset) };
@@ -269,11 +275,11 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        internal unsafe SocketError DoOperationSendToMultiBuffer(SafeSocketHandle handle)
+        internal unsafe SocketError DoOperationSendToMultiBuffer(IntPtr handle)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
-            NativeOverlapped* overlapped = AllocateNativeOverlapped();
+            Overlapped* overlapped = AllocateNativeOverlapped();
             try
             {
                 SocketError socketError = Interop.Winsock.WSASendTo(
@@ -299,7 +305,6 @@ namespace AKNet.Platform.Socket
         {
             if (_bufferListInternal == null || _bufferListInternal.Count == 0)
             {
-                // No buffer list is set so unpin any existing multiple buffer pinning.
                 if (_pinState == PinState.MultipleBuffer)
                 {
                     FreePinHandles();
@@ -452,42 +457,27 @@ namespace AKNet.Platform.Socket
         {
             Interop.Winsock.WSAMsg* PtrMessage = (Interop.Winsock.WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned!, 0);
             _socketFlags = PtrMessage->flags;
-
             if (_controlBufferPinned!.Length == sizeof(Interop.Winsock.ControlData))
             {
-                // IPv4.
                 _receiveMessageFromPacketInfo = SocketPal.GetIPPacketInformation((Interop.Winsock.ControlData*)PtrMessage->controlBuffer.Pointer);
             }
             else if (_controlBufferPinned.Length == sizeof(Interop.Winsock.ControlDataIPv6))
             {
-                // IPv6.
                 _receiveMessageFromPacketInfo = SocketPal.GetIPPacketInformation((Interop.Winsock.ControlDataIPv6*)PtrMessage->controlBuffer.Pointer);
             }
             else
             {
-                // Other.
                 _receiveMessageFromPacketInfo = default;
             }
         }
 
-        private void FinishOperationSendPackets()
+        private static readonly unsafe IOCompletionCallback s_completionPortCallback = delegate (uint errorCode, uint numBytes, Overlapped* nativeOverlapped)
+
         {
-            if (_sendPacketsFileHandles != null)
-            {
-                for (int i = 0; i < _sendPacketsFileHandles.Length; i++)
-                {
-                    _sendPacketsFileHandles[i]?.Dispose();
-                }
+            //Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
+            //var saeaBox = (StrongBox<SocketAsyncEventArgs>)(ThreadPoolBoundHandle.GetNativeOverlappedState(nativeOverlapped)!);
 
-                _sendPacketsFileHandles = null;
-            }
-        }
-
-        private static readonly unsafe IOCompletionCallback s_completionPortCallback = delegate (uint errorCode, uint numBytes, NativeOverlapped* nativeOverlapped)
-        {
-            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-            var saeaBox = (StrongBox<SocketAsyncEventArgs>)(ThreadPoolBoundHandle.GetNativeOverlappedState(nativeOverlapped)!);
-
+            StrongBox<SocketAsyncEventArgs> saeaBox = null;
             Debug.Assert(saeaBox.Value != null);
             SocketAsyncEventArgs saea = saeaBox.Value;
 
@@ -518,7 +508,7 @@ namespace AKNet.Platform.Socket
         };
 
 
-        private unsafe void GetOverlappedResultOnError(ref SocketError socketError, ref uint numBytes, ref SocketFlags socketFlags, NativeOverlapped* nativeOverlapped)
+        private unsafe void GetOverlappedResultOnError(ref SocketError socketError, ref uint numBytes, ref SocketFlags socketFlags, Overlapped* nativeOverlapped)
         {
             if (socketError != SocketError.OperationAborted)
             {

@@ -14,7 +14,6 @@ namespace AKNet.Platform.Socket
         public static readonly IPAddress None = Broadcast;
 
         internal const uint LoopbackMaskHostOrder = 0xFF000000;
-
         public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
         public static readonly IPAddress IPv6Loopback = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 0);
         public static readonly IPAddress IPv6None = IPv6Any;
@@ -22,7 +21,6 @@ namespace AKNet.Platform.Socket
         private static readonly IPAddress s_loopbackMappedToIPv6 = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1], 0);
         private uint _addressOrScopeId;
         private readonly ushort[]? _numbers;
-        private string? _toString;
         private int _hashCode;
 
         internal const int NumberOfLabels = IPAddressParserStatics.IPv6AddressBytes / 2;
@@ -47,7 +45,6 @@ namespace AKNet.Platform.Socket
             private set
             {
                 Debug.Assert(IsIPv4);
-                _toString = null;
                 _hashCode = 0;
                 _addressOrScopeId = value;
             }
@@ -78,7 +75,6 @@ namespace AKNet.Platform.Socket
             set
             {
                 Debug.Assert(IsIPv6);
-                _toString = null;
                 _hashCode = 0;
                 _addressOrScopeId = value;
             }
@@ -292,21 +288,6 @@ namespace AKNet.Platform.Socket
             }
         }
         
-        public override string ToString()
-        {
-            string? toString = _toString;
-            if (toString is null)
-            {
-                Span<char> span = stackalloc char[IPAddressParser.MaxIPv6StringLength];
-                int length = IsIPv4 ?
-                    IPAddressParser.FormatIPv4Address(_addressOrScopeId, span) :
-                    IPAddressParser.FormatIPv6Address(_numbers, _addressOrScopeId, span);
-                _toString = toString = new string(span.Slice(0, length));
-            }
-
-            return toString;
-        }
-
         public static long HostToNetworkOrder(long host)
         {
             return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(host) : host;

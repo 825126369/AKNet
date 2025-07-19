@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -8,13 +8,13 @@ namespace AKNet.Platform.Socket
         {
 #if NET7_0_OR_GREATER
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe partial SocketError getsockname(
-                SafeSocketHandle socketHandle,
+            internal static unsafe partial int getsockname(
+                IntPtr socketHandle,
                 byte* socketAddress,
                 out int socketAddressSize);
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe extern SocketError getsockname(SafeSocketHandle socketHandle, byte* socketAddress, out int socketAddressSize);
+            internal static unsafe extern int getsockname(IntPtr socketHandle, byte* socketAddress, out int socketAddressSize);
 #endif
         }
     }

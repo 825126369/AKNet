@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -8,15 +8,13 @@ namespace AKNet.Platform.Socket
         internal static partial class Winsock
         {
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial SocketError shutdown(
-                SafeSocketHandle socketHandle,
-                int how);
+            internal static partial int shutdown(IntPtr socketHandle, int how);
         }
 #else
         internal static partial class Winsock
         {
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern SocketError shutdown(SafeSocketHandle socketHandle, int how);
+            internal static extern int shutdown(IntPtr socketHandle, int how);
         }
 #endif
     }

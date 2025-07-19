@@ -1,4 +1,4 @@
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {

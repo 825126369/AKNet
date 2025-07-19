@@ -33,7 +33,6 @@ namespace AKNet.Platform.Socket
         internal SocketAddress? _socketAddress;
         private readonly bool _flowExecutionContext;
         private static readonly ContextCallback s_executionCallback = ExecutionCallback;
-        private static ConditionalWeakTable<SocketAsyncEventArgs, Activity>? s_connectActivityTable;
         private Socket? _currentSocket;
         private bool _userSocket;
         private bool _disposeCalled;

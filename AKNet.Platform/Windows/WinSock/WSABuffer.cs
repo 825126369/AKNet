@@ -1,12 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     [StructLayout(LayoutKind.Sequential)]
-    internal struct WSABuffer
+    internal struct WSABUF
     {
-        internal int Length; // Length of Buffer
-        internal IntPtr Pointer; // Pointer to Buffer
+        internal int len; // Length of Buffer
+        internal IntPtr buf; // Pointer to Buffer
     }
 }

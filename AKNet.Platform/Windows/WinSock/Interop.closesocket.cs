@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -9,10 +8,10 @@ namespace AKNet.Platform.Socket
         {
 #if NET7_0_OR_GREATER
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial SocketError closesocket(IntPtr socketHandle);
+            internal static partial int closesocket(IntPtr socketHandle);
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern SocketError closesocket(IntPtr socketHandle);
+            internal static extern int closesocket(IntPtr socketHandle);
 #endif
         }
     }

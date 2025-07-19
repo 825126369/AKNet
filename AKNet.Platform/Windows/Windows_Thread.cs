@@ -203,7 +203,7 @@ namespace AKNet.Platform
             int InfoLength = 0;
             SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Info = null;
             int ActiveProcessorCount = 0, MaxProcessorCount = 0;
-            Status = CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup, Info, out InfoLength);
+            Status = CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup, &Info, out InfoLength);
             if (Status != 0)
             {
                 goto Error;

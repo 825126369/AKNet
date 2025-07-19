@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -19,7 +19,7 @@ namespace AKNet.Platform.Socket
             }
 
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-            internal static unsafe partial SocketError GetNameInfoW(
+            internal static unsafe partial int GetNameInfoW(
                 byte* pSockaddr,
                 int SockaddrLength,
                 char* pNodeBuffer,
@@ -42,7 +42,7 @@ namespace AKNet.Platform.Socket
             }
 
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true, CharSet = CharSet.Unicode)]
-            internal static unsafe extern SocketError GetNameInfoW(
+            internal static unsafe extern int GetNameInfoW(
                 byte* pSockaddr,
                 int SockaddrLength,
                 char* pNodeBuffer,

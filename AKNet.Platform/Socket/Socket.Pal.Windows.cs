@@ -23,24 +23,21 @@ namespace AKNet.Platform.Socket
             return (SocketError)win32Error;
         }
 
-        public static SocketError CreateSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, out SafeSocketHandle socket)
+        public static SocketError CreateSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, out IntPtr socket)
         {
             Interop.Winsock.EnsureInitialized();
-            socket = new SafeSocketHandle();
-            IntPtr mPtr = Interop.Winsock.WSASocketW(addressFamily, (int)socketType, (int)protocolType, IntPtr.Zero, 0, 
+            socket = Interop.Winsock.WSASocketW(addressFamily, (int)socketType, (int)protocolType, IntPtr.Zero, 0, 
                 (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_OVERLAPPED | (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_NO_HANDLE_INHERIT);
-
-            socket.SetHandle(mPtr);
-            if (socket.IsInvalid)
+            
+            if (socket == IntPtr.Zero)
             {
                 SocketError error = GetLastSocketError();
-                socket.Dispose();
                 return error;
             }
             return SocketError.Success;
         }
 
-        public static SocketError SetBlocking(SafeSocketHandle handle, bool shouldBlock, out bool willBlock)
+        public static SocketError SetBlocking(IntPtr handle, bool shouldBlock, out bool willBlock)
         {
             int intBlocking = shouldBlock ? 0 : -1;
 
@@ -55,13 +52,13 @@ namespace AKNet.Platform.Socket
             return errorCode;
         }
 
-        public static unsafe SocketError GetSockName(SafeSocketHandle handle, byte* buffer, out int nameLen)
+        public static unsafe SocketError GetSockName(IntPtr handle, byte* buffer, out int nameLen)
         {
             SocketError errorCode = Interop.Winsock.getsockname(handle, buffer, out nameLen);
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static SocketError GetAvailable(SafeSocketHandle handle, out int available)
+        public static SocketError GetAvailable(IntPtr handle, out int available)
         {
             int value = 0;
             SocketError errorCode = Interop.Winsock.ioctlsocket(handle, Interop.Winsock.IoctlSocketConstants.FIONREAD, ref value);
@@ -69,7 +66,7 @@ namespace AKNet.Platform.Socket
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static unsafe SocketError GetPeerName(SafeSocketHandle handle, Span<byte> buffer, ref int nameLen)
+        public static unsafe SocketError GetPeerName(IntPtr handle, Span<byte> buffer, ref int nameLen)
         {
             fixed (byte* rawBuffer = buffer)
             {
@@ -78,13 +75,13 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static SocketError Bind(SafeSocketHandle handle, ProtocolType _ /*socketProtocolType*/, ReadOnlySpan<byte> buffer)
+        public static SocketError Bind(IntPtr handle, ProtocolType _ /*socketProtocolType*/, ReadOnlySpan<byte> buffer)
         {
             SocketError errorCode = Interop.Winsock.bind(handle, buffer);
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static SocketError Connect(SafeSocketHandle handle, Memory<byte> peerAddress)
+        public static SocketError Connect(IntPtr handle, Memory<byte> peerAddress)
         {
             SocketError errorCode = Interop.Winsock.WSAConnect(
                 handle,
@@ -113,7 +110,7 @@ namespace AKNet.Platform.Socket
             return new IPPacketInformation(address, (int)controlBuffer->index);
         }
 
-        public static SocketError WindowsIoctl(SafeSocketHandle handle, int ioControlCode, byte[]? optionInValue, byte[]? optionOutValue, out int optionLength)
+        public static SocketError WindowsIoctl(IntPtr handle, int ioControlCode, byte[]? optionInValue, byte[]? optionOutValue, out int optionLength)
         {
             if (ioControlCode == Interop.Winsock.IoctlSocketConstants.FIONBIO)
             {
@@ -133,7 +130,7 @@ namespace AKNet.Platform.Socket
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static unsafe SocketError SetSockOpt(SafeSocketHandle handle, SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue)
+        public static unsafe SocketError SetSockOpt(IntPtr handle, SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue)
         {
             SocketError errorCode;
             errorCode = Interop.Winsock.setsockopt(
@@ -146,7 +143,7 @@ namespace AKNet.Platform.Socket
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static unsafe SocketError SetSockOpt(SafeSocketHandle handle, SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue)
+        public static unsafe SocketError SetSockOpt(IntPtr handle, SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue)
         {
             SocketError errorCode;
             fixed (byte* optionValuePtr = optionValue)
@@ -161,7 +158,7 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static unsafe SocketError SetRawSockOpt(SafeSocketHandle handle, int optionLevel, int optionName, ReadOnlySpan<byte> optionValue)
+        public static unsafe SocketError SetRawSockOpt(IntPtr handle, int optionLevel, int optionName, ReadOnlySpan<byte> optionValue)
         {
             fixed (byte* optionValuePtr = optionValue)
             {
@@ -180,7 +177,7 @@ namespace AKNet.Platform.Socket
             socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
         }
         
-        public static SocketError SetLingerOption(SafeSocketHandle handle, LingerOption optionValue)
+        public static SocketError SetLingerOption(IntPtr handle, LingerOption optionValue)
         {
             Interop.Winsock.Linger lngopt = default;
             lngopt.OnOff = optionValue.Enabled ? (ushort)1 : (ushort)0;
@@ -194,7 +191,7 @@ namespace AKNet.Platform.Socket
             socket.SetSocketOption(optionLevel, SocketOptionName.IPProtectionLevel, protectionLevel);
         }
 
-        public static unsafe SocketError GetSockOpt(SafeSocketHandle handle, SocketOptionLevel optionLevel, SocketOptionName optionName, out int optionValue)
+        public static unsafe SocketError GetSockOpt(IntPtr handle, SocketOptionLevel optionLevel, SocketOptionName optionName, out int optionValue)
         {
             int optionLength = sizeof(int);
             int tmpOptionValue = 0;
@@ -209,7 +206,7 @@ namespace AKNet.Platform.Socket
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static unsafe SocketError GetSockOpt(SafeSocketHandle handle, SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue, ref int optionLength)
+        public static unsafe SocketError GetSockOpt(IntPtr handle, SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue, ref int optionLength)
         {
             fixed (byte* optionValuePtr = optionValue)
             {
@@ -223,7 +220,7 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static unsafe SocketError GetRawSockOpt(SafeSocketHandle handle, int optionLevel, int optionName, Span<byte> optionValue, ref int optionLength)
+        public static unsafe SocketError GetRawSockOpt(IntPtr handle, int optionLevel, int optionName, Span<byte> optionValue, ref int optionLength)
         {
             Debug.Assert((uint)optionLength <= optionValue.Length);
 
@@ -240,7 +237,7 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static SocketError GetLingerOption(SafeSocketHandle handle, out LingerOption? optionValue)
+        public static SocketError GetLingerOption(IntPtr handle, out LingerOption? optionValue)
         {
             int optlen = 4;
             SocketError errorCode = Interop.Winsock.getsockopt(handle, SocketOptionLevel.Socket, SocketOptionName.Linger, out Interop.Winsock.Linger lngopt, ref optlen);
@@ -254,7 +251,7 @@ namespace AKNet.Platform.Socket
             return SocketError.Success;
         }
 
-        public static SocketError Shutdown(SafeSocketHandle handle, bool isConnected, bool isDisconnected, SocketShutdown how)
+        public static SocketError Shutdown(IntPtr handle, bool isConnected, bool isDisconnected, SocketShutdown how)
         {
             SocketError err = Interop.Winsock.shutdown(handle, (int)how);
             if (err != SocketError.SocketError)

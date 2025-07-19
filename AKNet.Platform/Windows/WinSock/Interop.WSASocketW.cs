@@ -1,8 +1,6 @@
-using System;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -11,7 +9,7 @@ namespace AKNet.Platform.Socket
 #if NET7_0_OR_GREATER
         [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         internal static partial IntPtr WSASocketW(
-            AddressFamily addressFamily,
+            int addressFamily,
             int socketType,
             int protocolType,
             IntPtr protocolInfo,
@@ -21,7 +19,7 @@ namespace AKNet.Platform.Socket
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true, CharSet = CharSet.Unicode)]
             internal static extern IntPtr WSASocketW(
-                AddressFamily addressFamily,
+                int addressFamily,
                 int socketType,
                 int protocolType,
                 IntPtr protocolInfo,

@@ -48,44 +48,33 @@ namespace AKNet.Platform.Socket
             get => _port;
             set
             {
-                if (!TcpValidationHelpers.ValidatePortNumber(value))
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value));
-                }
-
                 _port = value;
             }
         }
 
         public static bool TryParse(string s, [NotNullWhen(true)] out IPEndPoint? result)
         {
-            return TryParse(s.AsSpan(), out result);
-        }
-
-        public static bool TryParse(ReadOnlySpan<char> s, [NotNullWhen(true)] out IPEndPoint? result)
-        {
-            int addressLength = s.Length;  // If there's no port then send the entire string to the address parser
+            int addressLength = s.Length; 
             int lastColonPos = s.LastIndexOf(':');
-
-            // Look to see if this is an IPv6 address with a port.
+            
             if (lastColonPos > 0)
             {
                 if (s[lastColonPos - 1] == ']')
                 {
                     addressLength = lastColonPos;
                 }
-                // Look to see if this is IPv4 with a port (IPv6 will have another colon)
-                else if (s.Slice(0, lastColonPos).LastIndexOf(':') == -1)
+
+                else if (s.Substring(0, lastColonPos).LastIndexOf(':') == -1)
                 {
                     addressLength = lastColonPos;
                 }
             }
 
-            if (IPAddress.TryParse(s.Slice(0, addressLength), out IPAddress? address))
+            if (IPAddress.TryParse(s.Substring(0, addressLength), out IPAddress? address))
             {
                 uint port = 0;
                 if (addressLength == s.Length ||
-                    (uint.TryParse(s.Slice(addressLength + 1), NumberStyles.None, CultureInfo.InvariantCulture, out port) && port <= MaxPort))
+                    (uint.TryParse(s.Substring(addressLength + 1), NumberStyles.None, CultureInfo.InvariantCulture, out port) && port <= MaxPort))
 
                 {
                     result = new IPEndPoint(address, (int)port);
@@ -95,25 +84,6 @@ namespace AKNet.Platform.Socket
 
             result = null;
             return false;
-        }
-
-        public static IPEndPoint Parse(string s)
-        {
-            if (s == null)
-            {
-                throw new ArgumentNullException();
-            }
-            return Parse(s.AsSpan());
-        }
-
-        public static IPEndPoint Parse(ReadOnlySpan<char> s)
-        {
-            if (TryParse(s, out IPEndPoint? result))
-            {
-                return result;
-            }
-
-            throw new FormatException();
         }
 
         public override string ToString()
@@ -178,7 +148,7 @@ namespace AKNet.Platform.Socket
             SocketAddressPal.SetPort(socketAddressBuffer, 0);
             if (address.AddressFamily == AddressFamily.InterNetwork)
             {
-                SocketAddressPal.SetIPv4Address(socketAddressBuffer, (uint)address.Address);
+                SocketAddressPal.SetIPv4Address(socketAddressBuffer, (uint)address.PrivateAddress);
             }
             else
             {
@@ -194,11 +164,11 @@ namespace AKNet.Platform.Socket
             return new IPEndPoint(GetIPAddress(socketAddressBuffer), SocketAddressPal.GetPort(socketAddressBuffer));
         }
 
-        public static void Serialize(this IPEndPoint endPoint, Span<byte> destination)
+        public void Serialize(Span<byte> destination)
         {
-            SocketAddressPal.SetAddressFamily(destination, endPoint.AddressFamily);
-            SetIPAddress(destination, endPoint.Address);
-            SocketAddressPal.SetPort(destination, (ushort)endPoint.Port);
+            SocketAddressPal.SetAddressFamily(destination, AddressFamily);
+            SetIPAddress(destination, Address);
+            SocketAddressPal.SetPort(destination, (ushort)Port);
         }
 
         public bool Equals(ReadOnlySpan<byte> socketAddressBuffer)

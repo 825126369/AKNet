@@ -1,8 +1,6 @@
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -12,21 +10,21 @@ namespace AKNet.Platform.Socket
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
             internal static unsafe partial bool WSAGetOverlappedResult(
-                SafeSocketHandle socketHandle,
-                NativeOverlapped* overlapped,
+                IntPtr socketHandle,
+                Overlapped* overlapped,
                 out uint bytesTransferred,
                 [MarshalAs(UnmanagedType.Bool)] bool wait,
-                out SocketFlags socketFlags);
+                out uint socketFlags);
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
             internal static unsafe extern bool WSAGetOverlappedResult(
-                SafeSocketHandle socketHandle,
-                NativeOverlapped* overlapped,
+                IntPtr socketHandle,
+                Overlapped* overlapped,
                 out uint bytesTransferred,
                 [MarshalAs(UnmanagedType.Bool)] bool wait,
-                out SocketFlags socketFlags);
+                out uint socketFlags);
 #endif
         }
     }

@@ -1,7 +1,6 @@
-using System;
 using System.Runtime.InteropServices;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -10,8 +9,8 @@ namespace AKNet.Platform.Socket
 #if NET7_0_OR_GREATER
             // Used with SIOGETEXTENSIONFUNCTIONPOINTER - we're assuming that will never block.
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial SocketError WSAIoctl(
-                SafeSocketHandle socketHandle,
+            internal static partial int WSAIoctl(
+                IntPtr socketHandle,
                 int ioControlCode,
                 ref Guid guid,
                 int guidSize,
@@ -22,8 +21,8 @@ namespace AKNet.Platform.Socket
                 IntPtr shouldBeNull2);
 
             [LibraryImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
-            internal static partial SocketError WSAIoctl_Blocking(
-                SafeSocketHandle socketHandle,
+            internal static partial int WSAIoctl_Blocking(
+                IntPtr socketHandle,
                 int ioControlCode,
                 byte[]? inBuffer,
                 int inBufferSize,
@@ -35,8 +34,8 @@ namespace AKNet.Platform.Socket
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern SocketError WSAIoctl(
-                SafeSocketHandle socketHandle,
+            internal static extern int WSAIoctl(
+                IntPtr socketHandle,
                 int ioControlCode,
                 ref Guid guid,
                 int guidSize,
@@ -47,8 +46,8 @@ namespace AKNet.Platform.Socket
                 IntPtr shouldBeNull2);
 
             [DllImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
-            internal static extern SocketError WSAIoctl_Blocking(
-                SafeSocketHandle socketHandle,
+            internal static extern int WSAIoctl_Blocking(
+                IntPtr socketHandle,
                 int ioControlCode,
                 byte[]? inBuffer,
                 int inBufferSize,

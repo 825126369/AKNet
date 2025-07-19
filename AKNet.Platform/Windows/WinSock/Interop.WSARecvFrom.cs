@@ -1,13 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -15,23 +12,23 @@ namespace AKNet.Platform.Socket
         {
 #if NET7_0_OR_GREATER
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            private static unsafe partial SocketError WSARecvFrom(
+            private static unsafe partial int WSARecvFrom(
                 SafeHandle socketHandle,
-                WSABuffer* buffers,
+                WSABUF* buffers,
                 int bufferCount,
                 out int bytesTransferred,
-                ref SocketFlags socketFlags,
+                ref uint socketFlags,
                 IntPtr socketAddressPointer,
                 IntPtr socketAddressSizePointer,
                 NativeOverlapped* overlapped,
                 IntPtr completionRoutine);
 
-            internal static unsafe SocketError WSARecvFrom(
+            internal static unsafe int WSARecvFrom(
                 SafeHandle socketHandle,
-                ref WSABuffer buffer,
+                ref WSABUF buffer,
                 int bufferCount,
                 out int bytesTransferred,
-                ref SocketFlags socketFlags,
+                ref uint socketFlags,
                 IntPtr socketAddressPointer,
                 IntPtr socketAddressSizePointer,
                 NativeOverlapped* overlapped,
@@ -40,23 +37,23 @@ namespace AKNet.Platform.Socket
                 // We intentionally do NOT copy this back after the function completes:
                 // We don't want to cause a race in async scenarios.
                 // The WSABuffer struct should be unchanged anyway.
-                WSABuffer localBuffer = buffer;
+                WSABUF localBuffer = buffer;
                 return WSARecvFrom(socketHandle, &localBuffer, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
             }
 
-            internal static unsafe SocketError WSARecvFrom(
+            internal static unsafe int WSARecvFrom(
                 SafeHandle socketHandle,
-                WSABuffer[] buffers,
+                WSABUF[] buffers,
                 int bufferCount,
                 out int bytesTransferred,
-                ref SocketFlags socketFlags,
+                ref uint socketFlags,
                 IntPtr socketAddressPointer,
                 IntPtr socketAddressSizePointer,
                 NativeOverlapped* overlapped,
                 IntPtr completionRoutine)
             {
                 Debug.Assert(buffers != null && buffers.Length > 0);
-                fixed (WSABuffer* buffersPtr = &buffers[0])
+                fixed (WSABUF* buffersPtr = &buffers[0])
                 {
                     return WSARecvFrom(socketHandle, buffersPtr, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
                 }
@@ -64,48 +61,45 @@ namespace AKNet.Platform.Socket
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            private static unsafe extern SocketError WSARecvFrom(
+            private static unsafe extern int WSARecvFrom(
                 SafeHandle socketHandle,
-                WSABuffer* buffers,
+                WSABUF* buffers,
                 int bufferCount,
                 out int bytesTransferred,
-                ref SocketFlags socketFlags,
+                ref uint socketFlags,
                 IntPtr socketAddressPointer,
                 IntPtr socketAddressSizePointer,
                 NativeOverlapped* overlapped,
                 IntPtr completionRoutine);
 
-            internal static unsafe SocketError WSARecvFrom(
+            internal static unsafe int WSARecvFrom(
                 SafeHandle socketHandle,
-                ref WSABuffer buffer,
+                ref WSABUF buffer,
                 int bufferCount,
                 out int bytesTransferred,
-                ref SocketFlags socketFlags,
+                ref uint socketFlags,
                 IntPtr socketAddressPointer,
                 IntPtr socketAddressSizePointer,
                 NativeOverlapped* overlapped,
                 IntPtr completionRoutine)
             {
-                // We intentionally do NOT copy this back after the function completes:
-                // We don't want to cause a race in async scenarios.
-                // The WSABuffer struct should be unchanged anyway.
-                WSABuffer localBuffer = buffer;
+                WSABUF localBuffer = buffer;
                 return WSARecvFrom(socketHandle, &localBuffer, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
             }
 
-            internal static unsafe SocketError WSARecvFrom(
+            internal static unsafe int WSARecvFrom(
                 SafeHandle socketHandle,
-                WSABuffer[] buffers,
+                WSABUF[] buffers,
                 int bufferCount,
                 out int bytesTransferred,
-                ref SocketFlags socketFlags,
+                ref uint socketFlags,
                 IntPtr socketAddressPointer,
                 IntPtr socketAddressSizePointer,
                 NativeOverlapped* overlapped,
                 IntPtr completionRoutine)
             {
                 Debug.Assert(buffers != null && buffers.Length > 0);
-                fixed (WSABuffer* buffersPtr = &buffers[0])
+                fixed (WSABUF* buffersPtr = &buffers[0])
                 {
                     return WSARecvFrom(socketHandle, buffersPtr, bufferCount, out bytesTransferred, ref socketFlags, socketAddressPointer, socketAddressSizePointer, overlapped, completionRoutine);
                 }

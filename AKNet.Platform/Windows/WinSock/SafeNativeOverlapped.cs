@@ -1,13 +1,11 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace AKNet.Platform.Socket
 {
     internal sealed class SafeNativeOverlapped : SafeHandle
     {
-        private readonly SafeSocketHandle? _socketHandle;
+        private readonly IntPtr _socketHandle;
 
         public SafeNativeOverlapped()
             : this(IntPtr.Zero)
@@ -21,7 +19,7 @@ namespace AKNet.Platform.Socket
             SetHandle(handle);
         }
 
-        public unsafe SafeNativeOverlapped(SafeSocketHandle socketHandle, NativeOverlapped* handle)
+        public unsafe SafeNativeOverlapped(IntPtr socketHandle, NativeOverlapped* handle)
             : this((IntPtr)handle)
         {
             _socketHandle = socketHandle;
@@ -40,16 +38,7 @@ namespace AKNet.Platform.Socket
 
         private unsafe void FreeNativeOverlapped()
         {
-            IntPtr oldHandle = Interlocked.Exchange(ref handle, IntPtr.Zero);
-            if (oldHandle != IntPtr.Zero && !Environment.HasShutdownStarted)
-            {
-                Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-                Debug.Assert(_socketHandle != null, "_socketHandle is null.");
-
-                ThreadPoolBoundHandle? boundHandle = _socketHandle.IOCPBoundHandle;
-                Debug.Assert(boundHandle != null, "SafeNativeOverlapped::FreeNativeOverlapped - boundHandle is null");
-                boundHandle?.FreeNativeOverlapped((NativeOverlapped*)oldHandle);
-            }
+           
         }
     }
 }
