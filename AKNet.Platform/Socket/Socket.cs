@@ -9,7 +9,7 @@ namespace AKNet.Platform.Socket
 {
     public partial class Socket : IDisposable
     {
-        internal const int DefaultCloseTimeout = -1; // NOTE: changing this default is a breaking change.
+        internal const int DefaultCloseTimeout = -1;
         private static readonly IPAddress s_IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
         private static readonly IPEndPoint s_IPEndPointIPv6 = new IPEndPoint(s_IPAddressAnyMapToIPv6, 0);
 
@@ -472,31 +472,17 @@ namespace AKNet.Platform.Socket
         {
             ThrowIfDisposed();
 
-            if (e == null)
+            if (e == null || e.RemoteEndPoint == null)
             {
                 throw new ArgumentNullException();
             }
-
-            EndPoint? endPointSnapshot = e.RemoteEndPoint;
-            if (endPointSnapshot == null && e._socketAddress == null)
+            
+            if (e._socketAddress == null)
             {
-                throw new ArgumentException();
-            }
-
-            if (e._socketAddress != null && endPointSnapshot is IPEndPoint ipep && e._socketAddress.Family == endPointSnapshot?.AddressFamily)
-            {
-                ipep.Serialize(e._socketAddress.Buffer.Span);
-            }
-            else if (endPointSnapshot != null)
-            {
-                e._socketAddress = Serialize(ref endPointSnapshot);
+                e._socketAddress = Serialize(e.RemoteEndPoint);
             }
                 
             e.StartOperationCommon(this, SocketAsyncOperation.SendTo);
-
-            EndPoint? oldEndPoint = _rightEndPoint;
-            _rightEndPoint ??= endPointSnapshot;
-
             SocketError socketError;
             try
             {
@@ -504,7 +490,6 @@ namespace AKNet.Platform.Socket
             }
             catch
             {
-                _rightEndPoint = oldEndPoint;
                 _localEndPoint = null;
                 e.Complete();
                 throw;
@@ -512,7 +497,6 @@ namespace AKNet.Platform.Socket
 
             if (!CheckErrorAndUpdateStatus(socketError))
             {
-                _rightEndPoint = oldEndPoint;
                 _localEndPoint = null;
             }
 
@@ -529,22 +513,8 @@ namespace AKNet.Platform.Socket
                 endPoint.Serialize().Size;
         }
 
-        public SocketAddress Serialize(ref EndPoint remoteEP)
+        public SocketAddress Serialize(EndPoint remoteEP)
         {
-            if (remoteEP is IPEndPoint ip)
-            {
-                IPAddress addr = ip.Address;
-                if (addr.AddressFamily == AddressFamily.InterNetwork && IsDualMode)
-                {
-                    addr = addr.MapToIPv6();
-                    remoteEP = new IPEndPoint(addr, ip.Port);
-                }
-            }
-            else if (remoteEP is DnsEndPoint)
-            {
-                throw new ArgumentException();
-            }
-
             return remoteEP.Serialize();
         }
 
