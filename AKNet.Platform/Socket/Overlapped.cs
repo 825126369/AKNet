@@ -108,7 +108,6 @@ namespace AKNet.Platform.Socket
             try
             {
                 nuint handleCount = 1;
-
                 if (userData != null)
                 {
                     if (userData.GetType() == typeof(object[]))

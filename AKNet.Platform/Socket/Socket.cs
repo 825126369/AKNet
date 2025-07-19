@@ -126,7 +126,6 @@ namespace AKNet.Platform.Socket
                 ThrowIfDisposed();
                 if (_remoteEndPoint == null)
                 {
-                    CheckNonBlockingConnectCompleted();
                     if (_rightEndPoint == null || !_isConnected)
                     {
                         return null;
@@ -202,33 +201,6 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        // Gets the socket's address family.
-        public AddressFamily AddressFamily
-        {
-            get
-            {
-                return _addressFamily;
-            }
-        }
-
-        // Gets the socket's socketType.
-        public SocketType SocketType
-        {
-            get
-            {
-                return _socketType;
-            }
-        }
-
-        // Gets the socket's protocol socketType.
-        public ProtocolType ProtocolType
-        {
-            get
-            {
-                return _protocolType;
-            }
-        }
-
         public bool IsBound
         {
             get
@@ -274,94 +246,11 @@ namespace AKNet.Platform.Socket
                 throw new InvalidOperationException();
             }
 
-            DnsEndPoint? dnsEP = remoteEP as DnsEndPoint;
-            if (dnsEP != null)
-            {
-                if (dnsEP.AddressFamily != AddressFamily.Unspecified && !CanTryAddressFamily(dnsEP.AddressFamily))
-                {
-                    throw new NotSupportedException(SR.net_invalidversion);
-                }
-
-                Connect(dnsEP.Host, dnsEP.Port);
-                return;
-            }
-
             SocketAddress socketAddress = Serialize(ref remoteEP);
             _pendingConnectRightEndPoint = remoteEP;
             _nonBlockingConnectInProgress = !Blocking;
 
             DoConnect(remoteEP, socketAddress);
-        }
-
-        public void Connect(IPAddress address, int port)
-        {
-            ThrowIfDisposed();
-            ThrowIfConnectedStreamSocket();
-            if (!CanTryAddressFamily(address.AddressFamily))
-            {
-                throw new NotSupportedException();
-            }
-            IPEndPoint remoteEP = new IPEndPoint(address, port);
-            Connect(remoteEP);
-        }
-
-        public void Connect(string host, int port)
-        {
-            ThrowIfDisposed();
-            if (_addressFamily != AddressFamily.InterNetwork && _addressFamily != AddressFamily.InterNetworkV6)
-            {
-                throw new NotSupportedException();
-            }
-
-            IPAddress? parsedAddress;
-            if (IPAddress.TryParse(host, out parsedAddress))
-            {
-                Connect(parsedAddress, port);
-            }
-            else
-            {
-                IPAddress[] addresses = Dns.GetHostAddresses(host);
-                Connect(addresses, port);
-            }
-        }
-
-        public void Connect(IPAddress[] addresses, int port)
-        {
-            ThrowIfDisposed();
-            if (addresses.Length == 0)
-            {
-                throw new ArgumentException();
-            }
-            
-            if (_addressFamily != AddressFamily.InterNetwork && _addressFamily != AddressFamily.InterNetworkV6)
-            {
-                throw new NotSupportedException();
-            }
-
-            ThrowIfConnectedStreamSocket();
-            ExceptionDispatchInfo? lastex = null;
-            foreach (IPAddress address in addresses)
-            {
-                if (CanTryAddressFamily(address.AddressFamily))
-                {
-                    try
-                    {
-                        Connect(new IPEndPoint(address, port));
-                        lastex = null;
-                        break;
-                    }
-                    catch (Exception ex) when (!ExceptionCheck.IsFatal(ex))
-                    {
-                        lastex = ExceptionDispatchInfo.Capture(ex);
-                    }
-                }
-            }
-
-            lastex?.Throw();
-            if (!Connected)
-            {
-                throw new ArgumentException();
-            }
         }
 
         public int IOControl(int ioControlCode, byte[]? optionInValue, byte[]? optionOutValue)
@@ -730,13 +619,6 @@ namespace AKNet.Platform.Socket
 
         internal bool Disposed => _disposed > 0;
 
-        internal static void GetIPProtocolInformation(AddressFamily addressFamily, SocketAddress socketAddress, out bool isIPv4, out bool isIPv6)
-        {
-            bool isIPv4MappedToIPv6 = socketAddress.Family == AddressFamily.InterNetworkV6 && socketAddress.GetIPAddress().IsIPv4MappedToIPv6;
-            isIPv4 = addressFamily == AddressFamily.InterNetwork || isIPv4MappedToIPv6; // DualMode
-            isIPv6 = addressFamily == AddressFamily.InterNetworkV6;
-        }
-
         internal static int GetAddressSize(EndPoint endPoint)
         {
             AddressFamily fam = endPoint.AddressFamily;
@@ -745,7 +627,7 @@ namespace AKNet.Platform.Socket
                 endPoint.Serialize().Size;
         }
 
-        private SocketAddress Serialize(ref EndPoint remoteEP)
+        public SocketAddress Serialize(ref EndPoint remoteEP)
         {
             if (remoteEP is IPEndPoint ip)
             {

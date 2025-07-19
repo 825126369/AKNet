@@ -103,6 +103,7 @@ namespace AKNet.Platform
         {
             sqe.Contex = contex;
             sqe.Completion = completion;
+            sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)Interop.Ucrtbase.malloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
             sqe.sqePtr->parent = sqe;
             CxPlatZeroMemory(sqe.sqePtr, sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
 #if DEBUG
@@ -111,10 +112,12 @@ namespace AKNet.Platform
             return true;
         }
 
-        public static void CxPlatSqeInitializeEx(Action<object> completion, object contex, out CXPLAT_SQE sqe)
+        public static void CxPlatSqeInitializeEx(Action<object> completion, object contex, CXPLAT_SQE sqe)
         {
-            sqe = new CXPLAT_SQE();
+            sqe.Contex = contex;
             sqe.Completion = completion;
+            sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)Interop.Ucrtbase.malloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
+            sqe.sqePtr->parent = sqe;
             CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
 #if DEBUG
             sqe.sqePtr->IsQueued = false;
@@ -123,7 +126,11 @@ namespace AKNet.Platform
 
         public static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
         {
-
+            if (sqe.sqePtr != null)
+            {
+                Interop.Ucrtbase.free(sqe.sqePtr);
+                sqe.sqePtr = null;
+            }
         }
 
         private static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE cqe)

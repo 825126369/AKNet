@@ -32,7 +32,7 @@ namespace AKNet.Platform
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* malloc(nuint size);
+            internal static partial void* malloc(int size);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -61,7 +61,7 @@ namespace AKNet.Platform
             internal static extern void free(void* ptr);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void* malloc(nuint size);
+            internal static extern void* malloc(int size);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
             internal static extern void* realloc(void* ptr, nuint new_size);

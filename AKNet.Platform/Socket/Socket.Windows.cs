@@ -125,21 +125,6 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        private Socket GetOrCreateAcceptSocket(Socket? acceptSocket, bool checkDisconnected, string propertyName, out SafeSocketHandle handle)
-        {
-            if (acceptSocket == null)
-            {
-                acceptSocket = new Socket(_addressFamily, _socketType, _protocolType);
-            }
-            else if (acceptSocket._rightEndPoint != null && (!checkDisconnected || !acceptSocket._isDisconnected))
-            {
-                throw new InvalidOperationException(SR.Format(SR.net_sockets_namedmustnotbebound, propertyName));
-            }
-
-            handle = acceptSocket._handle;
-            return acceptSocket;
-        }
-
         internal ThreadPoolBoundHandle GetOrAllocateThreadPoolBoundHandle() =>
             _handle.GetThreadPoolBoundHandle() ??
             GetOrAllocateThreadPoolBoundHandleSlow();
