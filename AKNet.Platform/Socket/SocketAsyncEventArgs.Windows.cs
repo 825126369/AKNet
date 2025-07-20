@@ -151,33 +151,25 @@ namespace AKNet.Platform.Socket
             return socketError;
         }
 
-        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, SafeHandle handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, CancellationToken cancellationToken)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
-            _wsaMessageBufferPinned = new byte[sizeof(Interop.Winsock.WSAMsg)];
-            IPAddress? ipAddress = (_socketAddress.Family == AddressFamily.InterNetworkV6 ? _socketAddress.GetIPAddress() : null);
-            bool ipv4 = (_currentSocket!.AddressFamily == AddressFamily.InterNetwork || (ipAddress != null && ipAddress.IsIPv4MappedToIPv6)); // DualMode
-            bool ipv6 = _currentSocket.AddressFamily == AddressFamily.InterNetworkV6;
-
-            if (ipv6 && (_controlBufferPinned == null || _controlBufferPinned.Length != sizeof(Interop.Winsock.ControlDataIPv6)))
+            _wsaMessageBufferPinned = new byte[sizeof(WSAMsg)];
+            if (_controlBufferPinned == null || _controlBufferPinned.Length != sizeof(ControlDataIPv6))
             {
-                _controlBufferPinned = new byte[sizeof(Interop.Winsock.ControlDataIPv6)];
-            }
-            else if (ipv4 && (_controlBufferPinned == null || _controlBufferPinned.Length != sizeof(Interop.Winsock.ControlData)))
-            {
-                _controlBufferPinned = new byte[sizeof(Interop.Winsock.ControlData)];
+                _controlBufferPinned = new byte[sizeof(ControlDataIPv6)];
             }
 
-            WSABuffer[] wsaRecvMsgWSABufferArray;
+            WSABUF[] wsaRecvMsgWSABufferArray;
             uint wsaRecvMsgWSABufferCount;
             if (_bufferList == null)
             {
-                _wsaRecvMsgWSABufferArrayPinned ??= new WSABuffer[1];
-                fixed (byte* bufferPtr = &MemoryMarshal.GetReference(_buffer.Span))
+                _wsaRecvMsgWSABufferArrayPinned = new WSABUF[1];
+                fixed (byte* bufferPtr = _buffer.Span.Slice(_offset))
                 {
-                    _wsaRecvMsgWSABufferArrayPinned[0].Pointer = (IntPtr)bufferPtr + _offset;
-                    _wsaRecvMsgWSABufferArrayPinned[0].Length = _count;
+                    _wsaRecvMsgWSABufferArrayPinned[0].buf = (IntPtr)bufferPtr;
+                    _wsaRecvMsgWSABufferArrayPinned[0].len = _count;
                     wsaRecvMsgWSABufferArray = _wsaRecvMsgWSABufferArrayPinned;
                     wsaRecvMsgWSABufferCount = 1;
                     return Core();
@@ -192,9 +184,10 @@ namespace AKNet.Platform.Socket
 
             SocketError Core()
             {
-                Interop.Winsock.WSAMsg* pMessage = (Interop.Winsock.WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned, 0);
+                WSAMsg* pMessage = (WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned, 0);
                 pMessage->socketAddress = PtrSocketAddressBuffer();
-                pMessage->addressLength = (uint)SocketAddress.GetMaximumAddressSize(_socketAddress!.Family);
+                pMessage->addressLength = (uint)SocketAddress.GetMaximumAddressSize(_socketAddress.Family);
+
                 fixed (void* ptrWSARecvMsgWSABufferArray = &wsaRecvMsgWSABufferArray[0])
                 {
                     pMessage->buffers = (IntPtr)ptrWSARecvMsgWSABufferArray;
@@ -206,17 +199,17 @@ namespace AKNet.Platform.Socket
                     Debug.Assert(_controlBufferPinned.Length > 0);
                     fixed (void* ptrControlBuffer = &_controlBufferPinned[0])
                     {
-                        pMessage->controlBuffer.Pointer = (IntPtr)ptrControlBuffer;
+                        pMessage->controlBuffer.buf = (IntPtr)ptrControlBuffer;
                     }
-                    pMessage->controlBuffer.Length = _controlBufferPinned.Length;
+                    pMessage->controlBuffer.len = _controlBufferPinned.Length;
                 }
                 pMessage->flags = _socketFlags;
 
-                Overlapped* overlapped = AllocateNativeOverlapped();
+                OVERLAPPED* overlapped = AllocateNativeOverlapped();
                 try
                 {
-                    SocketError socketError = socket.WSARecvMsg(
-                        handle,
+                    SocketError socketError = Interop.Winsock.WSARecvFrom(
+                        socket.SafeHandle,
                         Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned, 0),
                         out int bytesTransferred,
                         overlapped,
@@ -224,7 +217,7 @@ namespace AKNet.Platform.Socket
 
                     return ProcessIOCPResult(socketError == SocketError.Success, bytesTransferred, ref overlapped, _bufferList == null ? _buffer : default, cancellationToken);
                 }
-                catch when (overlapped is not null)
+                catch when (overlapped != null)
                 {
                     FreeNativeOverlapped(ref overlapped);
                     throw;

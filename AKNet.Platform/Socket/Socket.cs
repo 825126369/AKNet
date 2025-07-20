@@ -13,7 +13,7 @@ namespace AKNet.Platform.Socket
             SocketError errorCode = SocketPal.CreateSocket(addressFamily, socketType, protocolType, out _handle);
             if (errorCode != SocketError.Success)
             {
-                throw new SocketException((int)errorCode);
+                NetLog.LogError("CreateSocket: " + errorCode);
             }
         }
 
@@ -41,30 +41,25 @@ namespace AKNet.Platform.Socket
             SocketAddress socketAddress = Serialize(remoteEP);
             DoConnect(remoteEP, socketAddress);
         }
-            
+        
         public void Shutdown(SocketShutdown how)
         {
             ThrowIfDisposed();
             SocketError errorCode = SocketPal.Shutdown(_handle, how);
-            if (errorCode != SocketError.Success && errorCode != SocketError.NotSocket)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
         }
 
         public bool ReceiveMessageFromAsync(SocketAsyncEventArgs e) => ReceiveMessageFromAsync(e, default);
         private bool ReceiveMessageFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            EndPoint endPointSnapshot = e.RemoteEndPoint;
+            IPEN endPointSnapshot = e.RemoteEndPoint;
             e._socketAddress = Serialize(endPointSnapshot);
             e.RemoteEndPoint = endPointSnapshot;
-            SetReceivingPacketInformation();
             e.StartOperationCommon(this, SocketAsyncOperation.ReceiveMessageFrom);
             SocketError socketError;
             try
             {
-                socketError = e.DoOperationReceiveMessageFrom(this, _handle, cancellationToken);
+                socketError = e.DoOperationReceiveMessageFrom(this, cancellationToken);
             }
             catch
             {
@@ -80,7 +75,6 @@ namespace AKNet.Platform.Socket
         private bool SendToAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-
             if (e == null || e.RemoteEndPoint == null)
             {
                 throw new ArgumentNullException();
@@ -90,7 +84,7 @@ namespace AKNet.Platform.Socket
             {
                 e._socketAddress = Serialize(e.RemoteEndPoint);
             }
-                
+            
             e.StartOperationCommon(this, SocketAsyncOperation.SendTo);
             SocketError socketError;
             try
@@ -99,14 +93,8 @@ namespace AKNet.Platform.Socket
             }
             catch
             {
-                _localEndPoint = null;
                 e.Complete();
                 throw;
-            }
-
-            if (!CheckErrorAndUpdateStatus(socketError))
-            {
-                _localEndPoint = null;
             }
 
             return socketError == SocketError.IOPending;
