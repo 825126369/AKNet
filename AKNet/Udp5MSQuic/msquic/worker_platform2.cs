@@ -16,8 +16,6 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_SQE WakeSqe = new CXPLAT_SQE();
         public CXPLAT_SQE UpdatePollSqe = new CXPLAT_SQE();
 
-        public readonly CXPLAT_CQE[] PreAllocCqes = new CXPLAT_CQE[16];
-
         public readonly object ECLock = new object();
         public readonly CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
         public readonly CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<CXPLAT_WORKER>> DynamicPoolList = new CXPLAT_LIST_ENTRY<CXPLAT_POOL_EX<CXPLAT_WORKER>>(null);
@@ -297,7 +295,6 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
-            CXPLAT_SQE[] Cqes = Worker.PreAllocCqes;
             int CqeCount = OSPlatformFunc.CxPlatEventQDequeueEx(Worker.EventQ, (int)Worker.State.WaitTime);
             NetLog.Assert(CqeCount == Worker.EventQ.events_count);
             InterlockedFetchAndSetBoolean(ref Worker.Running);

@@ -7,8 +7,8 @@ namespace AKNet.Platform
     public class CXPLAT_EVENTQ
     {
         internal IntPtr Queue;
-        internal CXPLAT_CQE[] events_inner = new CXPLAT_CQE[13];
-        public CXPLAT_SQE[] events = new CXPLAT_SQE[13];
+        internal readonly CXPLAT_CQE[] events_inner = new CXPLAT_CQE[13];
+        public readonly CXPLAT_SQE[] events = new CXPLAT_SQE[13];
         public int events_count = 0;
     }
 
