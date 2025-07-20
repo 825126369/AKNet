@@ -19,7 +19,7 @@ namespace AKNet.Platform
                 Overlapped* overlapped,
                 IntPtr completionRoutine);
 
-            internal static unsafe SocketError WSASendTo(
+            internal static unsafe int WSASendTo(
                 IntPtr socketHandle,
                 ref WSABUF buffer,
                 int bufferCount,
@@ -29,14 +29,11 @@ namespace AKNet.Platform
                 Overlapped* overlapped,
                 IntPtr completionRoutine)
             {
-                // We intentionally do NOT copy this back after the function completes:
-                // We don't want to cause a race in async scenarios.
-                // The WSABuffer struct should be unchanged anyway.
                 WSABUF localBuffer = buffer;
                 return WSASendTo(socketHandle, &localBuffer, bufferCount, out bytesTransferred, socketFlags, socketAddress, socketAddress.Length, overlapped, completionRoutine);
             }
 
-            internal static unsafe SocketError WSASendTo(
+            internal static unsafe int WSASendTo(
                 IntPtr socketHandle,
                 WSABUF[] buffers,
                 int bufferCount,

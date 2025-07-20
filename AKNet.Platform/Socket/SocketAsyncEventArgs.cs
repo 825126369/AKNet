@@ -1,7 +1,5 @@
 using System.Diagnostics;
-using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform.Socket
@@ -218,23 +216,6 @@ namespace AKNet.Platform.Socket
             set { _userToken = value; }
         }
 
-        //internal Activity? ConnectActivity
-        //{
-        //    get => s_connectActivityTable?.TryGetValue(this, out Activity? result) == true ? result : null;
-        //    set
-        //    {
-        //        if (value is not null)
-        //        {
-        //            LazyInitializer.EnsureInitialized(ref s_connectActivityTable, () => new ConditionalWeakTable<SocketAsyncEventArgs, Activity>());
-        //            s_connectActivityTable.AddOrUpdate(this, value);
-        //        }
-        //        else
-        //        {
-        //            s_connectActivityTable?.Remove(this);
-        //        }
-        //    }
-        //}
-
         public void SetBuffer(int offset, int count)
         {
             StartConfiguring();
@@ -389,7 +370,6 @@ namespace AKNet.Platform.Socket
             }
 
             FreeInternals();
-            FinishOperationSendPackets();
             GC.SuppressFinalize(this);
         }
 
@@ -449,13 +429,6 @@ namespace AKNet.Platform.Socket
                 }
             }
 
-            switch (_completedOperation)
-            {
-                case SocketAsyncOperation.SendPackets:
-                    FinishOperationSendPackets();
-                    break;
-            }
-
             Complete();
         }
 
@@ -479,19 +452,13 @@ namespace AKNet.Platform.Socket
             SocketError socketError;
             switch (_completedOperation)
             {
-                case SocketAsyncOperation.Accept:
-                    break;
-                case SocketAsyncOperation.Connect:
-                    break;
-                case SocketAsyncOperation.Disconnect:;
-                    break;
                 case SocketAsyncOperation.ReceiveFrom:
                     UpdateReceivedSocketAddress(_socketAddress!);
                     if (_remoteEndPoint == null)
                     {
                         _socketAddress = null;
                     }
-                    else if (!SocketAddressExtensions.Equals(_socketAddress!, _remoteEndPoint))
+                    else if (!SocketAddress.Equals(_socketAddress!, _remoteEndPoint))
                     {
                         try
                         {
@@ -512,7 +479,7 @@ namespace AKNet.Platform.Socket
 
                 case SocketAsyncOperation.ReceiveMessageFrom:
                     UpdateReceivedSocketAddress(_socketAddress!);
-                    if (!SocketAddressExtensions.Equals(_socketAddress!, _remoteEndPoint))
+                    if (!SocketAddress.Equals(_socketAddress!, _remoteEndPoint))
                     {
                         try
                         {
@@ -531,10 +498,6 @@ namespace AKNet.Platform.Socket
                     }
 
                     FinishOperationReceiveMessageFrom();
-                    break;
-
-                case SocketAsyncOperation.SendPackets:
-                    FinishOperationSendPackets();
                     break;
             }
 

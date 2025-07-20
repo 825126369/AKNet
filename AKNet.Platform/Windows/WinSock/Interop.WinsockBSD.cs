@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {
@@ -65,7 +65,7 @@ namespace AKNet.Platform.Socket
 #else
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
     internal static partial class Interop
     {

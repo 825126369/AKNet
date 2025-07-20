@@ -368,15 +368,16 @@ namespace AKNet.Platform.Socket
             InternalSetBlocking(_willBlockInternal);
         }
         
+
         public bool ReceiveFromAsync(SocketAsyncEventArgs e) => ReceiveFromAsync(e, default);
         private bool ReceiveFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-
             if (e == null)
             {
                 throw new ArgumentNullException();
             }
+
             EndPoint? endPointSnapshot = e.RemoteEndPoint;
             if (e._socketAddress == null)
             {
@@ -389,12 +390,13 @@ namespace AKNet.Platform.Socket
                 {
                     throw new ArgumentException();
                 }
-                
+
                 e._socketAddress ??= new SocketAddress(_addressFamily);
             }
             
             e.RemoteEndPoint = endPointSnapshot;
             e.StartOperationCommon(this, SocketAsyncOperation.ReceiveFrom);
+
             SocketError socketError;
             try
             {
@@ -411,21 +413,9 @@ namespace AKNet.Platform.Socket
         }
 
         public bool ReceiveMessageFromAsync(SocketAsyncEventArgs e) => ReceiveMessageFromAsync(e, default);
-
         private bool ReceiveMessageFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-
-            if (e == null)
-            {
-                throw new ArgumentException();
-            }
-
-            if (e.RemoteEndPoint == null)
-            {
-                throw new ArgumentException();
-            }
-                
             EndPoint endPointSnapshot = e.RemoteEndPoint;
             e._socketAddress = Serialize(endPointSnapshot);
             e.RemoteEndPoint = endPointSnapshot;

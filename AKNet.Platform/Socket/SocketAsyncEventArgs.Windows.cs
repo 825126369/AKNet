@@ -11,11 +11,11 @@ namespace AKNet.Platform.Socket
     {
         private long _asyncCompletionOwnership;
         private MemoryHandle _singleBufferHandle;
-        private WSABuffer[]? _wsaBufferArrayPinned;
+        private WSABUF[]? _wsaBufferArrayPinned;
         private MemoryHandle[]? _multipleBufferMemoryHandles;
         private byte[]? _wsaMessageBufferPinned;
         private byte[]? _controlBufferPinned;
-        private WSABuffer[]? _wsaRecvMsgWSABufferArrayPinned;
+        private WSABUF[]? _wsaRecvMsgWSABufferArrayPinned;
         private IntPtr _socketAddressPtr;
         private IntPtr[]? _sendPacketsFileHandles;
         private PreAllocatedOverlapped _preAllocatedOverlapped;
@@ -248,12 +248,12 @@ namespace AKNet.Platform.Socket
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
-            fixed (byte* bufferPtr = &MemoryMarshal.GetReference(_buffer.Span))
+            fixed (byte* bufferPtr = _buffer.Span.Slice(_offset))
             {
                 Overlapped* overlapped = AllocateNativeOverlapped();
                 try
                 {
-                    var wsaBuffer = new WSABuffer { Length = _count, Pointer = (IntPtr)(bufferPtr + _offset) };
+                    var wsaBuffer = new WSABUF { len = _count, buf = (IntPtr)bufferPtr };
 
                     SocketError socketError = Interop.Winsock.WSASendTo(
                         handle,
@@ -334,8 +334,8 @@ namespace AKNet.Platform.Socket
                     for (int i = 0; i < bufferCount; i++)
                     {
                         ArraySegment<byte> localCopy = _bufferListInternal[i];
-                        _wsaBufferArrayPinned[i].Pointer = Marshal.UnsafeAddrOfPinnedArrayElement(localCopy.Array!, localCopy.Offset);
-                        _wsaBufferArrayPinned[i].Length = localCopy.Count;
+                        _wsaBufferArrayPinned[i].buf = Marshal.UnsafeAddrOfPinnedArrayElement(localCopy.Array!, localCopy.Offset);
+                        _wsaBufferArrayPinned[i].len = localCopy.Count;
                     }
 
                     _pinState = PinState.MultipleBuffer;
@@ -409,8 +409,8 @@ namespace AKNet.Platform.Socket
             {
                 for (int i = 0; i < _bufferListInternal!.Count; i++)
                 {
-                    WSABuffer wsaBuffer = _wsaBufferArrayPinned![i];
-                    if ((size -= wsaBuffer.Length) <= 0)
+                    WSABUF wsaBuffer = _wsaBufferArrayPinned![i];
+                    if ((size -= wsaBuffer.len) <= 0)
                     {
                         break;
                     }
@@ -455,15 +455,15 @@ namespace AKNet.Platform.Socket
 
         private unsafe void FinishOperationReceiveMessageFrom()
         {
-            Interop.Winsock.WSAMsg* PtrMessage = (Interop.Winsock.WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned!, 0);
+            WSAMsg* PtrMessage = (WSAMsg*)Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned!, 0);
             _socketFlags = PtrMessage->flags;
-            if (_controlBufferPinned!.Length == sizeof(Interop.Winsock.ControlData))
+            if (_controlBufferPinned!.Length == sizeof(ControlData))
             {
-                _receiveMessageFromPacketInfo = SocketPal.GetIPPacketInformation((Interop.Winsock.ControlData*)PtrMessage->controlBuffer.Pointer);
+                _receiveMessageFromPacketInfo = SocketPal.GetIPPacketInformation((ControlData*)PtrMessage->controlBuffer.buf);
             }
-            else if (_controlBufferPinned.Length == sizeof(Interop.Winsock.ControlDataIPv6))
+            else if (_controlBufferPinned.Length == sizeof(ControlDataIPv6))
             {
-                _receiveMessageFromPacketInfo = SocketPal.GetIPPacketInformation((Interop.Winsock.ControlDataIPv6*)PtrMessage->controlBuffer.Pointer);
+                _receiveMessageFromPacketInfo = SocketPal.GetIPPacketInformation((ControlDataIPv6*)PtrMessage->controlBuffer.buf);
             }
             else
             {
@@ -471,12 +471,8 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        private static readonly unsafe IOCompletionCallback s_completionPortCallback = delegate (uint errorCode, uint numBytes, Overlapped* nativeOverlapped)
-
+        public static readonly unsafe IOCompletionCallback s_completionPortCallback = delegate(uint errorCode, uint numBytes, Overlapped* nativeOverlapped)
         {
-            //Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-            //var saeaBox = (StrongBox<SocketAsyncEventArgs>)(ThreadPoolBoundHandle.GetNativeOverlappedState(nativeOverlapped)!);
-
             StrongBox<SocketAsyncEventArgs> saeaBox = null;
             Debug.Assert(saeaBox.Value != null);
             SocketAsyncEventArgs saea = saeaBox.Value;
