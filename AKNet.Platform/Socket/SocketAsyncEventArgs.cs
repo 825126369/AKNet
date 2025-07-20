@@ -413,8 +413,7 @@ namespace AKNet.Platform.Socket
             }
             StartOperationCommonCore();
         }
-
-        partial void StartOperationCommonCore();
+        
         internal void FinishOperationSyncFailure(SocketError socketError, int bytesTransferred, SocketFlags flags)
         {
             SetResults(socketError, bytesTransferred, flags);

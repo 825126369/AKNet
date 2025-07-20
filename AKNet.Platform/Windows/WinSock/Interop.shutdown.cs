@@ -8,13 +8,13 @@ namespace AKNet.Platform
         internal static partial class Winsock
         {
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial int shutdown(IntPtr socketHandle, int how);
+            internal static partial int shutdown(SafeHandle socketHandle, int how);
         }
 #else
         internal static partial class Winsock
         {
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern int shutdown(IntPtr socketHandle, int how);
+            internal static extern int shutdown(SafeHandle socketHandle, int how);
         }
 #endif
     }

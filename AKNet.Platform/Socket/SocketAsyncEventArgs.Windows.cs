@@ -4,6 +4,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using static AKNet.Platform.Interop.Kernel32;
 
 namespace AKNet.Platform.Socket
 {
@@ -43,7 +44,7 @@ namespace AKNet.Platform.Socket
             FreeOverlapped();
         }
 
-        private unsafe Overlapped* AllocateNativeOverlapped()
+        private unsafe OVERLAPPED* AllocateNativeOverlapped()
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
             Debug.Assert(_operating == OperationState_InProgress, $"Expected {nameof(_operating)} == {nameof(OperationState_InProgress)}, got {_operating}");
@@ -56,7 +57,7 @@ namespace AKNet.Platform.Socket
             //return boundHandle.AllocateNativeOverlapped(_preAllocatedOverlapped);
         }
 
-        private unsafe void FreeNativeOverlapped(ref Overlapped* overlapped)
+        private unsafe void FreeNativeOverlapped(ref OVERLAPPED* overlapped)
         {
             Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
             Debug.Assert(overlapped != null, "overlapped is null");
@@ -67,7 +68,7 @@ namespace AKNet.Platform.Socket
             overlapped = null;
         }
 
-        partial void StartOperationCommonCore()
+        void StartOperationCommonCore()
         {
             _strongThisRef.Value = this;
         }
@@ -150,15 +151,7 @@ namespace AKNet.Platform.Socket
             return socketError;
         }
 
-        internal unsafe SocketError DoOperationReceiveFrom(IntPtr handle, CancellationToken cancellationToken)
-        {
-            AllocateSocketAddressBuffer();
-            return _bufferList == null ?
-                DoOperationReceiveFromSingleBuffer(handle, cancellationToken) :
-                DoOperationReceiveFromMultiBuffer(handle);
-        }
-
-        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, IntPtr handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationReceiveMessageFrom(Socket socket, SafeHandle handle, CancellationToken cancellationToken)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
@@ -219,7 +212,7 @@ namespace AKNet.Platform.Socket
                 }
                 pMessage->flags = _socketFlags;
 
-                NativeOverlapped* overlapped = AllocateNativeOverlapped();
+                Overlapped* overlapped = AllocateNativeOverlapped();
                 try
                 {
                     SocketError socketError = socket.WSARecvMsg(

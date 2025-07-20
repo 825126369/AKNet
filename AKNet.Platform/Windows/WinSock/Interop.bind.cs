@@ -7,7 +7,7 @@ namespace AKNet.Platform
         {
 #if NET7_0_OR_GREATER
         [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-        private static partial int bind(
+        internal static partial int bind(
             SafeHandle socketHandle,
             byte* socketAddress,
             int socketAddressSize);

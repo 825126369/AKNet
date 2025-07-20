@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform.Socket
 {
-    public static class SocketPal
+    public unsafe static class SocketPal
     {
         private static void MicrosecondsToTimeValue(long microseconds, ref Interop.Winsock.TimeValue socketTime)
         {
@@ -50,10 +50,12 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static SocketError Bind(SafeHandle handle, ReadOnlySpan<byte> buffer)
+        public static int Bind(SafeHandle handle, ReadOnlySpan<byte> buffer)
         {
-            SocketError errorCode = (SocketError)Interop.Winsock.bind(handle, buffer);
-            return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
+            fixed (byte* ptr = buffer)
+            {
+                return Interop.Winsock.bind(handle, ptr, buffer.Length);
+            }
         }
 
         public static SocketError Connect(IntPtr handle, Memory<byte> peerAddress)
@@ -85,16 +87,14 @@ namespace AKNet.Platform.Socket
             return new IPPacketInformation(address, (int)controlBuffer->index);
         }
 
-        public static SocketError Shutdown(IntPtr handle, bool isConnected, bool isDisconnected, SocketShutdown how)
+        public static SocketError Shutdown(SafeHandle handle, SocketShutdown how)
         {
             SocketError err = (SocketError)Interop.Winsock.shutdown(handle, (int)how);
             if (err != SocketError.SocketError)
             {
                 return SocketError.Success;
             }
-
             err = GetLastSocketError();
-            Debug.Assert(err != SocketError.NotConnected || (!isConnected && !isDisconnected));
             return err;
         }
     }
