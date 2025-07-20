@@ -16,7 +16,6 @@ namespace AKNet.Platform.Socket
     internal unsafe struct ControlDataIPv6
     {
         internal const int IPv6AddressLength = 16;
-
         internal UIntPtr length;
         internal uint level;
         internal uint type;

@@ -21,13 +21,13 @@ namespace AKNet.Platform.Socket
             return (SocketError)win32Error;
         }
 
-        public static SocketError CreateSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, out IntPtr socket)
+        public static SocketError CreateSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, out SafeHandle socket)
         {
             Interop.Winsock.EnsureInitialized();
             socket = Interop.Winsock.WSASocketW((int)addressFamily, (int)socketType, (int)protocolType, IntPtr.Zero, 0, 
                 (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_OVERLAPPED | (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_NO_HANDLE_INHERIT);
             
-            if (socket == IntPtr.Zero)
+            if (socket == null)
             {
                 SocketError error = GetLastSocketError();
                 return error;
@@ -35,13 +35,13 @@ namespace AKNet.Platform.Socket
             return SocketError.Success;
         }
 
-        public static unsafe SocketError GetSockName(IntPtr handle, byte* buffer, out int nameLen)
+        public static unsafe SocketError GetSockName(SafeHandle handle, byte* buffer, out int nameLen)
         {
             SocketError errorCode = (SocketError)Interop.Winsock.getsockname(handle, buffer, out nameLen);
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static unsafe SocketError GetPeerName(IntPtr handle, Span<byte> buffer, ref int nameLen)
+        public static unsafe SocketError GetPeerName(SafeHandle handle, Span<byte> buffer, ref int nameLen)
         {
             fixed (byte* rawBuffer = buffer)
             {
@@ -50,7 +50,7 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static SocketError Bind(IntPtr handle, ProtocolType _, ReadOnlySpan<byte> buffer)
+        public static SocketError Bind(SafeHandle handle, ReadOnlySpan<byte> buffer)
         {
             SocketError errorCode = (SocketError)Interop.Winsock.bind(handle, buffer);
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
@@ -68,15 +68,15 @@ namespace AKNet.Platform.Socket
             return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
-        public static unsafe IPPacketInformation GetIPPacketInformation(ControlData* controlBuffer)
+        internal static unsafe IPPacketInformation GetIPPacketInformation(ControlData* controlBuffer)
         {
             IPAddress address = controlBuffer->length == UIntPtr.Zero ? IPAddress.None : new IPAddress((long)controlBuffer->address);
             return new IPPacketInformation(address, (int)controlBuffer->index);
         }
 
-        public static unsafe IPPacketInformation GetIPPacketInformation(ControlDataIPv6* controlBuffer)
+        internal static unsafe IPPacketInformation GetIPPacketInformation(ControlDataIPv6* controlBuffer)
         {
-            if (controlBuffer->length == (UIntPtr)sizeof(Interop.Winsock.ControlData))
+            if (controlBuffer->length == (UIntPtr)sizeof(ControlData))
             {
                 return GetIPPacketInformation((ControlData*)controlBuffer);
             }

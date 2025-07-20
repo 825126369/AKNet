@@ -16,8 +16,6 @@ namespace AKNet.Platform.Socket
         private static bool CheckIfPlatformHasUdpIssue()
         {
             Version osVersion = Environment.OSVersion.Version;
-
-            // 6.1 == Windows 7
             return (osVersion.Major < 6 ||
                     (osVersion.Major == 6 && osVersion.Minor <= 1));
         }

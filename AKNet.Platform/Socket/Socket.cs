@@ -1,36 +1,15 @@
-using Microsoft.Win32.SafeHandles;
-using System.Collections;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Platform.Socket
 {
     public partial class Socket : IDisposable
     {
-        internal const int DefaultCloseTimeout = -1;
-        private static readonly IPAddress s_IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
-        private static readonly IPEndPoint s_IPEndPointIPv6 = new IPEndPoint(s_IPAddressAnyMapToIPv6, 0);
-
-        private IntPtr _handle;
-        internal EndPoint? _rightEndPoint;
-        internal EndPoint? _remoteEndPoint;
-        private EndPoint? _localEndPoint;
-        private bool _isConnected;
-        private bool _isDisconnected;
-        private bool _willBlock = false;
-        private bool _willBlockInternal = false;
-        private bool _isListening;
-        private bool _nonBlockingConnectInProgress;
-        private EndPoint? _pendingConnectRightEndPoint;
-        private AddressFamily _addressFamily;
-        private SocketType _socketType;
-        private ProtocolType _protocolType;
-        private bool _receivingPacketInformation = false;
-
-        private int _closeTimeout = Socket.DefaultCloseTimeout;
-        private int _disposed;
+        private SafeHandle _handle;
+        private CXPLAT_EVENTQ _eventQ;
         
         public Socket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
         {
@@ -39,97 +18,9 @@ namespace AKNet.Platform.Socket
             {
                 throw new SocketException((int)errorCode);
             }
-
-            _addressFamily = addressFamily;
-            _socketType = socketType;
-            _protocolType = protocolType;
-        }
-        
-        public EndPoint? LocalEndPoint
-        {
-            get
-            {
-                ThrowIfDisposed();
-                if (_localEndPoint == null)
-                {
-                    Span<byte> buffer = stackalloc byte[byte.MaxValue];
-                    int size = buffer.Length;
-
-                    unsafe
-                    {
-                        fixed (byte* ptr = buffer)
-                        {
-                            int nLength = 0;
-                            SocketError errorCode = SocketPal.GetSockName(_handle, ptr, out nLength);
-                            buffer = buffer.Slice(0, nLength);  
-                            if (errorCode != SocketError.Success)
-                            {
-                                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-                            }
-                        }
-                    }
-
-                    if (_addressFamily == AddressFamily.InterNetwork || _addressFamily == AddressFamily.InterNetworkV6)
-                    {
-                        _localEndPoint = IPEndPoint.CreateIPEndPoint(buffer.Slice(0, size));
-                    }
-                    else
-                    {
-                        SocketAddress socketAddress = new SocketAddress(_rightEndPoint.AddressFamily, size);
-                        buffer.Slice(0, size).CopyTo(socketAddress.Buffer.Span);
-                        _localEndPoint = _rightEndPoint.Create(socketAddress);
-                    }
-                }
-
-                return _localEndPoint;
-            }
-        }
-        
-        public EndPoint? RemoteEndPoint
-        {
-            get
-            {
-                ThrowIfDisposed();
-                if (_remoteEndPoint == null)
-                {
-                    if (_rightEndPoint == null || !_isConnected)
-                    {
-                        return null;
-                    }
-
-                    Span<byte> buffer = stackalloc byte[SocketAddress.GetMaximumAddressSize(_addressFamily)];
-                    int size = buffer.Length;
-                    SocketError errorCode = SocketPal.GetPeerName( _handle, buffer, ref size);
-                    if (errorCode != SocketError.Success)
-                    {
-                        UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-                    }
-
-                    try
-                    {
-                        if (_addressFamily == AddressFamily.InterNetwork || _addressFamily == AddressFamily.InterNetworkV6)
-                        {
-                            _remoteEndPoint = IPEndPoint.CreateIPEndPoint(buffer.Slice(0, size));
-                        }
-                        else
-                        {
-                            SocketAddress socketAddress = new SocketAddress(_rightEndPoint.AddressFamily, size);
-                            buffer.Slice(0, size).CopyTo(socketAddress.Buffer.Span);
-                            _remoteEndPoint = _rightEndPoint.Create(socketAddress);
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                return _remoteEndPoint;
-            }
         }
 
-        public IntPtr Handle => SafeHandle;
-
-        public IntPtr SafeHandle
+        public SafeHandle SafeHandle
         {
             get
             {
@@ -137,41 +28,7 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        internal IntPtr InternalSafeHandle => _handle; // returns _handle without calling SetExposed.
-        public bool Blocking
-        {
-            get
-            {
-                return _willBlock;
-            }
-            set
-            {
-                ThrowIfDisposed();
-                bool current;
-                SocketError errorCode = InternalSetBlocking(value, out current);
-                if (errorCode != SocketError.Success)
-                {
-                    UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-                }
-                _willBlock = current;
-            }
-        }
-            
-        public bool Connected
-        {
-            get
-            {
-                return _isConnected;
-            }
-        }
-
-        public bool IsBound
-        {
-            get
-            {
-                return (_rightEndPoint != null);
-            }
-        }
+        internal SafeHandle InternalSafeHandle => _handle; // returns _handle without calling SetExposed.
         
         public void Bind(EndPoint localEP)
         {
@@ -183,176 +40,18 @@ namespace AKNet.Platform.Socket
         private void DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
         {
             IPEndPoint? ipEndPoint = endPointSnapshot as IPEndPoint;
-            SocketError errorCode = SocketPal.Bind( _handle, _protocolType, socketAddress.Buffer.Span.Slice(0, socketAddress.Size));
+            SocketError errorCode = SocketPal.Bind( _handle, socketAddress.Buffer.Span.Slice(0, socketAddress.Size));
             if (errorCode != SocketError.Success)
             {
                 UpdateStatusAfterSocketErrorAndThrowException(errorCode);
             }
-            _rightEndPoint = endPointSnapshot;
         }
         
         public void Connect(EndPoint remoteEP)
         {
             ThrowIfDisposed();
-            if (_isDisconnected)
-            {
-                throw new InvalidOperationException();
-            }
-
-            if (_isListening)
-            {
-                throw new InvalidOperationException();
-            }
-
             SocketAddress socketAddress = Serialize(remoteEP);
-            _pendingConnectRightEndPoint = remoteEP;
-            _nonBlockingConnectInProgress = !Blocking;
-
             DoConnect(remoteEP, socketAddress);
-        }
-
-        public int IOControl(int ioControlCode, byte[]? optionInValue, byte[]? optionOutValue)
-        {
-            ThrowIfDisposed();
-            int realOptionLength;
-            SocketError errorCode = SocketPal.WindowsIoctl(_handle, ioControlCode, optionInValue, optionOutValue, out realOptionLength);
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketErrorAndThrowException(errorCode);
-            }
-
-            return realOptionLength;
-        }
-
-        public int IOControl(IOControlCode ioControlCode, byte[]? optionInValue, byte[]? optionOutValue)
-        {
-            return IOControl(unchecked((int)ioControlCode), optionInValue, optionOutValue);
-        }
-        
-        public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue)
-        {
-            ThrowIfDisposed();
-            SetSocketOption(optionLevel, optionName, optionValue, false);
-        }
-
-        public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue)
-        {
-            ThrowIfDisposed();
-            SocketError errorCode = SocketPal.SetSockOpt(_handle, optionLevel, optionName, optionValue);
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-        }
-        
-        public void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, bool optionValue)
-        {
-            SetSocketOption(optionLevel, optionName, (optionValue ? 1 : 0));
-        }
-        
-        public void SetRawSocketOption(int optionLevel, int optionName, ReadOnlySpan<byte> optionValue)
-        {
-            ThrowIfDisposed();
-            SocketError errorCode = SocketPal.SetRawSockOpt(_handle, optionLevel, optionName, optionValue);
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-        }
-
-        public object? GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName)
-        {
-            ThrowIfDisposed();
-            int optionValue;
-            SocketError errorCode = SocketPal.GetSockOpt(
-                _handle,
-                optionLevel,
-                optionName,
-                out optionValue);
-            
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-
-            return optionValue;
-        }
-
-        public void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, byte[] optionValue)
-        {
-            ThrowIfDisposed();
-            int optionLength = optionValue != null ? optionValue.Length : 0;
-            SocketError errorCode = SocketPal.GetSockOpt(
-                _handle,
-                optionLevel,
-                optionName,
-                optionValue!,
-                ref optionLength);
-            
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-        }
-
-        public byte[] GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionLength)
-        {
-            ThrowIfDisposed();
-            byte[] optionValue = new byte[optionLength];
-            int realOptionLength = optionLength;
-            SocketError errorCode = SocketPal.GetSockOpt(
-                _handle,
-                optionLevel,
-                optionName,
-                optionValue,
-                ref realOptionLength);
-            
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-
-            if (optionLength != realOptionLength)
-            {
-                byte[] newOptionValue = new byte[realOptionLength];
-                Buffer.BlockCopy(optionValue, 0, newOptionValue, 0, realOptionLength);
-                optionValue = newOptionValue;
-            }
-
-            return optionValue;
-        }
-        
-        public int GetRawSocketOption(int optionLevel, int optionName, Span<byte> optionValue)
-        {
-            ThrowIfDisposed();
-            int realOptionLength = optionValue.Length;
-            SocketError errorCode = SocketPal.GetRawSockOpt(_handle, optionLevel, optionName, optionValue, ref realOptionLength);
-            if (errorCode != SocketError.Success)
-            {
-                UpdateStatusAfterSocketOptionErrorAndThrowException(errorCode);
-            }
-            return realOptionLength;
-        }
-        
-        public void SetIPProtectionLevel(IPProtectionLevel level)
-        {
-            if (level == IPProtectionLevel.Unspecified)
-            {
-                throw new ArgumentException();
-            }
-
-            if (_addressFamily == AddressFamily.InterNetworkV6)
-            {
-                SocketPal.SetIPProtectionLevel(this, SocketOptionLevel.IPv6, (int)level);
-            }
-            else if (_addressFamily == AddressFamily.InterNetwork)
-            {
-                SocketPal.SetIPProtectionLevel(this, SocketOptionLevel.IP, (int)level);
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
         }
             
         public void Shutdown(SocketShutdown how)
@@ -368,7 +67,6 @@ namespace AKNet.Platform.Socket
             InternalSetBlocking(_willBlockInternal);
         }
         
-
         public bool ReceiveFromAsync(SocketAsyncEventArgs e) => ReceiveFromAsync(e, default);
         private bool ReceiveFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {

@@ -8,7 +8,7 @@ namespace AKNet.Platform
         {
 #if NET7_0_OR_GREATER
         [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-        internal static partial IntPtr WSASocketW(
+        internal static partial SafeHandle WSASocketW(
             int addressFamily,
             int socketType,
             int protocolType,
@@ -18,7 +18,7 @@ namespace AKNet.Platform
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true, CharSet = CharSet.Unicode)]
-            internal static extern IntPtr WSASocketW(
+            internal static extern SafeHandle WSASocketW(
                 int addressFamily,
                 int socketType,
                 int protocolType,
