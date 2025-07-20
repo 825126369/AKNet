@@ -1,8 +1,0 @@
-namespace AKNet.MSQuicWrapper
-{
-    public enum QUIC_CONNECTION_SHUTDOWN_FLAGS
-    {
-        QUIC_CONNECTION_SHUTDOWN_FLAG_NONE = 0x0000,
-        QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT = 0x0001,
-    }
-}
