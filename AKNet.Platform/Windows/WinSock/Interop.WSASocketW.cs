@@ -15,7 +15,6 @@ namespace AKNet.Platform
             IntPtr protocolInfo,
             int group,
             int flags);
-
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true, CharSet = CharSet.Unicode)]
             internal static extern SafeHandle WSASocketW(

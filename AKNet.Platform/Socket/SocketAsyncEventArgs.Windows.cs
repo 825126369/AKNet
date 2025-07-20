@@ -208,7 +208,8 @@ namespace AKNet.Platform.Socket
                 OVERLAPPED* overlapped = AllocateNativeOverlapped();
                 try
                 {
-                    SocketError socketError = Interop.Winsock.WSARecvFrom(
+                    WSARecvMsgDelegate mFunc = DynamicWinsockMethods.GetWSARecvMsgDelegate(socket.SafeHandle);
+                    SocketError socketError = mFunc(
                         socket.SafeHandle,
                         Marshal.UnsafeAddrOfPinnedArrayElement(_wsaMessageBufferPinned, 0),
                         out int bytesTransferred,

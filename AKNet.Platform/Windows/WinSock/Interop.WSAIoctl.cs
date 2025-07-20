@@ -9,10 +9,10 @@ namespace AKNet.Platform
 #if NET7_0_OR_GREATER
             // Used with SIOGETEXTENSIONFUNCTIONPOINTER - we're assuming that will never block.
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static partial int WSAIoctl(
-                IntPtr socketHandle,
+            internal static unsafe partial int WSAIoctl(
+                SafeHandle socketHandle,
                 int ioControlCode,
-                ref Guid guid,
+                void* guid,
                 int guidSize,
                 out IntPtr funcPtr,
                 int funcPtrSize,
@@ -22,7 +22,7 @@ namespace AKNet.Platform
 
             [LibraryImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
             internal static partial int WSAIoctl_Blocking(
-                IntPtr socketHandle,
+                SafeHandle socketHandle,
                 int ioControlCode,
                 byte[]? inBuffer,
                 int inBufferSize,
@@ -34,10 +34,10 @@ namespace AKNet.Platform
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static extern int WSAIoctl(
-                IntPtr socketHandle,
+            internal static unsafe extern int WSAIoctl(
+                SafeHandle socketHandle,
                 int ioControlCode,
-                ref Guid guid,
+                void* guid,
                 int guidSize,
                 out IntPtr funcPtr,
                 int funcPtrSize,
@@ -47,7 +47,7 @@ namespace AKNet.Platform
 
             [DllImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
             internal static extern int WSAIoctl_Blocking(
-                IntPtr socketHandle,
+                SafeHandle socketHandle,
                 int ioControlCode,
                 byte[]? inBuffer,
                 int inBufferSize,

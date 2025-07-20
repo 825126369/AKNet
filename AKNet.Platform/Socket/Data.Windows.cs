@@ -2,6 +2,14 @@
 using System.Runtime.InteropServices;
 namespace AKNet.Platform.Socket
 {
+    internal unsafe struct GUID
+    {
+        public ulong Data1;
+        public ushort Data2;
+        public ushort Data3;
+        public fixed byte Data4[8];
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct ControlData
     {
