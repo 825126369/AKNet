@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 namespace AKNet.Platform.Socket
 {
     public struct IPPacketInformation : IEquatable<IPPacketInformation>
@@ -21,7 +20,7 @@ namespace AKNet.Platform.Socket
         public static bool operator !=(IPPacketInformation packetInformation1, IPPacketInformation packetInformation2) =>
             !packetInformation1.Equals(packetInformation2);
 
-        public override bool Equals([NotNullWhen(true)] object? comparand) =>
+        public override bool Equals(object? comparand) =>
             comparand is IPPacketInformation other && Equals(other);
         
         public bool Equals(IPPacketInformation other) =>

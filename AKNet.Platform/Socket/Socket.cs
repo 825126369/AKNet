@@ -180,7 +180,7 @@ namespace AKNet.Platform.Socket
                 endPoint.Serialize().Size;
         }
 
-        public SocketAddress Serialize(EndPoint remoteEP)
+        public SocketAddress Serialize(IPEndPoint remoteEP)
         {
             return remoteEP.Serialize();
         }
