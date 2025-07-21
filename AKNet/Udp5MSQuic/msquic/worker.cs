@@ -16,7 +16,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
         public QUIC_PARTITION Partition;
-        public Thread Thread;
+        public IntPtr Thread;
         public EventWaitHandle Ready = null;
         public EventWaitHandle Done = null;
 
@@ -117,7 +117,7 @@ namespace AKNet.Udp5MSQuic.Common
                 ThreadConfig.Name = "quic_worker";
                 ThreadConfig.Callback = QuicWorkerThread;
                 ThreadConfig.Context = Worker;
-                Status = CxPlatThreadCreate(ThreadConfig, Worker.Thread);
+                Status = CxPlatThreadCreate(ThreadConfig, out Worker.Thread);
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;

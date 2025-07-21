@@ -48,14 +48,14 @@ namespace AKNet.Udp5MSQuic.Common
         public uint Flags;
         public int IdealProcessor;
         public string Name;
-        public ParameterizedThreadStart Callback;
+        public Action<object> Callback;
         public object Context;
     }
 
     internal class CXPLAT_PROCESSOR_INFO
     {
         public int Index;
-        public int Group;
+        public ushort Group;
     }
 
     internal static partial class MSQuicFunc
@@ -170,40 +170,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CxPlatRefInitialize(ref Rundown.RefCount);
             CxPlatEventInitialize(out Rundown.RundownComplete, false, false);
-        }
-
-        static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, Thread mThread)
-        {
-            mThread = new Thread(Config.Callback);
-            NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
-            mThread.Name = Config.Name;
-
-            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC))
-            {
-                
-            }
-
-            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
-            {
-                mThread.Priority = ThreadPriority.Highest;
-            }
-            
-            mThread.Start(Config.Context);// 这里创建完成后，会立刻运行线程
-            return QUIC_STATUS_SUCCESS;
-        }
-
-        static void CxPlatThreadDelete(Thread mThread)
-        {
-            mThread.Abort();
-        }
-        static void CxPlatThreadWait(Thread mThread)
-        {
-            mThread.Join();
-        }
-
-        static ulong CxPlatProcessorInfoInit()
-        {
-            return 0;
         }
 
         static ulong CxPlatByteSwapUint16(ushort value)

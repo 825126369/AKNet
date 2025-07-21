@@ -20,22 +20,22 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
-        static void* CxPlatAlloc(int ByteCount, uint Tag = 0)
+        public static void* CxPlatAlloc(int ByteCount, uint Tag = 0)
         {
             return Interop.Kernel32.HeapAlloc(CxPlatform.Heap, 0, ByteCount);
         }
 
-        static void CxPlatFree(void* Mem, uint Tag = 0)
+        public static void CxPlatFree(void* Mem, uint Tag = 0)
         {
             Interop.Kernel32.HeapFree(CxPlatform.Heap, 0, Mem);
         }
 
-        static void CxPlatZeroMemory(void* Destination, int Length)
+        public static void CxPlatZeroMemory(void* Destination, int Length)
         {
             Interop.Ucrtbase.memset(Destination, 0, Length);
         }
 
-        static int CxPlatRandom(int BufferLen, void* Buffer)
+        public static int CxPlatRandom(int BufferLen, void* Buffer)
         {
             const int BCRYPT_RNG_USE_ENTROPY_IN_BUFFER = 0x00000001;
             const int BCRYPT_USE_SYSTEM_PREFERRED_RNG = 0x00000002;
@@ -47,55 +47,8 @@ namespace AKNet.Platform
                     BCRYPT_USE_SYSTEM_PREFERRED_RNG);
         }
 
-        public static int CxPlatInitialize()
-        {
-            int Status;
-            bool CryptoInitialized = false;
-            bool ProcInfoInitialized = false;
-
-            CxPlatform.Heap = Interop.Kernel32.HeapCreate(0, 0, 0);
-            if (CxPlatform.Heap == IntPtr.Zero)
-            {
-                Status = 1;
-                goto Error;
-            }
-
-            if (STATUS_FAILED(Status = CxPlatProcessorInfoInit()))
-            {
-                NetLog.LogError("CxPlatProcessorInfoInit failed");
-                goto Error;
-            }
-            ProcInfoInitialized = true;
-
-            var memInfo = GlobalMemoryStatusEx();
-            CxPlatTotalMemory = (long)memInfo.ullTotalPageFile;
-            CryptoInitialized = true;
-        Error:
-            if (STATUS_FAILED(Status))
-            {
-                if (ProcInfoInitialized)
-                {
-                    CxPlatProcessorInfoUnInit();
-                }
-                if (CxPlatform.Heap != IntPtr.Zero)
-                {
-                    Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
-                    CxPlatform.Heap = IntPtr.Zero;
-                }
-            }
-            return Status;
-        }
-
-        static void CxPlatUninitialize()
-        {
-            NetLog.Assert(CxPlatform.Heap != IntPtr.Zero);
-            CxPlatProcessorInfoUnInit();
-            Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
-            CxPlatform.Heap = IntPtr.Zero;
-        }
-
         //得到内存状态
-        private static MEMORYSTATUSEX GlobalMemoryStatusEx()
+        public static MEMORYSTATUSEX GlobalMemoryStatusEx()
         {
             MEMORYSTATUSEX memStatus = new MEMORYSTATUSEX();
             int structSize = Marshal.SizeOf(typeof(MEMORYSTATUSEX));

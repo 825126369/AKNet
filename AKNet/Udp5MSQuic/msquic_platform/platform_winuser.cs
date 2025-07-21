@@ -1,19 +1,284 @@
-﻿namespace AKNet.Udp5MSQuic.Common
+﻿#if TARGET_WINDOWS
+using AKNet.Common;
+using AKNet.Platform;
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+
+namespace AKNet.Udp5MSQuic.Common
 {
-    internal static partial class MSQuicFunc
+    internal struct CXPLAT_PROCESSOR_GROUP_INFO
+    {
+        public ulong Mask;  // Bit mask of active processors in the group
+        public int Count;  // Count of active processors in the group
+        public int Offset; // Base process index offset this group starts at
+    }
+
+    internal static unsafe partial class MSQuicFunc
     {
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
+        static CX_PLATFORM CxPlatform = new CX_PLATFORM();
+        static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo;
+        static CXPLAT_PROCESSOR_GROUP_INFO* CxPlatProcessorGroupInfo;
+        static int CxPlatProcessorCount;
+        static long CxPlatTotalMemory;
 
         static void CxPlatSystemLoad()
         {
 
         }
 
-        static int CxPlatInitialize()
+        public static int CxPlatInitialize()
         {
-            CxPlatCryptInitialize();
-           // CxPlatWorkersInit();
+            int Status;
+            bool CryptoInitialized = false;
+            bool ProcInfoInitialized = false;
+
+            CxPlatform.Heap = Interop.Kernel32.HeapCreate(0, 0, 0);
+            if (CxPlatform.Heap == IntPtr.Zero)
+            {
+                Status = 1;
+                goto Error;
+            }
+
+            if (QUIC_FAILED(Status = CxPlatProcessorInfoInit()))
+            {
+                NetLog.LogError("CxPlatProcessorInfoInit failed");
+                goto Error;
+            }
+            ProcInfoInitialized = true;
+
+            var memInfo = OSPlatformFunc.GlobalMemoryStatusEx();
+            CxPlatTotalMemory = (long)memInfo.ullTotalPageFile;
+            CryptoInitialized = true;
+        Error:
+            if (QUIC_FAILED(Status))
+            {
+                if (ProcInfoInitialized)
+                {
+                    CxPlatProcessorInfoUnInit();
+                }
+                if (CxPlatform.Heap != IntPtr.Zero)
+                {
+                    Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
+                    CxPlatform.Heap = IntPtr.Zero;
+                }
+            }
+            return Status;
+        }
+
+        static void CxPlatUninitialize()
+        {
+            NetLog.Assert(CxPlatform.Heap != IntPtr.Zero);
+            CxPlatProcessorInfoUnInit();
+            Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
+            CxPlatform.Heap = IntPtr.Zero;
+        }
+
+        //public static int CxPlatProcCount()
+        //{
+        //    return CxPlatProcessorCount;
+        //}
+
+        public static int CxPlatProcessorInfoInit()
+        {
+            int Status = 0;
+            int InfoLength = 0;
+            SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* Info = null;
+            int ActiveProcessorCount = 0, MaxProcessorCount = 0;
+            Status = CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup, &Info, out InfoLength);
+            if (Status != 0)
+            {
+                goto Error;
+            }
+
+            NetLog.Assert(InfoLength != 0);
+            NetLog.Assert(Info->Relationship == LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup);
+            NetLog.Assert(Info->DUMMYUNIONNAME.Group.ActiveGroupCount != 0);
+            NetLog.Assert(Info->DUMMYUNIONNAME.Group.ActiveGroupCount <= Info->DUMMYUNIONNAME.Group.MaximumGroupCount);
+            if (Info->DUMMYUNIONNAME.Group.ActiveGroupCount == 0)
+            {
+                goto Error;
+            }
+
+            for (int i = 0; i < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++i)
+            {
+                ActiveProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
+                MaxProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].MaximumProcessorCount;
+            }
+
+            NetLog.Assert(ActiveProcessorCount > 0);
+            NetLog.Assert(ActiveProcessorCount <= ushort.MaxValue);
+            if (ActiveProcessorCount == 0 || ActiveProcessorCount > ushort.MaxValue)
+            {
+                goto Error;
+            }
+
+            NetLog.Log(string.Format("[ dll] Processors: ({0} active, {1} max), Groups: ({2} active, {3} max)",
+                ActiveProcessorCount,
+                MaxProcessorCount,
+                Info->DUMMYUNIONNAME.Group.ActiveGroupCount,
+                Info->DUMMYUNIONNAME.Group.MaximumGroupCount));
+
+            NetLog.Assert(CxPlatProcessorInfo == null);
+            CxPlatProcessorInfo = (CXPLAT_PROCESSOR_INFO*)OSPlatformFunc.CxPlatAlloc(ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO));
+            if (CxPlatProcessorInfo == null)
+            {
+                goto Error;
+            }
+
+            OSPlatformFunc.CxPlatZeroMemory(
+                CxPlatProcessorInfo,
+                ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO));
+
+            NetLog.Assert(CxPlatProcessorGroupInfo == null);
+            CxPlatProcessorGroupInfo = (CXPLAT_PROCESSOR_GROUP_INFO*)OSPlatformFunc.CxPlatAlloc(
+                    Info->DUMMYUNIONNAME.Group.ActiveGroupCount * sizeof(CXPLAT_PROCESSOR_GROUP_INFO));
+
+            if (CxPlatProcessorGroupInfo == null)
+            {
+                goto Error;
+            }
+
+            CxPlatProcessorCount = 0;
+            for (int i = 0; i < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++i)
+            {
+                CxPlatProcessorGroupInfo[i].Mask = Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorMask;
+                CxPlatProcessorGroupInfo[i].Count = Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
+                CxPlatProcessorGroupInfo[i].Offset = CxPlatProcessorCount;
+                CxPlatProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
+            }
+
+            for (int Proc = 0; Proc < ActiveProcessorCount; ++Proc)
+            {
+                for (int Group = 0; Group < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++Group)
+                {
+                    if (Proc >= CxPlatProcessorGroupInfo[Group].Offset &&
+                        Proc < CxPlatProcessorGroupInfo[Group].Offset + Info->DUMMYUNIONNAME.Group.GroupInfo[Group].ActiveProcessorCount)
+                    {
+                        CxPlatProcessorInfo[Proc].Group = (ushort)Group;
+                        NetLog.Assert(Proc - CxPlatProcessorGroupInfo[Group].Offset <= byte.MaxValue);
+                        CxPlatProcessorInfo[Proc].Index = (byte)(Proc - CxPlatProcessorGroupInfo[Group].Offset);
+                        break;
+                    }
+                }
+            }
+
+            if (Info != null)
+            {
+                OSPlatformFunc.CxPlatFree(Info);
+            }
+
             return 0;
+        Error:
+            if (Info != null)
+            {
+                OSPlatformFunc.CxPlatFree(Info);
+            }
+            if (CxPlatProcessorGroupInfo != null)
+            {
+                OSPlatformFunc.CxPlatFree(CxPlatProcessorGroupInfo);
+                CxPlatProcessorGroupInfo = null;
+            }
+            if (CxPlatProcessorInfo != null)
+            {
+                OSPlatformFunc.CxPlatFree(CxPlatProcessorInfo);
+                CxPlatProcessorInfo = null;
+            }
+            return 1;
+        }
+
+        static void CxPlatProcessorInfoUnInit()
+        {
+            OSPlatformFunc.CxPlatFree(CxPlatProcessorGroupInfo);
+            CxPlatProcessorGroupInfo = null;
+            OSPlatformFunc.CxPlatFree(CxPlatProcessorInfo);
+            CxPlatProcessorInfo = null;
+        }
+
+        static int CxPlatGetProcessorGroupInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX** Buffer, out int BufferLength)
+        {
+            BufferLength = 0;
+            Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, null, out BufferLength);
+            if (BufferLength == 0)
+            {
+                return Interop.Kernel32.GetLastError();
+            }
+
+            *Buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)OSPlatformFunc.CxPlatAlloc(BufferLength);
+            if (*Buffer == null)
+            {
+                return 1;
+            }
+
+            if (!Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, *Buffer, out BufferLength))
+            {
+                OSPlatformFunc.CxPlatFree(*Buffer);
+                return Interop.Kernel32.GetLastError();
+            }
+            return 0;
+        }
+
+        public static int CxPlatThreadFunc(IntPtr parm)
+        {
+            return 0;
+        }
+
+        public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out IntPtr Thread)
+        {
+            nint funcPtr = Marshal.GetFunctionPointerForDelegate(Config.Callback); 
+            Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, CxPlatThreadFunc, Config.Context, 0, out _);
+            if (Thread == IntPtr.Zero)
+            {
+                int Error = Interop.Kernel32.GetLastError();
+                NetLog.LogError(Error);
+                return Error;
+            }
+
+            NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
+            CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
+            GROUP_AFFINITY Group;
+            if (HasFlag(Config.Flags, (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE))
+            {
+                Group.Mask = (ulong)(1ul << ProcInfo.Index);          // Fixed processor
+            }
+            else
+            {
+                Group.Mask = CxPlatProcessorGroupInfo[ProcInfo.Group].Mask;
+            }
+
+            Group.Group = ProcInfo.Group;
+            if (!Interop.Kernel32.SetThreadGroupAffinity(Thread, &Group, null))
+            {
+                NetLog.LogError("SetThreadGroupAffinity");
+            }
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) &&
+                !Interop.Kernel32.SetThreadIdealProcessorEx(Thread, (PROCESSOR_NUMBER*)&ProcInfo, null))
+            {
+                NetLog.LogError("SetThreadIdealProcessorEx");
+            }
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY) &&
+                !Interop.Kernel32.SetThreadPriority(Thread, OSPlatformFunc.THREAD_PRIORITY_HIGHEST))
+            {
+                NetLog.LogError("SetThreadPriority");
+            }
+
+            if (Config.Name != null)
+            {
+                Interop.Kernel32.SetThreadDescription(Thread, Config.Name);
+            }
+            return 0;
+        }
+
+        static void CxPlatThreadDelete(Thread mThread)
+        {
+            mThread.Abort();
+        }
+
+        static void CxPlatThreadWait(Thread mThread)
+        {
+            mThread.Join();
         }
     }
 }
+#endif

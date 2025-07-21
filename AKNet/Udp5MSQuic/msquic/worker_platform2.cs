@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using AKNet.Platform;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -10,7 +11,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_POOL<CXPLAT_WORKER> mPool;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
 
-        public Thread Thread;
+        public IntPtr Thread;
         public CXPLAT_EVENTQ EventQ = new CXPLAT_EVENTQ();
         public CXPLAT_SQE ShutdownSqe = new CXPLAT_SQE();
         public CXPLAT_SQE WakeSqe = new CXPLAT_SQE();
@@ -257,7 +258,7 @@ namespace AKNet.Udp5MSQuic.Common
             {
                 ThreadConfig.IdealProcessor = IdealProcessor;
                 ThreadConfig.Context = Worker;
-                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, Worker.Thread)))
+                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, out Worker.Thread)))
                 {
                     return false;
                 }
