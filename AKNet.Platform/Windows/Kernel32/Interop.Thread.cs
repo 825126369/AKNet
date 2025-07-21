@@ -38,6 +38,10 @@ namespace AKNet.Platform
             public static unsafe partial bool SetThreadPriority(IntPtr hThread, int nPriority);
             [LibraryImport(Interop.Libraries.Kernel32)]
             public static unsafe partial long SetThreadDescription(IntPtr hThread, [MarshalAs(UnmanagedType.LPWStr)] string lpThreadDescription);
+            [LibraryImport(Interop.Libraries.Kernel32)]
+            public static unsafe partial void WaitForSingleObject(IntPtr hHandle, long dwMilliseconds);
+            [LibraryImport(Interop.Libraries.Kernel32)]
+            public static unsafe partial void Sleep(long dwMilliseconds);
         }
 #else
         public static unsafe partial class Kernel32
@@ -66,6 +70,10 @@ namespace AKNet.Platform
             public static unsafe extern bool SetThreadPriority(IntPtr hThread, int nPriority);
             [DllImport(Interop.Libraries.Kernel32, CharSet = CharSet.Unicode)]
             public static unsafe extern long SetThreadDescription(IntPtr hThread, string lpThreadDescription);
+            [DllImport(Interop.Libraries.Kernel32)]
+            public static unsafe extern void WaitForSingleObject(IntPtr hHandle, long dwMilliseconds);
+            [DllImport(Interop.Libraries.Kernel32)]
+            public static unsafe extern void Sleep(long dwMilliseconds);
         }
 
 #endif

@@ -14,6 +14,18 @@ namespace AKNet.Udp5MSQuic.Common
         public int Offset; // Base process index offset this group starts at
     }
 
+    internal class CXPLAT_THREAD
+    {
+        public IntPtr mThreadPtr;
+        public LPTHREAD_START_ROUTINE mFunc;
+        public CXPLAT_THREAD_CONFIG mConfig;
+        public int ThreadFunc(IntPtr parm)
+        {
+             mConfig.Callback(mConfig.Context);
+            return 0;
+        }
+    }
+
     internal static unsafe partial class MSQuicFunc
     {
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
@@ -219,21 +231,18 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        public static int CxPlatThreadFunc(IntPtr parm)
+        public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THREAD mThread)
         {
-            return 0;
-        }
-
-        public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out IntPtr Thread)
-        {
-            nint funcPtr = Marshal.GetFunctionPointerForDelegate(Config.Callback); 
-            Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, CxPlatThreadFunc, Config.Context, 0, out _);
+            mThread = new CXPLAT_THREAD();
+            mThread.mConfig = Config;
+            IntPtr Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, mThread.ThreadFunc, IntPtr.Zero, 0, out _);
             if (Thread == IntPtr.Zero)
             {
                 int Error = Interop.Kernel32.GetLastError();
                 NetLog.LogError(Error);
                 return Error;
             }
+            mThread.mThreadPtr = Thread;
 
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
@@ -270,14 +279,18 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        static void CxPlatThreadDelete(Thread mThread)
+        static void CxPlatThreadDelete(CXPLAT_THREAD mThread)
         {
-            mThread.Abort();
+            if (mThread.mThreadPtr != IntPtr.Zero)
+            {
+                Interop.Kernel32.CloseHandle(mThread.mThreadPtr);
+                mThread.mThreadPtr = IntPtr.Zero;
+            }
         }
 
-        static void CxPlatThreadWait(Thread mThread)
+        static void CxPlatThreadWait(CXPLAT_THREAD mThread)
         {
-            mThread.Join();
+            Interop.Kernel32.WaitForSingleObject(mThread.mThreadPtr, OSPlatformFunc.INFINITE);
         }
     }
 }

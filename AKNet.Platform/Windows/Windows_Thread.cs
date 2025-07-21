@@ -141,9 +141,9 @@ namespace AKNet.Platform
         public byte Reserved;
     }
     
-
     public static unsafe partial class OSPlatformFunc
     {
+        public const long INFINITE = 0xFFFFFFFF;  // Infinite timeout
         public const int MAXLONG = 0x7fffffff;
         public const int THREAD_DYNAMIC_CODE_ALLOW = 1;     // Opt-out of dynamic code generation.
         public const int THREAD_BASE_PRIORITY_LOWRT = 15;  // value that gets a thread to LowRealtime-1
