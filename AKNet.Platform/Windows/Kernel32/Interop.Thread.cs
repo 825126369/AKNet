@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
 #if NET7_0_OR_GREATER
-        internal static unsafe partial class Kernel32
+        public static unsafe partial class Kernel32
         {
             [LibraryImport(Interop.Libraries.Kernel32)]
             public static partial int GetLastError();
@@ -40,7 +40,7 @@ namespace AKNet.Platform
             public static unsafe partial long SetThreadDescription(IntPtr hThread, [MarshalAs(UnmanagedType.LPWStr)] string lpThreadDescription);
         }
 #else
-        internal static partial class Kernel32
+        public static unsafe partial class Kernel32
         {
             [DllImport(Interop.Libraries.Kernel32)]
             public static extern int GetLastError();

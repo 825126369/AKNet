@@ -81,21 +81,21 @@ namespace AKNet.Platform.Socket
         internal SocketAddress(IPAddress ipAddress) : 
             this(ipAddress.AddressFamily, ((ipAddress.AddressFamily == AddressFamily.InterNetwork) ? IPv4AddressSize : IPv6AddressSize))
         {
-            SocketAddressPal.SetPort(_buffer, 0);
-            if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
-            {
-                Span<byte> addressBytes = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
-                ipAddress.TryWriteBytes(addressBytes, out int bytesWritten);
-                Debug.Assert(bytesWritten == IPAddressParserStatics.IPv6AddressBytes);
+            //SocketAddressPal.SetPort(_buffer, 0);
+            //if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
+            //{
+            //    Span<byte> addressBytes = stackalloc byte[IPAddressParserStatics.IPv6AddressBytes];
+            //    ipAddress.TryWriteBytes(addressBytes, out int bytesWritten);
+            //    Debug.Assert(bytesWritten == IPAddressParserStatics.IPv6AddressBytes);
 
-                SocketAddressPal.SetIPv6Address(_buffer, addressBytes, (uint)ipAddress.ScopeId);
-            }
-            else
-            {
-                uint address = unchecked((uint)ipAddress.Address);
-                Debug.Assert(ipAddress.AddressFamily == AddressFamily.InterNetwork);
-                SocketAddressPal.SetIPv4Address(_buffer, address);
-            }
+            //    SocketAddressPal.SetIPv6Address(_buffer, addressBytes, (uint)ipAddress.ScopeId);
+            //}
+            //else
+            //{
+            //    uint address = unchecked((uint)ipAddress.Address);
+            //    Debug.Assert(ipAddress.AddressFamily == AddressFamily.InterNetwork);
+            //    SocketAddressPal.SetIPv4Address(_buffer, address);
+            //}
         }
 
         internal SocketAddress(IPAddress ipaddress, int port) : this(ipaddress)
@@ -126,13 +126,15 @@ namespace AKNet.Platform.Socket
 
         public IPAddress GetIPAddress()
         {
-            return GetIPAddress(Buffer.Span);
+            return null;
+           // return GetIPAddress(Buffer.Span);
         }
 
-        public static int GetPort(this SocketAddress socketAddress)
+        public static int GetPort()
         {
-            Debug.Assert(socketAddress.Family == AddressFamily.InterNetwork || socketAddress.Family == AddressFamily.InterNetworkV6);
-            return (int)SocketAddressPal.GetPort(socketAddress.Buffer.Span);
+            //Debug.Assert(Family == AddressFamily.InterNetwork || _f == AddressFamily.InterNetworkV6);
+            //return (int)SocketAddressPal.GetPort(Buffer.Span);
+            return 0;
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -140,12 +142,12 @@ namespace AKNet.Platform.Socket
             return new IPEndPoint(GetIPAddress(), GetPort());
         }
 
-        public static bool Equals(this SocketAddress socketAddress, EndPoint? endPoint)
+        public static bool Equals(EndPoint? endPoint)
         {
-            if (socketAddress.Family == endPoint?.AddressFamily && endPoint is IPEndPoint ipe)
-            {
-                return ipe.Equals(socketAddress.Buffer.Span);
-            }
+            //if (Family == endPoint?.AddressFamily && endPoint is IPEndPoint ipe)
+            //{
+            //    return ipe.Equals(Buffer.Span);
+            //}
             return false;
         }
 

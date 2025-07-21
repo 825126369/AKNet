@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
 #if NET7_0_OR_GREATER
-        public static partial class Kernel32
+        public static unsafe partial class Kernel32
         {
             [Flags]
             internal enum FileCompletionNotificationModes : byte
@@ -23,7 +23,7 @@ namespace AKNet.Platform
             internal static partial bool SetFileCompletionNotificationModes(SafeHandle handle, FileCompletionNotificationModes flags);
         }
 #else
-        public static partial class Kernel32
+        public static unsafe partial class Kernel32
         {
             [Flags]
             internal enum FileCompletionNotificationModes : byte

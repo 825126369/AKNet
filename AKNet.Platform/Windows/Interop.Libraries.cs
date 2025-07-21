@@ -1,6 +1,6 @@
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
         public static class Libraries
         {

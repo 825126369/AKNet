@@ -3,10 +3,10 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
 #if NET7_0_OR_GREATER
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             [Flags]
             internal enum NameInfoFlags
@@ -29,7 +29,7 @@ namespace AKNet.Platform
                 int Flags);
         }
 #else
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             [Flags]
             internal enum NameInfoFlags

@@ -1,21 +1,17 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     internal enum CXPLAT_DATAPATH_TYPE
     {
         CXPLAT_DATAPATH_TYPE_UNKNOWN = 0,
-        CXPLAT_DATAPATH_TYPE_USER,
-        CXPLAT_DATAPATH_TYPE_RAW, // currently raw == xdp
+        CXPLAT_DATAPATH_TYPE_NORMAL,
+        CXPLAT_DATAPATH_TYPE_RAW,
     }
 
     internal enum CXPLAT_SOCKET_TYPE
     {
         CXPLAT_SOCKET_UDP = 0,
-        CXPLAT_SOCKET_TCP_LISTENER = 1,
-        CXPLAT_SOCKET_TCP = 2,
-        CXPLAT_SOCKET_TCP_SERVER = 3
     }
 
     internal class CXPLAT_DATAPATH_COMMON

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace AKNet.Platform
 {
     [StructLayout(LayoutKind.Sequential)]
-    internal struct MEMORYSTATUSEX
+    public struct MEMORYSTATUSEX
     {
         public int dwLength;
         public int dwMemoryLoad;

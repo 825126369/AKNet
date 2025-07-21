@@ -92,7 +92,7 @@ namespace AKNet.Platform.Socket
                     {
                         if (!_buffer.Equals(default))
                         {
-                            throw new ArgumentException(SR.net_ambiguousbuffers);
+                            throw new ArgumentException();
                         }
                         
                         int bufferCount = value.Count;
@@ -420,7 +420,6 @@ namespace AKNet.Platform.Socket
             Socket? currentSocket = _currentSocket;
             if (currentSocket != null)
             {
-                currentSocket.UpdateStatusAfterSocketError(socketError);
                 if (_completedOperation == SocketAsyncOperation.Connect && !_userSocket)
                 {
                     currentSocket.Dispose();
@@ -447,58 +446,58 @@ namespace AKNet.Platform.Socket
 
         internal void FinishOperationSyncSuccess(int bytesTransferred, SocketFlags flags)
         {
-            SetResults(SocketError.Success, bytesTransferred, flags);
-            SocketError socketError;
-            switch (_completedOperation)
-            {
-                case SocketAsyncOperation.ReceiveFrom:
-                    UpdateReceivedSocketAddress(_socketAddress!);
-                    if (_remoteEndPoint == null)
-                    {
-                        _socketAddress = null;
-                    }
-                    else if (!SocketAddress.Equals(_socketAddress!, _remoteEndPoint))
-                    {
-                        try
-                        {
-                            if (_remoteEndPoint!.AddressFamily == AddressFamily.InterNetworkV6 && _socketAddress!.Family == AddressFamily.InterNetwork)
-                            {
-                                _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPAddress().MapToIPv6(), _socketAddress.GetPort());
-                            }
-                            else
-                            {
-                                _remoteEndPoint = _remoteEndPoint!.Create(_socketAddress!);
-                            }
-                        }
-                        catch
-                        {
-                        }
-                    }
-                    break;
+            //SetResults(SocketError.Success, bytesTransferred, flags);
+            //SocketError socketError;
+            //switch (_completedOperation)
+            //{
+            //    case SocketAsyncOperation.ReceiveFrom:
+            //        UpdateReceivedSocketAddress(_socketAddress!);
+            //        if (_remoteEndPoint == null)
+            //        {
+            //            _socketAddress = null;
+            //        }
+            //        else if (!SocketAddress.Equals(_socketAddress!, _remoteEndPoint))
+            //        {
+            //            try
+            //            {
+            //                if (_remoteEndPoint!.AddressFamily == AddressFamily.InterNetworkV6 && _socketAddress!.Family == AddressFamily.InterNetwork)
+            //                {
+            //                    _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPAddress().MapToIPv6(), _socketAddress.GetPort());
+            //                }
+            //                else
+            //                {
+            //                    _remoteEndPoint = _remoteEndPoint!.Create(_socketAddress!);
+            //                }
+            //            }
+            //            catch
+            //            {
+            //            }
+            //        }
+            //        break;
 
-                case SocketAsyncOperation.ReceiveMessageFrom:
-                    UpdateReceivedSocketAddress(_socketAddress!);
-                    if (!SocketAddress.Equals(_socketAddress!, _remoteEndPoint))
-                    {
-                        try
-                        {
-                            if (_remoteEndPoint!.AddressFamily == AddressFamily.InterNetworkV6 && _socketAddress!.Family == AddressFamily.InterNetwork)
-                            {
-                                _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPAddress().MapToIPv6(), _socketAddress.GetPort());
-                            }
-                            else
-                            {
-                                _remoteEndPoint = _remoteEndPoint!.Create(_socketAddress!);
-                            }
-                        }
-                        catch
-                        {
-                        }
-                    }
+            //    case SocketAsyncOperation.ReceiveMessageFrom:
+            //        UpdateReceivedSocketAddress(_socketAddress!);
+            //        if (!SocketAddress.Equals(_socketAddress!, _remoteEndPoint))
+            //        {
+            //            try
+            //            {
+            //                if (_remoteEndPoint!.AddressFamily == AddressFamily.InterNetworkV6 && _socketAddress!.Family == AddressFamily.InterNetwork)
+            //                {
+            //                    _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPAddress().MapToIPv6(), _socketAddress.GetPort());
+            //                }
+            //                else
+            //                {
+            //                    _remoteEndPoint = _remoteEndPoint!.Create(_socketAddress!);
+            //                }
+            //            }
+            //            catch
+            //            {
+            //            }
+            //        }
 
-                    FinishOperationReceiveMessageFrom();
-                    break;
-            }
+            //        FinishOperationReceiveMessageFrom();
+            //        break;
+            //}
 
             Complete();
         }

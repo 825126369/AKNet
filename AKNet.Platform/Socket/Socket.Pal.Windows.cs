@@ -23,31 +23,26 @@ namespace AKNet.Platform.Socket
 
         public static SocketError CreateSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, out SafeHandle socket)
         {
-            Interop.Winsock.EnsureInitialized();
-            socket = Interop.Winsock.WSASocketW((int)addressFamily, (int)socketType, (int)protocolType, IntPtr.Zero, 0, 
-                (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_OVERLAPPED | (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_NO_HANDLE_INHERIT);
+            socket = null;
+            return SocketError.SocketError;
+            //Interop.Winsock.EnsureInitialized();
+            //socket = Interop.Winsock.WSASocketW((int)addressFamily, (int)socketType, (int)protocolType, IntPtr.Zero, 0, 
+            //    (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_OVERLAPPED | (int)Interop.Winsock.SocketConstructorFlags.WSA_FLAG_NO_HANDLE_INHERIT);
             
-            if (socket == null)
-            {
-                SocketError error = GetLastSocketError();
-                return error;
-            }
-            return SocketError.Success;
+            //if (socket == null)
+            //{
+            //    SocketError error = GetLastSocketError();
+            //    return error;
+            //}
+            //return SocketError.Success;
         }
 
         public static unsafe SocketError GetSockName(SafeHandle handle, byte* buffer, out int nameLen)
         {
-            SocketError errorCode = (SocketError)Interop.Winsock.getsockname(handle, buffer, out nameLen);
-            return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
-        }
-
-        public static unsafe SocketError GetPeerName(SafeHandle handle, Span<byte> buffer, ref int nameLen)
-        {
-            fixed (byte* rawBuffer = buffer)
-            {
-                SocketError errorCode = (SocketError)Interop.Winsock.getpeername(handle, rawBuffer, ref nameLen);
-                return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
-            }
+            nameLen = 0;
+            return SocketError.SocketError;
+            //SocketError errorCode = (SocketError)Interop.Winsock.getsockname(handle, buffer, out nameLen);
+            //return errorCode == SocketError.SocketError ? GetLastSocketError() : SocketError.Success;
         }
 
         public static int Bind(SafeHandle handle, ReadOnlySpan<byte> buffer)
@@ -58,11 +53,12 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        public static SocketError Connect(IntPtr handle, Memory<byte> peerAddress)
+        public static SocketError Connect(SafeHandle handle, Memory<byte> peerAddress)
         {
             SocketError errorCode = (SocketError)Interop.Winsock.WSAConnect(
                 handle,
                 peerAddress.Span,
+                0,
                 IntPtr.Zero,
                 IntPtr.Zero,
                 IntPtr.Zero,
@@ -78,13 +74,14 @@ namespace AKNet.Platform.Socket
 
         internal static unsafe IPPacketInformation GetIPPacketInformation(ControlDataIPv6* controlBuffer)
         {
-            if (controlBuffer->length == (UIntPtr)sizeof(ControlData))
-            {
-                return GetIPPacketInformation((ControlData*)controlBuffer);
-            }
+            //if (controlBuffer->length == (UIntPtr)sizeof(ControlData))
+            //{
+            //    return GetIPPacketInformation((ControlData*)controlBuffer);
+            //}
 
-            IPAddress address = controlBuffer->length != UIntPtr.Zero ? new IPAddress(new ReadOnlySpan<byte>(controlBuffer->address, Interop.Winsock.IPv6AddressLength)) : IPAddress.IPv6None;
-            return new IPPacketInformation(address, (int)controlBuffer->index);
+            //IPAddress address = controlBuffer->length != UIntPtr.Zero ? new IPAddress(new ReadOnlySpan<byte>(controlBuffer->address, Interop.Winsock.IPv6AddressLength)) : IPAddress.IPv6None;
+            //return new IPPacketInformation(address, (int)controlBuffer->index);
+            return new IPPacketInformation();
         }
 
         public static SocketError Shutdown(SafeHandle handle, SocketShutdown how)

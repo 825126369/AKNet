@@ -282,7 +282,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public CXPLAT_POOL_ENTRY<CXPLAT_ROUTE_RESOLUTION_OPERATION> GetEntry()
         {
-            throw new NotImplementedException();
+            return POOL_ENTRY;
         }
 
         public CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> GetPool()

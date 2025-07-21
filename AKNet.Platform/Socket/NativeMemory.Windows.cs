@@ -50,7 +50,7 @@ namespace AKNet.Platform.Socket
         }
         
         [CLSCompliant(false)]
-        public static void* Alloc(nuint byteCount)
+        public static void* Alloc(int byteCount)
         {
             void* result = Interop.Ucrtbase.malloc(byteCount);
             if (result == null)

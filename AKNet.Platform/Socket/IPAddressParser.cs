@@ -38,16 +38,16 @@ namespace AKNet.Platform.Socket
             int end = ipSpan.Length;
             long tmpAddr;
 
-            fixed (char* ipStringPtr = &MemoryMarshal.GetReference(ipSpan.AsSpan()))
-            {
-                tmpAddr = IPv4AddressHelper.ParseNonCanonical(ipStringPtr, 0, ref end, notImplicitFile: true);
-            }
+            //fixed (char* ipStringPtr = &MemoryMarshal.GetReference(ipSpan.AsSpan()))
+            //{
+            //    tmpAddr = IPv4AddressHelper.ParseNonCanonical(ipStringPtr, 0, ref end, notImplicitFile: true);
+            //}
 
-            if (tmpAddr != IPv4AddressHelper.Invalid && end == ipSpan.Length)
-            {
-                address = (uint)IPAddress.HostToNetworkOrder(unchecked((int)tmpAddr));
-                return true;
-            }
+            //if (tmpAddr != IPv4AddressHelper.Invalid && end == ipSpan.Length)
+            //{
+            //    address = (uint)IPAddress.HostToNetworkOrder(unchecked((int)tmpAddr));
+            //    return true;
+            //}
             
             address = 0;
             return false;
@@ -55,42 +55,43 @@ namespace AKNet.Platform.Socket
 
         private static unsafe bool TryParseIPv6(string ipSpan, Span<ushort> numbers, int numbersLength, out uint scope)
         {
-            Debug.Assert(numbersLength >= IPAddressParserStatics.IPv6AddressShorts);
+            //Debug.Assert(numbersLength >= IPAddressParserStatics.IPv6AddressShorts);
 
-            int end = ipSpan.Length;
-            bool isValid = false;
-            fixed (char* ipStringPtr = &MemoryMarshal.GetReference(ipSpan.AsSpan()))
-            {
-                isValid = IPv6AddressHelper.IsValidStrict(ipStringPtr, 0, ref end);
-            }
+            //int end = ipSpan.Length;
+            //bool isValid = false;
+            //fixed (char* ipStringPtr = &MemoryMarshal.GetReference(ipSpan.AsSpan()))
+            //{
+            //    isValid = IPv6AddressHelper.IsValidStrict(ipStringPtr, 0, ref end);
+            //}
+
+            //scope = 0;
+            //if (isValid || (end != ipSpan.Length))
+            //{
+            //    IPv6AddressHelper.Parse(ipSpan, numbers, out ReadOnlySpan<byte> scopeIdSpan);
+
+            //    if (scopeIdSpan.Length > 1)
+            //    {
+            //        bool parsedNumericScope = false;
+            //        scopeIdSpan = scopeIdSpan.Slice(1);
+            //        parsedNumericScope = uint.TryParse(scopeIdSpan, NumberStyles.None, CultureInfo.InvariantCulture, out scope);
+            //        if (parsedNumericScope)
+            //        {
+            //            return true;
+            //        }
+            //        else
+            //        {
+            //            uint interfaceIndex = InterfaceInfoPal.InterfaceNameToIndex(scopeIdSpan);
+            //            if (interfaceIndex > 0)
+            //            {
+            //                scope = interfaceIndex;
+            //                return true;
+            //            }
+            //        }
+            //    }
+            //    return true;
+            //}
 
             scope = 0;
-            if (isValid || (end != ipSpan.Length))
-            {
-                IPv6AddressHelper.Parse(ipSpan, numbers, out ReadOnlySpan<byte> scopeIdSpan);
-
-                if (scopeIdSpan.Length > 1)
-                {
-                    bool parsedNumericScope = false;
-                    scopeIdSpan = scopeIdSpan.Slice(1);
-                    parsedNumericScope = uint.TryParse(scopeIdSpan, NumberStyles.None, CultureInfo.InvariantCulture, out scope);
-                    if (parsedNumericScope)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        uint interfaceIndex = InterfaceInfoPal.InterfaceNameToIndex(scopeIdSpan);
-                        if (interfaceIndex > 0)
-                        {
-                            scope = interfaceIndex;
-                            return true;
-                        }
-                    }
-                }
-                return true;
-            }
-
             return false;
         }  
         

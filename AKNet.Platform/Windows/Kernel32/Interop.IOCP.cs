@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-    internal static unsafe partial class Interop
+    public static unsafe partial class Interop
     {
-        internal static unsafe partial class Kernel32
+        public static unsafe partial class Kernel32
         {
 #if NET7_0_OR_GREATER
             [LibraryImport(Libraries.Kernel32, SetLastError = true)]

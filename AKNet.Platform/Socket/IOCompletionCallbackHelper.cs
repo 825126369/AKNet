@@ -25,27 +25,27 @@ namespace AKNet.Platform.Socket
 
         public static void PerformSingleIOCompletionCallback(uint errorCode, uint numBytes, NativeOverlapped* pNativeOverlapped)
         {
-            Debug.Assert(pNativeOverlapped != null);
+            //Debug.Assert(pNativeOverlapped != null);
 
-            Overlapped overlapped = Overlapped.GetOverlappedFromNative(pNativeOverlapped);
-            object? callback = overlapped._callback;
-            if (callback is IOCompletionCallback iocb)
-            {
-                iocb(errorCode, numBytes, pNativeOverlapped);
-                return;
-            }
+            //Overlapped overlapped = Overlapped.GetOverlappedFromNative(pNativeOverlapped);
+            //object? callback = overlapped._callback;
+            //if (callback is IOCompletionCallback iocb)
+            //{
+            //    iocb(errorCode, numBytes, pNativeOverlapped);
+            //    return;
+            //}
 
-            if (callback == null)
-            {
-                return;
-            }
+            //if (callback == null)
+            //{
+            //    return;
+            //}
             
-            Debug.Assert(callback is IOCompletionCallbackHelper);
-            var helper = (IOCompletionCallbackHelper)callback;
-            helper._errorCode = errorCode;
-            helper._numBytes = numBytes;
-            helper._pNativeOverlapped = pNativeOverlapped;
-            ExecutionContext.RunInternal(helper._executionContext, IOCompletionCallback_Context_Delegate, helper);
+            //Debug.Assert(callback is IOCompletionCallbackHelper);
+            //var helper = (IOCompletionCallbackHelper)callback;
+            //helper._errorCode = errorCode;
+            //helper._numBytes = numBytes;
+            //helper._pNativeOverlapped = pNativeOverlapped;
+            //ExecutionContext.RunInternal(helper._executionContext, IOCompletionCallback_Context_Delegate, helper);
         }
     }
 }

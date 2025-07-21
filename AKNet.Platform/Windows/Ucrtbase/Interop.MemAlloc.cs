@@ -5,10 +5,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
 #if NET7_0_OR_GREATER
-        internal static unsafe partial class Ucrtbase
+        public static unsafe partial class Ucrtbase
         {
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
@@ -43,7 +43,7 @@ namespace AKNet.Platform
             internal static partial void* memset(void* ptr, int c, int n);
         }
 #else
-        internal static unsafe partial class Ucrtbase
+        public static unsafe partial class Ucrtbase
         {
             [DllImport(Libraries.Ucrtbase,CallingConvention = CallingConvention.Cdecl)]
             internal static extern void* _aligned_malloc(nuint size, nuint alignment);

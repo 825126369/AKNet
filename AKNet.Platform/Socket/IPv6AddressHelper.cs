@@ -466,10 +466,10 @@ namespace AKNet.Platform.Socket
                             }
 
                             i = end;
-                            if (!IPv4AddressHelper.IsValid(name, lastSequence, ref i, true, false, false))
-                            {
-                                return false;
-                            }
+                            //if (!IPv4AddressHelper.IsValid(name, lastSequence, ref i, true, false, false))
+                            //{
+                            //    return false;
+                            //}
                             // ipv4 address takes 2 slots in ipv6 address, one was just counted meeting the '.'
                             ++sequenceCount;
                             haveIPv4Address = true;

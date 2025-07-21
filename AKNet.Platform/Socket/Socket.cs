@@ -52,7 +52,7 @@ namespace AKNet.Platform.Socket
         private bool ReceiveMessageFromAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            IPEN endPointSnapshot = e.RemoteEndPoint;
+            IPEndPoint endPointSnapshot = e.RemoteEndPoint as IPEndPoint;
             e._socketAddress = Serialize(endPointSnapshot);
             e.RemoteEndPoint = endPointSnapshot;
             e.StartOperationCommon(this, SocketAsyncOperation.ReceiveMessageFrom);
@@ -80,10 +80,10 @@ namespace AKNet.Platform.Socket
                 throw new ArgumentNullException();
             }
             
-            if (e._socketAddress == null)
-            {
-                e._socketAddress = Serialize(e.RemoteEndPoint);
-            }
+            //if (e._socketAddress == null)
+            //{
+            //    e._socketAddress = Serialize(e.RemoteEndPoint);
+            //}
             
             e.StartOperationCommon(this, SocketAsyncOperation.SendTo);
             SocketError socketError;
@@ -110,7 +110,7 @@ namespace AKNet.Platform.Socket
             SocketError errorCode;
             try
             {
-                errorCode = SocketPal.Connect(_handle, socketAddress.Buffer.Slice(0, socketAddress.Size));
+                errorCode = SocketPal.Connect(SafeHandle, socketAddress.Buffer.Slice(0, socketAddress.Size));
             }
             catch (Exception ex)
             {
@@ -131,41 +131,41 @@ namespace AKNet.Platform.Socket
 
         internal void SetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int optionValue, bool silent)
         {
-            SocketError errorCode;
-            try
-            {
-                errorCode = SocketPal.SetSockOpt(_handle, optionLevel, optionName, optionValue);
-            }
-            catch
-            {
-                if (silent)
-                {
-                    return;
-                }
-                throw;
-            }
+            //SocketError errorCode;
+            //try
+            //{
+            //    errorCode = SocketPal.SetSockOpt(_handle, optionLevel, optionName, optionValue);
+            //}
+            //catch
+            //{
+            //    if (silent)
+            //    {
+            //        return;
+            //    }
+            //    throw;
+            //}
         }
         
         private void ThrowIfDisposed()
         {
-            if (Disposed)
-            {
-                throw new ObjectDisposedException("Disposed");
-            }
+            //if (Disposed)
+            //{
+            //    throw new ObjectDisposedException("Disposed");
+            //}
         }
 
         private void Dispose(bool disposing)
         {
-            if (Interlocked.Exchange(ref _disposed, 1) == 1)
-            {
-                return;
-            }
+            //if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            //{
+            //    return;
+            //}
 
-            if (_handle != null)
-            {
-                _handle.Dispose();
-                _handle = null;
-            }
+            //if (_handle != null)
+            //{
+            //    _handle.Dispose();
+            //    _handle = null;
+            //}
         }
 
         public void Dispose()

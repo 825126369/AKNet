@@ -16,7 +16,7 @@ namespace AKNet.Platform
         public IntPtr Context;
     }
 
-    internal enum LOGICAL_PROCESSOR_RELATIONSHIP
+    public enum LOGICAL_PROCESSOR_RELATIONSHIP
     {
         RelationProcessorCore,
         RelationNumaNode,
@@ -30,14 +30,14 @@ namespace AKNet.Platform
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal unsafe struct GROUP_AFFINITY
+    public unsafe struct GROUP_AFFINITY
     {
         public ulong Mask;
         public ushort Group;
         public fixed ushort Reserved[3];
     }
 
-    internal unsafe struct PROCESSOR_RELATIONSHIP
+    public unsafe struct PROCESSOR_RELATIONSHIP
     {
         private const int ANYSIZE_ARRAY = 1;
 
@@ -50,7 +50,7 @@ namespace AKNet.Platform
         public GROUP_AFFINITY[] GroupMask;
     }
 
-    internal unsafe struct PROCESSOR_GROUP_INFO
+    public unsafe struct PROCESSOR_GROUP_INFO
     {
         public byte MaximumProcessorCount;
         public byte ActiveProcessorCount;
@@ -58,7 +58,7 @@ namespace AKNet.Platform
         public ulong ActiveProcessorMask;
     }
 
-    internal unsafe struct GROUP_RELATIONSHIP
+    public unsafe struct GROUP_RELATIONSHIP
     {
         private const int ANYSIZE_ARRAY = 1;
 
@@ -70,7 +70,7 @@ namespace AKNet.Platform
         public PROCESSOR_GROUP_INFO[] GroupInfo;
     }
 
-    internal unsafe struct SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+    public unsafe struct SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
     {
         public LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
         public int Size;
@@ -89,7 +89,7 @@ namespace AKNet.Platform
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
     }
 
-    internal enum PROCESSOR_CACHE_TYPE
+    public enum PROCESSOR_CACHE_TYPE
     {
         CacheUnified,
         CacheInstruction,
@@ -98,7 +98,7 @@ namespace AKNet.Platform
         CacheUnknown
     }
 
-    internal unsafe struct CACHE_RELATIONSHIP
+    public unsafe struct CACHE_RELATIONSHIP
     {
         private const int ANYSIZE_ARRAY = 1;
 
@@ -119,7 +119,7 @@ namespace AKNet.Platform
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
     }
 
-    internal unsafe struct NUMA_NODE_RELATIONSHIP
+    public unsafe struct NUMA_NODE_RELATIONSHIP
     {
         private const int ANYSIZE_ARRAY = 1;
 
@@ -136,21 +136,21 @@ namespace AKNet.Platform
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
     }
 
-    internal unsafe struct CXPLAT_PROCESSOR_INFO
+    public unsafe struct CXPLAT_PROCESSOR_INFO
     {
         public ushort Group;  // The group number this processor is a part of
         public byte Index;   // Index in the current group
         public byte PADDING; // Here to align with PROCESSOR_NUMBER struct
     }
 
-    internal unsafe struct CXPLAT_PROCESSOR_GROUP_INFO
+    public unsafe struct CXPLAT_PROCESSOR_GROUP_INFO
     {
         public ulong Mask;  // Bit mask of active processors in the group
         public int Count;  // Count of active processors in the group
         public int Offset; // Base process index offset this group starts at
     }
 
-    internal struct PROCESSOR_NUMBER
+    public struct PROCESSOR_NUMBER
     {
         public ushort Group;
         public byte Number;

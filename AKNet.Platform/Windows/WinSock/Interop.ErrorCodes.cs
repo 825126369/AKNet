@@ -1,9 +1,9 @@
 
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             public const uint ERROR_SUCCESS = 0;
             public const uint ERROR_HANDLE_EOF = 38;

@@ -5,9 +5,9 @@ using System.Runtime.InteropServices.Marshalling;
 
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             internal static class IoctlSocketConstants
             {
@@ -67,9 +67,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             internal static class IoctlSocketConstants
             {

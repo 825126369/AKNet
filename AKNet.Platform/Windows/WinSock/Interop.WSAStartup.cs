@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-    internal static partial class Interop
+    public static unsafe partial class Interop
     {
 #if NET7_0_OR_GREATER
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             [LibraryImport(Libraries.Ws2_32)]
             private static unsafe partial int WSAStartup(ushort wVersionRequested, WSAData* lpWSAData);
@@ -15,7 +15,7 @@ namespace AKNet.Platform
             private static partial int WSACleanup();
         }
 #else
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             [DllImport(Interop.Libraries.Ws2_32)]
             private static unsafe extern int WSAStartup(ushort wVersionRequested, WSAData* lpWSAData);
@@ -25,7 +25,7 @@ namespace AKNet.Platform
         }
 #endif
 
-        internal static partial class Winsock
+        public static unsafe partial class Winsock
         {
             private static int s_initialized;
 
