@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Threading;
 using static AKNet.Platform.Interop.Kernel32;
 
 namespace AKNet.Platform.Socket
@@ -22,8 +23,10 @@ namespace AKNet.Platform.Socket
             return mGuid;
         }
         
+        static readonly GUID WSASendMsgGuid = GetGUID(WSAID_WSASENDMSG);
         static readonly GUID WSARecvMsgGuid = GetGUID(WSAID_WSARECVMSG);
-        static WSARecvMsgDelegate _recvMsg;
+        static WSARecvMsg _recvMsg;
+        static WSASendMsg _sendMsg;
 
         private static T CreateDelegate<T>(SafeHandle socketHandle, GUID guid) where T : Delegate
         {
@@ -51,20 +54,37 @@ namespace AKNet.Platform.Socket
             return Marshal.GetDelegateForFunctionPointer<T>(ptr);
         }
 
-        internal static unsafe WSARecvMsgDelegate GetWSARecvMsgDelegate(SafeHandle socketHandle)
+        internal static unsafe WSARecvMsg GetWSARecvMsgDelegate(SafeHandle socketHandle)
         {
             if (_recvMsg == null)
             {
-                _recvMsg = CreateDelegate<WSARecvMsgDelegate>(socketHandle, WSARecvMsgGuid);
+                _recvMsg = CreateDelegate<WSARecvMsg>(socketHandle, WSARecvMsgGuid);
             }
             return _recvMsg;
         }
+
+        internal static unsafe WSASendMsg GetWSASendMsgDelegate(SafeHandle socketHandle)
+        {
+            if (_sendMsg == null)
+            {
+                _sendMsg = CreateDelegate<WSASendMsg>(socketHandle, WSARecvMsgGuid);
+            }
+            return _sendMsg;
+        }
     }
 
-    internal unsafe delegate SocketError WSARecvMsgDelegate(
+    internal unsafe delegate SocketError WSARecvMsg(
                 SafeHandle socketHandle,
                 IntPtr msg,
                 out int bytesTransferred,
                 OVERLAPPED* overlapped,
                 IntPtr completionRoutine);
+
+    internal unsafe delegate int WSASendMsg(
+                SafeHandle Handle,
+                WSAMsg* lpMsg,
+                uint dwFlags,
+                int* lpNumberOfBytesSent,
+                OVERLAPPED* lpOverlapped,
+                IntPtr lpCompletionRoutine);
 }

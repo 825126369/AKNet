@@ -2,6 +2,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static AKNet.Platform.Interop.Kernel32;
@@ -112,7 +113,7 @@ namespace AKNet.Platform.Socket
                     _registrationToCancelPendingIO = cancellationToken.Register(s =>
                     {
                         var thisRef = (SocketAsyncEventArgs)s!;
-                        SafeSocketHandle handle = thisRef._currentSocket!.SafeHandle;
+                        SafeHandle handle = thisRef._currentSocket!.SafeHandle;
                         if (!handle.IsClosed)
                         {
                             try
@@ -226,29 +227,28 @@ namespace AKNet.Platform.Socket
             }
         }
 
-        internal unsafe SocketError DoOperationSendTo(IntPtr handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationSendTo(SafeHandle handle, CancellationToken cancellationToken)
         {
             return _bufferList == null ? DoOperationSendToSingleBuffer(handle, cancellationToken) : DoOperationSendToMultiBuffer(handle);
         }
 
-        internal unsafe SocketError DoOperationSendToSingleBuffer(IntPtr handle, CancellationToken cancellationToken)
+        internal unsafe SocketError DoOperationSendToSingleBuffer(SafeHandle handle, CancellationToken cancellationToken)
         {
             Debug.Assert(_asyncCompletionOwnership == 0, $"Expected 0, got {_asyncCompletionOwnership}");
 
             fixed (byte* bufferPtr = _buffer.Span.Slice(_offset))
             {
-                Overlapped* overlapped = AllocateNativeOverlapped();
+                OVERLAPPED* overlapped = AllocateNativeOverlapped();
                 try
                 {
                     var wsaBuffer = new WSABUF { len = _count, buf = (IntPtr)bufferPtr };
-
-                    SocketError socketError = Interop.Winsock.WSASendTo(
+                    WSASendMsg mFunc = DynamicWinsockMethods.GetWSASendMsgDelegate(handle);
+                    SocketError socketError = mFunc(
                         handle,
                         ref wsaBuffer,
                         1,
                         out int bytesTransferred,
                         _socketFlags,
-                        _socketAddress!.Buffer.Span,
                         overlapped,
                         IntPtr.Zero);
 
