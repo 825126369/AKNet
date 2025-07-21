@@ -2,8 +2,6 @@
 using AKNet.Common;
 using AKNet.Platform;
 using System;
-using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace AKNet.Udp5MSQuic.Common
 {
