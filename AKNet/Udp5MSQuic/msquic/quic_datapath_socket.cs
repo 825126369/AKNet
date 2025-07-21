@@ -647,7 +647,7 @@ namespace AKNet.Udp5MSQuic.Common
                     Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
                     Datagram.TypeOfService = TOS;
                     Datagram.Allocated = true;
-                    Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
+                    Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
                     Datagram.QueuedOnConnection = false;
 
                     if (DatagramChainTail == null)
@@ -768,7 +768,7 @@ namespace AKNet.Udp5MSQuic.Common
                 SendData.WsaBuffers.Clear();
                 SendData.ClientBuffer.Buffer = null;
                 SendData.ClientBuffer.Length = 0;
-                SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER;
+                SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
 
                 SendData.Owner = DatapathProc;
                 SendData.SendDataPool = SendDataPool;
@@ -843,7 +843,7 @@ namespace AKNet.Udp5MSQuic.Common
 
             arg.Completed -= DataPathProcessCqe;
             arg.Completed += DataPathProcessCqe2;
-            mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
+            //mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)

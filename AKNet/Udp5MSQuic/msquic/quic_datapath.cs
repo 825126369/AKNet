@@ -306,7 +306,7 @@ namespace AKNet.Udp5MSQuic.Common
         //给发送数据分配Buffer
         static QUIC_Pool_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ||
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ||
                 DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
 
             return SendDataAllocBuffer(SendData, MaxBufferLength);
@@ -463,7 +463,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         static void QuicCopyRouteInfo(CXPLAT_ROUTE DstRoute, CXPLAT_ROUTE SrcRoute)
         {
-            if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER)
+            if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL)
             {
                 DstRoute.CopyFrom(SrcRoute);
             }
@@ -585,8 +585,8 @@ namespace AKNet.Udp5MSQuic.Common
 
         static bool CxPlatDataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath, CXPLAT_SEND_DATA SendData)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER || DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER ? DataPathIsPaddingPreferred(Datapath) : RawDataPathIsPaddingPreferred(Datapath);
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL || DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
+            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ? DataPathIsPaddingPreferred(Datapath) : RawDataPathIsPaddingPreferred(Datapath);
         }
 
         static bool DataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath)
@@ -653,7 +653,7 @@ namespace AKNet.Udp5MSQuic.Common
         
         static void CxPlatResolveRouteComplete(object Context, CXPLAT_ROUTE Route, byte[] PhysicalAddress, byte PathId)
         {
-            NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_USER);
+            NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL);
             if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
             {
               
