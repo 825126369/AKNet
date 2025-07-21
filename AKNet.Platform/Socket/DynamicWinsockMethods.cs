@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Threading;
 using static AKNet.Platform.Interop.Kernel32;
 
 namespace AKNet.Platform.Socket

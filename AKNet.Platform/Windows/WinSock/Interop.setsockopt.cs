@@ -11,7 +11,7 @@ namespace AKNet.Platform
         {
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             internal static unsafe partial int setsockopt(
-                IntPtr socketHandle,
+                SafeHandle socketHandle,
                 int optionLevel,
                 int optionName,
                 byte* optionValue,
@@ -22,7 +22,7 @@ namespace AKNet.Platform
         {
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             internal static unsafe extern int setsockopt(
-                IntPtr socketHandle,
+                SafeHandle socketHandle,
                 int optionLevel,
                 int optionName,
                 byte* optionValue,

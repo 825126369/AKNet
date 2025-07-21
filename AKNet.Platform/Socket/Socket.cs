@@ -70,9 +70,9 @@ namespace AKNet.Platform.Socket
             return socketError == SocketError.IOPending;
         }
 
-        public bool SendToAsync(SocketAsyncEventArgs e) => SendToAsync(e, default);
+        public bool SendMessageToAsync(SocketAsyncEventArgs e) => SendMessageToAsync(e, default);
 
-        private bool SendToAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
+        private bool SendMessageToAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
             if (e == null || e.RemoteEndPoint == null)
@@ -100,16 +100,6 @@ namespace AKNet.Platform.Socket
             return socketError == SocketError.IOPending;
         }
 
-        internal bool Disposed => _disposed > 0;
-
-        internal static int GetAddressSize(EndPoint endPoint)
-        {
-            AddressFamily fam = endPoint.AddressFamily;
-            return fam == AddressFamily.InterNetwork ? SocketAddressPal.IPv4AddressSize :
-                fam == AddressFamily.InterNetworkV6 ? SocketAddressPal.IPv6AddressSize :
-                endPoint.Serialize().Size;
-        }
-
         public SocketAddress Serialize(IPEndPoint remoteEP)
         {
             return remoteEP.Serialize();
@@ -129,15 +119,9 @@ namespace AKNet.Platform.Socket
 
             if (errorCode != SocketError.Success)
             {
-                UpdateConnectSocketErrorForDisposed(ref errorCode);
                 SocketException socketException = SocketExceptionFactory.CreateSocketException((int)errorCode, endPointSnapshot);
-                UpdateStatusAfterSocketError(socketException);
                 throw socketException;
             }
-
-            _pendingConnectRightEndPoint = endPointSnapshot;
-            _nonBlockingConnectInProgress = false;
-            SetToConnected();
         }
 
         ~Socket()
