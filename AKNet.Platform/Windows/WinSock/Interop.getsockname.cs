@@ -8,13 +8,13 @@ namespace AKNet.Platform
         {
 #if NET7_0_OR_GREATER
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe partial int getsockname(
-                IntPtr socketHandle,
+            public static unsafe partial int getsockname(
+                SafeHandle socketHandle,
                 byte* socketAddress,
                 out int socketAddressSize);
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe extern int getsockname(IntPtr socketHandle, byte* socketAddress, out int socketAddressSize);
+            public static unsafe extern int getsockname(SafeHandle socketHandle, byte* socketAddress, out int socketAddressSize);
 #endif
         }
     }

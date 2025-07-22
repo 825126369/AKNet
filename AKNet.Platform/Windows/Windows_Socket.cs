@@ -1,4 +1,10 @@
 ﻿#if TARGET_WINDOWS
+using System.Buffers.Binary;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+
 namespace AKNet.Platform
 {
     public struct INET_PORT_RANGE
@@ -17,7 +23,7 @@ namespace AKNet.Platform
         public INET_PORT_RANGE Reservation;
         public INET_PORT_RESERVATION_TOKEN Token;
     }
-    
+
     //public unsafe struct SOCKADDR_IN
     //{
     //    public ushort sin_family;
@@ -37,14 +43,14 @@ namespace AKNet.Platform
         public const int WSA_FLAG_REGISTERED_IO = 0x100;
         public const int IPPROTO_IPV6 = 41;
         public const int IPV6_V6ONLY = 27;
-        
+
         public const ulong INVALID_SOCKET = (ulong)(~0UL);
         public const int SOCKET_ERROR = (-1);
         public const int NO_ERROR = 0;
 
         public const byte FILE_SKIP_COMPLETION_PORT_ON_SUCCESS = 0x1;
         public const byte FILE_SKIP_SET_EVENT_ON_HANDLE = 0x2;
-        
+
         public const uint IOC_IN = 0x80000000;
         public const uint IOC_VENDOR = 0x18000000;
         public static readonly uint SIO_CPU_AFFINITY = _WSAIOW(IOC_VENDOR, 21U);
@@ -63,7 +69,7 @@ namespace AKNet.Platform
         public const int IPV6_ECN = 50; // IPv6 ECN codepoint.
         public const int IP_HOPLIMIT = 21;
         public const int IPV6_HOPLIMIT = 21;
-
+        public const int IP_UNICAST_IF = 31;
         public const int SOL_SOCKET = 0xffff;
         public const int SO_RCVBUF = 0x1002;
         public const int UDP_RECV_MAX_COALESCED_SIZE = 3;

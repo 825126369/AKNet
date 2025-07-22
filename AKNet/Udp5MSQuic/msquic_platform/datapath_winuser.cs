@@ -738,7 +738,8 @@ namespace AKNet.Udp5MSQuic.Common
                 if (i == 0)
                 {
                     //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
-                    Socket.LocalAddress = new QUIC_ADDR(SocketProc.Socket.LocalEndPoint as IPEndPoint);
+                    var LocalEndPoint = SocketAddressHelper.GetLocalEndPoint(SocketProc.Socket, AddressFamily.InterNetworkV6);
+                    Socket.LocalAddress.SetIPEndPoint(LocalEndPoint);
                     if (Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
                     {
                         NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
