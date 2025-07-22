@@ -1,4 +1,9 @@
 ﻿#if TARGET_WINDOWS
+using AKNet.Platform;
+using System;
+using System.Net.Sockets;
+using System.Runtime.InteropServices.JavaScript;
+
 namespace AKNet.Platform
 {
     public struct INET_PORT_RANGE
@@ -16,6 +21,41 @@ namespace AKNet.Platform
     {
         public INET_PORT_RANGE Reservation;
         public INET_PORT_RESERVATION_TOKEN Token;
+    }
+
+    public struct IN_ADDR
+    {
+        public struct S_un_DATA
+        {
+            struct S_un_b_DATA 
+            { 
+                public byte s_b1, s_b2, s_b3, s_b4; 
+            }
+            public struct S_un_w_DATA
+            {
+                public ushort s_w1, s_w2; 
+            }
+
+            public S_un_b_DATA S_un_b;
+            public S_un_b_DATA S_un_w;
+            public ulong S_addr;
+        }
+        public S_un_DATA S_un;
+
+        #define s_addr  S_un.S_addr /* can be used for most tcp & ip code */
+        #define s_host  S_un.S_un_b.s_b2    // host on imp
+        #define s_net   S_un.S_un_b.s_b1    // network
+        #define s_imp   S_un.S_un_w.s_w2    // imp
+        #define s_impno S_un.S_un_b.s_b4    // imp #
+        #define s_lh    S_un.S_un_b.s_b3    // logical host
+    }
+    
+    public unsafe struct SOCKADDR_IN
+    {
+        public ushort sin_family;
+        public ushort sin_port;
+        IN_ADDR sin_addr;
+        public fixed byte sin_zero[8];
     }
 
     public static unsafe partial class OSPlatformFunc

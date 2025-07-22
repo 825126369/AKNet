@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -686,30 +685,26 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
                 
-                try
+                Result = Interop.Winsock.bind(SocketProc.Socket, &Socket.LocalAddress, sizeof(PSOCKADDR));
+                if(Result == OSPlatformFunc.SOCKET_ERROR)
                 {
-                    Interop.Winsock.bind(SocketProc.Socket, &Socket.LocalAddress, sizeof(PSOCKADDR));
-                }
-                catch (Exception e)
-                {
-                    NetLog.LogError(e.ToString());
+                    Status = QUIC_STATUS_INTERNAL_ERROR;
                     goto Error;
                 }
 
                 if (Config.RemoteAddress != null)
                 {
-                    var MappedRemoteAddress = Config.RemoteAddress;
+                    SOCKADDR_INET MappedRemoteAddress = { 0 };
+                    CxPlatConvertToMappedV6(Config.RemoteAddress, &MappedRemoteAddress);
 
-                    try
+                    Interop.Winsock.connect(MappedRemoteAddress.GetIPEndPoint());
+                    if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
-                        SocketProc.Socket.Connect(MappedRemoteAddress.GetIPEndPoint());
-                    }
-                    catch (Exception e)
-                    {
-                        NetLog.LogError(e.ToString());
+                        Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
                 }
+                    
 
                 if (i == 0)
                 {
