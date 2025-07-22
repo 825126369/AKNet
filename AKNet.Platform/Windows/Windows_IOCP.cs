@@ -2,7 +2,36 @@
 namespace AKNet.Platform
 {
     using System.Runtime.InteropServices;
-    using CXPLAT_CQE = AKNet.Platform.Interop.Kernel32.OVERLAPPED_ENTRY;
+    using CXPLAT_CQE = OVERLAPPED_ENTRY;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct OVERLAPPED_ENTRY
+    {
+        public IntPtr lpCompletionKey;
+        public OVERLAPPED* lpOverlapped;
+        public IntPtr Internal;
+        public int dwNumberOfBytesTransferred;
+    }
+
+    public unsafe struct OVERLAPPED
+    {
+        public ulong Internal;
+        public ulong InternalHigh;
+
+        [StructLayout(LayoutKind.Explicit)]
+        public struct DUMMYUNIONNAME_DATA1
+        {
+            public struct DUMMYSTRUCTNAME_DATA2
+            {
+                public int Offset;
+                public int OffsetHigh;
+            }
+            [FieldOffset(0)] public DUMMYSTRUCTNAME_DATA2 DUMMYUNIONNAME;
+            [FieldOffset(0)] public void* Pointer;
+        }
+        public DUMMYUNIONNAME_DATA1 DUMMYUNIONNAME;
+        public IntPtr hEvent;
+    }
 
     public class CXPLAT_EVENTQ
     {
@@ -15,18 +44,18 @@ namespace AKNet.Platform
     public unsafe class CXPLAT_SQE
     {
         [StructLayout(LayoutKind.Sequential)]
-        internal unsafe struct CXPLAT_SQE_Inner
+        public unsafe struct CXPLAT_SQE_Inner
         {
             public const string Overlapped_FieldName = "Overlapped";
-            internal Interop.Kernel32.OVERLAPPED Overlapped;
+            public OVERLAPPED Overlapped;
             public CXPLAT_SQE parent;
 #if DEBUG
             public bool IsQueued;
 #endif
         }
 
-        internal CXPLAT_SQE_Inner* sqePtr;
-        public Action<object> Completion; //这个主要是给外部程序使用的
+        public CXPLAT_SQE_Inner* sqePtr;
+        public Action<CXPLAT_CQE> Completion; //这个主要是给外部程序使用的
         public object Contex;
     }
 
@@ -53,7 +82,7 @@ namespace AKNet.Platform
 #if DEBUG
             NetLog.Assert(!sqe.sqePtr->IsQueued);
 #endif
-            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(OVERLAPPED));
             return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, 0, IntPtr.Zero, &sqe.sqePtr->Overlapped);
         }
 
@@ -62,7 +91,7 @@ namespace AKNet.Platform
 #if DEBUG
             NetLog.Assert(!sqe.sqePtr->IsQueued);
 #endif
-            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(OVERLAPPED));
             return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, &sqe.sqePtr->Overlapped);
         }
 
@@ -99,7 +128,7 @@ namespace AKNet.Platform
 
         }
 
-        public static bool CxPlatSqeInitialize(CXPLAT_EVENTQ queue, Action<object> completion, object contex, CXPLAT_SQE sqe)
+        public static bool CxPlatSqeInitialize(CXPLAT_EVENTQ queue, Action<CXPLAT_CQE> completion, object contex, CXPLAT_SQE sqe)
         {
             sqe.Contex = contex;
             sqe.Completion = completion;
@@ -112,13 +141,13 @@ namespace AKNet.Platform
             return true;
         }
 
-        public static void CxPlatSqeInitializeEx(Action<object> completion, object contex, CXPLAT_SQE sqe)
+        public static void CxPlatSqeInitializeEx(Action<CXPLAT_CQE> completion, object contex, CXPLAT_SQE sqe)
         {
             sqe.Contex = contex;
             sqe.Completion = completion;
             sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)Interop.Ucrtbase.malloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
             sqe.sqePtr->parent = sqe;
-            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(Interop.Kernel32.OVERLAPPED));
+            CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(OVERLAPPED));
 #if DEBUG
             sqe.sqePtr->IsQueued = false;
 #endif
@@ -133,7 +162,7 @@ namespace AKNet.Platform
             }
         }
 
-        private static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE cqe)
+        public static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE cqe)
         {
             CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(cqe.lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
             return data->parent;

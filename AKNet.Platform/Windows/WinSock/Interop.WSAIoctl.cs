@@ -23,7 +23,7 @@ namespace AKNet.Platform
             [LibraryImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
             public static partial int WSAIoctl_Blocking(
                 SafeHandle socketHandle,
-                int ioControlCode,
+                uint ioControlCode,
                 byte[]? inBuffer,
                 int inBufferSize,
                 byte[]? outBuffer,
@@ -48,7 +48,7 @@ namespace AKNet.Platform
             [DllImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
             public static extern int WSAIoctl_Blocking(
                 SafeHandle socketHandle,
-                int ioControlCode,
+                uint ioControlCode,
                 byte[]? inBuffer,
                 int inBufferSize,
                 byte[]? outBuffer,

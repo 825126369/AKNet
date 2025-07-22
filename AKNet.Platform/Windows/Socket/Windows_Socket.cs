@@ -1,12 +1,16 @@
 ﻿#if TARGET_WINDOWS
-using System.Buffers.Binary;
-using System.Diagnostics;
-using System.Net;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
+    internal unsafe struct GUID
+    {
+        public ulong Data1;
+        public ushort Data2;
+        public ushort Data3;
+        public fixed byte Data4[8];
+    }
+
     public struct INET_PORT_RANGE
     {
         public ushort StartPort;
@@ -31,6 +35,28 @@ namespace AKNet.Platform
     //    public  sin_addr;
     //    public fixed byte sin_zero[8];
     //}
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WSABUF
+    {
+        public int len; // Length of Buffer
+        public IntPtr buf; // Pointer to Buffer
+    }
+
+    public unsafe struct WSAMSG
+    {
+        public IntPtr name;              /* Remote address */
+        public int namelen;           /* Remote address length */
+        public void* lpBuffers;         /* Data buffer array */
+        public int dwBufferCount;     /* Number of elements in the array */
+        public WSABUF Control;           /* Control buffer */
+        public uint dwFlags;
+    }
+
+    public struct RIO_CMSG_BUFFER
+    {
+        public long TotalLength;
+    }
 
     public static unsafe partial class OSPlatformFunc
     {
@@ -73,6 +99,8 @@ namespace AKNet.Platform
         public const int SOL_SOCKET = 0xffff;
         public const int SO_RCVBUF = 0x1002;
         public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
+
+        public static readonly int RIO_CMSG_BASE_SIZE = WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
 
         public static uint _WSAIOW(uint x, uint y)
         {

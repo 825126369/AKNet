@@ -30,35 +30,6 @@ namespace AKNet.Platform
                 out int ulNumEntriesRemoved,
                 int dwMilliseconds,
                 [MarshalAs(UnmanagedType.Bool)] bool fAlertable);
-
-            [StructLayout(LayoutKind.Sequential)]
-            public unsafe struct OVERLAPPED_ENTRY
-            {
-                public IntPtr lpCompletionKey;
-                public OVERLAPPED* lpOverlapped;
-                public IntPtr Internal;
-                public int dwNumberOfBytesTransferred;
-            }
-
-            public unsafe struct OVERLAPPED
-            {
-                public IntPtr Internal;
-                public IntPtr InternalHigh;
-
-                [StructLayout(LayoutKind.Explicit)]
-                public struct DUMMYUNIONNAME_DATA1
-                {
-                    public struct DUMMYSTRUCTNAME_DATA2
-                    {
-                        public int Offset;
-                        public int OffsetHigh;
-                    }
-                    [FieldOffset(0)] public DUMMYSTRUCTNAME_DATA2 DUMMYUNIONNAME;
-                    [FieldOffset(0)] public void* Pointer;
-                }
-                public DUMMYUNIONNAME_DATA1 DUMMYUNIONNAME;
-                public IntPtr hEvent;
-            }
 #else
             [DllImport(Libraries.Kernel32, SetLastError = true)]
             internal static extern IntPtr CreateIoCompletionPort(IntPtr FileHandle, IntPtr ExistingCompletionPort, IntPtr CompletionKey, int NumberOfConcurrentThreads);
@@ -80,35 +51,6 @@ namespace AKNet.Platform
                 out int ulNumEntriesRemoved,
                 int dwMilliseconds,
                 [MarshalAs(UnmanagedType.Bool)] bool fAlertable);
-
-            [StructLayout(LayoutKind.Sequential)]
-            internal unsafe struct OVERLAPPED_ENTRY
-            {
-                public IntPtr lpCompletionKey;
-                public OVERLAPPED* lpOverlapped;
-                public IntPtr Internal;
-                public int dwNumberOfBytesTransferred;
-            }
-
-            internal unsafe struct OVERLAPPED
-            {
-                public IntPtr Internal;
-                public IntPtr InternalHigh;
-
-                [StructLayout(LayoutKind.Explicit)]
-                public struct DUMMYUNIONNAME_DATA1
-                {
-                    public struct DUMMYSTRUCTNAME_DATA2
-                    {
-                        public int Offset;
-                        public int OffsetHigh;
-                    }
-                    [FieldOffset(0)] public DUMMYSTRUCTNAME_DATA2 DUMMYUNIONNAME;
-                    [FieldOffset(0)] public void* Pointer;
-                }
-                public DUMMYUNIONNAME_DATA1 DUMMYUNIONNAME;
-                public IntPtr hEvent;
-            }
 #endif
 
         }

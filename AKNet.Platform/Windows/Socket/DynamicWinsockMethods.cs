@@ -1,9 +1,8 @@
 using System.Runtime.InteropServices;
-using static AKNet.Platform.Interop.Kernel32;
 
-namespace AKNet.Platform.Socket
+namespace AKNet.Platform
 {
-    internal static unsafe class DynamicWinsockMethods
+    public static unsafe class DynamicWinsockMethods
     {
         private static readonly ulong[] WSAID_WSASENDMSG = { 0xa441e712, 0x754f, 0x43ca, 0x84, 0xa7, 0x0d, 0xee, 0x44, 0xcf, 0x60, 0x6d };
         private static readonly ulong[] WSAID_WSARECVMSG = { 0xf689d7c8, 0x6f1f, 0x436b, 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22 };
@@ -41,19 +40,19 @@ namespace AKNet.Platform.Socket
                    out ptr,
                    sizeof(IntPtr),
                    out _,
-                   IntPtr.Zero,
-                   IntPtr.Zero);
+                   null,
+                   null);
             }
 
             if (errorCode != 0)
             {
-                throw new SocketException();
+                return null;
             }
 
             return Marshal.GetDelegateForFunctionPointer<T>(ptr);
         }
 
-        internal static unsafe WSARecvMsg GetWSARecvMsgDelegate(SafeHandle socketHandle)
+        public static unsafe WSARecvMsg GetWSARecvMsgDelegate(SafeHandle socketHandle)
         {
             if (_recvMsg == null)
             {
@@ -62,7 +61,7 @@ namespace AKNet.Platform.Socket
             return _recvMsg;
         }
 
-        internal static unsafe WSASendMsg GetWSASendMsgDelegate(SafeHandle socketHandle)
+        public static unsafe WSASendMsg GetWSASendMsgDelegate(SafeHandle socketHandle)
         {
             if (_sendMsg == null)
             {
@@ -72,16 +71,18 @@ namespace AKNet.Platform.Socket
         }
     }
 
-    internal unsafe delegate SocketError WSARecvMsg(
+
+    public unsafe delegate int WSARecvMsg(
                 SafeHandle socketHandle,
                 IntPtr msg,
                 out int bytesTransferred,
                 OVERLAPPED* overlapped,
                 IntPtr completionRoutine);
 
-    internal unsafe delegate int WSASendMsg(
+
+    public unsafe delegate int WSASendMsg(
                 SafeHandle Handle,
-                WSAMsg* lpMsg,
+                WSAMSG* lpMsg,
                 uint dwFlags,
                 int* lpNumberOfBytesSent,
                 OVERLAPPED* lpOverlapped,

@@ -14,7 +14,7 @@ namespace AKNet.Platform
                 public const int FIONREAD = 0x4004667F;
                 public const int FIONBIO = unchecked((int)0x8004667E);
                 public const int FIOASYNC = unchecked((int)0x8004667D);
-                public const int SIOGETEXTENSIONFUNCTIONPOINTER = unchecked((int)0xC8000006);
+                public const uint SIOGETEXTENSIONFUNCTIONPOINTER = unchecked(0xC8000006);
 
                 // Not likely to block (sync IO ok):
                 //
@@ -76,7 +76,7 @@ namespace AKNet.Platform
                 public const int FIONREAD = 0x4004667F;
                 public const int FIONBIO = unchecked((int)0x8004667E);
                 public const int FIOASYNC = unchecked((int)0x8004667D);
-                public const int SIOGETEXTENSIONFUNCTIONPOINTER = unchecked((int)0xC8000006);
+                public const uint SIOGETEXTENSIONFUNCTIONPOINTER = unchecked(0xC8000006);
 
                 // Not likely to block (sync IO ok):
                 //

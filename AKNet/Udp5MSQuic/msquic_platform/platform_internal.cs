@@ -65,13 +65,15 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_SOCKET Parent;
 
         public SafeHandle Socket;
-        public bool IoStarted;
-        public bool Uninitialized;
-        
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         public bool bReceiveIOContexUsed = false;
         public bool bSendIOContexUsed = false;
+        public bool Freed;
+        public bool RecvFailure;
+        public bool IoStarted;
+        public bool Uninitialized;
+        public readonly CXPLAT_RUNDOWN_REF RundownRef = new CXPLAT_RUNDOWN_REF();
     }
 
     internal class CXPLAT_SOCKET_RAW

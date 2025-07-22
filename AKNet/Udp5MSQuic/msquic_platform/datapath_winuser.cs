@@ -3,7 +3,6 @@ using AKNet.Common;
 using AKNet.Platform;
 using AKNet.Platform.Socket;
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -11,6 +10,8 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
+    using CXPLAT_CQE = OVERLAPPED_ENTRY;
+
     //一律强制转为IpV6地址
     internal class QUIC_ADDR
     {
@@ -207,7 +208,11 @@ namespace AKNet.Udp5MSQuic.Common
         public long ReferenceCount;
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
-        public SSocketAsyncEventArgs ReceiveArgs;
+
+        public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
+        public WSAMSG WsaMsgHdr;
+        public WSABUF WsaControlBuf;
+        public byte[] ControlBuf = new byte[100];
 
         public void Reset()
         {
@@ -757,7 +762,7 @@ namespace AKNet.Udp5MSQuic.Common
             NewSocket = Socket;
             for (int i = 0; i < SocketCount; i++)
             {
-                CxPlatDataPathStartReceiveAsync(Socket.PerProcSockets[i]);
+                CxPlatDataPathStartReceive(Socket.PerProcSockets[i]);
                 Socket.PerProcSockets[i].IoStarted = true;
             }
             Status = QUIC_STATUS_SUCCESS;
@@ -765,40 +770,90 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static bool CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
+        static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc, 
+            out ulong IoResult,
+            out int InlineBytesTransferred,
+            out DATAPATH_RX_IO_BLOCK IoBlock)
+        {
+            const int MAX_RECV_RETRIES = 10;
+            int RetryCount = 0;
+            int Status;
+            do
+            {
+                Status = CxPlatSocketStartReceive(SocketProc,
+                        out IoResult,
+                        out InlineBytesTransferred,
+                        out IoBlock);
+            } while (Status == QUIC_STATUS_OUT_OF_MEMORY && ++RetryCount < MAX_RECV_RETRIES);
+
+            if (Status == QUIC_STATUS_OUT_OF_MEMORY)
+            {
+                NetLog.Assert(RetryCount == MAX_RECV_RETRIES);
+                SocketProc.RecvFailure = true;
+                Status = QUIC_STATUS_PENDING;
+            }
+
+            return Status != QUIC_STATUS_PENDING;
+        }
+
+        static int CxPlatSocketStartReceive(CXPLAT_SOCKET_PROC SocketProc,
+            out ulong SyncIoResult,
+            out int SyncBytesReceived,
+            out DATAPATH_RX_IO_BLOCK SyncIoBlock)
+        {
+            int Status = 0;
+            if (SocketProc.Parent.UseRio)
+            {
+                //Status = CxPlatSocketStartRioReceives(SocketProc);
+                NetLog.Assert(Status != QUIC_STATUS_SUCCESS);
+            }
+            else
+            {
+                Status = CxPlatSocketStartWinsockReceive(SocketProc, out SyncIoResult, out SyncBytesReceived, out SyncIoBlock);
+            }
+            return Status;
+        }
+
+        static int CxPlatSocketStartWinsockReceive(CXPLAT_SOCKET_PROC SocketProc,
+            ref ulong SyncIoResult,
+            ref int SyncBytesReceived,
+            ref DATAPATH_RX_IO_BLOCK SyncIoBlock)
         {
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
             if (IoBlock == null)
             {
-                return false;
+                return QUIC_STATUS_OUT_OF_MEMORY;
             }
 
-            IoBlock.ReceiveArgs.UserToken = IoBlock;
-            IoBlock.ReceiveArgs.SetBuffer(0, SocketProc.Parent.RecvBufLen);
-            bool bIOSyncCompleted = false;
-            try
-            {
-                bIOSyncCompleted = !SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
-            }
-            catch (Exception e)
-            {
-                NetLog.LogError(e.ToString());
-                return false;
-            }
+            CxPlatStartDatapathIo(SocketProc, IoBlock.Sqe, IoBlock, CxPlatIoRecvEventComplete);
+            IoBlock.WsaControlBuf.buf = ((CHAR*)IoBlock) + Datapath.RecvPayloadOffset;
+            IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
+            IoBlock.WsaMsgHdr.name = (PSOCKADDR) & IoBlock->Route.RemoteAddress;
+            IoBlock.WsaMsgHdr.namelen = sizeof(IoBlock->Route.RemoteAddress);
+            IoBlock.WsaMsgHdr.lpBuffers = IoBlock.WsaControlBuf;
+            IoBlock.WsaMsgHdr.dwBufferCount = 1;
+            IoBlock.WsaMsgHdr.Control.buf = IoBlock->ControlBuf;
+            IoBlock.WsaMsgHdr.Control.len = sizeof(IoBlock->ControlBuf);
+            IoBlock.WsaMsgHdr.dwFlags = 0;
 
-            if (bIOSyncCompleted)
+            int BytesRecv = 0;
+
+            WSARecvMsg WSARecvMsg = DynamicWinsockMethods.GetWSARecvMsgDelegate(SocketProc.Socket);
+            fixed (WSAMSG* WSAMSG = IoBlock.WsaMsgHdr)
             {
-                NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
+                int Result = WSARecvMsg(
+                          SocketProc.Socket,
+                          IoBlock.WsaMsgHdr,
+                          BytesRecv,
+                          IoBlock.Sqe.sqePtr->Overlapped,
+                          null);
             }
             return true;
         }
 
-        static bool CxPlatDataPathUdpRecvComplete(SocketAsyncEventArgs arg)
+        static bool CxPlatDataPathUdpRecvComplete(CXPLAT_SOCKET_PROC SocketProc, DATAPATH_RX_IO_BLOCK IoBlock, ulong IoResult,
+            int NumberOfBytesTransferred)
         {
-            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
-
             if (arg.SocketError == SocketError.NotSocket || arg.SocketError == SocketError.OperationAborted)
             {
                 CxPlatSocketFreeRxIoBlock(IoBlock);
@@ -1065,6 +1120,50 @@ namespace AKNet.Udp5MSQuic.Common
                 return;
             }
             CxPlatDataPathStartReceiveAsync(SocketProc);
+        }
+
+        static void CxPlatDataPathSocketProcessReceive(DATAPATH_RX_IO_BLOCK IoBlock, int BytesTransferred,ulong IoResult)
+        {
+            CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
+            NetLog.Assert(!SocketProc.Freed);
+            if (!CxPlatRundownAcquire(SocketProc.RundownRef))
+            {
+                return;
+            }
+
+            NetLog.Assert(!SocketProc.Uninitialized);
+            for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
+            {
+                if (!CxPlatDataPathUdpRecvComplete(SocketProc, IoBlock, IoResult, BytesTransferred) ||
+                    !CxPlatDataPathStartReceiveAsync(
+                        SocketProc,
+                        InlineReceiveCount > 1 ? IoResult : null,
+                        InlineReceiveCount > 1 ? BytesTransferred : null,
+                        InlineReceiveCount > 1 ? IoBlock : null))
+                {
+                    break;
+                }
+            }
+
+            CxPlatRundownRelease(SocketProc.RundownRef);
+        }
+
+        static void CxPlatStartDatapathIo(CXPLAT_SOCKET_PROC SocketProc,CXPLAT_SQE Sqe, DATAPATH_RX_IO_BLOCK contex, Action<CXPLAT_CQE> Completion)
+        {
+            NetLog.Assert(Sqe.sqePtr->Overlapped.Internal != 0x103); // STATUS_PENDING
+            OSPlatformFunc.CxPlatSqeInitializeEx(Completion, contex, Sqe);
+            //CxPlatRefIncrement(ref SocketProc.RefCount);
+        }
+
+        static void CxPlatIoRecvEventComplete(CXPLAT_CQE Cqe)
+        {
+            CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Cqe);
+            NetLog.Assert(Cqe.Internal != 0x103); // STATUS_PENDING
+            NetLog.Assert(Cqe.dwNumberOfBytesTransferred <= ushort.MaxValue);
+
+            CxPlatDataPathSocketProcessReceive(Sqe.Contex as DATAPATH_RX_IO_BLOCK,
+                (ushort)Cqe.dwNumberOfBytesTransferred,
+                Interop.Kernel32.RtlNtStatusToDosError((long)Cqe.Internal));
         }
 
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
