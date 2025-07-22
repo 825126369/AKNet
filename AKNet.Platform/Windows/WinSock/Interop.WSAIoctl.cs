@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using static AKNet.Platform.Interop.Kernel32;
 
 namespace AKNet.Platform
 {
@@ -7,21 +8,20 @@ namespace AKNet.Platform
         public static unsafe partial class Winsock
         {
 #if NET7_0_OR_GREATER
-            // Used with SIOGETEXTENSIONFUNCTIONPOINTER - we're assuming that will never block.
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe partial int WSAIoctl(
+            public static unsafe partial int WSAIoctl(
                 SafeHandle socketHandle,
-                int ioControlCode,
-                void* guid,
-                int guidSize,
-                out IntPtr funcPtr,
-                int funcPtrSize,
+                uint ioControlCode,
+                void* lpvInBuffer,
+                int lpvInBufferLen,
+                void* lpvOutBuffer,
+                int lpvOutBufferLen,
                 out int bytesTransferred,
-                IntPtr shouldBeNull,
-                IntPtr shouldBeNull2);
+                void* shouldBeNull,
+                void* shouldBeNull2);
 
             [LibraryImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
-            internal static partial int WSAIoctl_Blocking(
+            public static partial int WSAIoctl_Blocking(
                 SafeHandle socketHandle,
                 int ioControlCode,
                 byte[]? inBuffer,
@@ -34,19 +34,19 @@ namespace AKNet.Platform
 
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe extern int WSAIoctl(
+            public static unsafe extern int WSAIoctl(
                 SafeHandle socketHandle,
-                int ioControlCode,
-                void* guid,
-                int guidSize,
-                out IntPtr funcPtr,
-                int funcPtrSize,
+                uint ioControlCode,
+                void* lpvInBuffer,
+                int lpvInBufferLen,
+                void* lpvOutBuffer,
+                int lpvOutBufferLen,
                 out int bytesTransferred,
-                IntPtr shouldBeNull,
-                IntPtr shouldBeNull2);
+                void* shouldBeNull,
+                void* shouldBeNull2);
 
             [DllImport(Interop.Libraries.Ws2_32, EntryPoint = "WSAIoctl", SetLastError = true)]
-            internal static extern int WSAIoctl_Blocking(
+            public static extern int WSAIoctl_Blocking(
                 SafeHandle socketHandle,
                 int ioControlCode,
                 byte[]? inBuffer,

@@ -1,6 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System.Runtime.InteropServices;
 namespace AKNet.Platform
 {
@@ -10,7 +7,7 @@ namespace AKNet.Platform
         public static unsafe partial class Winsock
         {
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe partial int setsockopt(
+            public static unsafe partial int setsockopt(
                 SafeHandle socketHandle,
                 int optionLevel,
                 int optionName,
@@ -21,7 +18,7 @@ namespace AKNet.Platform
         public static unsafe partial class Winsock
         {
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            internal static unsafe extern int setsockopt(
+            public static unsafe extern int setsockopt(
                 SafeHandle socketHandle,
                 int optionLevel,
                 int optionName,

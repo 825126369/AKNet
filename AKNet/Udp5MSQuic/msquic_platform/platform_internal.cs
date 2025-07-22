@@ -1,5 +1,7 @@
-﻿using System;
+﻿using AKNet.Platform;
+using System;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -33,6 +35,7 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_POOL<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL<DATAPATH_RX_PACKET>();
+        public CXPLAT_EVENTQ EventQ;
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
@@ -61,7 +64,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
 
-        public Socket Socket;
+        public SafeHandle Socket;
         public bool IoStarted;
         public bool Uninitialized;
         
@@ -107,6 +110,7 @@ namespace AKNet.Udp5MSQuic.Common
         public byte DisconnectIndicated;
         public bool PcpBinding;
         public bool Uninitialized;
+        public bool UseRio;
         public bool Freed;
         public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;

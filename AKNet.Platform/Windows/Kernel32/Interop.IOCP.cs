@@ -32,7 +32,7 @@ namespace AKNet.Platform
                 [MarshalAs(UnmanagedType.Bool)] bool fAlertable);
 
             [StructLayout(LayoutKind.Sequential)]
-            internal unsafe struct OVERLAPPED_ENTRY
+            public unsafe struct OVERLAPPED_ENTRY
             {
                 public IntPtr lpCompletionKey;
                 public OVERLAPPED* lpOverlapped;
@@ -40,7 +40,7 @@ namespace AKNet.Platform
                 public int dwNumberOfBytesTransferred;
             }
 
-            internal unsafe struct OVERLAPPED
+            public unsafe struct OVERLAPPED
             {
                 public IntPtr Internal;
                 public IntPtr InternalHigh;
