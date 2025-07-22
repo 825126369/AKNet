@@ -3,6 +3,7 @@ using AKNet.Common;
 using AKNet.Platform;
 using AKNet.Platform.Socket;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -152,6 +153,28 @@ namespace AKNet.Udp5MSQuic.Common
             int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
             qUIC_SSBuffer.Length = nLength;
             return qUIC_SSBuffer;
+        }
+
+        public ReadOnlySpan<byte> GetBindAddr()
+        {
+            const int IPv6AddressSize = 28;
+            const int IPv4AddressSize = 16;
+
+            //Family --2个字节
+            //端口 --2个字节
+            //地址 --
+#if NET8_0
+            var RawAddr = GetIPEndPoint().Serialize();
+            return RawAddr.Buffer.Span.Slice(0, RawAddr.Size);
+#else
+            SocketAddress RawAddr = GetIPEndPoint().Serialize();
+            Span<byte> buffer = new byte[RawAddr.Size];
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = RawAddr[i];
+            }
+            return buffer;
+#endif
         }
 
         public void Reset()
@@ -684,8 +707,13 @@ namespace AKNet.Udp5MSQuic.Common
                         goto Error;
                     }
                 }
-                
-                Result = Interop.Winsock.bind(SocketProc.Socket, &Socket.LocalAddress, sizeof(PSOCKADDR));
+
+                ReadOnlySpan<byte> mTemp = Socket.LocalAddress.GetBindAddr();
+                fixed (byte* mTempPtr = mTemp)
+                {
+                    Result = Interop.Winsock.bind(SocketProc.Socket, mTempPtr, mTemp.Length);
+                }
+
                 if(Result == OSPlatformFunc.SOCKET_ERROR)
                 {
                     Status = QUIC_STATUS_INTERNAL_ERROR;
@@ -694,18 +722,19 @@ namespace AKNet.Udp5MSQuic.Common
 
                 if (Config.RemoteAddress != null)
                 {
-                    SOCKADDR_INET MappedRemoteAddress = { 0 };
-                    CxPlatConvertToMappedV6(Config.RemoteAddress, &MappedRemoteAddress);
+                    mTemp = Socket.RemoteAddress.GetBindAddr();
+                    fixed (byte* mTempPtr = mTemp)
+                    {
+                        Interop.Winsock.connect(SocketProc.Socket, mTempPtr, mTemp.Length);
+                    }
 
-                    Interop.Winsock.connect(MappedRemoteAddress.GetIPEndPoint());
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
                 }
-                    
-
+                
                 if (i == 0)
                 {
                     //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
