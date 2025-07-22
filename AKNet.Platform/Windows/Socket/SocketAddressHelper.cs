@@ -7,6 +7,27 @@ namespace AKNet.Platform
 {
     public unsafe static class SocketAddressHelper
     {
+        public static ReadOnlySpan<byte> GetBindAddr(IPEndPoint mIpEndPoint)
+        {
+            const int IPv6AddressSize = 28;
+            const int IPv4AddressSize = 16;
+            //Family --2个字节
+            //端口 --2个字节
+            //地址 --
+#if NET8_0
+            var RawAddr = mIpEndPoint.Serialize();
+            return RawAddr.Buffer.Span.Slice(0, RawAddr.Size);
+#else
+            SocketAddress RawAddr = mIpEndPoint.Serialize();
+            Span<byte> buffer = new byte[RawAddr.Size];
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = RawAddr[i];
+            }
+            return buffer;
+#endif
+        }
+
         public static IPEndPoint GetLocalEndPoint(SafeHandle Socket, AddressFamily family)
         {
             int Result = 0;

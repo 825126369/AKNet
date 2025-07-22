@@ -48,7 +48,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool Freed;
         public readonly CXPLAT_DATAPATH_PROC[] Partitions = null;
         public int RecvDatagramLength;
-
+        public int RecvPayloadOffset;
         public CXPLAT_DATAPATH(int nWorkCount)
         {
             Partitions = new CXPLAT_DATAPATH_PROC[nWorkCount];
@@ -63,7 +63,6 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
-
         public SafeHandle Socket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();

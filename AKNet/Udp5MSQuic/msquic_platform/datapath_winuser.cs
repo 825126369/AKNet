@@ -158,24 +158,7 @@ namespace AKNet.Udp5MSQuic.Common
 
         public ReadOnlySpan<byte> GetBindAddr()
         {
-            const int IPv6AddressSize = 28;
-            const int IPv4AddressSize = 16;
-
-            //Family --2个字节
-            //端口 --2个字节
-            //地址 --
-#if NET8_0
-            var RawAddr = GetIPEndPoint().Serialize();
-            return RawAddr.Buffer.Span.Slice(0, RawAddr.Size);
-#else
-            SocketAddress RawAddr = GetIPEndPoint().Serialize();
-            Span<byte> buffer = new byte[RawAddr.Size];
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                buffer[i] = RawAddr[i];
-            }
-            return buffer;
-#endif
+            return SocketAddressHelper.GetBindAddr(GetIPEndPoint());
         }
 
         public void Reset()
@@ -206,9 +189,7 @@ namespace AKNet.Udp5MSQuic.Common
         public CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public long ReferenceCount;
-
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
-
         public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
         public WSAMSG WsaMsgHdr;
         public WSABUF WsaControlBuf;
@@ -819,6 +800,7 @@ namespace AKNet.Udp5MSQuic.Common
             ref int SyncBytesReceived,
             ref DATAPATH_RX_IO_BLOCK SyncIoBlock)
         {
+            CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
             if (IoBlock == null)
             {
@@ -826,29 +808,60 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             CxPlatStartDatapathIo(SocketProc, IoBlock.Sqe, IoBlock, CxPlatIoRecvEventComplete);
-            IoBlock.WsaControlBuf.buf = ((CHAR*)IoBlock) + Datapath.RecvPayloadOffset;
-            IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
-            IoBlock.WsaMsgHdr.name = (PSOCKADDR) & IoBlock->Route.RemoteAddress;
-            IoBlock.WsaMsgHdr.namelen = sizeof(IoBlock->Route.RemoteAddress);
-            IoBlock.WsaMsgHdr.lpBuffers = IoBlock.WsaControlBuf;
-            IoBlock.WsaMsgHdr.dwBufferCount = 1;
-            IoBlock.WsaMsgHdr.Control.buf = IoBlock->ControlBuf;
-            IoBlock.WsaMsgHdr.Control.len = sizeof(IoBlock->ControlBuf);
-            IoBlock.WsaMsgHdr.dwFlags = 0;
-
+            ReadOnlySpan<byte> mAdd = IoBlock.Route.RemoteAddress.GetBindAddr();
+            int Result = 0;
             int BytesRecv = 0;
-
-            WSARecvMsg WSARecvMsg = DynamicWinsockMethods.GetWSARecvMsgDelegate(SocketProc.Socket);
-            fixed (WSAMSG* WSAMSG = IoBlock.WsaMsgHdr)
+            fixed (void* mAddPtr = mAdd)
+            fixed (void* ControlBufPtr = IoBlock.ControlBuf)
+            fixed (void* WsaControlBufPtr = &IoBlock.WsaControlBuf)
             {
-                int Result = WSARecvMsg(
-                          SocketProc.Socket,
-                          IoBlock.WsaMsgHdr,
-                          BytesRecv,
-                          IoBlock.Sqe.sqePtr->Overlapped,
-                          null);
+                IoBlock.WsaControlBuf.buf = (IntPtr)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
+                IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
+
+                IoBlock.WsaMsgHdr.name = (IntPtr)mAddPtr;
+                IoBlock.WsaMsgHdr.namelen = mAdd.Length;
+                IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
+                IoBlock.WsaMsgHdr.dwBufferCount = 1;
+                IoBlock.WsaMsgHdr.Control.buf = (IntPtr)ControlBufPtr;
+                IoBlock.WsaMsgHdr.Control.len = IoBlock.ControlBuf.Length;
+                IoBlock.WsaMsgHdr.dwFlags = 0;
+
+                BytesRecv = 0;
+                WSARecvMsg WSARecvMsg = DynamicWinsockMethods.GetWSARecvMsgDelegate(SocketProc.Socket);
+                fixed (void* ptr2 = &IoBlock.WsaMsgHdr)
+                {
+                    Result = WSARecvMsg(
+                              SocketProc.Socket,
+                              (IntPtr)ptr2,
+                              out BytesRecv,
+                              &IoBlock.Sqe.sqePtr->Overlapped,
+                              IntPtr.Zero);
+                }
             }
-            return true;
+
+            if (Result == OSPlatformFunc.SOCKET_ERROR)
+            {
+                int WsaError = Interop.Winsock.WSAGetLastError();
+                NetLog.Assert(WsaError != OSPlatformFunc.NO_ERROR);
+                if (WsaError == OSPlatformFunc.WSA_IO_PENDING)
+                {
+                    return QUIC_STATUS_PENDING;
+                }
+                if (SyncBytesReceived == 0)
+                {
+                    IoBlock.Sqe.Completion = CxPlatIoRecvFailureEventComplete;
+                }
+            }
+
+            int Status = CxPlatSocketEnqueueSqe(SocketProc, IoBlock.Sqe, BytesRecv);
+            if (QUIC_FAILED(Status))
+            {
+                NetLog.Assert(false); // We don't expect tests to hit this.
+                CxPlatCancelDatapathIo(SocketProc);
+                CxPlatSocketFreeRxIoBlock(IoBlock);
+                return Status;
+            }
+            return QUIC_STATUS_PENDING;
         }
 
         static bool CxPlatDataPathUdpRecvComplete(CXPLAT_SOCKET_PROC SocketProc, DATAPATH_RX_IO_BLOCK IoBlock, ulong IoResult,

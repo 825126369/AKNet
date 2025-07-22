@@ -69,6 +69,7 @@ namespace AKNet.Platform
         public const int WSA_FLAG_REGISTERED_IO = 0x100;
         public const int IPPROTO_IPV6 = 41;
         public const int IPV6_V6ONLY = 27;
+        public const int IPV6_UNICAST_IF = 31; // IP unicast interface.
 
         public const ulong INVALID_SOCKET = (ulong)(~0UL);
         public const int SOCKET_ERROR = (-1);
@@ -100,7 +101,7 @@ namespace AKNet.Platform
         public const int SO_RCVBUF = 0x1002;
         public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
 
-        public static readonly int RIO_CMSG_BASE_SIZE = WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
+        //public static readonly int RIO_CMSG_BASE_SIZE = WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
 
         public static uint _WSAIOW(uint x, uint y)
         {

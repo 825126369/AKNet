@@ -81,7 +81,7 @@ namespace AKNet.Udp5MSQuic.Common
         }
     }
 
-    internal class QUIC_BUFFER
+    internal unsafe class QUIC_BUFFER
     {
         public int Offset;
         public int Length;
@@ -224,6 +224,14 @@ namespace AKNet.Udp5MSQuic.Common
         public bool IsEmpty
         {
             get => Length == 0;
+        }
+
+        public void* GetBufferPtr()
+        {
+            fixed (void* ptr = Buffer)
+            {
+                return ptr;
+            }
         }
     }
 
