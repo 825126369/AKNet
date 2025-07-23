@@ -7,6 +7,23 @@ namespace AKNet.Platform
 {
     public unsafe static class SocketAddressHelper
     {
+        public const int IPv6AddressSize = 28;
+        public const int IPv4AddressSize = 16;
+        public const int MaxAddressSize = 128;
+
+        public static int GetMaximumAddressSize(AddressFamily addressFamily = AddressFamily.Unspecified)
+        {
+            switch (addressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    return IPv4AddressSize;
+                case AddressFamily.InterNetworkV6:
+                    return IPv6AddressSize;
+                default:
+                    return MaxAddressSize;
+            }
+        }
+
         public static ReadOnlySpan<byte> GetBindAddr(IPEndPoint mIpEndPoint)
         {
             const int IPv6AddressSize = 28;

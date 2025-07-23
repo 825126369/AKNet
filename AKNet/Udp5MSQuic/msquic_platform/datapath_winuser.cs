@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 
 namespace AKNet.Udp5MSQuic.Common
 {
@@ -194,6 +195,7 @@ namespace AKNet.Udp5MSQuic.Common
         public WSAMSG WsaMsgHdr;
         public WSABUF WsaControlBuf;
         public byte[] ControlBuf = new byte[100];
+        public IntPtr _socketAddressPtr;
 
         public void Reset()
         {
@@ -778,9 +780,9 @@ namespace AKNet.Udp5MSQuic.Common
         }
 
         static int CxPlatSocketStartReceive(CXPLAT_SOCKET_PROC SocketProc,
-            out ulong SyncIoResult,
-            out int SyncBytesReceived,
-            out DATAPATH_RX_IO_BLOCK SyncIoBlock)
+            ref ulong SyncIoResult,
+            ref int SyncBytesReceived,
+            ref DATAPATH_RX_IO_BLOCK SyncIoBlock)
         {
             int Status = 0;
             if (SocketProc.Parent.UseRio)
@@ -790,7 +792,7 @@ namespace AKNet.Udp5MSQuic.Common
             }
             else
             {
-                Status = CxPlatSocketStartWinsockReceive(SocketProc, out SyncIoResult, out SyncBytesReceived, out SyncIoBlock);
+                Status = CxPlatSocketStartWinsockReceive(SocketProc, ref SyncIoResult, ref SyncBytesReceived, ref SyncIoBlock);
             }
             return Status;
         }
@@ -808,18 +810,15 @@ namespace AKNet.Udp5MSQuic.Common
             }
 
             CxPlatStartDatapathIo(SocketProc, IoBlock.Sqe, IoBlock, CxPlatIoRecvEventComplete);
-            ReadOnlySpan<byte> mAdd = IoBlock.Route.RemoteAddress.GetBindAddr();
             int Result = 0;
             int BytesRecv = 0;
-            fixed (void* mAddPtr = mAdd)
             fixed (void* ControlBufPtr = IoBlock.ControlBuf)
             fixed (void* WsaControlBufPtr = &IoBlock.WsaControlBuf)
             {
                 IoBlock.WsaControlBuf.buf = (IntPtr)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
                 IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
-
-                IoBlock.WsaMsgHdr.name = (IntPtr)mAddPtr;
-                IoBlock.WsaMsgHdr.namelen = mAdd.Length;
+                IoBlock.WsaMsgHdr.name = IoBlock._socketAddressPtr;
+                IoBlock.WsaMsgHdr.namelen = SocketAddressHelper.GetMaximumAddressSize();
                 IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
                 IoBlock.WsaMsgHdr.dwBufferCount = 1;
                 IoBlock.WsaMsgHdr.Control.buf = (IntPtr)ControlBufPtr;
@@ -856,7 +855,7 @@ namespace AKNet.Udp5MSQuic.Common
             int Status = CxPlatSocketEnqueueSqe(SocketProc, IoBlock.Sqe, BytesRecv);
             if (QUIC_FAILED(Status))
             {
-                NetLog.Assert(false); // We don't expect tests to hit this.
+                NetLog.Assert(false);
                 CxPlatCancelDatapathIo(SocketProc);
                 CxPlatSocketFreeRxIoBlock(IoBlock);
                 return Status;
@@ -864,31 +863,53 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_STATUS_PENDING;
         }
 
+
+
+        static void CxPlatCancelDatapathIo(CXPLAT_SOCKET_PROC SocketProc)
+        {
+            
+        }
+
+        static void CxPlatIoRecvFailureEventComplete(CXPLAT_CQE Cqe)
+        {
+            CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Cqe);
+            NetLog.Assert(Sqe.sqePtr->Overlapped.Internal != 0x103); // STATUS_PENDING
+            NetLog.Assert(Cqe.dwNumberOfBytesTransferred <= ushort.MaxValue);
+            CxPlatDataPathSocketProcessReceive(Sqe.Contex as  DATAPATH_RX_IO_BLOCK,
+                0,
+                (ulong)Cqe.dwNumberOfBytesTransferred);
+        }
+
         static bool CxPlatDataPathUdpRecvComplete(CXPLAT_SOCKET_PROC SocketProc, DATAPATH_RX_IO_BLOCK IoBlock, ulong IoResult,
             int NumberOfBytesTransferred)
         {
-            if (arg.SocketError == SocketError.NotSocket || arg.SocketError == SocketError.OperationAborted)
+            if (IoResult == OSPlatformFunc.WSAENOTSOCK || IoResult == OSPlatformFunc.WSA_OPERATION_ABORTED)
             {
                 CxPlatSocketFreeRxIoBlock(IoBlock);
                 return false;
             }
 
-            IoBlock.Route.RemoteAddress = new QUIC_ADDR(arg.RemoteEndPoint as IPEndPoint);
+            IntPtr RemoteAddress = IoBlock._socketAddressPtr;
             IoBlock.Route.LocalAddress = new QUIC_ADDR();
             QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
             QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
             IoBlock.Route.Queue = SocketProc;
 
-            if (IsUnreachableErrorCode(arg.SocketError))
+            if (IsUnreachableErrorCode(IoResult))
             {
                 if (!SocketProc.Parent.PcpBinding)
                 {
                     SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
                 }
             }
-            else if (arg.SocketError == SocketError.Success)
+            else if (IoResult == OSPlatformFunc.ERROR_MORE_DATA ||
+                   (IoResult == OSPlatformFunc.NO_ERROR && SocketProc.Parent.RecvBufLen < NumberOfBytesTransferred))
             {
-                if (arg.BytesTransferred == 0)
+                
+            }
+            else if (IoResult == OSPlatformFunc.NO_ERROR)
+            {
+                if (NumberOfBytesTransferred == 0)
                 {
                     NetLog.Assert(false);
                     goto Drop;
@@ -896,15 +917,21 @@ namespace AKNet.Udp5MSQuic.Common
 
                 CXPLAT_RECV_DATA RecvDataChain = null;
                 CXPLAT_RECV_DATA DatagramChainTail = null;
-
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-
-                int NumberOfBytesTransferred = arg.BytesTransferred;
+                
                 bool FoundLocalAddr = false;
-                int MessageLength = arg.BytesTransferred;
+                int MessageLength = NumberOfBytesTransferred;
                 int MessageCount = 0;
                 bool IsCoalesced = false;
-                byte TOS = 0;
+                int TypeOfService = 0;
+                int HopLimitTTL = 0;
+
+                if (SocketProc.Parent.UseRio)
+                {
+                    RIO_CMSG_BUFFER RioRcvMsg = (RIO_CMSG_BUFFER)IoBlock.ControlBuf;
+                    IoBlock.WsaMsgHdr.Control.buf = IoBlock.ControlBuf + RIO_CMSG_BASE_SIZE;
+                    IoBlock.WsaMsgHdr.Control.len = RioRcvMsg.TotalLength - RIO_CMSG_BASE_SIZE;
+                }
 
                 IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
                 if (mIPPacketInformation != null)
@@ -1008,11 +1035,15 @@ namespace AKNet.Udp5MSQuic.Common
             SendData.SendDataPool.CxPlatPoolFree(SendData);
         }
 
-        static bool IsUnreachableErrorCode(SocketError ErrorCode)
+        static bool IsUnreachableErrorCode(ulong ErrorCode)
         {
-            return ErrorCode == SocketError.NetworkUnreachable || //10051
-                ErrorCode == SocketError.HostUnreachable || //10065
-                ErrorCode == SocketError.ConnectionReset; //10054
+            return ErrorCode == OSPlatformFunc.ERROR_NETWORK_UNREACHABLE || //10051
+                ErrorCode == OSPlatformFunc.ERROR_HOST_UNREACHABLE ||       //10065
+                ErrorCode == OSPlatformFunc.ERROR_PROTOCOL_UNREACHABLE ||   //10054
+                ErrorCode == OSPlatformFunc.ERROR_PORT_UNREACHABLE ||       //10065
+                ErrorCode == OSPlatformFunc.WSAENETUNREACH ||               //10065
+                ErrorCode == OSPlatformFunc.WSAEHOSTUNREACH ||              //10065
+                ErrorCode == OSPlatformFunc.WSAECONNRESET;                  //10065
         }
 
         static int CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
@@ -1024,8 +1055,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(v.Offset == 0);
                 mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
             }
-
-
+                
             //NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
@@ -1034,13 +1064,14 @@ namespace AKNet.Udp5MSQuic.Common
             return 0;
         }
 
-        static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs arg)
+        static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, CXPLAT_SQE Sqe, int NumBytes)
         {
             NetLog.Assert(!SocketProc.Uninitialized);
-
-            //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
-            SocketProc.Socket.SendToAsync(arg);
+            NetLog.Assert(!SocketProc.Freed);
+            if (!OSPlatformFunc.CxPlatEventQEnqueueEx(SocketProc.DatapathProc.EventQ, Sqe, NumBytes))
+            {
+                return QUIC_STATUS_INTERNAL_ERROR;
+            }
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -1104,6 +1135,14 @@ namespace AKNet.Udp5MSQuic.Common
                     byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                     IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
                 }
+
+                int size = SocketAddressHelper.GetMaximumAddressSize(AddressFamily.InterNetworkV6);
+                if (IoBlock._socketAddressPtr == IntPtr.Zero)
+                {
+                    IoBlock._socketAddressPtr = (IntPtr)NativeMemory.Alloc((uint)(_socketAddress!.Size + sizeof(IntPtr)));
+                }
+                *((int*)_socketAddressPtr) = size;
+
                 IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
             }
             return IoBlock;
@@ -1113,26 +1152,6 @@ namespace AKNet.Udp5MSQuic.Common
         {
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
             SendDataFree(SendData);
-        }
-
-        static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
-        {
-            //NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
-            //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
-            NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
-
-            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            int BytesTransferred = arg.BytesTransferred;
-            SocketError IoResult = arg.SocketError;
-
-            CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
-            NetLog.Assert(!SocketProc.Uninitialized);
-
-            if (!CxPlatDataPathUdpRecvComplete(arg))
-            {
-                return;
-            }
-            CxPlatDataPathStartReceiveAsync(SocketProc);
         }
 
         static void CxPlatDataPathSocketProcessReceive(DATAPATH_RX_IO_BLOCK IoBlock, int BytesTransferred,ulong IoResult)

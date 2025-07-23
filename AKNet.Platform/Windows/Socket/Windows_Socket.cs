@@ -1,8 +1,11 @@
 ﻿#if TARGET_WINDOWS
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
+
+
     internal unsafe struct GUID
     {
         public ulong Data1;
@@ -37,20 +40,27 @@ namespace AKNet.Platform
     //}
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct WSABUF
+    public unsafe struct WSABUF
     {
         public int len; // Length of Buffer
-        public IntPtr buf; // Pointer to Buffer
+        public byte* buf; // Pointer to Buffer
     }
-
+    
     public unsafe struct WSAMSG
     {
-        public IntPtr name;              /* Remote address */
-        public int namelen;           /* Remote address length */
-        public void* lpBuffers;         /* Data buffer array */
-        public int dwBufferCount;     /* Number of elements in the array */
-        public WSABUF Control;           /* Control buffer */
+        public void* name;              //远程地址
+        public int namelen;           // 远程地址长度
+        public WSABUF* lpBuffers;       // 用户数据Buffer
+        public int dwBufferCount;     // 用户数据Buffer的长度
+        public WSABUF Control;        // 控制Buffer
         public uint dwFlags;
+    }
+
+    public struct WSACMSGHDR
+    {
+        public int cmsg_len;
+        public int cmsg_level;
+        public int cmsg_type;
     }
 
     public struct RIO_CMSG_BUFFER
@@ -74,6 +84,20 @@ namespace AKNet.Platform
         public const ulong INVALID_SOCKET = (ulong)(~0UL);
         public const int SOCKET_ERROR = (-1);
         public const int NO_ERROR = 0;
+
+        public const ulong ERROR_IO_PENDING = 997;    // dderror
+        public const ulong WSAENOTSOCK = 10038;
+        public const ulong ERROR_OPERATION_ABORTED = 995;
+        public const ulong WSAECONNRESET = 10054L;
+        public const ulong WSAEHOSTUNREACH = 10065L;
+        public const ulong WSAENETUNREACH = 10051L;
+        public const ulong ERROR_PORT_UNREACHABLE = 1234L;
+        public const ulong ERROR_PROTOCOL_UNREACHABLE = 1233L;
+        public const ulong ERROR_HOST_UNREACHABLE = 1232L;
+        public const ulong ERROR_NETWORK_UNREACHABLE = 1231L;
+        public const ulong ERROR_MORE_DATA = 234L;    // dderror
+        public const ulong WSA_IO_PENDING = (ERROR_IO_PENDING);
+        public const ulong WSA_OPERATION_ABORTED = (ERROR_OPERATION_ABORTED);
 
         public const byte FILE_SKIP_COMPLETION_PORT_ON_SUCCESS = 0x1;
         public const byte FILE_SKIP_SET_EVENT_ON_HANDLE = 0x2;
@@ -106,6 +130,11 @@ namespace AKNet.Platform
         public static uint _WSAIOW(uint x, uint y)
         {
             return (IOC_IN | (x) | (y));
+        }
+
+        public static WSACMSGHDR WSA_CMSG_FIRSTHDR(WSAMSG* msg)
+        {
+            return (msg->Control.len >= sizeof(WSACMSGHDR)) ? (WSACMSGHDR*)(msg->Control.buf) : null;
         }
     }
 }
