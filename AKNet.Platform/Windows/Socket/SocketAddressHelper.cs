@@ -31,8 +31,8 @@ namespace AKNet.Platform
             if (endPoint.AddressFamily == AddressFamily.InterNetwork) // IPv4
             {
                 var addr = new SOCKADDR_INET();
-                addr.Ipv4.sin_family = OSPlatformFunc.AF_INET, // AF_INET
-                addr.Ipv4.sin_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port)
+                addr.Ipv4.sin_family = OSPlatformFunc.AF_INET; // AF_INET
+                addr.Ipv4.sin_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
 
                 Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv4.sin_addr.u, 4);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
@@ -45,7 +45,7 @@ namespace AKNet.Platform
             else if (endPoint.AddressFamily == AddressFamily.InterNetworkV6) // IPv6
             {
                 var addr = new SOCKADDR_INET();
-                addr.Ipv6.sin6_family = OSPlatformFunc.AF_INET, // AF_INET
+                addr.Ipv6.sin6_family = OSPlatformFunc.AF_INET; // AF_INET
                 addr.Ipv6.sin6_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
                 addr.Ipv6.sin6_flowinfo = 0;
                 addr.Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;

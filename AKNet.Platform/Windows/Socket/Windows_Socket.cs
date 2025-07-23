@@ -214,7 +214,7 @@ namespace AKNet.Platform
 
         public static void* WSA_CMSG_DATA(WSACMSGHDR* cmsg)
         {
-            return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR));
+            return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)));
         }
 
         public static int WSA_CMSG_LEN(int length)
