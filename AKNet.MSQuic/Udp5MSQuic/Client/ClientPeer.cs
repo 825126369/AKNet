@@ -29,18 +29,10 @@ namespace AKNet.Udp5MSQuic.Client
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
 
-        public ClientPeer(TcpConfig mUserConfig)
+        public ClientPeer()
         {
             NetLog.Init();
-            if (mUserConfig == null)
-            {
-                this.mConfig = new Config();
-            }
-            else
-            {
-                this.mConfig = new Config(mUserConfig);
-            }
-
+            this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();

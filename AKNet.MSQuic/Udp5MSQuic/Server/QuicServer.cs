@@ -26,18 +26,10 @@ namespace AKNet.Udp5MSQuic.Server
         internal readonly CryptoMgr mCryptoMgr = null;
         internal readonly Config mConfig = null;
 
-        public QuicServer(TcpConfig mUserConfig = null)
+        public QuicServer()
         {
             NetLog.Init();
-            if (mUserConfig == null)
-            {
-                this.mConfig = new Config();
-            }
-            else
-            {
-                this.mConfig = new Config(mUserConfig);
-            }
-
+            this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();

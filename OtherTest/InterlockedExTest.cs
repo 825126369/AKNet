@@ -25,7 +25,7 @@ namespace OtherTest
             {
                 tasks[i] = Task.Run(() =>
                 {
-                    InterlockedEx.Increment(ref MMM);
+                    //InterlockedEx.Increment(ref MMM);
                 });
             }
 

@@ -6,6 +6,7 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Udp5MSQuic.Common;
 using System;
 using System.Runtime.CompilerServices;
 

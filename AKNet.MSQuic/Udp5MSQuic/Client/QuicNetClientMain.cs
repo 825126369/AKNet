@@ -15,9 +15,9 @@ namespace AKNet.Udp5MSQuic.Client
     {
         private ClientPeer mClientPeer;
 
-        public QuicNetClientMain(TcpConfig mUserConfig = null)
+        public QuicNetClientMain()
         {
-            mClientPeer = new ClientPeer(mUserConfig);
+            mClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)

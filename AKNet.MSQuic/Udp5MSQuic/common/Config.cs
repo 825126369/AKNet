@@ -22,36 +22,12 @@ namespace AKNet.Udp5MSQuic.Common
         public readonly double fReConnectMaxCdTime = 3.0;
 
         public readonly int MaxPlayerCount = 10000;
-        public readonly ECryptoType nECryptoType = ECryptoType.None;
         public readonly string CryptoPasswrod1 = string.Empty;
         public readonly string CryptoPasswrod2 = string.Empty;
 
-        public Config(TcpConfig mUserConfig = null)
+        public Config()
         {
-            if (mUserConfig != null)
-            {
-                if (mUserConfig.fMySendHeartBeatMaxTime > 0)
-                {
-                    fMySendHeartBeatMaxTime = mUserConfig.fMySendHeartBeatMaxTime;
-                }
-                if (mUserConfig.fReceiveHeartBeatTimeOut > 0)
-                {
-                    fReceiveHeartBeatTimeOut = mUserConfig.fReceiveHeartBeatTimeOut;
-                }
-                if (mUserConfig.fReConnectMaxCdTime > 0)
-                {
-                    fReConnectMaxCdTime = mUserConfig.fReConnectMaxCdTime;
-                }
-                if (mUserConfig.MaxPlayerCount > 0)
-                {
-                    MaxPlayerCount = mUserConfig.MaxPlayerCount;
-                }
 
-                nECryptoType = mUserConfig.nECryptoType;
-                CryptoPasswrod1 = mUserConfig.CryptoPasswrod1;
-                CryptoPasswrod2 = mUserConfig.CryptoPasswrod2;
-            }
         }
-
     }
 }
