@@ -1150,10 +1150,10 @@ namespace AKNet.Udp5MSQuic.Common
             }
         }
 
-        static int CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        static void CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
             SendData.LocalAddress = Route.LocalAddress;
-            CxPlatStartDatapathIo(SendData.SocketProc, SendData.Sqe, CxPlatIoQueueSendEventComplete);
+            CxPlatStartDatapathIo(SendData.SocketProc, SendData.Sqe, SendData, CxPlatIoQueueSendEventComplete);
             int Status = CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe, 0);
             if (QUIC_FAILED(Status))
             {
@@ -1285,7 +1285,7 @@ namespace AKNet.Udp5MSQuic.Common
                 NetLog.Assert(CMsg != null);
                 CMsg->cmsg_level = OSPlatformFunc.IPPROTO_UDP;
                 CMsg->cmsg_type = OSPlatformFunc.UDP_SEND_MSG_SIZE;
-                CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(DWORD));
+                CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(int));
                 *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.SegmentSize;
             }
 

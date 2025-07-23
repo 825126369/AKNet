@@ -1,4 +1,5 @@
 ﻿#if TARGET_WINDOWS
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -75,7 +76,7 @@ namespace AKNet.Platform
         public int len; // Length of Buffer
         public byte* buf; // Pointer to Buffer
     }
-    
+
     public unsafe struct WSAMSG
     {
         public void* name;        //远程地址

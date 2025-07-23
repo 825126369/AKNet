@@ -51,7 +51,7 @@ namespace AKNet.Platform
                 addr.Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;
                 Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv6.sin6_addr.u, 4);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
-                
+
                 IntPtr pAddr = Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
                 Marshal.StructureToPtr(addr, pAddr, false);
                 addressLen = Marshal.SizeOf(addr.Ipv6);
@@ -127,7 +127,7 @@ namespace AKNet.Platform
             {
                 OutAddr->si_family = OSPlatformFunc.AF_INET;
                 OutAddr->Ipv4.sin_port = InAddr->Ipv6.sin6_port;
-                OutAddr->Ipv4.sin_addr = *(IN_ADDR *)Interop.Winsock.IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
+                OutAddr->Ipv4.sin_addr = *(IN_ADDR*)Interop.Winsock.IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
             }
             else if (OutAddr != InAddr)
             {
@@ -135,6 +135,17 @@ namespace AKNet.Platform
             }
         }
 
-
+        public static void CxPlatConvertToMappedV6(SOCKADDR_INET* InAddr, SOCKADDR_INET* OutAddr)
+        {
+            if (InAddr->si_family == OSPlatformFunc.AF_INET)
+            {
+                ulong unspecified_scope = 0;
+                Interop.Winsock.IN6ADDR_SETV4MAPPED(&OutAddr->Ipv6, &InAddr->Ipv4.sin_addr, unspecified_scope, InAddr->Ipv4.sin_port);
+            } 
+            else
+            {
+                *OutAddr = *InAddr;
+            }
+        }
     }
 }
