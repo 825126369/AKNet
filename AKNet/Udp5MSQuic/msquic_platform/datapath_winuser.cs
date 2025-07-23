@@ -933,18 +933,77 @@ namespace AKNet.Udp5MSQuic.Common
                     IoBlock.WsaMsgHdr.Control.len = RioRcvMsg.TotalLength - RIO_CMSG_BASE_SIZE;
                 }
 
-                IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
-                if (mIPPacketInformation != null)
+                for (WSACMSGHDR* CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(&IoBlock.WsaMsgHdr);
+                    CMsg != null;
+                    CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&IoBlock.WsaMsgHdr, CMsg))
                 {
-                    IPAddress Ip = mIPPacketInformation.Address;
-                    LocalAddr.Ip = Ip;
-                    LocalAddr.nPort = SocketProc.Parent.LocalAddress.nPort;
-                    LocalAddr.ScopeId = mIPPacketInformation.Interface;
+                    if (CMsg->cmsg_level == OSPlatformFunc.IPPROTO_IPV6)
+                    {
+                        if (CMsg->cmsg_type == OSPlatformFunc.IPV6_PKTINFO)
+                        {
+                            IN6_PKTINFO* PktInfo6 = (IN6_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            LocalAddr.si_family = QUIC_ADDRESS_FAMILY_INET6;
+                            LocalAddr.Ipv6.sin6_addr = PktInfo6->ipi6_addr;
+                            LocalAddr.Ipv6.sin6_port = SocketProc->Parent->LocalAddress.Ipv6.sin6_port;
 
-                    FoundLocalAddr = true;
-
-                    int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService);
-                    TOS = (byte)TypeOfService;
+                            CxPlatConvertFromMappedV6(LocalAddr, LocalAddr);
+                            LocalAddr.Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
+                            FoundLocalAddr = true;
+                        }
+                        else if (CMsg->cmsg_type == OSPlatformFunc.IPV6_TCLASS)
+                        {
+                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
+                            CXPLAT_DBG_ASSERT(TypeOfService < UINT8_MAX);
+                        }
+                        else if (CMsg->cmsg_type == IPV6_ECN)
+                        {
+                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
+                            CXPLAT_DBG_ASSERT(TypeOfService <= CXPLAT_ECN_CE);
+                        }
+                        else if (CMsg->cmsg_type == IPV6_HOPLIMIT)
+                        {
+                            HopLimitTTL = *(PINT)WSA_CMSG_DATA(CMsg);
+                            CXPLAT_DBG_ASSERT(HopLimitTTL < 256);
+                            CXPLAT_DBG_ASSERT(HopLimitTTL > 0);
+                        }
+                    }
+                    else if (CMsg->cmsg_level == IPPROTO_IP)
+                    {
+                        if (CMsg->cmsg_type == IP_PKTINFO)
+                        {
+                            PIN_PKTINFO PktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(CMsg);
+                            LocalAddr->si_family = QUIC_ADDRESS_FAMILY_INET;
+                            LocalAddr->Ipv4.sin_addr = PktInfo->ipi_addr;
+                            LocalAddr->Ipv4.sin_port = SocketProc->Parent->LocalAddress.Ipv6.sin6_port;
+                            LocalAddr->Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
+                            FoundLocalAddr = TRUE;
+                        }
+                        else if (CMsg->cmsg_type == IP_TOS)
+                        {
+                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
+                            CXPLAT_DBG_ASSERT(TypeOfService < UINT8_MAX);
+                        }
+                        else if (CMsg->cmsg_type == IP_ECN)
+                        {
+                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
+                            CXPLAT_DBG_ASSERT(TypeOfService <= CXPLAT_ECN_CE);
+                        }
+                        else if (CMsg->cmsg_type == IP_TTL)
+                        {
+                            HopLimitTTL = *(PINT)WSA_CMSG_DATA(CMsg);
+                            CXPLAT_DBG_ASSERT(HopLimitTTL < 256);
+                            CXPLAT_DBG_ASSERT(HopLimitTTL > 0);
+                        }
+                    }
+                    else if (CMsg->cmsg_level == IPPROTO_UDP)
+                    {
+                        if (CMsg->cmsg_type == UDP_COALESCED_INFO)
+                        {
+                            CXPLAT_DBG_ASSERT(*(PDWORD)WSA_CMSG_DATA(CMsg) <= SocketProc->Parent->RecvBufLen);
+                            MessageLength = (UINT16) * (PDWORD)WSA_CMSG_DATA(CMsg);
+                            IsCoalesced = TRUE;
+                        }
+                    }
                 }
 
                 if (!FoundLocalAddr)

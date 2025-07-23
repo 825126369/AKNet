@@ -1,4 +1,5 @@
 ﻿#if TARGET_WINDOWS
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -61,6 +62,12 @@ namespace AKNet.Platform
         public int cmsg_len;
         public int cmsg_level;
         public int cmsg_type;
+    }
+
+    public unsafe struct IN6_PKTINFO
+    {
+        public void* ipi6_addr;    // Source/destination IPv6 address.
+        public ulong ipi6_ifindex;    // Send/receive interface index.
     }
 
     public struct RIO_CMSG_BUFFER
@@ -132,9 +139,36 @@ namespace AKNet.Platform
             return (IOC_IN | (x) | (y));
         }
 
-        public static WSACMSGHDR WSA_CMSG_FIRSTHDR(WSAMSG* msg)
+        public static WSACMSGHDR* WSA_CMSG_FIRSTHDR(WSAMSG* msg)
         {
-            return (msg->Control.len >= sizeof(WSACMSGHDR)) ? (WSACMSGHDR*)(msg->Control.buf) : null;
+            return msg->Control.len >= sizeof(WSACMSGHDR) ? (WSACMSGHDR*)(msg->Control.buf) : null;
+        }
+
+        public static WSACMSGHDR* WSA_CMSG_NXTHDR(WSAMSG* msg, WSACMSGHDR* cmsg)
+        {
+            if(cmsg == null)
+            {
+                return WSA_CMSG_FIRSTHDR(msg);
+            }
+            else
+            {
+                byte* ptr2 = msg->Control.buf + msg->Control.len;
+                byte* ptr1 = (byte*)cmsg + cmsg->cmsg_len + sizeof(WSACMSGHDR);
+                if(ptr1 > ptr2)
+                {
+                    return null;
+                }
+                else
+                {
+                    return (WSACMSGHDR*)((byte*)cmsg + cmsg->cmsg_len);
+                }
+            }
+                
+        }
+
+        public static void* WSA_CMSG_DATA(WSACMSGHDR* cmsg)
+        {
+            return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR));
         }
     }
 }
