@@ -192,10 +192,10 @@ namespace AKNet.Udp5MSQuic.Common
         public long ReferenceCount;
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
-        public WSAMSG WsaMsgHdr;
-        public WSABUF WsaControlBuf;
+        public WSAMSG WsaMsgHdr;//这是消息头
+        public WSABUF WsaControlBuf;//这是实际数据
         public byte[] ControlBuf = new byte[100];
-        public IntPtr _socketAddressPtr;
+        public IntPtr _socketAddressPtr;//这是远程地址
 
         public void Reset()
         {
@@ -918,7 +918,7 @@ namespace AKNet.Udp5MSQuic.Common
                 CXPLAT_RECV_DATA RecvDataChain = null;
                 CXPLAT_RECV_DATA DatagramChainTail = null;
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-                
+
                 bool FoundLocalAddr = false;
                 int MessageLength = NumberOfBytesTransferred;
                 int MessageCount = 0;
@@ -933,8 +933,7 @@ namespace AKNet.Udp5MSQuic.Common
                     IoBlock.WsaMsgHdr.Control.len = RioRcvMsg.TotalLength - RIO_CMSG_BASE_SIZE;
                 }
 
-                for (WSACMSGHDR* CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(&IoBlock.WsaMsgHdr);
-                    CMsg != null;
+                for (WSACMSGHDR* CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(&IoBlock.WsaMsgHdr); CMsg != null;
                     CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&IoBlock.WsaMsgHdr, CMsg))
                 {
                     if (CMsg->cmsg_level == OSPlatformFunc.IPPROTO_IPV6)
@@ -974,11 +973,18 @@ namespace AKNet.Udp5MSQuic.Common
                     {
                         if (CMsg->cmsg_type == OSPlatformFunc.IP_PKTINFO)
                         {
-                            IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
-                            LocalAddr.si_family = QUIC_ADDRESS_FAMILY_INET;
-                            LocalAddr.Ipv4.sin_addr = PktInfo->ipi_addr;
-                            LocalAddr.Ipv4.sin_port = SocketProc.Parent.LocalAddress.Ipv6.sin6_port;
-                            LocalAddr.Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
+                            //IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            //LocalAddr.si_family = QUIC_ADDRESS_FAMILY_INET;
+                            //LocalAddr.Ipv4.sin_addr = PktInfo->ipi_addr;
+                            //LocalAddr.Ipv4.sin_port = SocketProc.Parent.LocalAddress.Ipv6.sin6_port;
+                            //LocalAddr.Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
+                            
+                            //SOCKADDR_INET mAddr = new SOCKADDR_INET();
+                            //mAddr.Ipv4.sin_family = OSPlatformFunc.AF_INET6;
+                            //mAddr.Ipv4.sin_addr = PktInfo->ipi_addr;
+                            //mAddr.Ipv4.sin_port = (ushort)SocketProc.Parent.LocalAddress.nPort;
+                            //mAddr.Ipv4.sin6_scope_id = PktInfo->ipi_ifindex;
+                            NetLog.Assert(false);
                             FoundLocalAddr = true;
                         }
                         else if (CMsg->cmsg_type == OSPlatformFunc.IP_TOS)
@@ -1015,7 +1021,7 @@ namespace AKNet.Udp5MSQuic.Common
                     goto Drop;
                 }
 
-                NetLog.Assert(arg.BytesTransferred <= SocketProc.Parent.RecvBufLen);
+                NetLog.Assert(NumberOfBytesTransferred <= SocketProc.Parent.RecvBufLen);
 
                 CXPLAT_RECV_DATA Datagram = IoBlock.CXPLAT_CONTAINING_RECORD.Data;
                 for (; NumberOfBytesTransferred != 0; NumberOfBytesTransferred -= MessageLength)
@@ -1028,12 +1034,12 @@ namespace AKNet.Udp5MSQuic.Common
                     }
 
                     Datagram.Next = null;
-                    Datagram.Buffer.Buffer = arg.Buffer;
-                    Datagram.Buffer.Offset = arg.Offset;
-                    Datagram.Buffer.Length = arg.BytesTransferred;
+                    Datagram.Buffer.Buffer = IoBlock.WsaControlBuf;
+                    Datagram.Buffer.Offset = 0;
+                    Datagram.Buffer.Length = MessageLength;
                     Datagram.Route = IoBlock.Route;
                     Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
-                    Datagram.TypeOfService = TOS;
+                    Datagram.TypeOfService = (byte)TypeOfService;
                     Datagram.Allocated = true;
                     Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
                     Datagram.QueuedOnConnection = false;
