@@ -13,7 +13,7 @@ namespace AKNet.Udp5MSQuic.Common
 {
     using CXPLAT_CQE = OVERLAPPED_ENTRY;
     //一律强制转为IpV6地址
-    internal class QUIC_ADDR
+    internal unsafe class QUIC_ADDR
     {
         public const int sizeof_QUIC_ADDR = 12;
         public static readonly IPAddress IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
@@ -157,9 +157,9 @@ namespace AKNet.Udp5MSQuic.Common
             return qUIC_SSBuffer;
         }
 
-        public ReadOnlySpan<byte> GetBindAddr()
+        public SOCKADDR_INET* GetRawAddr(out int addressLen)
         {
-            return SocketAddressHelper.GetBindAddr(GetIPEndPoint());
+            return SocketAddressHelper.GetRawAddr(GetIPEndPoint(), out addressLen);
         }
 
         public void Reset()
@@ -696,12 +696,10 @@ namespace AKNet.Udp5MSQuic.Common
                     }
                 }
 
-                ReadOnlySpan<byte> mTemp = Socket.LocalAddress.GetBindAddr();
-                fixed (byte* mTempPtr = mTemp)
-                {
-                    Result = Interop.Winsock.bind(SocketProc.Socket, mTempPtr, mTemp.Length);
-                }
-
+                int addressLen = 0;
+                SOCKADDR_INET* mTempPtr = Socket.LocalAddress.GetRawAddr(out addressLen);
+                Result = Interop.Winsock.bind(SocketProc.Socket, (byte*)mTempPtr, addressLen);
+                
                 if(Result == OSPlatformFunc.SOCKET_ERROR)
                 {
                     Status = QUIC_STATUS_INTERNAL_ERROR;
@@ -745,7 +743,7 @@ namespace AKNet.Udp5MSQuic.Common
             NewSocket = Socket;
             for (int i = 0; i < SocketCount; i++)
             {
-                CxPlatDataPathStartReceive(Socket.PerProcSockets[i]);
+                CxPlatDataPathStartReceive(Socket.PerProcSockets[i], ref _,ref _,ref _);
                 Socket.PerProcSockets[i].IoStarted = true;
             }
             Status = QUIC_STATUS_SUCCESS;
@@ -754,9 +752,9 @@ namespace AKNet.Udp5MSQuic.Common
         }
 
         static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc, 
-            out ulong IoResult,
-            out int InlineBytesTransferred,
-            out DATAPATH_RX_IO_BLOCK IoBlock)
+            ref ulong IoResult,
+            ref int InlineBytesTransferred,
+            ref DATAPATH_RX_IO_BLOCK IoBlock)
         {
             const int MAX_RECV_RETRIES = 10;
             int RetryCount = 0;
@@ -764,9 +762,9 @@ namespace AKNet.Udp5MSQuic.Common
             do
             {
                 Status = CxPlatSocketStartReceive(SocketProc,
-                        out IoResult,
-                        out InlineBytesTransferred,
-                        out IoBlock);
+                        ref IoResult,
+                        ref InlineBytesTransferred,
+                        ref IoBlock);
             } while (Status == QUIC_STATUS_OUT_OF_MEMORY && ++RetryCount < MAX_RECV_RETRIES);
 
             if (Status == QUIC_STATUS_OUT_OF_MEMORY)
@@ -1080,9 +1078,13 @@ namespace AKNet.Udp5MSQuic.Common
             return true;
         }
 
-        static void CxPlatSendDataComplete(CXPLAT_SEND_DATA SendData)
+        static void CxPlatSendDataComplete(CXPLAT_SEND_DATA SendData, ulong IoResult)
         {
             CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
+            if (IoResult != QUIC_STATUS_SUCCESS)
+            {
+                NetLog.LogError("CxPlatSendDataComplete Error");
+            }
             SendDataFree(SendData);
         }
 
@@ -1114,22 +1116,210 @@ namespace AKNet.Udp5MSQuic.Common
                 ErrorCode == OSPlatformFunc.WSAECONNRESET;                  //10065
         }
 
+        static void CxPlatIoSendEventComplete(CXPLAT_CQE Cqe)
+        {
+            CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Cqe);
+            NetLog.Assert(Sqe.sqePtr->Overlapped.Internal != 0x103); // STATUS_PENDING
+            CXPLAT_SEND_DATA SendData = Sqe.Contex as CXPLAT_SEND_DATA;
+            CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
+            CxPlatSendDataComplete(SendData, Interop.Kernel32.RtlNtStatusToDosError((long)Cqe.Internal));
+            //CxPlatSocketContextRelease(SocketProc);
+        }
+
+        static void CxPlatIoQueueSendEventComplete(CXPLAT_CQE Cqe)
+        {
+            CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Cqe);
+            NetLog.Assert(Sqe.sqePtr->Overlapped.Internal != 0x103); // STATUS_PENDING
+            CXPLAT_SEND_DATA SendData = Sqe.Contex as CXPLAT_SEND_DATA;
+            CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
+            CxPlatDataPathSocketProcessQueuedSend(SendData);
+            //CxPlatSocketContextRelease(SocketProc);
+        }
+
+        static void CxPlatDataPathSocketProcessQueuedSend(CXPLAT_SEND_DATA SendData)
+        {
+            CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
+            if (CxPlatRundownAcquire(SocketProc.RundownRef))
+            {
+                CxPlatSocketSendInline(SendData.LocalAddress, SendData);
+                CxPlatRundownRelease(SocketProc.RundownRef);
+            }
+            else
+            {
+                CxPlatSendDataComplete(SendData, OSPlatformFunc.WSAESHUTDOWN);
+            }
+        }
+
         static int CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
-            IList<ArraySegment<byte>> mList = SendData.Sqe.BufferList;
-            mList.Clear();
-            foreach (var v in SendData.WsaBuffers)
+            SendData.LocalAddress = Route.LocalAddress;
+            CxPlatStartDatapathIo(SendData.SocketProc, SendData.Sqe, CxPlatIoQueueSendEventComplete);
+            int Status = CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe, 0);
+            if (QUIC_FAILED(Status))
             {
-                NetLog.Assert(v.Offset == 0);
-                mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
+                CxPlatCancelDatapathIo(SendData.SocketProc);
             }
-                
-            //NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
-            SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
-            SendData.Sqe.UserToken = SendData;
-            SendData.Sqe.BufferList = mList;
-            CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe);
-            return 0;
+        }
+
+        static void CxPlatSocketSendInline(QUIC_ADDR LocalAddress, CXPLAT_SEND_DATA SendData)
+        {
+            CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
+            //if (SocketProc.RioSendCount == OSPlatformFunc.RIO_SEND_QUEUE_DEPTH)
+            //{
+            //    CxPlatListInsertTail(SocketProc.RioSendOverflow, &SendData.RioOverflowEntry);
+            //    return;
+            //}
+
+            int Result;
+            int BytesSent;
+            CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
+            CXPLAT_SOCKET Socket = SocketProc.Parent;
+
+            WSAMSG WSAMhdr;
+            WSAMhdr.dwFlags = 0;
+            if (Socket.HasFixedRemoteAddress) 
+            {
+                WSAMhdr.name = null;
+                WSAMhdr.namelen = 0;
+            } 
+            else
+            {
+                int addressLen = 0;
+                WSAMhdr.name = SendData.MappedRemoteAddress.GetRawAddr(out addressLen);
+                WSAMhdr.namelen = addressLen;
+            }
+
+            WSAMhdr.lpBuffers = SendData.WsaBuffers;
+            WSAMhdr.dwBufferCount = SendData.WsaBufferCount;
+            WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE + SendData.CtrlBuf;
+            WSAMhdr.Control.len = 0;
+
+            PWSACMSGHDR CMsg = NULL;
+            if (LocalAddress->si_family == QUIC_ADDRESS_FAMILY_INET)
+            {
+
+                if (!Socket->HasFixedRemoteAddress)
+                {
+                    WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));
+                    CMsg = WSA_CMSG_FIRSTHDR(&WSAMhdr);
+                    CMsg->cmsg_level = IPPROTO_IP;
+                    CMsg->cmsg_type = IP_PKTINFO;
+                    CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN_PKTINFO));
+                    PIN_PKTINFO PktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(CMsg);
+                    PktInfo->ipi_ifindex = LocalAddress->Ipv6.sin6_scope_id;
+                    PktInfo->ipi_addr = LocalAddress->Ipv4.sin_addr;
+                }
+
+                if (Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_DSCP)
+                {
+                    if (SendData->ECN != CXPLAT_ECN_NON_ECT || SendData->DSCP != CXPLAT_DSCP_CS0)
+                    {
+                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
+                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        CXPLAT_DBG_ASSERT(CMsg != NULL);
+                        CMsg->cmsg_level = IPPROTO_IP;
+                        CMsg->cmsg_type = IP_TOS;
+                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
+                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN | (SendData->DSCP << 2);
+                    }
+                }
+                else
+                {
+                    if (SendData->ECN != CXPLAT_ECN_NON_ECT)
+                    {
+                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
+                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        CXPLAT_DBG_ASSERT(CMsg != NULL);
+                        CMsg->cmsg_level = IPPROTO_IP;
+                        CMsg->cmsg_type = IP_ECN;
+                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
+                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN;
+                    }
+                }
+
+            }
+            else
+            {
+
+                if (!Socket->HasFixedRemoteAddress)
+                {
+                    WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(IN6_PKTINFO));
+                    CMsg = WSA_CMSG_FIRSTHDR(&WSAMhdr);
+                    CMsg->cmsg_level = IPPROTO_IPV6;
+                    CMsg->cmsg_type = IPV6_PKTINFO;
+                    CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
+                    PIN6_PKTINFO PktInfo6 = (PIN6_PKTINFO)WSA_CMSG_DATA(CMsg);
+                    PktInfo6->ipi6_ifindex = LocalAddress->Ipv6.sin6_scope_id;
+                    PktInfo6->ipi6_addr = LocalAddress->Ipv6.sin6_addr;
+                }
+
+                if (Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_DSCP)
+                {
+                    if (SendData->ECN != CXPLAT_ECN_NON_ECT || SendData->DSCP != CXPLAT_DSCP_CS0)
+                    {
+                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
+                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        CXPLAT_DBG_ASSERT(CMsg != NULL);
+                        CMsg->cmsg_level = IPPROTO_IPV6;
+                        CMsg->cmsg_type = IPV6_TCLASS;
+                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
+                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN | (SendData->DSCP << 2);
+                    }
+                }
+                else
+                {
+                    if (SendData->ECN != CXPLAT_ECN_NON_ECT)
+                    {
+                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
+                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        CXPLAT_DBG_ASSERT(CMsg != NULL);
+                        CMsg->cmsg_level = IPPROTO_IPV6;
+                        CMsg->cmsg_type = IPV6_ECN;
+                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
+                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN;
+                    }
+                }
+            }
+
+            if (SendData->SegmentSize > 0)
+            {
+                WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(DWORD));
+                CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                CXPLAT_DBG_ASSERT(CMsg != NULL);
+                CMsg->cmsg_level = IPPROTO_UDP;
+                CMsg->cmsg_type = UDP_SEND_MSG_SIZE;
+                CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(DWORD));
+                *(PDWORD)WSA_CMSG_DATA(CMsg) = SendData->SegmentSize;
+            }
+
+            //
+            // Windows' networking stack doesn't like a non-NULL Control.buf when len is 0.
+            //
+            if (WSAMhdr.Control.len == 0)
+            {
+                WSAMhdr.Control.buf = null;
+            }
+
+            if (Socket->UseRio)
+            {
+                //CxPlatSocketSendWithRio(SendData, &WSAMhdr);
+                return;
+            }
+            
+            CxPlatStartDatapathIo(SocketProc, SendData.Sqe, SendData, CxPlatIoSendEventComplete);
+            WSASendMsg mFunc = DynamicWinsockMethods.GetWSASendMsgDelegate(SocketProc.Socket);
+            Result = mFunc(SocketProc.Socket, &WSAMhdr,0, &BytesSent, &SendData.Sqe.sqePtr->Overlapped, IntPtr.Zero);
+            int WsaError = OSPlatformFunc.NO_ERROR;
+            if (Result == OSPlatformFunc.SOCKET_ERROR)
+            {
+                WsaError = Interop.Winsock.WSAGetLastError();
+                if ((ulong)WsaError == OSPlatformFunc.WSA_IO_PENDING)
+                {
+                    return;
+                }
+            }
+            CxPlatCancelDatapathIo(SocketProc);
+            CxPlatSendDataComplete(SendData, WsaError);
         }
 
         static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, CXPLAT_SQE Sqe, int NumBytes)
@@ -1248,7 +1438,7 @@ namespace AKNet.Udp5MSQuic.Common
             CxPlatRundownRelease(SocketProc.RundownRef);
         }
 
-        static void CxPlatStartDatapathIo(CXPLAT_SOCKET_PROC SocketProc,CXPLAT_SQE Sqe, DATAPATH_RX_IO_BLOCK contex, Action<CXPLAT_CQE> Completion)
+        static void CxPlatStartDatapathIo(CXPLAT_SOCKET_PROC SocketProc,CXPLAT_SQE Sqe, object contex, Action<CXPLAT_CQE> Completion)
         {
             NetLog.Assert(Sqe.sqePtr->Overlapped.Internal != 0x103); // STATUS_PENDING
             OSPlatformFunc.CxPlatSqeInitializeEx(Completion, contex, Sqe);

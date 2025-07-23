@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Platform;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
@@ -252,7 +253,7 @@ namespace AKNet.Udp5MSQuic.Common
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
-        public SocketAsyncEventArgs Sqe = null;
+        public CXPLAT_SQE Sqe = null;
         public CXPLAT_SEND_DATA()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);

@@ -24,25 +24,41 @@ namespace AKNet.Platform
             }
         }
 
-        public static ReadOnlySpan<byte> GetBindAddr(IPEndPoint mIpEndPoint)
+        public static SOCKADDR_INET* GetRawAddr(IPEndPoint endPoint, out int addressLen)
         {
-            const int IPv6AddressSize = 28;
-            const int IPv4AddressSize = 16;
-            //Family --2个字节
-            //端口 --2个字节
-            //地址 --
-#if NET8_0
-            var RawAddr = mIpEndPoint.Serialize();
-            return RawAddr.Buffer.Span.Slice(0, RawAddr.Size);
-#else
-            SocketAddress RawAddr = mIpEndPoint.Serialize();
-            Span<byte> buffer = new byte[RawAddr.Size];
-            for (int i = 0; i < buffer.Length; i++)
+            if (endPoint.AddressFamily == AddressFamily.InterNetwork) // IPv4
             {
-                buffer[i] = RawAddr[i];
+                var addr = new SOCKADDR_INET();
+                addr.Ipv4.sin_family = OSPlatformFunc.AF_INET, // AF_INET
+                addr.Ipv4.sin_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port)
+
+                Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv4.sin_addr.u, 4);
+                endPoint.Address.TryWriteBytes(addrSpan, out _);
+
+                IntPtr pAddr = Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
+                Marshal.StructureToPtr(addr, pAddr, false);
+                addressLen = Marshal.SizeOf(addr.Ipv4);
+                return (SOCKADDR_INET*)pAddr;
             }
-            return buffer;
-#endif
+            else if (endPoint.AddressFamily == AddressFamily.InterNetworkV6) // IPv6
+            {
+                var addr = new SOCKADDR_INET();
+                addr.Ipv6.sin6_family = OSPlatformFunc.AF_INET, // AF_INET
+                addr.Ipv6.sin6_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
+                addr.Ipv6.sin6_flowinfo = 0;
+                addr.Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;
+                Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv6.sin6_addr.u, 4);
+                endPoint.Address.TryWriteBytes(addrSpan, out _);
+                
+                IntPtr pAddr = Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
+                Marshal.StructureToPtr(addr, pAddr, false);
+                addressLen = Marshal.SizeOf(addr.Ipv6);
+                return (SOCKADDR_INET*)pAddr;
+            }
+            else
+            {
+                throw new NotSupportedException("不支持的地址族");
+            }
         }
 
         public static IPEndPoint RawAddrTo(SOCKADDR_INET sockaddr)

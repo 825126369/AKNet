@@ -1,8 +1,4 @@
 ﻿#if TARGET_WINDOWS
-using AKNet.Platform;
-using System;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -32,6 +28,12 @@ namespace AKNet.Platform
     {
         public INET_PORT_RANGE Reservation;
         public INET_PORT_RESERVATION_TOKEN Token;
+    }
+
+    public unsafe struct SOCKADDR
+    {
+        public ushort sa_family;
+        public fixed byte sa_data[14];
     }
 
     public unsafe struct SOCKADDR_IN
@@ -78,9 +80,9 @@ namespace AKNet.Platform
     
     public unsafe struct WSAMSG
     {
-        public void* name;              //远程地址
+        public void* name;        //远程地址
         public int namelen;           // 远程地址长度
-        public WSABUF* lpBuffers;       // 用户数据Buffer
+        public WSABUF* lpBuffers;     // 用户数据Buffer
         public int dwBufferCount;     // 用户数据Buffer的长度
         public WSABUF Control;        // 控制Buffer
         public uint dwFlags;
@@ -141,6 +143,7 @@ namespace AKNet.Platform
         public const ulong ERROR_MORE_DATA = 234L;    // dderror
         public const ulong WSA_IO_PENDING = (ERROR_IO_PENDING);
         public const ulong WSA_OPERATION_ABORTED = (ERROR_OPERATION_ABORTED);
+        public const ulong WSAESHUTDOWN = 10058L;
 
         public const byte FILE_SKIP_COMPLETION_PORT_ON_SUCCESS = 0x1;
         public const byte FILE_SKIP_SET_EVENT_ON_HANDLE = 0x2;
@@ -172,6 +175,7 @@ namespace AKNet.Platform
         public const int SO_RCVBUF = 0x1002;
         public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
 
+        public const int RIO_SEND_QUEUE_DEPTH = 256;
         //public static readonly int RIO_CMSG_BASE_SIZE = WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
 
         public static uint _WSAIOW(uint x, uint y)

@@ -73,6 +73,7 @@ namespace AKNet.Udp5MSQuic.Common
         public bool IoStarted;
         public bool Uninitialized;
         public readonly CXPLAT_RUNDOWN_REF RundownRef = new CXPLAT_RUNDOWN_REF();
+        public int RioSendCount;
     }
 
     internal class CXPLAT_SOCKET_RAW
