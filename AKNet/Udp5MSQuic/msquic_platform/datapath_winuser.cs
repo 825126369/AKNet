@@ -1209,86 +1209,84 @@ namespace AKNet.Udp5MSQuic.Common
                     PktInfo->ipi_addr = LocalAddress.Ipv4.sin_addr;
                 }
 
-                if (Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_DSCP)
+                if (BoolOk(Socket.Datapath.Features & (ulong)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_SEND_DSCP))
                 {
-                    if (SendData->ECN != CXPLAT_ECN_NON_ECT || SendData->DSCP != CXPLAT_DSCP_CS0)
+                    if (SendData.ECN != (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT || SendData.DSCP != (byte)CXPLAT_DSCP_TYPE.CXPLAT_DSCP_CS0)
                     {
-                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
-                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
-                        CXPLAT_DBG_ASSERT(CMsg != NULL);
-                        CMsg->cmsg_level = IPPROTO_IP;
-                        CMsg->cmsg_type = IP_TOS;
-                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
-                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN | (SendData->DSCP << 2);
+                        WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int));
+                        CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        NetLog.Assert(CMsg != null);
+                        CMsg->cmsg_level = OSPlatformFunc.IPPROTO_IP;
+                        CMsg->cmsg_type = OSPlatformFunc.IP_TOS;
+                        CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(int));
+                        *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.ECN | (SendData.DSCP << 2);
                     }
                 }
                 else
                 {
-                    if (SendData->ECN != CXPLAT_ECN_NON_ECT)
+                    if (SendData.ECN != (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT)
                     {
-                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
-                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
-                        CXPLAT_DBG_ASSERT(CMsg != NULL);
-                        CMsg->cmsg_level = IPPROTO_IP;
-                        CMsg->cmsg_type = IP_ECN;
-                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
-                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN;
+                        WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int));
+                        CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        NetLog.Assert(CMsg != null);
+                        CMsg->cmsg_level = OSPlatformFunc.IPPROTO_IP;
+                        CMsg->cmsg_type = OSPlatformFunc.IP_ECN;
+                        CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(int));
+                        *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.ECN;
                     }
                 }
-
             }
             else
             {
-
-                if (!Socket->HasFixedRemoteAddress)
+                if (!Socket.HasFixedRemoteAddress)
                 {
-                    WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(IN6_PKTINFO));
-                    CMsg = WSA_CMSG_FIRSTHDR(&WSAMhdr);
-                    CMsg->cmsg_level = IPPROTO_IPV6;
-                    CMsg->cmsg_type = IPV6_PKTINFO;
-                    CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
-                    PIN6_PKTINFO PktInfo6 = (PIN6_PKTINFO)WSA_CMSG_DATA(CMsg);
-                    PktInfo6->ipi6_ifindex = LocalAddress->Ipv6.sin6_scope_id;
-                    PktInfo6->ipi6_addr = LocalAddress->Ipv6.sin6_addr;
+                    WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN6_PKTINFO));
+                    CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(&WSAMhdr);
+                    CMsg->cmsg_level = OSPlatformFunc.IPPROTO_IPV6;
+                    CMsg->cmsg_type = OSPlatformFunc.IPV6_PKTINFO;
+                    CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
+                    IN6_PKTINFO* PktInfo6 = (IN6_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                    PktInfo6->ipi6_ifindex = LocalAddress.Ipv6.sin6_scope_id;
+                    PktInfo6->ipi6_addr = LocalAddress.Ipv6.sin6_addr;
                 }
 
-                if (Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_DSCP)
+                if (BoolOk(Socket.Datapath.Features & (ulong)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_SEND_DSCP))
                 {
-                    if (SendData->ECN != CXPLAT_ECN_NON_ECT || SendData->DSCP != CXPLAT_DSCP_CS0)
+                    if (SendData.ECN != (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT || SendData.DSCP != (byte)CXPLAT_DSCP_TYPE.CXPLAT_DSCP_CS0)
                     {
-                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
-                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
-                        CXPLAT_DBG_ASSERT(CMsg != NULL);
-                        CMsg->cmsg_level = IPPROTO_IPV6;
-                        CMsg->cmsg_type = IPV6_TCLASS;
-                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
-                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN | (SendData->DSCP << 2);
+                        WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int));
+                        CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        NetLog.Assert(CMsg != null);
+                        CMsg->cmsg_level = OSPlatformFunc.IPPROTO_IPV6;
+                        CMsg->cmsg_type = OSPlatformFunc.IPV6_TCLASS;
+                        CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(int));
+                        *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.ECN | (SendData.DSCP << 2);
                     }
                 }
                 else
                 {
-                    if (SendData->ECN != CXPLAT_ECN_NON_ECT)
+                    if (SendData.ECN != (byte)CXPLAT_ECN_TYPE.CXPLAT_ECN_NON_ECT)
                     {
-                        WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(INT));
-                        CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
-                        CXPLAT_DBG_ASSERT(CMsg != NULL);
-                        CMsg->cmsg_level = IPPROTO_IPV6;
-                        CMsg->cmsg_type = IPV6_ECN;
-                        CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(INT));
-                        *(PINT)WSA_CMSG_DATA(CMsg) = SendData->ECN;
+                        WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int));
+                        CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                        NetLog.Assert(CMsg != null);
+                        CMsg->cmsg_level = OSPlatformFunc.IPPROTO_IPV6;
+                        CMsg->cmsg_type = OSPlatformFunc.IPV6_ECN;
+                        CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(int));
+                        *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.ECN;
                     }
                 }
             }
 
-            if (SendData->SegmentSize > 0)
+            if (SendData.SegmentSize > 0)
             {
-                WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(DWORD));
-                CMsg = WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
-                CXPLAT_DBG_ASSERT(CMsg != NULL);
-                CMsg->cmsg_level = IPPROTO_UDP;
-                CMsg->cmsg_type = UDP_SEND_MSG_SIZE;
-                CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(DWORD));
-                *(PDWORD)WSA_CMSG_DATA(CMsg) = SendData->SegmentSize;
+                WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int));
+                CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&WSAMhdr, CMsg);
+                NetLog.Assert(CMsg != null);
+                CMsg->cmsg_level = OSPlatformFunc.IPPROTO_UDP;
+                CMsg->cmsg_type = OSPlatformFunc.UDP_SEND_MSG_SIZE;
+                CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(DWORD));
+                *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.SegmentSize;
             }
 
             //
@@ -1299,7 +1297,7 @@ namespace AKNet.Udp5MSQuic.Common
                 WSAMhdr.Control.buf = null;
             }
 
-            if (Socket->UseRio)
+            if (Socket.UseRio)
             {
                 //CxPlatSocketSendWithRio(SendData, &WSAMhdr);
                 return;
@@ -1318,7 +1316,7 @@ namespace AKNet.Udp5MSQuic.Common
                 }
             }
             CxPlatCancelDatapathIo(SocketProc);
-            CxPlatSendDataComplete(SendData, WsaError);
+            CxPlatSendDataComplete(SendData, (ulong)WsaError);
         }
 
         static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, CXPLAT_SQE Sqe, int NumBytes)

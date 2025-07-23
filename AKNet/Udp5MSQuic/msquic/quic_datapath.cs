@@ -232,6 +232,7 @@ namespace AKNet.Udp5MSQuic.Common
     {
         public CXPLAT_DATAPATH_TYPE DatapathType;
         public byte ECN;
+        public byte DSCP;
     }
 
 

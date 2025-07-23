@@ -173,10 +173,13 @@ namespace AKNet.Platform
         public const int IP_UNICAST_IF = 31;
         public const int SOL_SOCKET = 0xffff;
         public const int SO_RCVBUF = 0x1002;
-        public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
 
         public const int RIO_SEND_QUEUE_DEPTH = 256;
         //public static readonly int RIO_CMSG_BASE_SIZE = WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
+
+
+        public const int UDP_SEND_MSG_SIZE = 2;
+        public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
 
         public static uint _WSAIOW(uint x, uint y)
         {
