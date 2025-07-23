@@ -215,6 +215,43 @@ namespace AKNet.Platform
             return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR));
         }
 
+        public static int WSA_CMSG_LEN(int length)
+        {
+            return WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)) + length;
+        }
+
+        public static int WSA_CMSG_SPACE(int length)
+        {
+            return WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR) + WSA_CMSGHDR_ALIGN(length));
+        }
+
+        public static int WSA_CMSGHDR_ALIGN(int length)
+        {
+            return (length + TYPE_ALIGNMENT<WSACMSGHDR>() - 1) & (~(TYPE_ALIGNMENT<WSACMSGHDR>() - 1));
+        }
+
+        public static int WSA_CMSGDATA_ALIGN(int length)
+        {
+            return (((length) + MAX_NATURAL_ALIGNMENT() - 1) & (~(MAX_NATURAL_ALIGNMENT() - 1)));
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct Test<T> where T : struct
+        {
+            public byte b;
+            public T value;
+        }
+
+        public static int TYPE_ALIGNMENT<T>() where T : struct
+        {
+            return (int)Marshal.OffsetOf<Test<T>>("value");
+        }
+
+        public static int MAX_NATURAL_ALIGNMENT()
+        {
+            return sizeof(ulong);
+        }
+
         public static void CxPlatConvertFromMappedV6(QUIC_ADDR* InAddr, out QUIC_ADDR* OutAddr)
         {
             NetLog.Assert(InAddr.si_family == OSPlatformFunc.AF_INET6);
@@ -226,7 +263,7 @@ namespace AKNet.Platform
                     IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
             } else if (OutAddr != InAddr) {
                 * OutAddr = *InAddr;
-        }
+            }
         }
     }
 }

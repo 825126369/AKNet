@@ -1194,20 +1194,19 @@ namespace AKNet.Udp5MSQuic.Common
             WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE + SendData.CtrlBuf;
             WSAMhdr.Control.len = 0;
 
-            PWSACMSGHDR CMsg = NULL;
-            if (LocalAddress->si_family == QUIC_ADDRESS_FAMILY_INET)
+            WSACMSGHDR* CMsg = null;
+            if (LocalAddress.si_family == OSPlatformFunc.AF_INET)
             {
-
-                if (!Socket->HasFixedRemoteAddress)
+                if (!Socket.HasFixedRemoteAddress)
                 {
-                    WSAMhdr.Control.len += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));
-                    CMsg = WSA_CMSG_FIRSTHDR(&WSAMhdr);
-                    CMsg->cmsg_level = IPPROTO_IP;
-                    CMsg->cmsg_type = IP_PKTINFO;
-                    CMsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN_PKTINFO));
-                    PIN_PKTINFO PktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(CMsg);
-                    PktInfo->ipi_ifindex = LocalAddress->Ipv6.sin6_scope_id;
-                    PktInfo->ipi_addr = LocalAddress->Ipv4.sin_addr;
+                    WSAMhdr.Control.len += OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN_PKTINFO));
+                    CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(&WSAMhdr);
+                    CMsg->cmsg_level = OSPlatformFunc.IPPROTO_IP;
+                    CMsg->cmsg_type = OSPlatformFunc.IP_PKTINFO;
+                    CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(IN_PKTINFO));
+                    IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                    PktInfo->ipi_ifindex = LocalAddress.Ipv6.sin6_scope_id;
+                    PktInfo->ipi_addr = LocalAddress.Ipv4.sin_addr;
                 }
 
                 if (Socket->Datapath->Features & CXPLAT_DATAPATH_FEATURE_SEND_DSCP)
