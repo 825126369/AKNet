@@ -45,6 +45,26 @@ namespace AKNet.Platform
 #endif
         }
 
+        public static IPEndPoint RawAddrTo(SOCKADDR_INET sockaddr)
+        {
+            if (sockaddr.si_family == OSPlatformFunc.AF_INET6) // AF_INET (IPv4)
+            {
+                var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr.Ipv4.sin_addr.u, 4));
+                int port = (int)IPAddress.NetworkToHostOrder((short)sockaddr.Ipv4.sin_port);
+                return new IPEndPoint(addr, port);
+            }
+            else if (sockaddr.si_family == OSPlatformFunc.AF_INET) // AF_INET6 (IPv6)
+            {
+                var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr.Ipv6.sin6_addr.u, 16));
+                int port = (int)IPAddress.NetworkToHostOrder((short)sockaddr.Ipv6.sin6_port);
+                return new IPEndPoint(addr, port);
+            }
+            else
+            {
+                throw new NotSupportedException("Unsupported address family.");
+            }
+        }
+
         public static IPEndPoint GetLocalEndPoint(SafeHandle Socket, AddressFamily family)
         {
             int Result = 0;

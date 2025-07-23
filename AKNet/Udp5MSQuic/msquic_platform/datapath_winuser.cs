@@ -7,12 +7,11 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Udp5MSQuic.Common
 {
     using CXPLAT_CQE = OVERLAPPED_ENTRY;
-
     //一律强制转为IpV6地址
     internal class QUIC_ADDR
     {
@@ -23,6 +22,7 @@ namespace AKNet.Udp5MSQuic.Common
         private IPAddress dont_use_this_field_Ip;
         public int nPort;
         private IPEndPoint mEndPoint;
+        public SOCKADDR_INET RawAddr;
         public int ScopeId;
 
         public QUIC_ADDR()
@@ -942,66 +942,69 @@ namespace AKNet.Udp5MSQuic.Common
                         if (CMsg->cmsg_type == OSPlatformFunc.IPV6_PKTINFO)
                         {
                             IN6_PKTINFO* PktInfo6 = (IN6_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
-                            LocalAddr.si_family = QUIC_ADDRESS_FAMILY_INET6;
-                            LocalAddr.Ipv6.sin6_addr = PktInfo6->ipi6_addr;
-                            LocalAddr.Ipv6.sin6_port = SocketProc->Parent->LocalAddress.Ipv6.sin6_port;
 
-                            CxPlatConvertFromMappedV6(LocalAddr, LocalAddr);
-                            LocalAddr.Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
+                            SOCKADDR_INET mAddr = new SOCKADDR_INET();
+                            mAddr.Ipv6.sin6_family = OSPlatformFunc.AF_INET6;
+                            mAddr.Ipv6.sin6_addr = PktInfo6->ipi6_addr;
+                            mAddr.Ipv6.sin6_port = (ushort)SocketProc.Parent.LocalAddress.nPort;
+                            mAddr.Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
+
+                            var mLocalIpEndPoint = SocketAddressHelper.RawAddrTo(mAddr);
+                            LocalAddr.SetIPEndPoint(mLocalIpEndPoint);
                             FoundLocalAddr = true;
                         }
                         else if (CMsg->cmsg_type == OSPlatformFunc.IPV6_TCLASS)
                         {
-                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(TypeOfService < UINT8_MAX);
+                            TypeOfService = *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            NetLog.Assert(TypeOfService < byte.MaxValue);
                         }
-                        else if (CMsg->cmsg_type == IPV6_ECN)
+                        else if (CMsg->cmsg_type == OSPlatformFunc.IPV6_ECN)
                         {
-                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(TypeOfService <= CXPLAT_ECN_CE);
+                            TypeOfService = *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            NetLog.Assert(TypeOfService <= (int)CXPLAT_ECN_TYPE.CXPLAT_ECN_CE);
                         }
-                        else if (CMsg->cmsg_type == IPV6_HOPLIMIT)
+                        else if (CMsg->cmsg_type == OSPlatformFunc.IPV6_HOPLIMIT)
                         {
-                            HopLimitTTL = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(HopLimitTTL < 256);
-                            CXPLAT_DBG_ASSERT(HopLimitTTL > 0);
+                            HopLimitTTL = *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            NetLog.Assert(HopLimitTTL < 256);
+                            NetLog.Assert(HopLimitTTL > 0);
                         }
                     }
-                    else if (CMsg->cmsg_level == IPPROTO_IP)
+                    else if (CMsg->cmsg_level == OSPlatformFunc.IPPROTO_IP)
                     {
-                        if (CMsg->cmsg_type == IP_PKTINFO)
+                        if (CMsg->cmsg_type == OSPlatformFunc.IP_PKTINFO)
                         {
-                            PIN_PKTINFO PktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(CMsg);
-                            LocalAddr->si_family = QUIC_ADDRESS_FAMILY_INET;
-                            LocalAddr->Ipv4.sin_addr = PktInfo->ipi_addr;
-                            LocalAddr->Ipv4.sin_port = SocketProc->Parent->LocalAddress.Ipv6.sin6_port;
-                            LocalAddr->Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
-                            FoundLocalAddr = TRUE;
+                            IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            LocalAddr.si_family = QUIC_ADDRESS_FAMILY_INET;
+                            LocalAddr.Ipv4.sin_addr = PktInfo->ipi_addr;
+                            LocalAddr.Ipv4.sin_port = SocketProc.Parent.LocalAddress.Ipv6.sin6_port;
+                            LocalAddr.Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
+                            FoundLocalAddr = true;
                         }
-                        else if (CMsg->cmsg_type == IP_TOS)
+                        else if (CMsg->cmsg_type == OSPlatformFunc.IP_TOS)
                         {
-                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(TypeOfService < UINT8_MAX);
+                            TypeOfService = *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            NetLog.Assert(TypeOfService < byte.MaxValue);
                         }
-                        else if (CMsg->cmsg_type == IP_ECN)
+                        else if (CMsg->cmsg_type == OSPlatformFunc.IP_ECN)
                         {
-                            TypeOfService = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(TypeOfService <= CXPLAT_ECN_CE);
+                            TypeOfService = *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            NetLog.Assert(TypeOfService <= (int)CXPLAT_ECN_TYPE.CXPLAT_ECN_CE);
                         }
-                        else if (CMsg->cmsg_type == IP_TTL)
+                        else if (CMsg->cmsg_type == OSPlatformFunc.IP_TTL)
                         {
-                            HopLimitTTL = *(PINT)WSA_CMSG_DATA(CMsg);
-                            CXPLAT_DBG_ASSERT(HopLimitTTL < 256);
-                            CXPLAT_DBG_ASSERT(HopLimitTTL > 0);
+                            HopLimitTTL = *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            NetLog.Assert(HopLimitTTL < 256);
+                            NetLog.Assert(HopLimitTTL > 0);
                         }
                     }
-                    else if (CMsg->cmsg_level == IPPROTO_UDP)
+                    else if (CMsg->cmsg_level == OSPlatformFunc.IPPROTO_UDP)
                     {
                         if (CMsg->cmsg_type == UDP_COALESCED_INFO)
                         {
-                            CXPLAT_DBG_ASSERT(*(PDWORD)WSA_CMSG_DATA(CMsg) <= SocketProc->Parent->RecvBufLen);
-                            MessageLength = (UINT16) * (PDWORD)WSA_CMSG_DATA(CMsg);
-                            IsCoalesced = TRUE;
+                            NetLog.Assert(*(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) <= SocketProc.Parent.RecvBufLen);
+                            MessageLength = (ushort) *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            IsCoalesced = true;
                         }
                     }
                 }

@@ -1,5 +1,7 @@
 ﻿#if TARGET_WINDOWS
+using AKNet.Platform;
 using System;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -32,13 +34,40 @@ namespace AKNet.Platform
         public INET_PORT_RESERVATION_TOKEN Token;
     }
 
-    //public unsafe struct SOCKADDR_IN
-    //{
-    //    public ushort sin_family;
-    //    public ushort sin_port;
-    //    public  sin_addr;
-    //    public fixed byte sin_zero[8];
-    //}
+    public unsafe struct SOCKADDR_IN
+    {
+        public ushort sin_family;
+        public ushort sin_port;
+        public IN_ADDR sin_addr;
+        public fixed byte sin_zero[8];
+    }
+
+    public unsafe struct SOCKADDR_IN6
+    {
+        public ushort sin6_family;          // AF_INET6.
+        public ushort sin6_port;            // Transport level port number.
+        public ulong sin6_flowinfo;         // IPv6 flow information.
+        public IN6_ADDR sin6_addr;            // IPv6 address.
+        public ulong sin6_scope_id;
+    }
+
+    public unsafe struct IN_ADDR
+    {
+        public fixed byte u[4];
+    }
+
+    public unsafe struct IN6_ADDR
+    {
+        public fixed byte u[16];
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct SOCKADDR_INET
+    {
+        [FieldOffset(0)] public SOCKADDR_IN Ipv4;
+        [FieldOffset(0)] public SOCKADDR_IN6 Ipv6;
+        [FieldOffset(0)] public ushort si_family;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct WSABUF
@@ -66,8 +95,14 @@ namespace AKNet.Platform
 
     public unsafe struct IN6_PKTINFO
     {
-        public void* ipi6_addr;    // Source/destination IPv6 address.
+        public IN6_ADDR ipi6_addr;    // Source/destination IPv6 address.
         public ulong ipi6_ifindex;    // Send/receive interface index.
+    }
+
+    public unsafe struct IN_PKTINFO
+    {
+        public IN_ADDR ipi_addr;     // Source/destination IPv4 address.
+        public ulong ipi_ifindex;    // Send/receive interface index.
     }
 
     public struct RIO_CMSG_BUFFER
@@ -77,6 +112,7 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
+        public const int AF_INET = 2;               // internetwork: UDP, TCP, etc.
         public const int AF_INET6 = 23;            // Internetwork Version 6
         public const int SOCK_DGRAM = 2;             /* datagram socket */
         public const int IPPROTO_UDP = 17;
@@ -115,9 +151,13 @@ namespace AKNet.Platform
         public static readonly uint SIO_ACQUIRE_PORT_RESERVATION = _WSAIOW(IOC_VENDOR, 100);
         public static readonly uint SIO_ASSOCIATE_PORT_RESERVATION = _WSAIOW(IOC_VENDOR, 102);
 
+        public const int IP_TOS = 3; // IP type of service.
+        public const int IP_TTL = 4; // IP TTL (hop limit).
+        public const int IP_PKTINFO = 19; // Receive packet information.
         public const int IP_DONTFRAGMENT = 14; // Don't fragment IP datagrams.
         public const int IPV6_DONTFRAG = 14; // Don't fragment IP datagrams.
         public const int IPV6_PKTINFO = 19; // Receive packet information.
+        public const int IPV6_TCLASS = 39; // Packet traffic class.
 
         //IPV6_RECVTCLASS 是一个用于 IPv6 套接字编程的选项，用于启用接收端获取数据包的 TClass（Traffic Class）字段值。
         //这个字段在 IPv6 报文中用于标识数据包的流量类别，类似于 IPv4 中的 TOS（Type of Service）字段。
@@ -169,6 +209,20 @@ namespace AKNet.Platform
         public static void* WSA_CMSG_DATA(WSACMSGHDR* cmsg)
         {
             return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR));
+        }
+
+        public static void CxPlatConvertFromMappedV6(QUIC_ADDR* InAddr, out QUIC_ADDR* OutAddr)
+        {
+            NetLog.Assert(InAddr.si_family == OSPlatformFunc.AF_INET6);
+            if (IN6_IS_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr)) {
+                OutAddr->si_family = QUIC_ADDRESS_FAMILY_INET;
+                OutAddr->Ipv4.sin_port = InAddr->Ipv6.sin6_port;
+                OutAddr->Ipv4.sin_addr =
+                    *(IN_ADDR UNALIGNED *)
+                    IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
+            } else if (OutAddr != InAddr) {
+                * OutAddr = *InAddr;
+        }
         }
     }
 }
