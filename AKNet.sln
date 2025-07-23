@@ -61,6 +61,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestNetClient", "Test\AkNet
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestNetServer", "Test\AkNet.MSQuicTest\TestNetServer\TestNetServer.csproj", "{94E7ADB4-E5B0-80BC-2CFE-A87975018279}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet.Common", "AKNet.Common\AKNet.Common.csproj", "{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -359,6 +361,18 @@ Global
 		{94E7ADB4-E5B0-80BC-2CFE-A87975018279}.Release|x64.Build.0 = Release|Any CPU
 		{94E7ADB4-E5B0-80BC-2CFE-A87975018279}.Release|x86.ActiveCfg = Release|Any CPU
 		{94E7ADB4-E5B0-80BC-2CFE-A87975018279}.Release|x86.Build.0 = Release|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Debug|x64.Build.0 = Debug|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Debug|x86.Build.0 = Debug|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Release|x64.ActiveCfg = Release|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Release|x64.Build.0 = Release|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Release|x86.ActiveCfg = Release|Any CPU
+		{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

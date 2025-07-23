@@ -1,17 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
 	<TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
 	<LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="ClientPeerBaseExtentions.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.29.1" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\AKNet\AKNet.csproj" />
-  </ItemGroup>
-
 </Project>
