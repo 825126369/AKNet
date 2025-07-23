@@ -237,7 +237,7 @@ namespace AKNet.Udp5MSQuic.Common
 
 
     //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
-    internal class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
+    internal unsafe class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
         public CXPLAT_POOL<CXPLAT_SEND_DATA> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> POOL_ENTRY = null;
@@ -554,9 +554,9 @@ namespace AKNet.Udp5MSQuic.Common
             return SendData;
         }
 
-        static int CxPlatSocketSend(CXPLAT_SOCKET Socket,CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
+        static void CxPlatSocketSend(CXPLAT_SOCKET Socket,CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
         {
-            return SocketSend(Socket, Route, SendData);
+            SocketSend(Socket, Route, SendData);
         }
 
         static int CxPlatSocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, out CXPLAT_SOCKET NewSocket)
@@ -573,13 +573,12 @@ namespace AKNet.Udp5MSQuic.Common
             return Status;
         }
 
-        static int SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        static unsafe void SocketSend(CXPLAT_SOCKET Socket, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;
-
             CxPlatSendDataFinalizeSendBuffer(SendData);
-            SocketAddressHelper.CxPlatConvertToMappedV6(Route.RemoteAddress, SendData.MappedRemoteAddress);
+            SocketAddressHelper.CxPlatConvertToMappedV6(Route.RemoteAddress.GetRawAddr(out _), SendData.MappedRemoteAddress.GetRawAddr(out _));
 
             if (Socket.UseRio)
             {

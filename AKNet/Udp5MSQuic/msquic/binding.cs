@@ -1272,14 +1272,12 @@ namespace AKNet.Udp5MSQuic.Common
             return QUIC_SUCCEEDED(Status);
         }
 
-        static int QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
+        static void QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
         {
-            int Status;
-            Status = CxPlatSocketSend(Binding.Socket, Route, SendData);
+            CxPlatSocketSend(Binding.Socket, Route, SendData);
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_BYTES, BytesToSend);
             QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND_CALLS);
-            return Status;
         }
 
         static int QuicBindingRegisterListener(QUIC_BINDING Binding, QUIC_LISTENER NewListener)
