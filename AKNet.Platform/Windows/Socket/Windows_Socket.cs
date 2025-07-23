@@ -3,8 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-
-
     internal unsafe struct GUID
     {
         public ulong Data1;
@@ -253,20 +251,6 @@ namespace AKNet.Platform
         public static int MAX_NATURAL_ALIGNMENT()
         {
             return sizeof(ulong);
-        }
-
-        public static void CxPlatConvertFromMappedV6(QUIC_ADDR* InAddr, out QUIC_ADDR* OutAddr)
-        {
-            NetLog.Assert(InAddr.si_family == OSPlatformFunc.AF_INET6);
-            if (IN6_IS_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr)) {
-                OutAddr->si_family = QUIC_ADDRESS_FAMILY_INET;
-                OutAddr->Ipv4.sin_port = InAddr->Ipv6.sin6_port;
-                OutAddr->Ipv4.sin_addr =
-                    *(IN_ADDR UNALIGNED *)
-                    IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
-            } else if (OutAddr != InAddr) {
-                * OutAddr = *InAddr;
-            }
         }
     }
 }

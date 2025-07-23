@@ -1,6 +1,8 @@
-﻿using System.Buffers.Binary;
+﻿using System;
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -116,7 +118,35 @@ namespace AKNet.Platform
                 default:
                     return null;
             }
-
         }
+
+        public static void CxPlatConvertFromMappedV6(SOCKADDR_INET* InAddr, out SOCKADDR_INET* OutAddr)
+        {
+            NetLog.Assert(InAddr->si_family == OSPlatformFunc.AF_INET6);
+            if (IN6_IS_ADDR_V4MAPPED(InAddr->Ipv6.sin6_addr))
+            {
+                OutAddr->si_family = QUIC_ADDRESS_FAMILY_INET;
+                OutAddr->Ipv4.sin_port = InAddr->Ipv6.sin6_port;
+                OutAddr->Ipv4.sin_addr =
+                    *(IN_ADDR UNALIGNED *)
+                    IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
+            }
+            else if (OutAddr != InAddr)
+            {
+                *OutAddr = *InAddr;
+            }
+        }
+
+        public static bool IN6_IS_ADDR_V4MAPPED(SOCKADDR_INET* a)
+        {
+            return (bool)((a->s6_words[0] == 0) &&
+                             (a->s6_words[1] == 0) &&
+                             (a->s6_words[2] == 0) &&
+                             (a->s6_words[3] == 0) &&
+                             (a->s6_words[4] == 0) &&
+                             (a->s6_words[5] == 0xffff));
+        }
+
+
     }
 }
