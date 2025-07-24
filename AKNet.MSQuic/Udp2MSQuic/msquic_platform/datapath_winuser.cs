@@ -708,11 +708,9 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (Config.RemoteAddress != null)
                 {
-                    mTemp = Socket.RemoteAddress.GetBindAddr();
-                    fixed (byte* mTempPtr = mTemp)
-                    {
-                        Interop.Winsock.connect(SocketProc.Socket, mTempPtr, mTemp.Length);
-                    }
+                    int nLength = 0;
+                    mTempPtr = Socket.RemoteAddress.GetRawAddr(out nLength);
+                    Interop.Winsock.connect(SocketProc.Socket, (byte*)mTempPtr, nLength);
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -813,7 +811,7 @@ namespace AKNet.Udp2MSQuic.Common
             fixed (void* ControlBufPtr = IoBlock.ControlBuf)
             fixed (void* WsaControlBufPtr = &IoBlock.WsaControlBuf)
             {
-                IoBlock.WsaControlBuf.buf = (IntPtr)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
+                IoBlock.WsaControlBuf.buf = (byte*)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
                 IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
                 IoBlock.WsaMsgHdr.name = IoBlock._socketAddressPtr;
                 IoBlock.WsaMsgHdr.namelen = SocketAddressHelper.GetMaximumAddressSize();
@@ -840,7 +838,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 int WsaError = Interop.Winsock.WSAGetLastError();
                 NetLog.Assert(WsaError != OSPlatformFunc.NO_ERROR);
-                if (WsaError == OSPlatformFunc.WSA_IO_PENDING)
+                if ((ulong)WsaError == OSPlatformFunc.WSA_IO_PENDING)
                 {
                     return QUIC_STATUS_PENDING;
                 }
