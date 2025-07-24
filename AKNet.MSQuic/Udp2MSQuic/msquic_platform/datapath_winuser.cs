@@ -750,9 +750,9 @@ namespace AKNet.Udp2MSQuic.Common
         }
 
         static bool CxPlatDataPathStartReceive(CXPLAT_SOCKET_PROC SocketProc, 
-            ref ulong IoResult,
-            ref int InlineBytesTransferred,
-            ref DATAPATH_RX_IO_BLOCK IoBlock)
+            ulong IoResult,
+            int InlineBytesTransferred,
+            DATAPATH_RX_IO_BLOCK IoBlock)
         {
             const int MAX_RECV_RETRIES = 10;
             int RetryCount = 0;
@@ -760,9 +760,9 @@ namespace AKNet.Udp2MSQuic.Common
             do
             {
                 Status = CxPlatSocketStartReceive(SocketProc,
-                        ref IoResult,
-                        ref InlineBytesTransferred,
-                        ref IoBlock);
+                        IoResult,
+                        InlineBytesTransferred,
+                        IoBlock);
             } while (Status == QUIC_STATUS_OUT_OF_MEMORY && ++RetryCount < MAX_RECV_RETRIES);
 
             if (Status == QUIC_STATUS_OUT_OF_MEMORY)
@@ -776,9 +776,9 @@ namespace AKNet.Udp2MSQuic.Common
         }
 
         static int CxPlatSocketStartReceive(CXPLAT_SOCKET_PROC SocketProc,
-            ref ulong SyncIoResult,
-            ref int SyncBytesReceived,
-            ref DATAPATH_RX_IO_BLOCK SyncIoBlock)
+            ulong SyncIoResult,
+            int SyncBytesReceived,
+            DATAPATH_RX_IO_BLOCK SyncIoBlock)
         {
             int Status = 0;
             if (SocketProc.Parent.UseRio)
@@ -788,15 +788,15 @@ namespace AKNet.Udp2MSQuic.Common
             }
             else
             {
-                Status = CxPlatSocketStartWinsockReceive(SocketProc, ref SyncIoResult, ref SyncBytesReceived, ref SyncIoBlock);
+                Status = CxPlatSocketStartWinsockReceive(SocketProc, SyncIoResult, SyncBytesReceived, SyncIoBlock);
             }
             return Status;
         }
 
         static int CxPlatSocketStartWinsockReceive(CXPLAT_SOCKET_PROC SocketProc,
-            ref ulong SyncIoResult,
-            ref int SyncBytesReceived,
-            ref DATAPATH_RX_IO_BLOCK SyncIoBlock)
+            ulong SyncIoResult,
+            int SyncBytesReceived,
+            DATAPATH_RX_IO_BLOCK SyncIoBlock)
         {
             CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
@@ -858,9 +858,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
             return QUIC_STATUS_PENDING;
         }
-
-
-
+        
         static void CxPlatCancelDatapathIo(CXPLAT_SOCKET_PROC SocketProc)
         {
             
@@ -871,9 +869,7 @@ namespace AKNet.Udp2MSQuic.Common
             CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Cqe);
             NetLog.Assert(Sqe.sqePtr->Overlapped.Internal != 0x103); // STATUS_PENDING
             NetLog.Assert(Cqe.dwNumberOfBytesTransferred <= ushort.MaxValue);
-            CxPlatDataPathSocketProcessReceive(Sqe.Contex as  DATAPATH_RX_IO_BLOCK,
-                0,
-                (ulong)Cqe.dwNumberOfBytesTransferred);
+            CxPlatDataPathSocketProcessReceive(Sqe.Contex as DATAPATH_RX_IO_BLOCK, 0, (ulong)Cqe.dwNumberOfBytesTransferred);
         }
 
         static bool CxPlatDataPathUdpRecvComplete(CXPLAT_SOCKET_PROC SocketProc, DATAPATH_RX_IO_BLOCK IoBlock, ulong IoResult,
@@ -1413,17 +1409,20 @@ namespace AKNet.Udp2MSQuic.Common
             NetLog.Assert(!SocketProc.Freed);
             if (!CxPlatRundownAcquire(SocketProc.RundownRef))
             {
+                //CxPlatSocketContextRelease(SocketProc);
                 return;
             }
 
             NetLog.Assert(!SocketProc.Uninitialized);
             for (int InlineReceiveCount = 10; InlineReceiveCount > 0; InlineReceiveCount--)
             {
+                //CxPlatSocketContextRelease(SocketProc);
+
                 if (!CxPlatDataPathUdpRecvComplete(SocketProc, IoBlock, IoResult, BytesTransferred) ||
-                    !CxPlatDataPathStartReceiveAsync(
+                    !CxPlatDataPathStartReceive(
                         SocketProc,
-                        InlineReceiveCount > 1 ? IoResult : null,
-                        InlineReceiveCount > 1 ? BytesTransferred : null,
+                        InlineReceiveCount > 1 ? IoResult : 0,
+                        InlineReceiveCount > 1 ? BytesTransferred : 0,
                         InlineReceiveCount > 1 ? IoBlock : null))
                 {
                     break;
@@ -1449,35 +1448,6 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatDataPathSocketProcessReceive(Sqe.Contex as DATAPATH_RX_IO_BLOCK,
                 (ushort)Cqe.dwNumberOfBytesTransferred,
                 Interop.Kernel32.RtlNtStatusToDosError((long)Cqe.Internal));
-        }
-
-        static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
-        {
-            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            var mWorker = IoBlock.SocketProc.Parent.Datapath.WorkerPool.Workers[IoBlock.SocketProc.DatapathProc.PartitionIndex];
-
-            arg.Completed -= DataPathProcessCqe;
-            arg.Completed += DataPathProcessCqe2;
-            //mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
-        }
-
-        static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)
-        {
-            arg.Completed -= DataPathProcessCqe2;
-            switch (arg.LastOperation)
-            {
-                case SocketAsyncOperation.ReceiveMessageFrom:
-                    CxPlatDataPathSocketProcessReceive(arg);
-                    break;
-
-                case SocketAsyncOperation.SendTo:
-                    CxPlatSendDataComplete(arg);
-                    break;
-
-                default:
-                    NetLog.Assert(false, arg.LastOperation);
-                    break;
-            }
         }
     }
 }

@@ -7,9 +7,9 @@ namespace AKNet.Platform
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct OVERLAPPED_ENTRY
     {
-        public IntPtr lpCompletionKey;
+        public ulong lpCompletionKey;
         public OVERLAPPED* lpOverlapped;
-        public IntPtr Internal;
+        public ulong Internal;
         public int dwNumberOfBytesTransferred;
     }
 
