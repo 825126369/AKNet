@@ -1,7 +1,6 @@
 ﻿using AKNet.Platform;
 using System;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 
 namespace AKNet.Udp1MSQuic.Common
 {
