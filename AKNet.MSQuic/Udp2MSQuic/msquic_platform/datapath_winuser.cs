@@ -1358,11 +1358,8 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (SendData.Sqe == null)
                 {
-                    SendData.Sqe = new SocketAsyncEventArgs();
-                    SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
+                    SendData.Sqe = new CXPLAT_SQE();
                 }
-
-                SendData.Sqe.Completed += DataPathProcessCqe;
             }
 
             return SendData;

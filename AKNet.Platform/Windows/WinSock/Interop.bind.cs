@@ -14,6 +14,7 @@ namespace AKNet.Platform
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static partial int WSAGetLastError();
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static partial bool IN6_IS_ADDR_V4MAPPED(IN6_ADDR* a);
             [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static partial byte* IN6_GET_ADDR_V4MAPPED(IN6_ADDR* Ipv6Address);

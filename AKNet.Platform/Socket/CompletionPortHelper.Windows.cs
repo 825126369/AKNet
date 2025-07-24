@@ -5,12 +5,12 @@ namespace AKNet.Platform.Socket
 {
     internal static class CompletionPortHelper
     {
-        internal static bool SkipCompletionPortOnSuccess(SafeHandle handle)
-        {
-            return Interop.Kernel32.SetFileCompletionNotificationModes(handle,
-                Interop.Kernel32.FileCompletionNotificationModes.SkipCompletionPortOnSuccess |
-                Interop.Kernel32.FileCompletionNotificationModes.SkipSetEventOnHandle);
-        }
+        //internal static bool SkipCompletionPortOnSuccess(SafeHandle handle)
+        //{
+        //    return Interop.Kernel32.SetFileCompletionNotificationModes(handle,
+        //        FileCompletionNotificationModes.SkipCompletionPortOnSuccess |
+        //        FileCompletionNotificationModes.SkipSetEventOnHandle);
+        //}
         
         internal static readonly bool PlatformHasUdpIssue = CheckIfPlatformHasUdpIssue();
         private static bool CheckIfPlatformHasUdpIssue()

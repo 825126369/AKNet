@@ -28,7 +28,7 @@ namespace AKNet.Platform
 
         private static T CreateDelegate<T>(SafeHandle socketHandle, GUID guid) where T : Delegate
         {
-            IntPtr ptr;
+            void* ptr = null;
             int errorCode;
             unsafe
             {
@@ -37,8 +37,8 @@ namespace AKNet.Platform
                    Interop.Winsock.IoctlSocketConstants.SIOGETEXTENSIONFUNCTIONPOINTER,
                    &guid,
                    sizeof(GUID),
-                   out ptr,
-                   sizeof(IntPtr),
+                   &ptr,
+                   sizeof(void*),
                    out _,
                    null,
                    null);
@@ -49,7 +49,7 @@ namespace AKNet.Platform
                 return null;
             }
 
-            return Marshal.GetDelegateForFunctionPointer<T>(ptr);
+            return Marshal.GetDelegateForFunctionPointer<T>((IntPtr)ptr);
         }
 
         public static unsafe WSARecvMsg GetWSARecvMsgDelegate(SafeHandle socketHandle)
