@@ -843,7 +843,7 @@ namespace AKNet.Udp1MSQuic.Common
 
             arg.Completed -= DataPathProcessCqe;
             arg.Completed += DataPathProcessCqe2;
-            //mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
+            mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)

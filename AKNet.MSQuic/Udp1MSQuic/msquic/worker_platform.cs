@@ -243,7 +243,7 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 ThreadConfig.IdealProcessor = IdealProcessor;
                 ThreadConfig.Context = Worker;
-                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, Worker.Thread)))
+                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, out Worker.Thread)))
                 {
                     return false;
                 }

@@ -254,7 +254,7 @@ namespace AKNet.Udp1MSQuic.Common
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
-        public CXPLAT_SQE Sqe = null;
+        public SocketAsyncEventArgs Sqe = null;
         public CXPLAT_SEND_DATA()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
@@ -578,21 +578,7 @@ namespace AKNet.Udp1MSQuic.Common
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;
             CxPlatSendDataFinalizeSendBuffer(SendData);
-            SocketAddressHelper.CxPlatConvertToMappedV6(Route.RemoteAddress.GetRawAddr(out _), 
-                SendData.MappedRemoteAddress.GetRawAddr(out _));
-
-            if (Socket.UseRio)
-            {
-                CxPlatSocketSendEnqueue(Route, SendData);
-            }
-            else if (!HasFlag(SendData.SendFlags, (ulong)CXPLAT_SEND_FLAGS.CXPLAT_SEND_FLAGS_MAX_THROUGHPUT))
-            {
-                CxPlatSocketSendInline(Route.LocalAddress, SendData);
-            }
-            else
-            {
-                CxPlatSocketSendEnqueue(Route, SendData);
-            }
+            CxPlatSocketSendEnqueue(Route, SendData);
         }
 
         static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)
