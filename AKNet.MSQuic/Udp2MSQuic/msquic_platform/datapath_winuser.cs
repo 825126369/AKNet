@@ -88,11 +88,6 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        public void CopyFrom(QUIC_ADDR other)
-        {
-            this.WriteFrom(other.ToSSBuffer().GetSpan());
-        }
-
         public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)
         {
             QUIC_ADDR mm = new QUIC_ADDR();
@@ -109,15 +104,22 @@ namespace AKNet.Udp2MSQuic.Common
 
         public void WriteFrom(ReadOnlySpan<byte> Buffer)
         {
-            fixed (void* ptr = Buffer)
-            {
-                RawAddr = (SOCKADDR_INET*)ptr;
-            }
+            RawAddr = (SOCKADDR_INET*)Marshal.AllocHGlobal(sizeof(SOCKADDR_INET));
+            Span<byte> mTarget = new Span<byte>(RawAddr, sizeof(SOCKADDR_INET));
+            Buffer.CopyTo(mTarget);
+        }
+
+        public void WriteFrom(QUIC_ADDR other)
+        {
+            RawAddr = (SOCKADDR_INET*)Marshal.AllocHGlobal(sizeof(SOCKADDR_INET));
+            Span<byte> mTarget = new Span<byte>(RawAddr, sizeof(SOCKADDR_INET));
+            Span<byte> mSource = new Span<byte>(other.RawAddr, sizeof(SOCKADDR_INET));
+            mSource.CopyTo(mTarget);
         }
 
         public QUIC_SSBuffer ToSSBuffer()
         {
-            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[20]);
+            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[30]);
             int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
             qUIC_SSBuffer.Length = nLength;
             return qUIC_SSBuffer;
