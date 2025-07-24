@@ -132,7 +132,7 @@ namespace AKNet.Platform
         {
             sqe.Contex = contex;
             sqe.Completion = completion;
-            sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)Interop.Ucrtbase.malloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
+            sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)CxPlatAlloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
             sqe.sqePtr->parent = sqe;
             CxPlatZeroMemory(sqe.sqePtr, sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
 #if DEBUG
@@ -145,7 +145,7 @@ namespace AKNet.Platform
         {
             sqe.Contex = contex;
             sqe.Completion = completion;
-            sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)Interop.Ucrtbase.malloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
+            sqe.sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)CxPlatAlloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
             sqe.sqePtr->parent = sqe;
             CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(OVERLAPPED));
 #if DEBUG
@@ -157,7 +157,7 @@ namespace AKNet.Platform
         {
             if (sqe.sqePtr != null)
             {
-                Interop.Ucrtbase.free(sqe.sqePtr);
+                CxPlatFree(sqe.sqePtr);
                 sqe.sqePtr = null;
             }
         }

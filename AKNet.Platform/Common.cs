@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -80,6 +79,27 @@ namespace AKNet.Platform
         {
              IntPtr offset = Marshal.OffsetOf(typeof(T), fieldName);
              return (T*) ((byte*) address - offset.ToInt32());
+        }
+
+        // 内存分配
+        public static void* CxPlatAlloc(int ByteCount, uint Tag = 0)
+        {
+            return (void*)Marshal.AllocHGlobal(ByteCount);
+        }
+
+        public static void CxPlatFree(void* Mem, uint Tag = 0)
+        {
+            Marshal.FreeHGlobal((IntPtr)Mem);
+        }
+
+        public static void CxPlatZeroMemory(void* Destination, int Length)
+        {
+            new Span<byte>(Destination, Length).Clear();
+        }
+
+        public static bool memcmp(void* s1, void* s2, int n)
+        {
+            return new Span<byte>(s1, n) == new Span<byte>(s2, n);
         }
     }
 }

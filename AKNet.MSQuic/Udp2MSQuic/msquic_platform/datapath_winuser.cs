@@ -33,6 +33,9 @@ namespace AKNet.Udp2MSQuic.Common
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
             RawAddr = SocketAddressHelper.GetRawAddr(mIPEndPoint,out _);
+            var RawAddr2 = SocketAddressHelper.GetRawAddr(mIPEndPoint, out _);
+            SocketAddressHelper.CxPlatConvertToMappedV6(RawAddr2, RawAddr);
+            Marshal.FreeHGlobal((IntPtr)RawAddr2);
             CheckFamilyError();
         }
 

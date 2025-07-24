@@ -20,26 +20,6 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
-        public static void* CxPlatAlloc(int ByteCount, uint Tag = 0)
-        {
-            return Interop.Kernel32.HeapAlloc(CxPlatform.Heap, 0, ByteCount);
-        }
-
-        public static void CxPlatFree(void* Mem, uint Tag = 0)
-        {
-            Interop.Kernel32.HeapFree(CxPlatform.Heap, 0, Mem);
-        }
-
-        public static void CxPlatZeroMemory(void* Destination, int Length)
-        {
-            Interop.Ucrtbase.memset(Destination, 0, Length);
-        }
-
-        public static int memcmp(void* s1, void* s2, int n)
-        {
-             return Interop.Ucrtbase.memcmp(s1, s2, n);
-        }
-
         public static int CxPlatRandom(int BufferLen, void* Buffer)
         {
             const int BCRYPT_RNG_USE_ENTROPY_IN_BUFFER = 0x00000001;
