@@ -11,36 +11,11 @@ using System.Diagnostics;
 
 namespace AKNet.Common
 {
-    public static class NetLogMgr
+    public static partial class NetLogMgr
     {
         public static void SetOrPrintLog(bool bPrintLog)
         {
             NetLog.bPrintLog = bPrintLog;
-        }
-
-        public static void Log(object message)
-        {
-            NetLog.Log(message);
-        }
-
-        public static void LogWarning(object message)
-        {
-            NetLog.LogWarning(message);
-        }
-
-        public static void LogException(Exception e)
-        {
-            NetLog.LogException(e);
-        }
-
-        public static void LogError(object message)
-        {
-            NetLog.LogError(message);
-        }
-
-        public static void Assert(bool bTrue, object message = null)
-        {
-            NetLog.Assert(bTrue, message);
         }
 
         public static void AddLogFunc(Action<string> LogFunc, Action<string> LogErrorFunc, Action<string> LogWarningFunc)
@@ -75,8 +50,8 @@ namespace AKNet.Common
 #endif
         }
     }
-        
-    internal static class NetLog
+    
+    public static partial class NetLog
     {
         public static bool bPrintLog = true;
         public static event Action<string> LogFunc;
@@ -152,7 +127,7 @@ namespace AKNet.Common
             return st.ToString();
         }
 
-        internal static void Log(object message)
+        public static void Log(object message)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -165,7 +140,7 @@ namespace AKNet.Common
             }
         }
 
-        internal static void LogWarning(object message)
+        public static void LogWarning(object message)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -178,7 +153,7 @@ namespace AKNet.Common
             }
         }
 
-        internal static void LogException(Exception e)
+        public static void LogException(Exception e)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -191,7 +166,7 @@ namespace AKNet.Common
             }
         }
 
-        internal static void LogError(object message)
+        public static void LogError(object message)
         {
             if (!bPrintLog) return;
 #if DEBUG
@@ -204,7 +179,7 @@ namespace AKNet.Common
             }
         }
 
-        internal static void Assert(bool bTrue, object message = null)
+        public static void Assert(bool bTrue, object message = null)
         {
             if (!bPrintLog) return;
             if (!bTrue)

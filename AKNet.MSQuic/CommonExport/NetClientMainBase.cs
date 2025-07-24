@@ -19,25 +19,13 @@ namespace AKNet.Common
 
         public NetClientMainBase(NetType nNetType = NetType.UDP)
         {
-            if (nNetType == NetType.TCP)
+            if (nNetType == NetType.MSQuic1)
             {
                 mInterface = new AKNet.Tcp.Client.TcpNetClientMain();
             }
-            else if (nNetType == NetType.UDP)
+            else if (nNetType == NetType.MSQuic2)
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
-            }
-            else if (nNetType == NetType.Udp2Tcp)
-            {
-                mInterface = new AKNet.Udp2Tcp.Client.Udp2TcpNetClientMain();
-            }
-            else if (nNetType == NetType.Udp3Tcp)
-            {
-                mInterface = new AKNet.Udp3Tcp.Client.Udp3TcpNetClientMain();
-            }
-            else if (nNetType == NetType.Udp4LinuxTcp)
-            {
-                mInterface = new AKNet.Udp4LinuxTcp.Client.Udp4LinuxTcpNetClientMain();
             }
             else
             {

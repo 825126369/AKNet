@@ -10,7 +10,7 @@ using System;
 
 namespace AKNet.Common
 {
-    internal class ListenClientPeerStateMgr
+    public class ListenClientPeerStateMgr
 	{
 		private event Action<ClientPeerBase, SOCKET_PEER_STATE> mEventFunc1 = null;
 		private event Action<ClientPeerBase> mEventFunc2 = null;

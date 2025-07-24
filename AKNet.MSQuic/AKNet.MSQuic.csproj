@@ -22,6 +22,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
 	  <ProjectReference Include="..\AKNet.Platform\AKNet.Platform.csproj" />
 	</ItemGroup>
 	

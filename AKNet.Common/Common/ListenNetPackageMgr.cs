@@ -11,7 +11,7 @@ using System.Collections.Generic;
 
 namespace AKNet.Common
 {
-    internal class ListenNetPackageMgr
+    public class ListenNetPackageMgr
 	{
 		private readonly Dictionary<ushort, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
 		private event Action<ClientPeerBase, NetPackage> mCommonListenFunc = null;

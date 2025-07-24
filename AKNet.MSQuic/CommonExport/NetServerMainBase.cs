@@ -14,30 +14,18 @@ namespace AKNet.Common
         protected NetServerInterface mInterface = null;
         public NetServerMainBase()
         {
-            mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
+            mInterface = new AKNet.MSQuic.POINTTOPOINT.Server.UdpNetServerMain();
         }
 
-        public NetServerMainBase(NetType nNetType = NetType.UDP)
+        public NetServerMainBase(NetType nNetType = NetType.MSQuic1)
         {
-            if (nNetType == NetType.TCP)
+            if (nNetType == NetType.MSQuic1)
             {
                 mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
             }
-            else if (nNetType == NetType.UDP)
+            else if (nNetType == NetType.MSQuic2)
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
-            }
-            else if (nNetType == NetType.Udp2Tcp)
-            {
-                mInterface = new AKNet.Udp2Tcp.Server.Udp2TcpNetServerMain();
-            }
-            else if (nNetType == NetType.Udp3Tcp)
-            {
-                mInterface = new AKNet.Udp3Tcp.Server.Udp3TcpNetServerMain();
-            }
-            else if (nNetType == NetType.Udp4LinuxTcp)
-            {
-                mInterface = new AKNet.Udp4LinuxTcp.Server.Udp4LinuxTcpNetServerMain();
             }
             else
             {

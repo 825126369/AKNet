@@ -6,14 +6,11 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-
 namespace AKNet.Common
 {
-    public interface NetPackage
+    public enum NetType
     {
-        ushort GetPackageId();
-        ReadOnlySpan<byte> GetData();
+        MSQuic1,
+        MSQuic2,
     }
 }
-

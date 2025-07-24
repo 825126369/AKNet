@@ -11,4 +11,8 @@
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.29.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
+  </ItemGroup>
 </Project>
