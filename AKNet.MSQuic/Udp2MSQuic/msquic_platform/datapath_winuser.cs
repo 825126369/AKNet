@@ -38,7 +38,14 @@ namespace AKNet.Udp2MSQuic.Common
 
         public ReadOnlySpan<byte> GetBytes()
         {
-            return new ReadOnlySpan<byte>(RawAddr->Ipv6.sin6_addr.u, 16);
+            if (RawAddr->si_family == OSPlatformFunc.AF_INET)
+            {
+                return new ReadOnlySpan<byte>(RawAddr->Ipv4.sin_addr.u, 4);
+            }
+            else
+            {
+                return new ReadOnlySpan<byte>(RawAddr->Ipv6.sin6_addr.u, 16);
+            }
         }
 
         public void SetIPEndPoint(IPEndPoint mIPEndPoint)
