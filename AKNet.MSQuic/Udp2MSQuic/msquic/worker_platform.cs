@@ -1,10 +1,7 @@
-﻿#if NO_HAVE_CUSTOM_IOCP
-using AKNet.Common;
+﻿using AKNet.Common;
+using AKNet.Platform;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -14,13 +11,11 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_POOL<CXPLAT_WORKER> mPool;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
 
-        public Thread Thread;
-        //public ConcurrentQueue<SocketAsyncEventArgs> EventQ = new ConcurrentQueue<SocketAsyncEventArgs>();
-        public ConcurrentQueue<SSocketAsyncEventArgs> EventQ = new ConcurrentQueue<SSocketAsyncEventArgs>();
-        public SSocketAsyncEventArgs ShutdownSqe = new SSocketAsyncEventArgs();
-        public SSocketAsyncEventArgs WakeSqe = new SSocketAsyncEventArgs();
-        public SSocketAsyncEventArgs UpdatePollSqe = new SSocketAsyncEventArgs();
-        public readonly List<SSocketAsyncEventArgs> Cqes = new List<SSocketAsyncEventArgs>();
+        public CXPLAT_THREAD Thread;
+        public CXPLAT_EVENTQ EventQ = new CXPLAT_EVENTQ();
+        public CXPLAT_SQE ShutdownSqe = new CXPLAT_SQE();
+        public CXPLAT_SQE WakeSqe = new CXPLAT_SQE();
+        public CXPLAT_SQE UpdatePollSqe = new CXPLAT_SQE();
 
         public readonly object ECLock = new object();
         public readonly CXPLAT_EXECUTION_STATE State = new CXPLAT_EXECUTION_STATE();
@@ -175,7 +170,7 @@ namespace AKNet.Udp2MSQuic.Common
             if (Worker.InitializedThread)
             {
                 Worker.StoppingThread = true;
-                Worker.EventQ.Append(Worker.ShutdownSqe);
+                OSPlatformFunc.CxPlatEventQEnqueue(Worker.EventQ, Worker.ShutdownSqe);
                 CxPlatThreadWait(Worker.Thread);
                 CxPlatThreadDelete(Worker.Thread);
 #if DEBUG
@@ -188,10 +183,21 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 // TODO - Handle synchronized cleanup for external event queues?
             }
-
-            while (Worker.EventQ.Count > 0)
+            if (Worker.InitializedUpdatePollSqe)
             {
-                Worker.EventQ.TryDequeue(out _);
+               OSPlatformFunc.CxPlatSqeCleanup(Worker.EventQ, Worker.UpdatePollSqe);
+            }
+            if (Worker.InitializedWakeSqe)
+            {
+                OSPlatformFunc.CxPlatSqeCleanup(Worker.EventQ, Worker.WakeSqe);
+            }
+            if (Worker.InitializedShutdownSqe)
+            {
+                OSPlatformFunc.CxPlatSqeCleanup(Worker.EventQ, Worker.ShutdownSqe);
+            }
+            if (Worker.InitializedEventQ)
+            {
+                OSPlatformFunc.CxPlatEventQCleanup(Worker.EventQ);
             }
         }
 
@@ -217,33 +223,42 @@ namespace AKNet.Udp2MSQuic.Common
             Worker.State.WaitTime = int.MaxValue;
             Worker.State.ThreadID = int.MaxValue;
 
-            //if (EventQ != null)
-            //{
-            //    Worker.EventQ = EventQ;
-            //}
-            //else
-            //{
+            if (EventQ != null)
+            {
+                Worker.EventQ = EventQ;
+            }
+            else
+            {
+                if (!OSPlatformFunc.CxPlatEventQInitialize(Worker.EventQ))
+                {
+                    return false;
+                }
+                Worker.InitializedEventQ = true;
+            }
 
-            //}
-
-            Worker.ShutdownSqe.UserToken = Worker;
-            Worker.WakeSqe.UserToken = Worker;
-            Worker.UpdatePollSqe.UserToken = Worker;
-
-            Worker.ShutdownSqe.Completed += ShutdownCompletion;
-            Worker.WakeSqe.Completed += WakeCompletion;
-            Worker.UpdatePollSqe.Completed += UpdatePollCompletion;
-
-            Worker.InitializedEventQ = true;
+            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, ShutdownCompletion, Worker, Worker.ShutdownSqe))
+            {
+                return false;
+            }
             Worker.InitializedShutdownSqe = true;
+
+            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, WakeCompletion, Worker, Worker.WakeSqe))
+            {
+                return false;
+            }
             Worker.InitializedWakeSqe = true;
+
+            if (!OSPlatformFunc.CxPlatSqeInitialize(Worker.EventQ, UpdatePollCompletion, Worker, Worker.UpdatePollSqe))
+            {
+                return false;
+            }
             Worker.InitializedUpdatePollSqe = true;
 
             if (ThreadConfig != null)
             {
                 ThreadConfig.IdealProcessor = IdealProcessor;
                 ThreadConfig.Context = Worker;
-                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, Worker.Thread)))
+                if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, out Worker.Thread)))
                 {
                     return false;
                 }
@@ -253,19 +268,19 @@ namespace AKNet.Udp2MSQuic.Common
             return true;
         }
 
-        static void UpdatePollCompletion(object Cqe, SocketAsyncEventArgs arg)
+        static void UpdatePollCompletion(object Cqe)
         {
-            CXPLAT_WORKER Worker = arg.UserToken as CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = Cqe as CXPLAT_WORKER;
             CxPlatUpdateExecutionContexts(Worker);
         }
 
-        static void ShutdownCompletion(object Cqe, SocketAsyncEventArgs arg)
+        static void ShutdownCompletion(object Cqe)
         {
-            CXPLAT_WORKER Worker = arg.UserToken as CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = Cqe as CXPLAT_WORKER;
             Worker.StoppedThread = true;
         }
 
-        static void WakeCompletion(object Cqe, SocketAsyncEventArgs arg)
+        static void WakeCompletion(object Cqe)
         {
 
         }
@@ -275,33 +290,14 @@ namespace AKNet.Udp2MSQuic.Common
             CXPLAT_WORKER Worker = Context.CxPlatContext;
             if (!BoolOk(InterlockedFetchAndSetBoolean(ref Worker.Running)))
             {
-                Worker.EventQ.Enqueue(Worker.WakeSqe);
+                OSPlatformFunc.CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
             }
         }
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
-            var Cqes = Worker.Cqes;
-            int CqeCount = 0;
-            while (Worker.EventQ.Count > 0)
-            {
-                SSocketAsyncEventArgs mArgs = null;
-                if (Worker.EventQ.TryDequeue(out mArgs))
-                {
-                    CqeCount++;
-                    Cqes.Add(mArgs);
-                }
-                else
-                {
-                    break;
-                }
-
-                if (CqeCount >= 16)
-                {
-                    break;
-                }
-            }
-
+            int CqeCount = OSPlatformFunc.CxPlatEventQDequeueEx(Worker.EventQ, (int)Worker.State.WaitTime);
+            NetLog.Assert(CqeCount == Worker.EventQ.events_count);
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
             {
@@ -311,10 +307,10 @@ namespace AKNet.Udp2MSQuic.Common
                 Worker.State.NoWorkCount = 0;
                 for (int i = 0; i < CqeCount; ++i)
                 {
-                    SSocketAsyncEventArgs Sqe = Cqes[i];
-                    Sqe.Do();
+                    CXPLAT_SQE Sqe = Worker.EventQ.events[i];
+                    Sqe.Completion(Sqe.Contex);
                 }
-                Cqes.Clear();
+                OSPlatformFunc.CxPlatEventQReturn(Worker.EventQ, CqeCount);
             }
         }
 
@@ -333,7 +329,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (QueueEvent)
             {
-                Worker.EventQ.Enqueue(Worker.UpdatePollSqe);
+                OSPlatformFunc.CxPlatEventQEnqueue(Worker.EventQ, Worker.UpdatePollSqe);
             }
         }
 
@@ -497,6 +493,13 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatRundownRelease(WorkerPool.Rundown);
         }
 
+        static CXPLAT_EVENTQ CxPlatWorkerPoolGetEventQ(CXPLAT_WORKER_POOL WorkerPool,int Index)
+        {
+            NetLog.Assert(WorkerPool != null);
+            NetLog.Assert(Index < WorkerPool.WorkerCount);
+            return WorkerPool.Workers[Index].EventQ;
+        }
+
         static void CxPlatProcessDynamicPoolAllocator(CXPLAT_POOL_EX<CXPLAT_WORKER> Pool)
         {
             for (int i = 0; i < DYNAMIC_POOL_PRUNE_COUNT; ++i)
@@ -522,4 +525,3 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 }
-#endif
