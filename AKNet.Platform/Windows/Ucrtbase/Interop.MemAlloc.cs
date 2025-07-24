@@ -1,6 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 namespace AKNet.Platform
@@ -12,62 +9,66 @@ namespace AKNet.Platform
         {
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* _aligned_malloc(nuint size, nuint alignment);
+            public static partial void* _aligned_malloc(nuint size, nuint alignment);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void _aligned_free(void* ptr);
+            public static partial void _aligned_free(void* ptr);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* _aligned_realloc(void* ptr, nuint size, nuint alignment);
+            public static partial void* _aligned_realloc(void* ptr, nuint size, nuint alignment);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* calloc(nuint num, nuint size);
+            public static partial void* calloc(nuint num, nuint size);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void free(void* ptr);
+            public static partial void free(void* ptr);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* malloc(int size);
+            public static partial void* malloc(int size);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* realloc(void* ptr, nuint new_size);
+            public static partial void* realloc(void* ptr, nuint new_size);
 
             [LibraryImport(Libraries.Ucrtbase)]
             [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
-            internal static partial void* memset(void* ptr, int c, int n);
+            public static partial void* memset(void* ptr, int c, int n);
+
+            [LibraryImport(Libraries.Ucrtbase)]
+            public static partial int memcmp(void* s1, void* s2, int n);
         }
 #else
         public static unsafe partial class Ucrtbase
         {
-            [DllImport(Libraries.Ucrtbase,CallingConvention = CallingConvention.Cdecl)]
+            [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
             internal static extern void* _aligned_malloc(nuint size, nuint alignment);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void _aligned_free(void* ptr);
+            public static extern void _aligned_free(void* ptr);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void* _aligned_realloc(void* ptr, nuint size, nuint alignment);
+            public static extern void* _aligned_realloc(void* ptr, nuint size, nuint alignment);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void* calloc(nuint num, nuint size);
+            public static extern void* calloc(nuint num, nuint size);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void free(void* ptr);
+            public static extern void free(void* ptr);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void* malloc(int size);
+            public static extern void* malloc(int size);
 
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void* realloc(void* ptr, nuint new_size);
+            public static extern void* realloc(void* ptr, nuint new_size);
             [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern void* memset(void* ptr, int c, int n);
-#pragma warning restore CS3016 // Arrays as attribute arguments is not CLS-compliant
+            public static extern void* memset(void* ptr, int c, int n);
+            [DllImport(Libraries.Ucrtbase, CallingConvention = CallingConvention.Cdecl)]
+            public static extern int memcmp(void* s1, void* s2, int n);
         }
 #endif
     }

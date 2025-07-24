@@ -2,6 +2,8 @@
 using AKNet.Common;
 using AKNet.Platform;
 using System;
+using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -290,6 +292,106 @@ namespace AKNet.Udp2MSQuic.Common
         {
             Interop.Kernel32.WaitForSingleObject(mThread.mThreadPtr, OSPlatformFunc.INFINITE);
         }
+
+        internal static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        {
+            if (Addr1.RawAddr->si_family != Addr2.RawAddr->si_family || Addr1.RawAddr->Ipv4.sin_port != Addr2.RawAddr->Ipv4.sin_port)
+            {
+                return false;
+            }
+            return QuicAddrCompareIp(Addr1, Addr2);
+        }
+
+        static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        {
+            if (Addr1.RawAddr->si_family == OSPlatformFunc.AF_INET)
+            {
+                return orBufferEqual(Addr1.RawAddr->Ipv4.sin_addr.GetSpan(), Addr2.RawAddr->Ipv4.sin_addr.GetSpan());
+            }
+            else
+            {
+                return orBufferEqual(Addr1.RawAddr->Ipv6.sin6_addr.GetSpan(), Addr2.RawAddr->Ipv6.sin6_addr.GetSpan());
+            }
+        }
+
+        static int QuicAddrGetPort(QUIC_ADDR Addr)
+        {
+            return Addr.RawAddr->Ipv4.sin_port;
+        }
+
+        static void QuicAddrSetPort(QUIC_ADDR Addr, int Port)
+        {
+            Addr.RawAddr->Ipv4.sin_port = (ushort)Port;
+        }
+
+        static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
+        {
+            if (Addr != null)
+            {
+                return Addr.Family;
+            }
+            else
+            {
+                return AddressFamily.Unspecified;
+            }
+        }
+
+        static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
+        {
+            if (Addr.Family == AddressFamily.Unspecified)
+            {
+                return true;
+            }
+            else
+            {
+                /*
+                public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
+                public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
+                public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
+                public static readonly IPAddress None = Broadcast;
+                public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
+                 */
+                return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any);
+            }
+        }
+
+        static bool QuicAddrIsValid(QUIC_ADDR Addr)
+        {
+            return Addr.Family == AddressFamily.InterNetwork ||
+                Addr.Family == AddressFamily.InterNetworkV6;
+        }
+
+        static void UPDATE_HASH(uint value, ref uint Hash)
+        {
+            Hash = (Hash << 5) - Hash + (value);
+        }
+
+        static uint QuicAddrHash(QUIC_ADDR Addr)
+        {
+            uint Hash = 5387;
+            if (Addr.RawAddr->si_family == OSPlatformFunc.AF_INET)
+            {
+                UPDATE_HASH((uint)(Addr.RawAddr->Ipv4.sin_port & 0xFF), ref Hash);
+                UPDATE_HASH((uint)Addr.RawAddr->Ipv4.sin_port >> 8, ref Hash);
+                ReadOnlySpan<byte> addr_bytes = Addr.RawAddr->Ipv4.sin_addr.GetSpan();
+                for (int i = 0; i < addr_bytes.Length; ++i)
+                {
+                    UPDATE_HASH(addr_bytes[i], ref Hash);
+                }
+            }
+            else
+            {
+                UPDATE_HASH((uint)(Addr.RawAddr->Ipv6.sin6_port & 0xFF), ref Hash);
+                UPDATE_HASH((uint)Addr.RawAddr->Ipv6.sin6_port >> 8, ref Hash);
+                ReadOnlySpan<byte> addr_bytes = Addr.RawAddr->Ipv6.sin6_addr.GetSpan();
+                for (int i = 0; i < addr_bytes.Length; ++i)
+                {
+                    UPDATE_HASH(addr_bytes[i], ref Hash);
+                }
+            }
+            return Hash;
+        }
+
     }
 }
 #endif

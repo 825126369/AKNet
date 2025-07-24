@@ -55,11 +55,27 @@ namespace AKNet.Platform
     public unsafe struct IN_ADDR
     {
         public fixed byte u[4];
+
+        public ReadOnlySpan<byte> GetSpan()
+        {
+            fixed (void* uPtr = u)
+            {
+                return new ReadOnlySpan<byte>(uPtr, 4);
+            }
+        }
     }
 
     public unsafe struct IN6_ADDR
     {
         public fixed byte u[16];
+
+        public ReadOnlySpan<byte> GetSpan()
+        {
+            fixed (void* uPtr = u)
+            {
+                return new ReadOnlySpan<byte>(uPtr, 16);
+            }
+        }
     }
 
     [StructLayout(LayoutKind.Explicit)]

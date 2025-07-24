@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Platform;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -522,7 +523,7 @@ namespace AKNet.Udp2MSQuic.Common
         byte MaterialLength;
     }
 
-    internal static partial class MSQuicFunc
+    internal static unsafe partial class MSQuicFunc
     {
         public const uint QUIC_STREAM_EVENT_START_COMPLETE = 0;
         public const uint QUIC_STREAM_EVENT_RECEIVE = 1;
@@ -577,85 +578,5 @@ namespace AKNet.Udp2MSQuic.Common
         public const byte QUIC_FLOW_BLOCKED_STREAM_ID_FLOW_CONTROL = 0x20;
         public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
         public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
-
-        internal static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
-        {
-            if (Addr1.Family != Addr2.Family || Addr1.nPort != Addr2.nPort)
-            {
-                return false;
-            }
-            return QuicAddrCompareIp(Addr1, Addr2);
-        }
-
-        static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
-        {
-            return Addr1.Ip.Equals(Addr2.Ip);
-        }
-
-        static int QuicAddrGetPort(QUIC_ADDR Addr)
-        {
-            return Addr.nPort;
-        }
-
-        static void QuicAddrSetPort(QUIC_ADDR Addr, int Port)
-        {
-            Addr.nPort = Port;
-        }
-
-        static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
-        {
-            if (Addr != null)
-            {
-                return Addr.Family;
-            }
-            else
-            {
-                return AddressFamily.Unspecified;
-            }
-        }
-
-
-        static void UPDATE_HASH(uint value, ref uint Hash)
-        {
-            Hash = (Hash << 5) - Hash + (value);
-        }
-
-        static uint QuicAddrHash(QUIC_ADDR Addr)
-        {
-            uint Hash = 5387;
-            UPDATE_HASH((uint)(Addr.nPort & 0xFF), ref Hash);
-            UPDATE_HASH((uint)Addr.nPort >> 8, ref Hash);
-            byte[] addr_bytes = Addr.Ip.GetAddressBytes();
-            for (int i = 0; i < addr_bytes.Length; ++i)
-            {
-                UPDATE_HASH(addr_bytes[i], ref Hash);
-            }
-            return Hash;
-        }
-
-        static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
-        {
-            if (Addr.Family == AddressFamily.Unspecified)
-            {
-                return true;
-            }
-            else
-            {
-                /*
-                public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
-                public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
-                public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
-                public static readonly IPAddress None = Broadcast;
-                public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
-                 */
-                return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any);
-            }
-        }
-
-        static bool QuicAddrIsValid(QUIC_ADDR Addr)
-        {
-            return Addr.Family == AddressFamily.InterNetwork ||
-                Addr.Family == AddressFamily.InterNetworkV6;
-        }
     }
 }
