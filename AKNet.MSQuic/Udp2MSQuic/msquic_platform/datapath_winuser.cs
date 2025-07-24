@@ -690,6 +690,7 @@ namespace AKNet.Udp2MSQuic.Common
                               out BytesReturned,
                               null,
                               null);
+
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
                         Status = QUIC_STATUS_INTERNAL_ERROR;
@@ -738,11 +739,11 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 Socket.RemoteAddress = Config.RemoteAddress;
             }
-
+            
             NewSocket = Socket;
             for (int i = 0; i < SocketCount; i++)
             {
-                CxPlatDataPathStartReceive(Socket.PerProcSockets[i], ref _,ref _,ref _);
+                CxPlatDataPathStartReceive(Socket.PerProcSockets[i], 0, 0, null);
                 Socket.PerProcSockets[i].IoStarted = true;
             }
             Status = QUIC_STATUS_SUCCESS;
@@ -814,6 +815,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 IoBlock.WsaControlBuf.buf = (byte*)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
                 IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
+
                 IoBlock.WsaMsgHdr.name = IoBlock._socketAddressPtr;
                 IoBlock.WsaMsgHdr.namelen = SocketAddressHelper.GetMaximumAddressSize();
                 IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
