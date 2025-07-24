@@ -27,7 +27,7 @@ namespace CopyrightProtectionTool
             mTemplateDic["$Web$"] = "https://github.com/825126369/AKNet";
             mTemplateDic["$Author$"] = "AKe";
             mTemplateDic["$CreateTime$"] = DateTime.Now.ToString();
-            mTemplateDic["$Description$"] = "这是一个 C# 的游戏网络库";
+            mTemplateDic["$Description$"] = "C#游戏网络库";
             mTemplateDic["$Copyright$"] = "MIT软件许可证";
             mTemplateDic["$HEAD$"] = Head;
             mTemplateDic["$END$"] = End;
