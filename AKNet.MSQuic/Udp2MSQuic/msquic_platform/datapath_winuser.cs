@@ -811,7 +811,7 @@ namespace AKNet.Udp2MSQuic.Common
             int Result = 0;
             int BytesRecv = 0;
             fixed (void* ControlBufPtr = IoBlock.ControlBuf)
-            fixed (void* WsaControlBufPtr = &IoBlock.WsaControlBuf)
+            fixed (WSABUF* WsaControlBufPtr = &IoBlock.WsaControlBuf)
             {
                 IoBlock.WsaControlBuf.buf = (byte*)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
                 IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
@@ -820,7 +820,7 @@ namespace AKNet.Udp2MSQuic.Common
                 IoBlock.WsaMsgHdr.namelen = SocketAddressHelper.GetMaximumAddressSize();
                 IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
                 IoBlock.WsaMsgHdr.dwBufferCount = 1;
-                IoBlock.WsaMsgHdr.Control.buf = (IntPtr)ControlBufPtr;
+                IoBlock.WsaMsgHdr.Control.buf = (byte*)ControlBufPtr;
                 IoBlock.WsaMsgHdr.Control.len = IoBlock.ControlBuf.Length;
                 IoBlock.WsaMsgHdr.dwFlags = 0;
 
