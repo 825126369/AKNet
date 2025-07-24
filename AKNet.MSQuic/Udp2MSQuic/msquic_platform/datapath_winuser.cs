@@ -3,7 +3,6 @@ using AKNet.Common;
 using AKNet.Platform;
 using AKNet.Platform.Socket;
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -813,10 +812,10 @@ namespace AKNet.Udp2MSQuic.Common
             fixed (void* ControlBufPtr = IoBlock.ControlBuf)
             fixed (WSABUF* WsaControlBufPtr = &IoBlock.WsaControlBuf)
             {
-                IoBlock.WsaControlBuf.buf = (byte*)IoBlock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
+                IoBlock.WsaControlBuf.buf = (byte*)IoBl_socketAddressPtrock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
                 IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
 
-                IoBlock.WsaMsgHdr.name = IoBlock._socketAddressPtr;
+                IoBlock.WsaMsgHdr.name = IoBlock.;
                 IoBlock.WsaMsgHdr.namelen = SocketAddressHelper.GetMaximumAddressSize();
                 IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
                 IoBlock.WsaMsgHdr.dwBufferCount = 1;
