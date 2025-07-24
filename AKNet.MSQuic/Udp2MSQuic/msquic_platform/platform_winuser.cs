@@ -4,6 +4,7 @@ using AKNet.Platform;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -326,14 +327,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
         {
-            if (Addr != null)
-            {
-                return Addr.Family;
-            }
-            else
-            {
-                return AddressFamily.Unspecified;
-            }
+            return (AddressFamily)Addr.RawAddr->si_family;
         }
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
@@ -359,6 +353,25 @@ namespace AKNet.Udp2MSQuic.Common
         {
             return Addr.Family == AddressFamily.InterNetwork ||
                 Addr.Family == AddressFamily.InterNetworkV6;
+        }
+
+        public static int QUIC_ADDR_V4_PORT_OFFSET()
+        {
+            return (int)Marshal.OffsetOf(typeof(SOCKADDR_IN), "sin_port");
+        }
+        public static int QUIC_ADDR_V4_IP_OFFSET()
+        {
+            return (int)Marshal.OffsetOf(typeof(SOCKADDR_IN), "sin_addr");
+        }
+
+        public static int QUIC_ADDR_V6_PORT_OFFSET()
+        {
+            return (int)Marshal.OffsetOf(typeof(SOCKADDR_IN6), "sin6_port");
+        }
+
+        public static int QUIC_ADDR_V6_IP_OFFSET()
+        {
+            return (int)Marshal.OffsetOf(typeof(SOCKADDR_IN6), "sin6_addr");
         }
 
         static void UPDATE_HASH(uint value, ref uint Hash)

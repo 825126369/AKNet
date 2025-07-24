@@ -475,11 +475,12 @@ namespace AKNet.Udp2MSQuic.Common
 
         public static int QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
         {
-            uint Key;
-            CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, out Key);
+            uint Key = 0;
+            int Offset = 0;
+            CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, out Key, out Offset);
             if (RemoteCid.Length != 0)
             {
-                Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, RemoteCid);
+                Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, Offset, RemoteCid.GetSpan());
             }
             return (int)Key;
         }

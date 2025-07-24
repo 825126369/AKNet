@@ -102,22 +102,17 @@ namespace AKNet.Udp2MSQuic.Common
 
         public int WriteTo(Span<byte> Buffer)
         {
-            byte[] temp = Ip.MapToIPv6().GetAddressBytes();
-            Buffer[0] = (byte)temp.Length;
-            temp.AsSpan().CopyTo(Buffer.Slice(1));
-            Buffer = Buffer.Slice(temp.Length + 1);
-            EndianBitConverter.SetBytes(Buffer, 0, (ushort)nPort);
-            return temp.Length + 1 + sizeof(ushort);
+            ReadOnlySpan<byte> mSpan = UnSafeTool.GetSpan(RawAddr);
+            mSpan.CopyTo(Buffer);
+            return mSpan.Length;
         }
 
         public void WriteFrom(ReadOnlySpan<byte> Buffer)
         {
-            int nIpLength = Buffer[0];
-            byte[] temp = Buffer.Slice(1, nIpLength).ToArray();
-            Ip = new IPAddress(temp);
-            Buffer = Buffer.Slice(temp.Length + 1);
-            nPort = EndianBitConverter.ToUInt16(Buffer, 0);
-            CheckFamilyError();
+            fixed (void* ptr = Buffer)
+            {
+                RawAddr = (SOCKADDR_INET*)ptr;
+            }
         }
 
         public QUIC_SSBuffer ToSSBuffer()

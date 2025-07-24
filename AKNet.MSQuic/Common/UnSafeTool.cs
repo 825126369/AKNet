@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Common
 {
@@ -15,5 +16,11 @@ namespace AKNet.Common
                 Buffer.MemoryCopy(pSrc, pDest, size, size);
             }
         }
+
+        public static ReadOnlySpan<byte> GetSpan<T>(T* source) where T : struct
+        {
+            return new ReadOnlySpan<byte>((void*)source, sizeof(T));
+        }
+
     }
 }
