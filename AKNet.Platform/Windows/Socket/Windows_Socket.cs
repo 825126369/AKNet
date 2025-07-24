@@ -1,5 +1,5 @@
 ﻿#if TARGET_WINDOWS
-using System.Runtime.CompilerServices;
+using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -109,6 +109,22 @@ namespace AKNet.Platform
     public struct RIO_CMSG_BUFFER
     {
         public long TotalLength;
+    }
+
+    public class CxPlatSocketHandle : SafeHandleMinusOneIsInvalid
+    {
+        public CxPlatSocketHandle() : base(true) { }
+        protected override bool ReleaseHandle()
+        {
+            return Interop.Kernel32.CloseHandle(handle);
+        }
+
+        public static implicit operator CxPlatSocketHandle(IntPtr mPtr)
+        {
+            CxPlatSocketHandle handle = new CxPlatSocketHandle();
+            handle.SetHandle(mPtr);
+            return handle;
+        }
     }
 
     public static unsafe partial class OSPlatformFunc

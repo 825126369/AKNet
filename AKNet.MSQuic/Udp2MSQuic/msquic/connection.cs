@@ -278,7 +278,7 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 
-    internal static partial class MSQuicFunc
+    internal static unsafe partial class MSQuicFunc
     {
         static void QuicConnValidate(QUIC_CONNECTION Connection)
         {
@@ -582,14 +582,14 @@ namespace AKNet.Udp2MSQuic.Common
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
                     Connection.ServerID[0] = CxPlatRandom.RandomByte();
-                    byte[] IP_Array = Packet.Route.LocalAddress.GetBytes();
+                    ReadOnlySpan<byte> IP_Array = Packet.Route.LocalAddress.GetBytes();
                     if (Packet.Route.LocalAddress.Family == AddressFamily.InterNetwork)
                     {
-                        Array.Copy(IP_Array, 0, Connection.ServerID, 1, 4);
+                        IP_Array.CopyTo(Connection.ServerID.AsSpan().Slice(1, 4));
                     }
                     else
                     {
-                        Array.Copy(IP_Array, 12, Connection.ServerID, 1, 4);
+                        IP_Array.Slice(12).CopyTo(Connection.ServerID.AsSpan().Slice(1, 4));
                     }
                 }
                 else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
@@ -1481,7 +1481,7 @@ namespace AKNet.Udp2MSQuic.Common
             UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
             UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
             UdpConfig.Flags = Connection.State.ShareBinding ? CXPLAT_SOCKET_FLAG_SHARE : 0;
-            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Ip.ScopeId : 0;
+            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.RawAddr->Ipv6.sin6_scope_id : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
             Status = QuicLibraryGetBinding(UdpConfig, out Path.Binding);
 

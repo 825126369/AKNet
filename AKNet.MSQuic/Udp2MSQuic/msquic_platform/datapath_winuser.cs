@@ -11,49 +11,37 @@ using System.Runtime.InteropServices;
 namespace AKNet.Udp2MSQuic.Common
 {
     using CXPLAT_CQE = OVERLAPPED_ENTRY;
+
     //一律强制转为IpV6地址
     internal unsafe class QUIC_ADDR
     {
-        public const int sizeof_QUIC_ADDR = 12;
-        public static readonly IPAddress IPAddressAnyMapToIPv6 = IPAddress.Any.MapToIPv6();
-
         public string ServerName;
-        private IPAddress dont_use_this_field_Ip;
-        public int nPort;
-        private IPEndPoint mEndPoint;
-        public SOCKADDR_INET RawAddr;
-        public int ScopeId;
+        public SOCKADDR_INET* RawAddr;
+        public IPEndPoint mEndPoint;
 
         public QUIC_ADDR()
         {
-            Ip = IPAddress.IPv6Any;
-            nPort = 0;
             CheckFamilyError();
         }
 
-        public QUIC_ADDR(IPAddress otherIp, int nPort)
+        public QUIC_ADDR(IPAddress otherIp, int nPort) : this(new IPEndPoint(otherIp, nPort))
         {
-            this.Ip = otherIp;
-            this.nPort = nPort;
-            CheckFamilyError();
+
         }
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
-            Ip = mIPEndPoint.Address;
-            nPort = mIPEndPoint.Port;
+            RawAddr = SocketAddressHelper.GetRawAddr(mIPEndPoint,out _);
             CheckFamilyError();
         }
 
-        public byte[] GetBytes()
+        public ReadOnlySpan<byte> GetBytes()
         {
-            return Ip.GetAddressBytes();
+            return new ReadOnlySpan<byte>(RawAddr->Ipv6.sin6_addr.u, 16);
         }
 
         public void SetIPEndPoint(IPEndPoint mIPEndPoint)
         {
-            this.Ip = mIPEndPoint.Address;
-            this.nPort = mIPEndPoint.Port;
             CheckFamilyError();
         }
 
@@ -61,7 +49,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             if (mEndPoint == null || mEndPoint.Address != Ip || mEndPoint.Port != nPort)
             {
-                mEndPoint = new IPEndPoint(Ip, nPort);
+                mEndPoint = SocketAddressHelper.RawAddrTo(RawAddr);
             }
             return mEndPoint;
         }
@@ -95,25 +83,8 @@ namespace AKNet.Udp2MSQuic.Common
             get
             {
                 CheckFamilyError();
-                return Ip.AddressFamily;
+                return (AddressFamily)RawAddr->si_family;
             }
-        }
-
-        public QUIC_ADDR MapToIPv6()
-        {
-            QUIC_ADDR OutAddr = new QUIC_ADDR();
-            OutAddr.nPort = nPort;
-            if (Ip.AddressFamily == AddressFamily.InterNetwork)
-            {
-                OutAddr.Ip = Ip.MapToIPv6();
-            }
-            else
-            {
-                OutAddr.Ip = Ip;
-            }
-
-            CheckFamilyError();
-            return OutAddr;
         }
 
         public void CopyFrom(QUIC_ADDR other)
@@ -158,27 +129,27 @@ namespace AKNet.Udp2MSQuic.Common
 
         public SOCKADDR_INET* GetRawAddr(out int addressLen)
         {
-            return SocketAddressHelper.GetRawAddr(GetIPEndPoint(), out addressLen);
+            addressLen = Marshal.SizeOf(RawAddr->Ipv6);
+            return RawAddr;
         }
 
         public void Reset()
         {
-            Ip = IPAddress.IPv6Any;
-            nPort = 0;
+            RawAddr = null;
             ServerName = string.Empty;
             CheckFamilyError();
         }
 
         public override string ToString()
         {
-            return $"{Ip}:{nPort}";
+            return GetIPEndPoint().ToString();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CheckFamilyError()
         {
 #if DEBUG
-            NetLog.Assert(dont_use_this_field_Ip.AddressFamily == AddressFamily.InterNetworkV6);
+            NetLog.Assert((AddressFamily)RawAddr->si_family == AddressFamily.InterNetworkV6);
 #endif
         }
     }
@@ -191,10 +162,10 @@ namespace AKNet.Udp2MSQuic.Common
         public long ReferenceCount;
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
-        public WSAMSG WsaMsgHdr;//这是消息头
-        public WSABUF WsaControlBuf;//这是实际数据
+        public WSAMSG WsaMsgHdr;            //这是消息头
+        public WSABUF WsaControlBuf;        //这是实际数据
         public byte[] ControlBuf = new byte[100];
-        public IntPtr _socketAddressPtr;//这是远程地址
+        public IntPtr _socketAddressPtr;    //这是远程地址
 
         public void Reset()
         {

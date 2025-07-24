@@ -63,7 +63,7 @@ namespace AKNet.Udp2MSQuic.Common
     {
         public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
-        public SafeHandle Socket;
+        public CxPlatSocketHandle Socket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         public bool bReceiveIOContexUsed = false;
