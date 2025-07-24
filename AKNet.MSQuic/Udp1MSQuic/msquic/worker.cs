@@ -16,7 +16,7 @@ namespace AKNet.Udp1MSQuic.Common
     {
         public readonly CXPLAT_EXECUTION_CONTEXT ExecutionContext = new CXPLAT_EXECUTION_CONTEXT();
         public QUIC_PARTITION Partition;
-        public CXPLAT_THREAD Thread;
+        public Thread Thread;
         public EventWaitHandle Ready = null;
         public EventWaitHandle Done = null;
 

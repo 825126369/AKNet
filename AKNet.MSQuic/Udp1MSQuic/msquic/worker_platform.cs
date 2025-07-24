@@ -1,4 +1,4 @@
-﻿#if NO_HAVE_CUSTOM_IOCP
+﻿
 using AKNet.Common;
 using System;
 using System.Collections.Concurrent;
@@ -152,7 +152,7 @@ namespace AKNet.Udp1MSQuic.Common
                 NetLog.Assert(IdealProcessor < CxPlatProcCount());
 
                 CXPLAT_WORKER Worker = WorkerPool.Workers[i];
-                if (!CxPlatWorkerPoolInitWorker(Worker, IdealProcessor, null, ThreadConfig))
+                if (!CxPlatWorkerPoolInitWorker(Worker, IdealProcessor, ThreadConfig))
                 {
                     goto Error;
                 }
@@ -209,7 +209,7 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
-        static bool CxPlatWorkerPoolInitWorker(CXPLAT_WORKER Worker, int IdealProcessor, CXPLAT_EVENTQ EventQ, CXPLAT_THREAD_CONFIG ThreadConfig)
+        static bool CxPlatWorkerPoolInitWorker(CXPLAT_WORKER Worker, int IdealProcessor, CXPLAT_THREAD_CONFIG ThreadConfig)
         {
             CxPlatListInitializeHead(Worker.DynamicPoolList);
             Worker.InitializedECLock = true;
@@ -522,4 +522,3 @@ namespace AKNet.Udp1MSQuic.Common
         }
     }
 }
-#endif

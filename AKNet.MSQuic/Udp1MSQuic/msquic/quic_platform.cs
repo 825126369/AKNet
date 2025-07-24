@@ -48,7 +48,7 @@ namespace AKNet.Udp1MSQuic.Common
         public uint Flags;
         public int IdealProcessor;
         public string Name;
-        public Action<object> Callback;
+        public ParameterizedThreadStart Callback;
         public object Context;
     }
 
