@@ -47,36 +47,9 @@ namespace AKNet.Udp2MSQuic.Common
         }
 
         public IPEndPoint GetIPEndPoint()
-        {
-            if (mEndPoint == null || mEndPoint.Address != Ip || mEndPoint.Port != nPort)
-            {
-                mEndPoint = SocketAddressHelper.RawAddrTo(RawAddr);
-            }
-            return mEndPoint;
-        }
-
-        public IPAddress Ip
-        {
-            get
-            {
-                return dont_use_this_field_Ip;
-            }
-
-            set
-            {
-                IPAddress tt = value;
-                if (tt.Equals(IPAddress.Any) || tt.Equals(IPAddressAnyMapToIPv6))
-                {
-                    tt = IPAddress.IPv6Any;
-                }
-                else if (tt.AddressFamily == AddressFamily.InterNetwork)
-                {
-                    tt = tt.MapToIPv6();
-                }
-
-                dont_use_this_field_Ip = tt;
-                CheckFamilyError();
-            }
+        { 
+            var mIpEndPoint = SocketAddressHelper.RawAddrTo(RawAddr);
+            return mIpEndPoint;
         }
 
         public AddressFamily Family

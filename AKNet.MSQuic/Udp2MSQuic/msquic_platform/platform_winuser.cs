@@ -332,20 +332,26 @@ namespace AKNet.Udp2MSQuic.Common
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
         {
-            if (Addr.Family == AddressFamily.Unspecified)
+            /*
+            public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
+            public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
+            public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
+            public static readonly IPAddress None = Broadcast;
+            public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
+             */
+            if (Addr.RawAddr->si_family == (ushort)AddressFamily.Unspecified)
             {
                 return true;
             }
+            else if (Addr.RawAddr->si_family == OSPlatformFunc.AF_INET)
+            {
+                IN_ADDR ZeroAddr = new IN_ADDR();
+                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv4.sin_addr, &ZeroAddr, sizeof(IN_ADDR)) == 0;
+            }
             else
             {
-                /*
-                public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
-                public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
-                public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
-                public static readonly IPAddress None = Broadcast;
-                public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
-                 */
-                return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any);
+                IN6_ADDR ZeroAddr = new IN6_ADDR();
+                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR)) == 0;
             }
         }
 
