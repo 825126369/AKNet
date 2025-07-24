@@ -12,7 +12,7 @@ namespace AKNet.Common
     {
         public NetServerMain()
         {
-            mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
+            mInterface = new AKNet.Udp1MSQuic.Server.QuicNetServerMain();
         }
 
         public NetServerMain(NetType nNetType) : base(nNetType)

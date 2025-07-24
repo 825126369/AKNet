@@ -10,7 +10,7 @@ namespace AKNet.Common
 {
     public enum NetType
     {
-        MSQuic1,
-        MSQuic2,
+        Udp1MSQuic,
+        Udp2MSQuic,
     }
 }

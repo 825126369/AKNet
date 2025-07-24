@@ -12,7 +12,7 @@ namespace AKNet.Common
     {
         public NetClientMain()
         {
-            mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
+            mInterface = new AKNet.Udp1MSQuic.Client.QuicNetClientMain();
         }
 
         public NetClientMain(NetType nNetType) :base(nNetType)
