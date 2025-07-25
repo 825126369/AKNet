@@ -224,7 +224,7 @@ namespace AKNet.Platform
 
         public static WSACMSGHDR* WSA_CMSG_NXTHDR(WSAMSG* msg, WSACMSGHDR* cmsg)
         {
-            if(cmsg == null)
+            if (cmsg == null)
             {
                 return WSA_CMSG_FIRSTHDR(msg);
             }
@@ -232,7 +232,7 @@ namespace AKNet.Platform
             {
                 byte* ptr2 = msg->Control.buf + msg->Control.len;
                 byte* ptr1 = (byte*)cmsg + cmsg->cmsg_len + sizeof(WSACMSGHDR);
-                if(ptr1 > ptr2)
+                if (ptr1 > ptr2)
                 {
                     return null;
                 }
@@ -241,7 +241,7 @@ namespace AKNet.Platform
                     return (WSACMSGHDR*)((byte*)cmsg + cmsg->cmsg_len);
                 }
             }
-                
+
         }
 
         public static void* WSA_CMSG_DATA(WSACMSGHDR* cmsg)
@@ -267,6 +267,11 @@ namespace AKNet.Platform
         public static int WSA_CMSGDATA_ALIGN(int length)
         {
             return (((length) + MAX_NATURAL_ALIGNMENT() - 1) & (~(MAX_NATURAL_ALIGNMENT() - 1)));
+        }
+
+        public static int RIO_CMSG_BASE_SIZE()
+        {
+            return WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
         }
 
         [StructLayout(LayoutKind.Sequential)]
