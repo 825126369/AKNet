@@ -339,6 +339,7 @@ namespace AKNet.Udp2MSQuic.Common
             public static readonly IPAddress None = Broadcast;
             public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
              */
+
             if (Addr.RawAddr->si_family == (ushort)AddressFamily.Unspecified)
             {
                 return true;
@@ -346,12 +347,12 @@ namespace AKNet.Udp2MSQuic.Common
             else if (Addr.RawAddr->si_family == OSPlatformFunc.AF_INET)
             {
                 IN_ADDR ZeroAddr = new IN_ADDR();
-                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv4.sin_addr, &ZeroAddr, sizeof(IN_ADDR)) == 0;
+                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv4.sin_addr, &ZeroAddr, sizeof(IN_ADDR));
             }
             else
             {
                 IN6_ADDR ZeroAddr = new IN6_ADDR();
-                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR)) == 0;
+                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR));
             }
         }
 

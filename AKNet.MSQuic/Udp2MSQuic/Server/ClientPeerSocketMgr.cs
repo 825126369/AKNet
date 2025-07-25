@@ -42,8 +42,7 @@ namespace AKNet.Udp2MSQuic.Server
             this.mQuicConnection.mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
             this.mQuicConnection.mOption.SendFinishFunc = SendFinishFunc;
             this.mQuicConnection.RequestReceiveStreamData();
-            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
-
+            this.mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
             this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 

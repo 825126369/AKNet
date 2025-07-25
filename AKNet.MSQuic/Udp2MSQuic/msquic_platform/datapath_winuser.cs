@@ -2,7 +2,6 @@
 
 using AKNet.Common;
 using AKNet.Platform;
-using AKNet.Platform.Socket;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -1038,7 +1037,6 @@ namespace AKNet.Udp2MSQuic.Common
 
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
-            IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
             IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
         }
 
@@ -1049,7 +1047,6 @@ namespace AKNet.Udp2MSQuic.Common
                 SendData.BufferPool.CxPlatPoolFree(SendData.WsaBuffers[i]);
             }
             SendData.WsaBuffers.Clear();
-            SendData.Sqe.Completed -= DataPathProcessCqe;
             SendData.SendDataPool.CxPlatPoolFree(SendData);
         }
 
@@ -1129,7 +1126,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 WSAMhdr.name = null;
                 WSAMhdr.namelen = 0;
-            } 
+            }
             else
             {
                 int addressLen = 0;
@@ -1143,7 +1140,7 @@ namespace AKNet.Udp2MSQuic.Common
             WSAMhdr.Control.len = 0;
 
             WSACMSGHDR* CMsg = null;
-            if (LocalAddress.si_family == OSPlatformFunc.AF_INET)
+            if (LocalAddress.Family == AddressFamily.InterNetwork)
             {
                 if (!Socket.HasFixedRemoteAddress)
                 {
@@ -1153,8 +1150,8 @@ namespace AKNet.Udp2MSQuic.Common
                     CMsg->cmsg_type = OSPlatformFunc.IP_PKTINFO;
                     CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(IN_PKTINFO));
                     IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
-                    PktInfo->ipi_ifindex = LocalAddress.Ipv6.sin6_scope_id;
-                    PktInfo->ipi_addr = LocalAddress.Ipv4.sin_addr;
+                    PktInfo->ipi_ifindex = LocalAddress.RawAddr->Ipv6.sin6_scope_id;
+                    PktInfo->ipi_addr = LocalAddress.RawAddr->Ipv4.sin_addr;
                 }
 
                 if (BoolOk(Socket.Datapath.Features & (ulong)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_SEND_DSCP))
