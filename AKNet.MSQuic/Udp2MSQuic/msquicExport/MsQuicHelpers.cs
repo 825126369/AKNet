@@ -29,11 +29,6 @@ namespace AKNet.Udp2MSQuic.Common
             return false;
         }
 
-        internal static IPEndPoint QuicAddrToIPEndPoint(QUIC_ADDR quicAddress, AddressFamily addressFamilyOverride = AddressFamily.Unspecified)
-        {
-            return new IPEndPoint(quicAddress.Ip, quicAddress.nPort);
-        }
-
         public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
         {
             QUIC_ADDR result = new QUIC_ADDR(ipEndPoint);

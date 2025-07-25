@@ -225,12 +225,6 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 case QUIC_PARAM_CONN_LOCAL_ADDRESS:
                     {
-                        if (Buffer.Length != QUIC_ADDR.sizeof_QUIC_ADDR)
-                        {
-                            Status = QUIC_STATUS_INVALID_PARAMETER;
-                            break;
-                        }
-
                         if (Connection.State.ClosedLocally || QuicConnIsServer(Connection))
                         {
                             Status = QUIC_STATUS_INVALID_STATE;

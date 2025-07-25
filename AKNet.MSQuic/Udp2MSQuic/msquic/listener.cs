@@ -208,7 +208,7 @@ namespace AKNet.Udp2MSQuic.Common
             bool PortUnspecified = false;
             if (LocalAddress != null)
             {
-                Listener.LocalAddress.CopyFrom(LocalAddress);
+                Listener.LocalAddress.WriteFrom(LocalAddress);
                 Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
                 PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
             }

@@ -70,6 +70,15 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        public ushort nPort
+        {
+            get
+            {
+                CheckFamilyError();
+                return RawAddr->Ipv4.sin_port;
+            }
+        }
+
         public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)
         {
             QUIC_ADDR mm = new QUIC_ADDR();
@@ -142,8 +151,8 @@ namespace AKNet.Udp2MSQuic.Common
         public long ReferenceCount;
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
-        public WSAMSG WsaMsgHdr;            //这是消息头
-        public WSABUF WsaControlBuf;        //这是实际数据
+        public readonly WSAMSG* WsaMsgHdr;            //这是消息头
+        public readonly WSABUF* WsaControlBuf;        //这是实际数据
         public readonly Memory<byte> ControlBuf = new byte[
                 OSPlatformFunc.RIO_CMSG_BASE_SIZE() +
                 OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
@@ -151,7 +160,15 @@ namespace AKNet.Udp2MSQuic.Common
                 OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int)) +           // IP_TOS, or IP_ECN if RECV_DSCP isn't supported
                 OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int))             // IP_HOP_LIMIT
             ];
-        public IntPtr _socketAddressPtr;    //这是远程地址
+
+        public byte[] mCqeBuffer = null;
+        public Memory<byte> mCqeMemory = null;
+
+        public DATAPATH_RX_IO_BLOCK()
+        {
+            WsaMsgHdr = (WSAMSG*)Marshal.AllocHGlobal(sizeof(WSAMSG));
+            WsaControlBuf = (WSABUF*)Marshal.AllocHGlobal(sizeof(WSABUF));
+        }
 
         public void Reset()
         {
@@ -766,31 +783,29 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatStartDatapathIo(SocketProc, IoBlock.Sqe, IoBlock, CxPlatIoRecvEventComplete);
             int Result = 0;
             int BytesRecv = 0;
-            fixed (WSABUF* WsaControlBufPtr = &IoBlock.WsaControlBuf)
+
+            IoBlock.WsaControlBuf->buf = (byte*)IoBlock.mCqeMemory.Pin().Pointer;
+            IoBlock.WsaControlBuf->len = SocketProc.Parent.RecvBufLen;
+            IoBlock.WsaMsgHdr->name = IoBlock.Route.RemoteAddress.RawAddr;
+            IoBlock.WsaMsgHdr->namelen = Marshal.SizeOf<SOCKADDR_INET>();
+            IoBlock.WsaMsgHdr->lpBuffers = IoBlock.WsaControlBuf;
+            IoBlock.WsaMsgHdr->dwBufferCount = 1;
+            IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBuf.Pin().Pointer;
+            IoBlock.WsaMsgHdr->Control.len = IoBlock.ControlBuf.Length;
+            IoBlock.WsaMsgHdr->dwFlags = 0;
+
+            BytesRecv = 0;
+            WSARecvMsg WSARecvMsg = DynamicWinsockMethods.GetWSARecvMsgDelegate(SocketProc.Socket);
+            fixed (void* ptr2 = &IoBlock.WsaMsgHdr)
             {
-                IoBlock.WsaControlBuf.buf = IoBlock;
-                IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
-
-                IoBlock.WsaMsgHdr.name = IoBlock.Route.RemoteAddress.RawAddr;
-                IoBlock.WsaMsgHdr.namelen = Marshal.SizeOf<SOCKADDR_INET>();
-                IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
-                IoBlock.WsaMsgHdr.dwBufferCount = 1;
-                IoBlock.WsaMsgHdr.Control.buf = (byte*)IoBlock.ControlBuf.Pin().Pointer;
-                IoBlock.WsaMsgHdr.Control.len = IoBlock.ControlBuf.Length;
-                IoBlock.WsaMsgHdr.dwFlags = 0;
-
-                BytesRecv = 0;
-                WSARecvMsg WSARecvMsg = DynamicWinsockMethods.GetWSARecvMsgDelegate(SocketProc.Socket);
-                fixed (void* ptr2 = &IoBlock.WsaMsgHdr)
-                {
-                    Result = WSARecvMsg(
-                              SocketProc.Socket,
-                              (IntPtr)ptr2,
-                              out BytesRecv,
-                              &IoBlock.Sqe.sqePtr->Overlapped,
-                              IntPtr.Zero);
-                }
+                Result = WSARecvMsg(
+                          SocketProc.Socket,
+                          (IntPtr)ptr2,
+                          out BytesRecv,
+                          &IoBlock.Sqe.sqePtr->Overlapped,
+                          IntPtr.Zero);
             }
+
 
             if (Result == OSPlatformFunc.SOCKET_ERROR)
             {
@@ -839,17 +854,15 @@ namespace AKNet.Udp2MSQuic.Common
                 return false;
             }
 
-            IntPtr RemoteAddress = IoBlock._socketAddressPtr;
-            IoBlock.Route.LocalAddress = new QUIC_ADDR();
-            QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
-            QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
+            SOCKADDR_INET* LocalRawAddr = IoBlock.Route.LocalAddress.RawAddr;
+            SOCKADDR_INET* RemoteAddr = IoBlock.Route.RemoteAddress.RawAddr;
             IoBlock.Route.Queue = SocketProc;
 
             if (IsUnreachableErrorCode(IoResult))
             {
                 if (!SocketProc.Parent.PcpBinding)
                 {
-                    SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
+                    SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, IoBlock.Route.RemoteAddress);
                 }
             }
             else if (IoResult == OSPlatformFunc.ERROR_MORE_DATA ||
@@ -878,28 +891,23 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (SocketProc.Parent.UseRio)
                 {
-                    RIO_CMSG_BUFFER RioRcvMsg = (RIO_CMSG_BUFFER)IoBlock.ControlBuf;
-                    IoBlock.WsaMsgHdr.Control.buf = IoBlock.ControlBuf + RIO_CMSG_BASE_SIZE;
-                    IoBlock.WsaMsgHdr.Control.len = RioRcvMsg.TotalLength - RIO_CMSG_BASE_SIZE;
+                    RIO_CMSG_BUFFER* RioRcvMsg = (RIO_CMSG_BUFFER*)IoBlock.ControlBuf.Pin().Pointer;
+                    IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBuf.Pin().Pointer + OSPlatformFunc.RIO_CMSG_BASE_SIZE();
+                    IoBlock.WsaMsgHdr->Control.len = (int)RioRcvMsg->TotalLength - OSPlatformFunc.RIO_CMSG_BASE_SIZE();
                 }
 
-                for (WSACMSGHDR* CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(&IoBlock.WsaMsgHdr); CMsg != null;
-                    CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(&IoBlock.WsaMsgHdr, CMsg))
+                for (WSACMSGHDR* CMsg = OSPlatformFunc.WSA_CMSG_FIRSTHDR(IoBlock.WsaMsgHdr); CMsg != null;
+                    CMsg = OSPlatformFunc.WSA_CMSG_NXTHDR(IoBlock.WsaMsgHdr, CMsg))
                 {
                     if (CMsg->cmsg_level == OSPlatformFunc.IPPROTO_IPV6)
                     {
                         if (CMsg->cmsg_type == OSPlatformFunc.IPV6_PKTINFO)
                         {
                             IN6_PKTINFO* PktInfo6 = (IN6_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
-
-                            SOCKADDR_INET mAddr = new SOCKADDR_INET();
-                            mAddr.Ipv6.sin6_family = OSPlatformFunc.AF_INET6;
-                            mAddr.Ipv6.sin6_addr = PktInfo6->ipi6_addr;
-                            mAddr.Ipv6.sin6_port = (ushort)SocketProc.Parent.LocalAddress.nPort;
-                            mAddr.Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
-
-                            var mLocalIpEndPoint = SocketAddressHelper.RawAddrTo(mAddr);
-                            LocalAddr.SetIPEndPoint(mLocalIpEndPoint);
+                            LocalRawAddr->Ipv6.sin6_family = OSPlatformFunc.AF_INET6;
+                            LocalRawAddr->Ipv6.sin6_addr = PktInfo6->ipi6_addr;
+                            LocalRawAddr->Ipv6.sin6_port = (ushort)SocketProc.Parent.LocalAddress.nPort;
+                            LocalRawAddr->Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
                             FoundLocalAddr = true;
                         }
                         else if (CMsg->cmsg_type == OSPlatformFunc.IPV6_TCLASS)
@@ -984,7 +992,7 @@ namespace AKNet.Udp2MSQuic.Common
                     }
 
                     Datagram.Next = null;
-                    Datagram.Buffer.Buffer = IoBlock.WsaControlBuf;
+                    Datagram.Buffer.Buffer = IoBlock.mCqeBuffer;
                     Datagram.Buffer.Offset = 0;
                     Datagram.Buffer.Length = MessageLength;
                     Datagram.Route = IoBlock.Route;
@@ -1211,8 +1219,8 @@ namespace AKNet.Udp2MSQuic.Common
                     CMsg->cmsg_type = OSPlatformFunc.IPV6_PKTINFO;
                     CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
                     IN6_PKTINFO* PktInfo6 = (IN6_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
-                    PktInfo6->ipi6_ifindex = LocalAddress.Ipv6.sin6_scope_id;
-                    PktInfo6->ipi6_addr = LocalAddress.Ipv6.sin6_addr;
+                    PktInfo6->ipi6_ifindex = LocalAddress.RawAddr->Ipv6.sin6_scope_id;
+                    PktInfo6->ipi6_addr = LocalAddress.RawAddr->Ipv6.sin6_addr;
                 }
 
                 if (BoolOk(Socket.Datapath.Features & (ulong)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_SEND_DSCP))
@@ -1342,22 +1350,19 @@ namespace AKNet.Udp2MSQuic.Common
                 IoBlock.ReferenceCount = 0;
                 IoBlock.SocketProc = SocketProc;
 
-                if (IoBlock.ReceiveArgs == null)
+                if (IoBlock.mCqeMemory.IsEmpty)
                 {
-                    IoBlock.ReceiveArgs = new SSocketAsyncEventArgs();
-                    IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
-                    byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
-                    IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
+                    if (BoolOk(SocketProc.Parent.Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING))
+                    {
+                        IoBlock.mCqeBuffer = new byte[MAX_URO_PAYLOAD_LENGTH];
+                    }
+                    else
+                    {
+                        IoBlock.mCqeBuffer = new byte[MAX_RECV_PAYLOAD_LENGTH];
+                    }
+                    
+                    IoBlock.mCqeMemory = IoBlock.mCqeBuffer;
                 }
-
-                int size = SocketAddressHelper.GetMaximumAddressSize(AddressFamily.InterNetworkV6);
-                if (IoBlock._socketAddressPtr == IntPtr.Zero)
-                {
-                    IoBlock._socketAddressPtr = (IntPtr)NativeMemory.Alloc((uint)(_socketAddress!.Size + sizeof(IntPtr)));
-                }
-                *((int*)_socketAddressPtr) = size;
-
-                IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
             }
             return IoBlock;
         }

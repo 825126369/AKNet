@@ -1,11 +1,11 @@
 ﻿using AKNet.Common;
 using AKNet.Platform;
-using System;
 using System.Collections.Generic;
 using System.Threading;
 
 namespace AKNet.Udp2MSQuic.Common
 {
+    using CXPLAT_CQE = OVERLAPPED_ENTRY;
     internal class CXPLAT_WORKER : CXPLAT_POOL_Interface<CXPLAT_WORKER>
     {
         public CXPLAT_POOL<CXPLAT_WORKER> mPool;
@@ -268,19 +268,19 @@ namespace AKNet.Udp2MSQuic.Common
             return true;
         }
 
-        static void UpdatePollCompletion(object Cqe)
+        static void UpdatePollCompletion(CXPLAT_CQE Cqe)
         {
-            CXPLAT_WORKER Worker = Cqe as CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = OSPlatformFunc.CxPlatCqeGetSqe(Cqe).Contex as CXPLAT_WORKER;
             CxPlatUpdateExecutionContexts(Worker);
         }
 
-        static void ShutdownCompletion(object Cqe)
+        static void ShutdownCompletion(CXPLAT_CQE Cqe)
         {
-            CXPLAT_WORKER Worker = Cqe as CXPLAT_WORKER;
+            CXPLAT_WORKER Worker = OSPlatformFunc.CxPlatCqeGetSqe(Cqe).Contex as CXPLAT_WORKER;
             Worker.StoppedThread = true;
         }
 
-        static void WakeCompletion(object Cqe)
+        static void WakeCompletion(CXPLAT_CQE Cqe)
         {
 
         }
@@ -301,14 +301,15 @@ namespace AKNet.Udp2MSQuic.Common
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
             {
+
 #if DEBUG // Debug statistics
                 Worker.CqeCount += CqeCount;
 #endif
                 Worker.State.NoWorkCount = 0;
                 for (int i = 0; i < CqeCount; ++i)
                 {
-                    CXPLAT_SQE Sqe = Worker.EventQ.events[i];
-                    Sqe.Completion(Sqe);
+                    CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Worker.EventQ.events[i]);
+                    Sqe.Completion(Worker.EventQ.events[i]);
                 }
                 OSPlatformFunc.CxPlatEventQReturn(Worker.EventQ, CqeCount);
             }

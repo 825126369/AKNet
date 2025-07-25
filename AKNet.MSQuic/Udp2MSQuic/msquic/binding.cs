@@ -682,7 +682,7 @@ namespace AKNet.Udp2MSQuic.Common
             QUIC_CID mNewCID = new QUIC_CID(Packet.SourceCid.Data.Length);
             Packet.SourceCid.Data.CopyTo(mNewCID.Data);
             mNewCID.RemoteAddress = new QUIC_ADDR();
-            mNewCID.RemoteAddress.CopyFrom(Packet.SourceCid.RemoteAddress);
+            mNewCID.RemoteAddress.WriteFrom(Packet.SourceCid.RemoteAddress);
             
             if (!QuicLookupAddRemoteHash(
                     Binding.Lookup,

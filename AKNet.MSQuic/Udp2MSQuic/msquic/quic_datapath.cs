@@ -112,8 +112,8 @@ namespace AKNet.Udp2MSQuic.Common
         public void CopyFrom(CXPLAT_ROUTE other)
         {
             this.Queue = other.Queue;
-            this.RemoteAddress.CopyFrom(other.RemoteAddress);
-            this.LocalAddress.CopyFrom(other.LocalAddress);
+            this.RemoteAddress.WriteFrom(other.RemoteAddress);
+            this.LocalAddress.WriteFrom(other.LocalAddress);
             DatapathType = other.DatapathType;
             State = other.State;
         }

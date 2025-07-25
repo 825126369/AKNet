@@ -36,8 +36,7 @@ namespace AKNet.Platform
     public class CXPLAT_EVENTQ
     {
         internal IntPtr Queue;
-        internal readonly CXPLAT_CQE[] events_inner = new CXPLAT_CQE[13];
-        public readonly CXPLAT_SQE[] events = new CXPLAT_SQE[13];
+        public readonly CXPLAT_CQE[] events = new CXPLAT_CQE[13];
         public int events_count = 0;
     }
 
@@ -97,29 +96,27 @@ namespace AKNet.Platform
 
         public static int CxPlatEventQDequeueEx(CXPLAT_EVENTQ queue, int wait_time)
         {
-            fixed (CXPLAT_CQE* eventPtr = queue.events_inner)
+            fixed (CXPLAT_CQE* eventPtr = queue.events)
             {
                 int out_count = 0;
-                if (!Interop.Kernel32.GetQueuedCompletionStatusEx(queue.Queue, eventPtr, queue.events_inner.Length, out out_count, wait_time, false))
+                if (!Interop.Kernel32.GetQueuedCompletionStatusEx(queue.Queue, eventPtr, queue.events.Length, out out_count, wait_time, false))
                 {
                     return 0;
                 }
 
                 NetLog.Assert(out_count != 0);
-                NetLog.Assert(queue.events_inner[0].lpOverlapped != null || out_count == 1);
+                NetLog.Assert(queue.events[0].lpOverlapped != null || out_count == 1);
 #if DEBUG
-                if (queue.events_inner[0].lpOverlapped != null)
+                if (queue.events[0].lpOverlapped != null)
                 {
                     for (int i = 0; i < out_count; ++i)
                     {
-                        CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(
-                            queue.events_inner[i].lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
+                        CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(queue.events[i].lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
                         data->IsQueued = true;
-                        queue.events[i] = data->parent;
                     }
                 }
 #endif
-                return queue.events_inner[0].lpOverlapped == null ? 0 : out_count;
+                return queue.events[0].lpOverlapped == null ? 0 : out_count;
             }
         }
 

@@ -24,15 +24,6 @@ namespace AKNet.Udp2MSQuic.Common
         public CryptoMgr(Config mConfig)
         {
             this.mConfig = mConfig;
-            ECryptoType nECryptoType = mConfig.nECryptoType;
-            string password1 = mConfig.CryptoPasswrod1;
-            string password2 = mConfig.CryptoPasswrod2;
-
-            ////Test
-            //nECryptoType = ECryptoType.Xor;
-            //password1 = "2024/11/23-0208";
-            //password2 = "2026/11/23-0208";
-
             mNetStreamEncryption = new NetStreamEncryption();
         }
 
