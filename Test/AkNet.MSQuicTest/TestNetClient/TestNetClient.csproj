@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\AKNet.MSQuic\AKNet.MSQuic.csproj" />
 	<ProjectReference Include="..\..\..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
+	<ProjectReference Include="..\..\TestCommon\TestCommon.csproj" />
   </ItemGroup>
 
 </Project>

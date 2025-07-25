@@ -578,7 +578,16 @@ namespace AKNet.Udp1MSQuic.Common
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;
             CxPlatSendDataFinalizeSendBuffer(SendData);
-            CxPlatSocketSendEnqueue(Route, SendData);
+            SendData.MappedRemoteAddress = Route.RemoteAddress;
+
+            if (!BoolOk(SendData.SendFlags & CXPLAT_SEND_FLAGS_MAX_THROUGHPUT))
+            {
+                CxPlatSocketSendInline(Route.LocalAddress, SendData);
+            }
+            else
+            {
+                CxPlatSocketSendEnqueue(Route, SendData);
+            }
         }
 
         static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)

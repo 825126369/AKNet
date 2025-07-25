@@ -716,7 +716,7 @@ namespace AKNet.Udp1MSQuic.Common
                 ErrorCode == SocketError.ConnectionReset; //10054
         }
 
-        static int CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
+        static int CxPlatSocketSendInline(QUIC_ADDR LocalAddress, CXPLAT_SEND_DATA SendData)
         {
             IList<ArraySegment<byte>> mList = SendData.Sqe.BufferList;
             mList.Clear();
@@ -728,21 +728,21 @@ namespace AKNet.Udp1MSQuic.Common
 
 
             //NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
+            //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
+            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
             SendData.Sqe.BufferList = mList;
-            CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe);
+            SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
             return 0;
         }
 
-        static int CxPlatSocketEnqueueSqe(CXPLAT_SOCKET_PROC SocketProc, SocketAsyncEventArgs arg)
+        static void CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
         {
-            NetLog.Assert(!SocketProc.Uninitialized);
-
-            //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
-            SocketProc.Socket.SendToAsync(arg);
-            return QUIC_STATUS_SUCCESS;
+            SendData.LocalAddress = Route.LocalAddress;
+            SendData.Sqe.Completed += DataPathProcessCqe3;
+            SendData.SocketProc.DatapathProc.EventQ.Enqueue(SendData.Sqe);
         }
 
         static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
@@ -844,6 +844,14 @@ namespace AKNet.Udp1MSQuic.Common
             arg.Completed -= DataPathProcessCqe;
             arg.Completed += DataPathProcessCqe2;
             mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
+        }
+
+        static void DataPathProcessCqe3(object Cqe, SocketAsyncEventArgs arg)
+        {
+            CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
+            arg.Completed -= DataPathProcessCqe3;
+            arg.Completed += DataPathProcessCqe2;
+            CxPlatSocketSendInline(SendData.LocalAddress, SendData);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)

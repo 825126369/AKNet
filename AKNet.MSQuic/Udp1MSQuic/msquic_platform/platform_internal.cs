@@ -1,5 +1,6 @@
 ﻿using AKNet.Platform;
 using System;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 
 namespace AKNet.Udp1MSQuic.Common
@@ -34,7 +35,7 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_POOL<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL<DATAPATH_RX_PACKET>();
-        public CXPLAT_EVENTQ EventQ;
+        public ConcurrentQueue<SocketAsyncEventArgs> EventQ;
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON

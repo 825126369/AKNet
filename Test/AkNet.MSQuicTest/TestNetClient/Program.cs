@@ -1,5 +1,4 @@
 ﻿using TestCommon;
-using System.Net.WebSockets;
 
 namespace TestNetClient
 {
