@@ -250,9 +250,15 @@ namespace AKNet.Udp2MSQuic.Common
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
         public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
+        public WSABUF* WsaBuffersInner;
         public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
+
+        //// IP_PKTINFO + IP_ECN or IP_TOS +  UDP_SEND_MSG_SIZE
+        public Memory<byte> CtrlBuf = new byte
+            [OSPlatformFunc.RIO_CMSG_BASE_SIZE() + OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +
+                OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int)) + OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int))];
 
         public CXPLAT_SQE Sqe = null;
         public CXPLAT_SEND_DATA()

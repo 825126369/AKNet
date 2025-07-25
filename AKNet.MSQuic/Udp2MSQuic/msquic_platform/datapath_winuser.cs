@@ -134,7 +134,7 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 
-    internal class DATAPATH_RX_IO_BLOCK
+    internal unsafe class DATAPATH_RX_IO_BLOCK
     {
         public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
         public CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = null;
@@ -144,7 +144,13 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
         public WSAMSG WsaMsgHdr;            //这是消息头
         public WSABUF WsaControlBuf;        //这是实际数据
-        public byte[] ControlBuf = new byte[100];
+        public readonly Memory<byte> ControlBuf = new byte[
+                OSPlatformFunc.RIO_CMSG_BASE_SIZE() +
+                OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
+                OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int)) +         // UDP_COALESCED_INFO
+                OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int)) +           // IP_TOS, or IP_ECN if RECV_DSCP isn't supported
+                OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int))             // IP_HOP_LIMIT
+            ];
         public IntPtr _socketAddressPtr;    //这是远程地址
 
         public void Reset()
@@ -760,17 +766,16 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatStartDatapathIo(SocketProc, IoBlock.Sqe, IoBlock, CxPlatIoRecvEventComplete);
             int Result = 0;
             int BytesRecv = 0;
-            fixed (void* ControlBufPtr = IoBlock.ControlBuf)
             fixed (WSABUF* WsaControlBufPtr = &IoBlock.WsaControlBuf)
             {
-                IoBlock.WsaControlBuf.buf = (byte*)IoBl_socketAddressPtrock.CXPLAT_CONTAINING_RECORD.Data.Buffer.GetBufferPtr();
+                IoBlock.WsaControlBuf.buf = IoBlock;
                 IoBlock.WsaControlBuf.len = SocketProc.Parent.RecvBufLen;
 
-                IoBlock.WsaMsgHdr.name = IoBlock.;
-                IoBlock.WsaMsgHdr.namelen = SocketAddressHelper.GetMaximumAddressSize();
+                IoBlock.WsaMsgHdr.name = IoBlock.Route.RemoteAddress.RawAddr;
+                IoBlock.WsaMsgHdr.namelen = Marshal.SizeOf<SOCKADDR_INET>();
                 IoBlock.WsaMsgHdr.lpBuffers = WsaControlBufPtr;
                 IoBlock.WsaMsgHdr.dwBufferCount = 1;
-                IoBlock.WsaMsgHdr.Control.buf = (byte*)ControlBufPtr;
+                IoBlock.WsaMsgHdr.Control.buf = (byte*)IoBlock.ControlBuf.Pin().Pointer;
                 IoBlock.WsaMsgHdr.Control.len = IoBlock.ControlBuf.Length;
                 IoBlock.WsaMsgHdr.dwFlags = 0;
 
@@ -1134,9 +1139,24 @@ namespace AKNet.Udp2MSQuic.Common
                 WSAMhdr.namelen = addressLen;
             }
 
-            WSAMhdr.lpBuffers = SendData.WsaBuffers;
-            WSAMhdr.dwBufferCount = SendData.WsaBufferCount;
-            WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE + SendData.CtrlBuf;
+            ///这个自己加的代码，给lpBuffers 赋值
+            if(SendData.WsaBuffersInner == null)
+            {
+                SendData.WsaBuffersInner = (WSABUF*)OSPlatformFunc.CxPlatAlloc(sizeof(WSABUF) * CXPLAT_MAX_BATCH_SEND);
+            }
+
+            for(int i = 0; i < SendData.WsaBuffers.Count; i++)
+            {
+                fixed (byte* bufPtr = SendData.WsaBuffers[i].Buffer)
+                {
+                    SendData.WsaBuffersInner[i].buf = bufPtr;
+                    SendData.WsaBuffersInner[i].len = SendData.WsaBuffers[i].Buffer.Length;
+                }
+            }
+
+            WSAMhdr.lpBuffers = SendData.WsaBuffersInner;
+            WSAMhdr.dwBufferCount = SendData.WsaBuffers.Count;
+            WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE() + (byte*)SendData.CtrlBuf.Pin().Pointer;
             WSAMhdr.Control.len = 0;
 
             WSACMSGHDR* CMsg = null;
@@ -1233,10 +1253,7 @@ namespace AKNet.Udp2MSQuic.Common
                 CMsg->cmsg_len = OSPlatformFunc.WSA_CMSG_LEN(sizeof(int));
                 *(int*)OSPlatformFunc.WSA_CMSG_DATA(CMsg) = SendData.SegmentSize;
             }
-
-            //
-            // Windows' networking stack doesn't like a non-NULL Control.buf when len is 0.
-            //
+            
             if (WSAMhdr.Control.len == 0)
             {
                 WSAMhdr.Control.buf = null;
