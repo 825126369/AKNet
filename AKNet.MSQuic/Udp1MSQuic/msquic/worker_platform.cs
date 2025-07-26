@@ -175,7 +175,8 @@ namespace AKNet.Udp1MSQuic.Common
             if (Worker.InitializedThread)
             {
                 Worker.StoppingThread = true;
-                Worker.EventQ.Append(Worker.ShutdownSqe);
+                CxPlatWorkerAddNetEvent(Worker, Worker.ShutdownSqe);
+
                 CxPlatThreadWait(Worker.Thread);
                 CxPlatThreadDelete(Worker.Thread);
 #if DEBUG
@@ -266,7 +267,7 @@ namespace AKNet.Udp1MSQuic.Common
             CXPLAT_WORKER Worker = Context.CxPlatContext;
             if (!BoolOk(InterlockedFetchAndSetBoolean(ref Worker.Running)))
             {
-                Worker.EventQ.Enqueue(Worker.WakeSqe);
+                CxPlatWorkerAddNetEvent(Worker, Worker.WakeSqe);
             }
         }
 
@@ -285,7 +286,7 @@ namespace AKNet.Udp1MSQuic.Common
 
             if (QueueEvent)
             {
-                Worker.EventQ.Enqueue(Worker.UpdatePollSqe);
+                CxPlatWorkerAddNetEvent(Worker, Worker.UpdatePollSqe);
             }
         }
 
@@ -439,7 +440,7 @@ namespace AKNet.Udp1MSQuic.Common
 
             if (Worker.EventQ.Count == 0)
             {
-                Worker.mEventQReady.WaitOne((int)Worker.State.WaitTime);
+                CxPlatEventWaitWithTimeout(Worker.mEventQReady, (int)Worker.State.WaitTime);
             }
 
             while (Worker.EventQ.Count > 0)
@@ -480,7 +481,7 @@ namespace AKNet.Udp1MSQuic.Common
         static void CxPlatWorkerAddNetEvent(CXPLAT_WORKER Worker, SSocketAsyncEventArgs Sqe)
         {
             Worker.EventQ.Enqueue(Sqe);
-            Worker.mEventQReady.Set();
+            CxPlatEventSet(Worker.mEventQReady);
         }
 
         static int CxPlatWorkerPoolGetCount(CXPLAT_WORKER_POOL WorkerPool)

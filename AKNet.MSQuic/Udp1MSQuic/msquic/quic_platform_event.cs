@@ -39,7 +39,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         static bool CxPlatEventWaitWithTimeout(EventWaitHandle Event, int TimeoutMs)
         {
-            NetLog.Assert(TimeoutMs != int.MaxValue);
+            //NetLog.Assert(TimeoutMs != int.MaxValue);
             return Event.WaitOne(TimeoutMs);
         }
 

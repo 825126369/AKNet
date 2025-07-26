@@ -302,7 +302,6 @@ namespace AKNet.Udp1MSQuic.Common
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
                 Datapath.Partitions[i].mWorker = CxPlatWorkerPoolGetWorker(Datapath.WorkerPool, i);
-                Datapath.Partitions[i] = new CXPLAT_DATAPATH_PROC();
                 Datapath.Partitions[i].Datapath = Datapath;
                 Datapath.Partitions[i].PartitionIndex = i;
                 CxPlatRefInitialize(ref Datapath.Partitions[i].RefCount);
