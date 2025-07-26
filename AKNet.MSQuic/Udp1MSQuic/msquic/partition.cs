@@ -21,7 +21,10 @@ namespace AKNet.Udp1MSQuic.Common
         public CXPLAT_HASH ResetTokenHash;
         public readonly object ResetTokenLock = new object();
         public readonly object StatelessRetryKeysLock = new object();
-        public readonly QUIC_RETRY_KEY[] StatelessRetryKeys = new QUIC_RETRY_KEY[2];
+        public readonly QUIC_RETRY_KEY[] StatelessRetryKeys = new QUIC_RETRY_KEY[2]
+        {
+            new QUIC_RETRY_KEY(), new QUIC_RETRY_KEY()
+        };
 
         public readonly CXPLAT_POOL<QUIC_CONNECTION> ConnectionPool = new CXPLAT_POOL<QUIC_CONNECTION>();
         public readonly CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS>();
@@ -36,6 +39,8 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_RECV_CHUNK
 
         public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+
+        
     }
 
     internal static partial class MSQuicFunc

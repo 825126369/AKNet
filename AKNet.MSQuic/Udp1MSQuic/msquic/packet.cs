@@ -164,10 +164,12 @@ namespace AKNet.Udp1MSQuic.Common
         }
     }
 
+    //防止DOS的重试包
     internal class QUIC_RETRY_PACKET_V1
     {
-        public byte UNUSED; //4位
+        public const int sizeof_Length = 6;
 
+        public byte UNUSED; //4位
         //表示这个长头部的类型。
         //对于 Retry 包，该字段应为：
         //Type == 0b11 （二进制）
@@ -190,26 +192,31 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
-        public byte[] ToBytes()
-        {
-            return null;
-        }
-
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            UNUSED = (byte)(buffer[0] & 0x0F);
-            Type = (byte)((buffer[0] & 0x30) >> 4);
-            FixedBit = (byte)((buffer[0] & 0x40) >> 6);
-            IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
-
+            UpdateFirstByte(buffer[0]);
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
         }
 
-        public void WriteTo(Span<byte> buffer)
+        public void UpdateFirstByte(byte buffer)
         {
-            
+            UNUSED = (byte)(buffer & 0x0F);
+            Type = (byte)((buffer & 0x30) >> 5);
+            FixedBit = (byte)((buffer & 0x40) >> 6);
+            IsLongHeader = (byte)((buffer & 0x80) >> 7);
+        }
+
+        public byte GetFirstByte()
+        {
+            return (byte)
+                (
+                   (UNUSED & 0x0F) |
+                   ((Type & 0x03) << 4) |
+                   ((FixedBit & 0x01) << 6) |
+                   ((IsLongHeader & 0x01) << 7)
+               );
         }
     }
 
@@ -631,7 +638,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         static int MIN_RETRY_HEADER_LENGTH_V1()
         {
-            return sizeof_QUIC_RETRY_PACKET_V1 + sizeof(byte);
+            return QUIC_RETRY_PACKET_V1.sizeof_Length + sizeof(byte);
         }
 
         static int QuicPacketMaxBufferSizeForRetryV1()
@@ -648,8 +655,6 @@ namespace AKNet.Udp1MSQuic.Common
             }
 
             QUIC_RETRY_PACKET_V1 Header = new QUIC_RETRY_PACKET_V1();
-            Header.WriteFrom(Buffer);
-                
             byte RandomBits = CxPlatRandom.RandomByte();
             Header.IsLongHeader = 1;
             Header.FixedBit = 1;
@@ -658,26 +663,29 @@ namespace AKNet.Udp1MSQuic.Common
             Header.Version = Version;
             Header.DestCidLength = (byte)DestCid.Length;
 
-            QUIC_SSBuffer HeaderBuffer = Header.DestCid;
-            if (DestCid.Length != 0)
+            Buffer[0] = Header.GetFirstByte();
+            EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Version);
+            Buffer[5] = (byte)DestCid.Length;
+
+            QUIC_SSBuffer HeaderBuffer = Buffer + 6;
+            if (!DestCid.IsEmpty)
             {
                 DestCid.GetSpan().CopyTo(HeaderBuffer.GetSpan());
-                HeaderBuffer = HeaderBuffer.Slice(DestCid.Length);
+                HeaderBuffer += DestCid.Length;
             }
 
             HeaderBuffer[0] = (byte)SourceCid.Length;
-            HeaderBuffer = HeaderBuffer.Slice(1);
-
-            if (SourceCid.Length != 0)
+            HeaderBuffer += 1;
+            if (!SourceCid.IsEmpty)
             {
                 SourceCid.GetSpan().CopyTo(HeaderBuffer.GetSpan());
-                HeaderBuffer = HeaderBuffer.Slice(SourceCid.Length);
+                HeaderBuffer += SourceCid.Length;
             }
 
-            if (Token.Length != 0)
+            if (!Token.IsEmpty)
             {
                 Token.GetSpan().CopyTo(HeaderBuffer.GetSpan());
-                HeaderBuffer = HeaderBuffer.Slice(Token.Length);
+                HeaderBuffer += Token.Length;
             }
 
             QUIC_VERSION_INFO VersionInfo = null;
@@ -689,9 +697,9 @@ namespace AKNet.Udp1MSQuic.Common
                     break;
                 }
             }
-            NetLog.Assert(VersionInfo != null);
 
-            if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(VersionInfo, OrigDestCid, new QUIC_SSBuffer(Header.ToBytes(), RequiredBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1, QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
+            NetLog.Assert(VersionInfo != null);
+            if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(VersionInfo, OrigDestCid, Buffer.Slice(0, RequiredBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
                     HeaderBuffer)))
             {
                 return 0;
@@ -700,6 +708,10 @@ namespace AKNet.Udp1MSQuic.Common
             return RequiredBufferLength;
         }
 
+        //在 QUIC 协议中，为了防止 DoS 攻击（拒绝服务攻击），服务器在收到客户端的初始连接请求（Initial packet）时，可能不会立即分配资源来建立连接。
+        //为了验证客户端的真实性，服务器可以发送一个 Stateless Retry 包，其中包含一个 token（称为 Retry Token），
+        //客户端收到后必须在下一次 Initial packet 中带上这个 token，以证明它确实收到了 Retry 包。
+        //为此，服务器需要生成一个 带签名的 token，并在客户端再次连接时验证该 token 的来源和完整性。
         static int QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Buffer, QUIC_SSBuffer IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
@@ -707,8 +719,7 @@ namespace AKNet.Udp1MSQuic.Common
             Secret.Aead = CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM;
 
             Version.RetryIntegritySecret.Slice(0, QUIC_VERSION_RETRY_INTEGRITY_SECRET_LENGTH).CopyTo(Secret.Secret);
-
-            byte[] RetryPseudoPacket = null;
+            
             QUIC_PACKET_KEY RetryIntegrityKey = null;
             int Status = QuicPacketKeyDerive(QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL, Version.HkdfLabels, Secret, "RetryIntegrity", false, ref RetryIntegrityKey);
             if (QUIC_FAILED(Status))
@@ -717,7 +728,7 @@ namespace AKNet.Udp1MSQuic.Common
             }
 
             int RetryPseudoPacketLength = sizeof(byte) + OrigDestCid.Length + Buffer.Length;
-            RetryPseudoPacket = new byte[RetryPseudoPacketLength];
+            byte[] RetryPseudoPacket = new byte[RetryPseudoPacketLength];
             if (RetryPseudoPacket == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -726,22 +737,18 @@ namespace AKNet.Udp1MSQuic.Common
 
             QUIC_SSBuffer RetryPseudoPacketCursor = RetryPseudoPacket;
             RetryPseudoPacketCursor[0] = (byte)OrigDestCid.Length;
-            RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(1);
+            RetryPseudoPacketCursor +=1;
             OrigDestCid.GetSpan().CopyTo(RetryPseudoPacketCursor.GetSpan());
-            RetryPseudoPacketCursor = RetryPseudoPacketCursor.Slice(OrigDestCid.Length);
+            RetryPseudoPacketCursor += OrigDestCid.Length;
             Buffer.GetSpan().CopyTo(RetryPseudoPacketCursor.GetSpan());
 
-            //Status = CxPlatEncrypt(
-            //        RetryIntegrityKey.PacketKey,
-            //        RetryIntegrityKey.Iv,
-            //        RetryPseudoPacket,
-            //        IntegrityField);
+            Status = CxPlatEncrypt(
+                    RetryIntegrityKey.PacketKey,
+                    RetryIntegrityKey.Iv,
+                    RetryPseudoPacket,
+                    IntegrityField);
 
         Exit:
-            if (RetryPseudoPacket != null)
-            {
-                RetryPseudoPacket = null;
-            }
             QuicPacketKeyFree(RetryIntegrityKey);
             return Status;
         }
