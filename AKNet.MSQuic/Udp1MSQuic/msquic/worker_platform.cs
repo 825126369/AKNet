@@ -377,7 +377,6 @@ namespace AKNet.Udp1MSQuic.Common
                 ++Worker.LoopCount;
 #endif
                 Worker.State.TimeNow = CxPlatTimeUs();
-
                 CxPlatRunExecutionContexts(Worker);
                 if (Worker.State.WaitTime > 0 && BoolOk(InterlockedFetchAndClearBoolean(ref Worker.Running)))
                 {
@@ -421,9 +420,10 @@ namespace AKNet.Udp1MSQuic.Common
                 return;
             }
 
-#if DEBUG // Debug statistics
+#if DEBUG
             ++Worker.EcPollCount;
 #endif
+
             long NextTime = long.MaxValue;
             CXPLAT_LIST_ENTRY EC = Worker.ExecutionContexts;
             do
@@ -432,7 +432,7 @@ namespace AKNet.Udp1MSQuic.Common
                 bool Ready = BoolOk(InterlockedFetchAndClearBoolean(ref Context.Ready));
                 if (Ready || Context.NextTimeUs <= Worker.State.TimeNow)
                 {
-#if DEBUG // Debug statistics
+#if DEBUG
                     ++Worker.EcRunCount;
 #endif
                     CXPLAT_LIST_ENTRY Next = Context.Entry.Next;
@@ -441,18 +441,20 @@ namespace AKNet.Udp1MSQuic.Common
                         EC = Next; // Remove Context from the list.
                         continue;
                     }
+
                     if (BoolOk(Context.Ready))
                     {
                         NextTime = 0;
                     }
                 }
+
                 if (Context.NextTimeUs < NextTime)
                 {
                     NextTime = Context.NextTimeUs;
                 }
                 EC = Context.Entry.Next;
             } while (EC != null);
-
+            
             if (NextTime == 0)
             {
                 Worker.State.WaitTime = 0;

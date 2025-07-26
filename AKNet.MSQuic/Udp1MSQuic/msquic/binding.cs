@@ -938,7 +938,6 @@ namespace AKNet.Udp1MSQuic.Common
 
             QUIC_ADDR Addr = Info.LocalAddress;
             AddressFamily Family = QuicAddrGetFamily(Addr);
-
             bool FailedAlpnMatch = false;
             bool FailedAddrMatch = true;
 
@@ -953,15 +952,15 @@ namespace AKNet.Udp1MSQuic.Common
 
                 if (ExistingFamily != AddressFamily.Unspecified)
                 {
-                    //{::ffff:127.0.0.1:0}   {::ffff:0:0:6000}
+                    //{::ffff:127.0.0.1:0}      {::ffff:0:0:6000}
                     if (Family != ExistingFamily || (!ExistingWildCard && !QuicAddrCompareIp(Addr,ExistingAddr)))
                     {
                         FailedAddrMatch = true;
                         continue;
                     }
                 }
-                FailedAddrMatch = false;
 
+                FailedAddrMatch = false;
                 if (QuicListenerMatchesAlpn(ExistingListener, Info))
                 {
                     if (CxPlatRefIncrementNonZero(ref ExistingListener.RefCount, 1))
