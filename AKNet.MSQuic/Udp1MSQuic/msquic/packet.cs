@@ -906,9 +906,8 @@ namespace AKNet.Udp1MSQuic.Common
             Buffer[0] = Header.GetFirstByte();
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Header.Version);
             Buffer[5] = Header.DestCidLength;
-
-            int nOffset = 6;
-            QUIC_SSBuffer HeaderBuffer = Buffer.Slice(nOffset);
+                
+            QUIC_SSBuffer HeaderBuffer = Buffer.Slice(6);
             if (DestCid.Data.Length != 0)
             {
                 DestCid.Data.GetSpan().CopyTo(HeaderBuffer.GetSpan());
