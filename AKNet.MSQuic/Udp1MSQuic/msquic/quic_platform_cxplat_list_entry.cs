@@ -73,6 +73,7 @@ namespace AKNet.Udp1MSQuic.Common
             Queue.Prev = Entry;
         }
 
+        //这种适合中间元素插入
         public static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY EntryInQueue, CXPLAT_LIST_ENTRY Entry)
         {
             EntryNotInQueueStateOk(Entry);
