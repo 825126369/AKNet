@@ -726,7 +726,6 @@ namespace AKNet.Udp1MSQuic.Common
                 mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
             }
 
-
             //NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
             //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
             //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
