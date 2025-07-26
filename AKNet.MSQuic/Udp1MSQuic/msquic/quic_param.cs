@@ -225,12 +225,6 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 case QUIC_PARAM_CONN_LOCAL_ADDRESS:
                     {
-                        if (Buffer.Length != QUIC_ADDR.sizeof_QUIC_ADDR)
-                        {
-                            Status = QUIC_STATUS_INVALID_PARAMETER;
-                            break;
-                        }
-
                         if (Connection.State.ClosedLocally || QuicConnIsServer(Connection))
                         {
                             Status = QUIC_STATUS_INVALID_STATE;
@@ -292,14 +286,15 @@ namespace AKNet.Udp1MSQuic.Common
                         break;
                     }
 
-                    if (QuicAddrIsWildCard((QUIC_ADDR)Buffer) || QuicConnIsServer(Connection))
+                    QUIC_ADDR mAddr = (QUIC_ADDR)Buffer;
+                    if (QuicAddrIsWildCard(mAddr) || QuicConnIsServer(Connection))
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;
                     }
 
                     Connection.State.RemoteAddressSet = true;
-                    Connection.Paths[0].Route.RemoteAddress.WriteFrom(Buffer);
+                    Connection.Paths[0].Route.RemoteAddress = mAddr;
                     Status = QUIC_STATUS_SUCCESS;
                     break;
                 default:

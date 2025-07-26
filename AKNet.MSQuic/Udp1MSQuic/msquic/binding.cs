@@ -654,7 +654,8 @@ namespace AKNet.Udp1MSQuic.Common
             QUIC_WORKER Worker = QuicLibraryGetWorker(Packet);
             if (QuicWorkerIsOverloaded(Worker))
             {
-                QuicPacketLogDrop(Binding, Packet, $"Stateless worker overloaded: {Worker.AverageQueueDelay}, {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
+                QuicPacketLogDrop(Binding, Packet, $"Stateless worker overloaded: {Worker.Partition.Index}, {Worker.PartitionIndex}, " +
+                    $"{Worker.AverageQueueDelay}, {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
                 return null;
             }
 
@@ -668,7 +669,7 @@ namespace AKNet.Udp1MSQuic.Common
             }
 
             bool BindingRefAdded = false;
-            NetLog.Assert(NewConnection.SourceCids.Next != null);
+            NetLog.Assert(!CxPlatListIsEmpty(NewConnection.SourceCids));
             QuicConnAddRef(NewConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             if (!QuicLibraryTryAddRefBinding(Binding))
             {
@@ -719,11 +720,10 @@ namespace AKNet.Udp1MSQuic.Common
             }
             else
             {
-                NewConnection.SourceCids.Next = null;
+                CxPlatListInitializeHead(NewConnection.SourceCids);
                 QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
                 QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             }
-
             return Connection;
         }
 

@@ -413,7 +413,8 @@ namespace AKNet.Udp1MSQuic.Common
             if (!QuicRegistrationAcceptConnection(Listener.Registration, Connection))
             {
                 QuicConnTransportError(Connection, QUIC_ERROR_CONNECTION_REFUSED, 
-                    $"连接被拒绝，负载太大: {Connection.Worker.AverageQueueDelay} {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
+                    $"连接被拒绝，负载太大: {Connection.Worker.Partition.Index}, {Connection.Worker.PartitionIndex}," +
+                    $"{Connection.Worker.AverageQueueDelay} {MsQuicLib.Settings.MaxWorkerQueueDelayUs}");
 
                 Listener.TotalRejectedConnections++;
                 QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_LOAD_REJECT);

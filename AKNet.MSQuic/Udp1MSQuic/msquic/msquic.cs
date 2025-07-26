@@ -635,21 +635,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
         {
-            if (Addr.Family == AddressFamily.Unspecified)
-            {
-                return true;
-            }
-            else
-            {
-                /*
-                public static readonly IPAddress Any = new ReadOnlyIPAddress([0, 0, 0, 0]);
-                public static readonly IPAddress Loopback = new ReadOnlyIPAddress([127, 0, 0, 1]);
-                public static readonly IPAddress Broadcast = new ReadOnlyIPAddress([255, 255, 255, 255]);
-                public static readonly IPAddress None = Broadcast;
-                public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
-                 */
-                return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any);
-            }
+            return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any) || Addr.Ip.Equals(IPAddress.Any.MapToIPv6());
         }
 
         static bool QuicAddrIsValid(QUIC_ADDR Addr)

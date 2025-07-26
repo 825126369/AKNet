@@ -29,32 +29,15 @@ namespace AKNet.Udp1MSQuic.Common
             return false;
         }
 
-        internal static IPEndPoint QuicAddrToIPEndPoint(QUIC_ADDR quicAddress, AddressFamily addressFamilyOverride = AddressFamily.Unspecified)
+        public static QUIC_SSBuffer GetMsQuicParameter(QUIC_HANDLE handle, uint parameter)
         {
-            return new IPEndPoint(quicAddress.Ip, quicAddress.nPort);
-        }
-
-        public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
-        {
-            QUIC_ADDR result = new QUIC_ADDR(ipEndPoint);
-            return result;
-        }
-
-        internal static T GetMsQuicParameter<T>(QUIC_HANDLE handle, uint parameter)
-        {
-            //T value;
-            //GetMsQuicParameter(handle, parameter, (uint)sizeof(T), (byte*)&value);
-            //return value;
-            return default;
-        }
-
-        public static void GetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
-        {
-            int status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
+            QUIC_SSBuffer value = default;
+            int status = MSQuicFunc.MsQuicGetParam(handle, parameter, out value);
             if (MSQuicFunc.QUIC_FAILED(status))
             {
                 NetLog.LogError($"GetParam({handle}, {parameter}) failed");
             }
+            return value;
         }
 
         public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)

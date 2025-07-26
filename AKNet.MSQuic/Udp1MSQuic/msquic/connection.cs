@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -582,14 +583,14 @@ namespace AKNet.Udp1MSQuic.Common
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
                     Connection.ServerID[0] = CxPlatRandom.RandomByte();
-                    byte[] IP_Array = Packet.Route.LocalAddress.GetBytes();
+                    ReadOnlySpan<byte> IP_Array = Packet.Route.LocalAddress.GetAddressSpan();
                     if (Packet.Route.LocalAddress.Family == AddressFamily.InterNetwork)
                     {
-                        Array.Copy(IP_Array, 0, Connection.ServerID, 1, 4);
+                        IP_Array.CopyTo(Connection.ServerID.AsSpan().Slice(1, 4));
                     }
                     else
                     {
-                        Array.Copy(IP_Array, 12, Connection.ServerID, 1, 4);
+                        IP_Array.Slice(12).CopyTo(Connection.ServerID.AsSpan().Slice(1, 4));
                     }
                 }
                 else if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_FIXED)
