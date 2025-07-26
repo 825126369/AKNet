@@ -74,7 +74,7 @@ namespace AKNet.Udp1MSQuic.Common
         }
 
         //这种适合中间元素插入
-        public static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY EntryInQueue, CXPLAT_LIST_ENTRY Entry)
+        public static void CxPlatListInsertMiddle(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY EntryInQueue, CXPLAT_LIST_ENTRY Entry)
         {
             EntryNotInQueueStateOk(Entry);
             EntryInQueueStateOk(Queue);

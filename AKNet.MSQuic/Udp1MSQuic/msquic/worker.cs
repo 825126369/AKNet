@@ -345,7 +345,7 @@ namespace AKNet.Udp1MSQuic.Common
                     Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
                     if (StillHasPriorityWork)
                     {
-                        CxPlatListInsertTail(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                        CxPlatListInsertMiddle(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
                         Worker.PriorityConnectionsTail = Connection.WorkerLink;
                         Connection.HasPriorityWork = true;
                     }
@@ -382,7 +382,7 @@ namespace AKNet.Udp1MSQuic.Common
             Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
             if (IsPriority)
             {
-                CxPlatListInsertTail(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                CxPlatListInsertMiddle(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
                 Worker.PriorityConnectionsTail = Connection.WorkerLink;
                 Connection.HasPriorityWork = true;
             }
@@ -543,7 +543,7 @@ namespace AKNet.Udp1MSQuic.Common
                     CxPlatListEntryRemove(Connection.WorkerLink);
                 }
 
-                CxPlatListInsertTail(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                CxPlatListInsertMiddle(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
                 Worker.PriorityConnectionsTail = Connection.WorkerLink;
                 Connection.HasPriorityWork = true;
             }

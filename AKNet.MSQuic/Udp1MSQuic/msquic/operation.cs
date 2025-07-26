@@ -393,7 +393,7 @@ namespace AKNet.Udp1MSQuic.Common
             CxPlatDispatchLockAcquire(OperQ.Lock);
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
 
-            CxPlatListInsertTail(OperQ.List, OperQ.PriorityTail, Oper.Link);
+            CxPlatListInsertMiddle(OperQ.List, OperQ.PriorityTail, Oper.Link);
             OperQ.PriorityTail = Oper.Link;
 
             CxPlatDispatchLockRelease(OperQ.Lock);
