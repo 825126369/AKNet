@@ -776,7 +776,7 @@ namespace AKNet.Udp1MSQuic.Common
 
                 if (SendData.Sqe == null)
                 {
-                    SendData.Sqe = new SocketAsyncEventArgs();
+                    SendData.Sqe = new SSocketAsyncEventArgs();
                     SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
                 }
 

@@ -254,7 +254,7 @@ namespace AKNet.Udp1MSQuic.Common
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
 
-        public SocketAsyncEventArgs Sqe = null;
+        public SSocketAsyncEventArgs Sqe = null;
         public CXPLAT_SEND_DATA()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
