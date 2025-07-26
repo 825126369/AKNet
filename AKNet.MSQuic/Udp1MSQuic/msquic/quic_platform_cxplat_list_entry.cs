@@ -114,8 +114,12 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
+        //从一个队列，移动到另一个队列里
         static void CxPlatListMoveItems(CXPLAT_LIST_ENTRY Source, CXPLAT_LIST_ENTRY Destination)
         {
+            EntryInQueueStateOk(Source);
+            EntryInQueueStateOk(Destination);
+
             if (!CxPlatListIsEmpty(Source))
             {
                 if (CxPlatListIsEmpty(Destination))
@@ -127,10 +131,13 @@ namespace AKNet.Udp1MSQuic.Common
                 }
                 else
                 {
-                    Source.Next.Prev = Destination.Prev;
-                    Destination.Prev.Next = Source.Next;
-                    Source.Prev.Next = Destination;
-                    Destination.Prev = Source.Prev;
+                    CXPLAT_LIST_ENTRY AddEntryHead = Source.Next;
+                    CXPLAT_LIST_ENTRY AddEntryTail = Source.Prev;
+
+                    Destination.Prev.Next = AddEntryHead;
+                    AddEntryHead.Prev = Destination.Prev;
+                    Destination.Prev = AddEntryTail;
+                    AddEntryTail.Next = Destination;
                 }
                 CxPlatListInitializeHead(Source);
             }

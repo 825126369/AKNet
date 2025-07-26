@@ -28,7 +28,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         private bool CheckAndInit()
         {
-            MSQuicFunc.DoTest();
+            //MSQuicFunc.DoTest();
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicOpenVersion((uint)s_minMsQuicVersion.Major, out _)))
             {
                 NetLog.LogError("MSQuicFunc.MsQuicOpenVersion Error");
