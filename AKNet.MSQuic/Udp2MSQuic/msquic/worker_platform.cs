@@ -433,7 +433,7 @@ namespace AKNet.Udp2MSQuic.Common
                     ++Worker.EcRunCount;
 #endif
                     CXPLAT_LIST_ENTRY Next = Context.Entry.Next;
-                    if (!Context.Callback(Context.Context, Worker.State))
+                    if (!Context.Callback(Context.Context, Worker.State)) //返回true 再次运行
                     {
                         EC = Next; // Remove Context from the list.
                         continue;

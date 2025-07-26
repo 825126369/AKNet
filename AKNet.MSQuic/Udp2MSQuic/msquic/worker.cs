@@ -48,7 +48,7 @@ namespace AKNet.Udp2MSQuic.Common
             return CxPlatListIsEmpty(Worker.Connections) && CxPlatListIsEmpty(Worker.Operations);
         }
 
-        static void QuicWorkerAssignConnection(QUIC_WORKER Worker,QUIC_CONNECTION Connection)
+        static void QuicWorkerAssignConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
         {
             NetLog.Assert(Connection.Worker != Worker);
             Connection.Worker = Worker;
