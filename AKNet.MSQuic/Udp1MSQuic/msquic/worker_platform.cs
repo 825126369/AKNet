@@ -522,5 +522,12 @@ namespace AKNet.Udp1MSQuic.Common
             }
             CxPlatLockRelease(Worker.ECLock);
         }
+
+        ConcurrentQueue<SSocketAsyncEventArgs> CxPlatWorkerPoolGetEventQ(CXPLAT_WORKER_POOL WorkerPool, int Index)
+        {
+            NetLog.Assert(WorkerPool != null);
+            NetLog.Assert(Index < WorkerPool.WorkerCount);
+            return WorkerPool.Workers[Index].EventQ;
+        }
     }
 }
