@@ -15,11 +15,10 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
 
         public Thread Thread;
-        //public ConcurrentQueue<SocketAsyncEventArgs> EventQ = new ConcurrentQueue<SocketAsyncEventArgs>();
-        public ConcurrentQueue<SSocketAsyncEventArgs> EventQ = new ConcurrentQueue<SSocketAsyncEventArgs>();
-        public SSocketAsyncEventArgs ShutdownSqe = new SSocketAsyncEventArgs();
-        public SSocketAsyncEventArgs WakeSqe = new SSocketAsyncEventArgs();
-        public SSocketAsyncEventArgs UpdatePollSqe = new SSocketAsyncEventArgs();
+        public readonly ConcurrentQueue<SSocketAsyncEventArgs> EventQ = new ConcurrentQueue<SSocketAsyncEventArgs>();
+        public readonly SSocketAsyncEventArgs ShutdownSqe = new SSocketAsyncEventArgs();
+        public readonly SSocketAsyncEventArgs WakeSqe = new SSocketAsyncEventArgs();
+        public readonly SSocketAsyncEventArgs UpdatePollSqe = new SSocketAsyncEventArgs();
         public readonly List<SSocketAsyncEventArgs> Cqes = new List<SSocketAsyncEventArgs>();
 
         public readonly object ECLock = new object();
@@ -99,7 +98,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         static CXPLAT_WORKER_POOL CxPlatWorkerPoolCreate(QUIC_GLOBAL_EXECUTION_CONFIG Config)
         {
-            List<int> ProcessorList = new List<int>();
+            List<int> ProcessorList = null;
             int ProcessorCount;
             if (Config != null && Config.ProcessorList.Count > 0)
             {
@@ -216,15 +215,6 @@ namespace AKNet.Udp1MSQuic.Common
             Worker.IdealProcessor = IdealProcessor;
             Worker.State.WaitTime = int.MaxValue;
             Worker.State.ThreadID = int.MaxValue;
-
-            //if (EventQ != null)
-            //{
-            //    Worker.EventQ = EventQ;
-            //}
-            //else
-            //{
-
-            //}
 
             Worker.ShutdownSqe.UserToken = Worker;
             Worker.WakeSqe.UserToken = Worker;
@@ -399,11 +389,11 @@ namespace AKNet.Udp1MSQuic.Common
                     Worker.State.NoWorkCount = 0;
                 }
 
-                if (Worker.State.TimeNow - Worker.State.LastPoolProcessTime > DYNAMIC_POOL_PROCESSING_PERIOD)
-                {
-                    CxPlatProcessDynamicPoolAllocators(Worker);
-                    Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
-                }
+                //if (Worker.State.TimeNow - Worker.State.LastPoolProcessTime > DYNAMIC_POOL_PROCESSING_PERIOD)
+                //{
+                //    CxPlatProcessDynamicPoolAllocators(Worker);
+                //    Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
+                //}
             }
 
             Worker.Running = 0;
@@ -419,11 +409,9 @@ namespace AKNet.Udp1MSQuic.Common
                 Worker.State.WaitTime = int.MaxValue;
                 return;
             }
-
 #if DEBUG
             ++Worker.EcPollCount;
 #endif
-
             long NextTime = long.MaxValue;
             CXPLAT_LIST_ENTRY EC = Worker.ExecutionContexts;
             do

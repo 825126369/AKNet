@@ -73,6 +73,18 @@ namespace AKNet.Udp1MSQuic.Common
             Queue.Prev = Entry;
         }
 
+        public static void CxPlatListInsertTail(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY EntryInQueue, CXPLAT_LIST_ENTRY Entry)
+        {
+            EntryNotInQueueStateOk(Entry);
+            EntryInQueueStateOk(Queue);
+            EntryInQueueStateOk(EntryInQueue);
+
+            Entry.Next = EntryInQueue.Next;
+            Entry.Prev = EntryInQueue;
+            EntryInQueue.Next = Entry;
+            Queue.Prev = Entry;
+        }
+
         static void CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             EntryInQueueStateOk(Entry);

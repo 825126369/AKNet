@@ -42,7 +42,7 @@ namespace AKNet.Udp1MSQuic.Common
         public const int CXPLAT_POOL_MAXIMUM_DEPTH = 0x4000;
         public const int CXPLAT_POOL_DEFAULT_MAX_DEPTH = 256;
 
-        public virtual void CxPlatPoolInitialize()
+        public void CxPlatPoolInitialize()
         {
             this.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
             this.ListDepth = 0;
@@ -54,7 +54,7 @@ namespace AKNet.Udp1MSQuic.Common
             return new T();
         }
 
-        public virtual void Free(T t)
+        public void Free(T t)
         {
             //直接GC掉
         }
@@ -113,12 +113,10 @@ namespace AKNet.Udp1MSQuic.Common
                 t = GetValue(Entry);
             }
             MSQuicFunc.CxPlatLockRelease(Lock);
-
             if (t == null)
             {
                 return false;
             }
-            Free(t);
             return true;
         }
 
