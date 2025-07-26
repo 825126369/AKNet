@@ -580,11 +580,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         internal static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
         {
-            if (Addr1.Family != Addr2.Family || Addr1.nPort != Addr2.nPort)
-            {
-                return false;
-            }
-            return QuicAddrCompareIp(Addr1, Addr2);
+            return Addr1.GetIPEndPoint().Equals(Addr2.GetIPEndPoint());
         }
 
         static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
@@ -604,33 +600,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
         {
-            if (Addr != null)
-            {
-                return Addr.Family;
-            }
-            else
-            {
-                return AddressFamily.Unspecified;
-            }
-        }
-
-
-        static void UPDATE_HASH(uint value, ref uint Hash)
-        {
-            Hash = (Hash << 5) - Hash + (value);
-        }
-
-        static uint QuicAddrHash(QUIC_ADDR Addr)
-        {
-            uint Hash = 5387;
-            UPDATE_HASH((uint)(Addr.nPort & 0xFF), ref Hash);
-            UPDATE_HASH((uint)Addr.nPort >> 8, ref Hash);
-            byte[] addr_bytes = Addr.Ip.GetAddressBytes();
-            for (int i = 0; i < addr_bytes.Length; ++i)
-            {
-                UPDATE_HASH(addr_bytes[i], ref Hash);
-            }
-            return Hash;
+            return Addr.Family;
         }
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
@@ -642,6 +612,24 @@ namespace AKNet.Udp1MSQuic.Common
         {
             return Addr.Family == AddressFamily.InterNetwork ||
                 Addr.Family == AddressFamily.InterNetworkV6;
+        }
+
+        static void UPDATE_HASH(uint value, ref uint Hash)
+        {
+             Hash = (Hash << 5) - Hash + value;
+        }
+
+        static uint QuicAddrHash(QUIC_ADDR Addr)
+        {
+            uint Hash = 5387;
+            UPDATE_HASH((uint)(Addr.nPort & 0xFF), ref Hash);
+            UPDATE_HASH((uint)Addr.nPort >> 8, ref Hash);
+            ReadOnlySpan<byte> addr_bytes = Addr.GetAddressSpan();
+            for (int i = 0; i < addr_bytes.Length; ++i)
+            {
+                UPDATE_HASH(addr_bytes[i], ref Hash);
+            }
+            return Hash;
         }
     }
 }
