@@ -3,16 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
 {
-    internal unsafe class CX_PLATFORM
-    {
-        public IntPtr Heap;
-        public int dwBuildNumber;
-#if DEBUG
-        public int AllocFailDenominator;
-        public long AllocCounter;
-#endif
-    }
-
     internal enum CXPLAT_THREAD_FLAGS
     {
         CXPLAT_THREAD_FLAG_NONE = 0x0000,
@@ -23,9 +13,6 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
-        public static long CxPlatTotalMemory;
-        static readonly CX_PLATFORM CxPlatform = new CX_PLATFORM();
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool STATUS_FAILED(int Status)
         {

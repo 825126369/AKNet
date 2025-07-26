@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Platform;
 using System;
 using System.Diagnostics;
 
@@ -30,7 +31,7 @@ namespace AKNet.Udp1MSQuic.Common
         //Thread.Sleep(1);实际上它可能会休眠 15.6 毫秒，而不是 1 毫秒，因为系统时钟的最小分辨率为 15.6ms。
         static long CxPlatGetTimerResolutionUs()
         {
-            return AKNetSystemInfo.GetSystemTimeResolution();
+            return OSPlatformFunc.GetSystemTimeAdjustment();
         }
 
         static long CxPlatTimeEpochMs64()

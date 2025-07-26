@@ -539,7 +539,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
             
-            long CurrentMemoryLimit = (long)(MsQuicLib.Settings.RetryMemoryLimit / (double)ushort.MaxValue * AKNetSystemInfo.GetTotalMemory());
+            long CurrentMemoryLimit = (long)(MsQuicLib.Settings.RetryMemoryLimit / (double)ushort.MaxValue * CxPlatTotalMemory);
             return MsQuicLib.CurrentHandshakeMemoryUsage >= CurrentMemoryLimit;
         }
 
