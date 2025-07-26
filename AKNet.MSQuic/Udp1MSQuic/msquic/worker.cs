@@ -568,7 +568,8 @@ namespace AKNet.Udp1MSQuic.Common
             CxPlatDispatchLockAcquire(Worker.Lock);
 
             bool WakeWorkerThread;
-            if (Worker.OperationCount < MsQuicLib.Settings.MaxStatelessOperations && QuicLibraryTryAddRefBinding(Operation.STATELESS.Context.Binding))
+            if (Worker.OperationCount < MsQuicLib.Settings.MaxStatelessOperations && 
+                QuicLibraryTryAddRefBinding(Operation.STATELESS.Context.Binding))
             {
                 Operation.STATELESS.Context.HasBindingRef = true;
                 WakeWorkerThread = QuicWorkerIsIdle(Worker);
