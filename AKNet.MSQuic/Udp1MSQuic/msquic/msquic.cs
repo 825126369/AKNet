@@ -580,7 +580,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         internal static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
         {
-            return Addr1.GetIPEndPoint().Equals(Addr2.GetIPEndPoint());
+            return Addr1.GetIPEndPoint().Equals(Addr2.GetIPEndPoint()); //这里会比较 Scord Id
         }
 
         static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)

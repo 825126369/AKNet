@@ -1482,7 +1482,7 @@ namespace AKNet.Udp1MSQuic.Common
             UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
             UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
             UdpConfig.Flags = Connection.State.ShareBinding ? CXPLAT_SOCKET_FLAG_SHARE : 0;
-            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Ip.ScopeId : 0;
+            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.ScopeId : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
             Status = QuicLibraryGetBinding(UdpConfig, out Path.Binding);
 

@@ -22,6 +22,7 @@ namespace AKNet.Udp1MSQuic.Common
         public string ServerName;
         private IPEndPoint mEndPoint;
         private byte[] mAddressCache = new byte[16];
+        long m_ScopeId = 0;
 
         public QUIC_ADDR()
         {
@@ -70,16 +71,17 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
+        //C# IPAddress 会比较 ScopeId，而 QUIC地址比较时，没有考虑这个字段，故而，不直接赋值给IPAddress
         public long ScopeId
         {
             get
             {
-                return mEndPoint.Address.ScopeId;
+                return m_ScopeId;
             }
 
             set
             {
-                mEndPoint.Address.ScopeId = value;
+                m_ScopeId = value;
             }
         }
 
@@ -437,8 +439,8 @@ namespace AKNet.Udp1MSQuic.Common
 
                 if (Config.InterfaceIndex != 0)
                 {
-                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface, Config.InterfaceIndex);
-                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, Config.InterfaceIndex);
+                    //SocketProc.Socket.SetSocketOption((int)SocketOptionLevel.IPv6, 41, Config.InterfaceIndex);
+                    //SocketProc.Socket.SetSocketOption((int)SocketOptionLevel.IP, 41, Config.InterfaceIndex);
                 }
 
                 if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_PORT_RESERVATIONS) && Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
