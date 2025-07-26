@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp2MSQuic.Common;
 using System;
 using System.Security.Cryptography.X509Certificates;
 
@@ -78,6 +79,41 @@ namespace AKNet.Udp1MSQuic.Common
                 var nId = QuicPartitionIdCreate(i);
                 var nIndex = QuicPartitionIdGetIndex(nId);
                 NetLog.Assert(i == nIndex);
+            }
+
+            //CXList 测试
+            CXPLAT_LIST_ENTRY<int> mList = new CXPLAT_LIST_ENTRY<int>(-1);
+            CxPlatListInitializeHead(mList);
+
+            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(1));
+            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(2));
+            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(3));
+            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(4));
+            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(5));
+
+            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(1));
+            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(2));
+            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(3));
+            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(4));
+            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(5));
+
+            CxPlatListInsertMiddle(mList, mList.Next, new CXPLAT_LIST_ENTRY<int>(1));
+            CxPlatListInsertMiddle(mList, mList.Next, new CXPLAT_LIST_ENTRY<int>(2));
+            CxPlatListInsertMiddle(mList, mList.Next, new CXPLAT_LIST_ENTRY<int>(3));
+            CxPlatListInsertMiddle(mList, mList.Next, new CXPLAT_LIST_ENTRY<int>(4));
+            CxPlatListInsertMiddle(mList, mList.Next, new CXPLAT_LIST_ENTRY<int>(5));
+
+            CxPlatListInsertMiddle(mList, mList.Next.Next, new CXPLAT_LIST_ENTRY<int>(1));
+            CxPlatListInsertMiddle(mList, mList.Next.Next, new CXPLAT_LIST_ENTRY<int>(2));
+            CxPlatListInsertMiddle(mList, mList.Next.Next, new CXPLAT_LIST_ENTRY<int>(3));
+            CxPlatListInsertMiddle(mList, mList.Next.Next, new CXPLAT_LIST_ENTRY<int>(4));
+            CxPlatListInsertMiddle(mList, mList.Next.Next, new CXPLAT_LIST_ENTRY<int>(5));
+
+            CXPLAT_LIST_ENTRY<int> iter = mList.Next as CXPLAT_LIST_ENTRY<int>;
+            while (mList != iter)
+            {
+                NetLog.Log(iter.value);
+                iter = iter.Next as CXPLAT_LIST_ENTRY<int>;
             }
         }
     }

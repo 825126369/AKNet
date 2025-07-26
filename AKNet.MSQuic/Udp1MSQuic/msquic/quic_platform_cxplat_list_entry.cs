@@ -19,14 +19,10 @@ namespace AKNet.Udp1MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry) where T:class
+        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry)
         {
             CXPLAT_LIST_ENTRY<T> t = Entry as CXPLAT_LIST_ENTRY<T>;
-            if (t != null)
-            {
-                return t.value;
-            }
-            return null;
+            return t.value;
         }
 
         static void EntryInQueueStateOk(CXPLAT_LIST_ENTRY Entry)
@@ -82,8 +78,8 @@ namespace AKNet.Udp1MSQuic.Common
 
             Entry.Next = EntryInQueue.Next;
             Entry.Prev = EntryInQueue;
+            EntryInQueue.Next.Prev = Entry;
             EntryInQueue.Next = Entry;
-            Queue.Prev = Entry;
         }
 
         static void CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
@@ -105,9 +101,8 @@ namespace AKNet.Udp1MSQuic.Common
             if (!CxPlatListIsEmpty(ListHead))
             {
                 CXPLAT_LIST_ENTRY Entry = ListHead.Next; // cppcheck-suppress shadowFunction
-                CXPLAT_LIST_ENTRY Next = Entry.Next;
-                ListHead.Next = Next;
-                Next.Prev = ListHead;
+                ListHead.Next = Entry.Next;
+                Entry.Next.Prev = ListHead;
 
                 Entry.Next = null;
                 Entry.Prev = null;
