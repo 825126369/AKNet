@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
 using System;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Udp1MSQuic.Common
 {
@@ -81,20 +83,24 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
-        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, out uint Key)
+        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, out uint Key, out int Offset)
         {
+            NetLog.Assert(Addr.Family == AddressFamily.InterNetworkV6);
+
             Key = 0;
-            byte[] IpBytes = Addr.Ip.GetAddressBytes();
-            byte[] nPortBytes = BitConverter.GetBytes((ushort)(Addr.nPort));
-            Key ^= CxPlatToeplitzHashCompute(Toeplitz, nPortBytes);
-            Key ^= CxPlatToeplitzHashCompute(Toeplitz, IpBytes);
+            Offset = 0;
+            ReadOnlySpan<byte> IpBytes = Addr.GetAddressSpan();
+            ushort nPort = (ushort)Addr.nPort;
+            ReadOnlySpan<byte> nPortBytes = MemoryMarshal.Cast<ushort, byte>(MemoryMarshal.CreateSpan<ushort>(ref nPort, 1));
+            Key ^= CxPlatToeplitzHashCompute(Toeplitz, 0, nPortBytes);
+            Key ^= CxPlatToeplitzHashCompute(Toeplitz, 2, IpBytes);
+            Offset = 2 + 16;
         }
 
-        static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz,  QUIC_SSBuffer HashInput)
+        static uint CxPlatToeplitzHashCompute(CXPLAT_TOEPLITZ_HASH Toeplitz, int Toeplitz_Offset, ReadOnlySpan<byte> HashInput)
         {
-            int BaseOffset = HashInput.Offset * NIBBLES_PER_BYTE;
+            int BaseOffset = Toeplitz_Offset * NIBBLES_PER_BYTE;
             uint Result = 0;
-
             NetLog.Assert((BaseOffset + HashInput.Length * NIBBLES_PER_BYTE) <= CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT);
             for (int i = 0; i < HashInput.Length; i++)
             {
