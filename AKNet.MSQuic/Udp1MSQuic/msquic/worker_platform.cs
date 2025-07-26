@@ -15,6 +15,7 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_WORKER> POOL_ENTRY = null;
 
         public Thread Thread;
+        public AutoResetEvent mEventQReady = new AutoResetEvent(false);
         public readonly ConcurrentQueue<SSocketAsyncEventArgs> EventQ = new ConcurrentQueue<SSocketAsyncEventArgs>();
         public readonly SSocketAsyncEventArgs ShutdownSqe = new SSocketAsyncEventArgs();
         public readonly SSocketAsyncEventArgs WakeSqe = new SSocketAsyncEventArgs();
@@ -269,45 +270,6 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
-        static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
-        {
-            var Cqes = Worker.Cqes;
-            int CqeCount = 0;
-            while (Worker.EventQ.Count > 0)
-            {
-                SSocketAsyncEventArgs mArgs = null;
-                if (Worker.EventQ.TryDequeue(out mArgs))
-                {
-                    CqeCount++;
-                    Cqes.Add(mArgs);
-                }
-                else
-                {
-                    break;
-                }
-
-                if (CqeCount >= 16)
-                {
-                    break;
-                }
-            }
-
-            InterlockedFetchAndSetBoolean(ref Worker.Running);
-            if (CqeCount != 0)
-            {
-#if DEBUG // Debug statistics
-                Worker.CqeCount += CqeCount;
-#endif
-                Worker.State.NoWorkCount = 0;
-                for (int i = 0; i < CqeCount; ++i)
-                {
-                    SSocketAsyncEventArgs Sqe = Cqes[i];
-                    Sqe.Do();
-                }
-                Cqes.Clear();
-            }
-        }
-
         static void CxPlatWorkerPoolAddExecutionContext(CXPLAT_WORKER_POOL WorkerPool, CXPLAT_EXECUTION_CONTEXT Context, int Index)
         {
             NetLog.Assert(WorkerPool != null);
@@ -455,7 +417,7 @@ namespace AKNet.Udp1MSQuic.Common
                 {
                     Worker.State.WaitTime = 1;
                 }
-                else if (Diff < long.MaxValue)
+                else if (Diff < int.MaxValue)
                 {
                     Worker.State.WaitTime = Diff;
                 }
@@ -468,6 +430,57 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 Worker.State.WaitTime = int.MaxValue;
             }
+        }
+
+        static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
+        {
+            var Cqes = Worker.Cqes;
+            int CqeCount = 0;
+
+            if (Worker.EventQ.Count == 0)
+            {
+                Worker.mEventQReady.WaitOne((int)Worker.State.WaitTime);
+            }
+
+            while (Worker.EventQ.Count > 0)
+            {
+                SSocketAsyncEventArgs mArgs = null;
+                if (Worker.EventQ.TryDequeue(out mArgs))
+                {
+                    CqeCount++;
+                    Cqes.Add(mArgs);
+                }
+                else
+                {
+                    break;
+                }
+
+                if (CqeCount >= 16)
+                {
+                    break;
+                }
+            }
+
+            InterlockedFetchAndSetBoolean(ref Worker.Running);
+            if (CqeCount != 0)
+            {
+#if DEBUG // Debug statistics
+                Worker.CqeCount += CqeCount;
+#endif
+                Worker.State.NoWorkCount = 0;
+                for (int i = 0; i < CqeCount; ++i)
+                {
+                    SSocketAsyncEventArgs Sqe = Cqes[i];
+                    Sqe.Do();
+                }
+                Cqes.Clear();
+            }
+        }
+
+        static void CxPlatWorkerAddNetEvent(CXPLAT_WORKER Worker, SSocketAsyncEventArgs Sqe)
+        {
+            Worker.EventQ.Enqueue(Sqe);
+            Worker.mEventQReady.Set();
         }
 
         static int CxPlatWorkerPoolGetCount(CXPLAT_WORKER_POOL WorkerPool)
@@ -511,11 +524,11 @@ namespace AKNet.Udp1MSQuic.Common
             CxPlatLockRelease(Worker.ECLock);
         }
 
-        static ConcurrentQueue<SSocketAsyncEventArgs> CxPlatWorkerPoolGetEventQ(CXPLAT_WORKER_POOL WorkerPool, int Index)
+        static CXPLAT_WORKER CxPlatWorkerPoolGetWorker(CXPLAT_WORKER_POOL WorkerPool, int Index)
         {
             NetLog.Assert(WorkerPool != null);
             NetLog.Assert(Index < WorkerPool.WorkerCount);
-            return WorkerPool.Workers[Index].EventQ;
+            return WorkerPool.Workers[Index];
         }
     }
 }

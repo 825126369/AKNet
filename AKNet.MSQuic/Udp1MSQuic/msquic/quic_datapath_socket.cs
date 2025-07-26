@@ -301,7 +301,7 @@ namespace AKNet.Udp1MSQuic.Common
 
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
-                Datapath.Partitions[i].EventQ = CxPlatWorkerPoolGetEventQ(Datapath.WorkerPool, i);
+                Datapath.Partitions[i].mWorker = CxPlatWorkerPoolGetWorker(Datapath.WorkerPool, i);
                 Datapath.Partitions[i] = new CXPLAT_DATAPATH_PROC();
                 Datapath.Partitions[i].Datapath = Datapath;
                 Datapath.Partitions[i].PartitionIndex = i;
@@ -738,7 +738,7 @@ namespace AKNet.Udp1MSQuic.Common
         {
             SendData.LocalAddress = Route.LocalAddress;
             SendData.Sqe.Completed += DataPathProcessCqe3;
-            SendData.SocketProc.DatapathProc.EventQ.Enqueue(SendData.Sqe);
+            CxPlatWorkerAddNetEvent(SendData.SocketProc.DatapathProc.mWorker, SendData.Sqe);
         }
 
         static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)
@@ -835,11 +835,11 @@ namespace AKNet.Udp1MSQuic.Common
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            var mWorker = IoBlock.SocketProc.Parent.Datapath.WorkerPool.Workers[IoBlock.SocketProc.DatapathProc.PartitionIndex];
+            var mWorker = IoBlock.SocketProc.DatapathProc.mWorker;
 
             arg.Completed -= DataPathProcessCqe;
             arg.Completed += DataPathProcessCqe2;
-            mWorker.EventQ.Enqueue(arg as SSocketAsyncEventArgs);
+            CxPlatWorkerAddNetEvent(mWorker, arg as SSocketAsyncEventArgs);
         }
 
         static void DataPathProcessCqe3(object Cqe, SocketAsyncEventArgs arg)

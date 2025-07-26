@@ -35,7 +35,7 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_POOL<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL<DATAPATH_RX_PACKET>();
-        public ConcurrentQueue<SSocketAsyncEventArgs> EventQ;
+        public CXPLAT_WORKER mWorker;
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
