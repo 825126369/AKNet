@@ -173,7 +173,7 @@ namespace AKNet.Udp1MSQuic.Common
         public byte SourceCidLimit;
         public int PathsCount;
         public int NextPathId;
-        public bool WorkerProcessing;
+        public bool WorkerProcessing; //处理连接的Workr, 比如是否切换工作线程
         public bool HasQueuedWork;
         public bool HasPriorityWork;
         

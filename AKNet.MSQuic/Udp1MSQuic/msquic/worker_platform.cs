@@ -329,7 +329,6 @@ namespace AKNet.Udp1MSQuic.Common
 #if DEBUG
                 ++Worker.LoopCount;
 #endif
-                NetLog.Log($"Worker: {Worker.IdealProcessor} LoopCount: {Worker.LoopCount}");
                 Worker.State.TimeNow = CxPlatTimeUs();
                 CxPlatRunExecutionContexts(Worker);
                 if (Worker.State.WaitTime > 0 && BoolOk(InterlockedFetchAndClearBoolean(ref Worker.Running)))

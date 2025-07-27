@@ -311,7 +311,9 @@ namespace AKNet.Udp1MSQuic.Common
                 {
                     Delay = 0;
                 }
-                QuicWorkerUpdateQueueDelay(Worker, Delay);
+
+                //NetLog.Log($"LastQueueTime: {Connection.Stats.Schedule.LastQueueTime}, {TimeNow}");
+               // QuicWorkerUpdateQueueDelay(Worker, Delay);
             }
 
             Connection.WorkerThreadID = ThreadID;
