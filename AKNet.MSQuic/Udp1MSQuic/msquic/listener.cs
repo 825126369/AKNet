@@ -208,9 +208,9 @@ namespace AKNet.Udp1MSQuic.Common
             bool PortUnspecified = false;
             if (LocalAddress != null)
             {
-                Listener.LocalAddress.CopyFrom(LocalAddress);
-                Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
-                PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
+                Listener.LocalAddress.nPort = LocalAddress.nPort; //这里特殊处理，我默认就用 IPV6.Any
+                Listener.WildCard = QuicAddrIsWildCard(Listener.LocalAddress);
+                PortUnspecified = QuicAddrGetPort(Listener.LocalAddress) == 0;
             }
             else
             {
@@ -226,7 +226,7 @@ namespace AKNet.Udp1MSQuic.Common
             }
 
             CXPLAT_UDP_CONFIG UdpConfig = new CXPLAT_UDP_CONFIG();
-            UdpConfig.LocalAddress = LocalAddress;
+            UdpConfig.LocalAddress = Listener.LocalAddress;
             UdpConfig.RemoteAddress = null;
             UdpConfig.Flags = CXPLAT_SOCKET_FLAG_SHARE | CXPLAT_SOCKET_SERVER_OWNED; // Listeners always share the binding.
             UdpConfig.InterfaceIndex = 0;

@@ -52,10 +52,11 @@ namespace AKNet.Udp2MSQuic.Common
         public object Context;
     }
 
-    internal class CXPLAT_PROCESSOR_INFO
+    internal struct CXPLAT_PROCESSOR_INFO
     {
-        public int Index;
-        public ushort Group;
+        public ushort Group;  // The group number this processor is a part of
+        public byte Index;   // Index in the current group
+        public byte PADDING; // Here to align with PROCESSOR_NUMBER struct
     }
 
     internal static partial class MSQuicFunc

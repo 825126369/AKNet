@@ -32,7 +32,31 @@ namespace AKNet.Platform
                 IntPtr overlapped,
                 IntPtr completionRoutine);
 
+            [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            public static unsafe partial int WSAIoctl(
+                IntPtr socketHandle,
+                uint ioControlCode,
+                void* lpvInBuffer,
+                int lpvInBufferLen,
+                void* lpvOutBuffer,
+                int lpvOutBufferLen,
+                out int bytesTransferred,
+                void* shouldBeNull,
+                void* shouldBeNull2);
+
 #else
+            [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            public static unsafe extern int WSAIoctl(
+                IntPtr socketHandle,
+                uint ioControlCode,
+                void* lpvInBuffer,
+                int lpvInBufferLen,
+                void* lpvOutBuffer,
+                int lpvOutBufferLen,
+                out int bytesTransferred,
+                void* shouldBeNull,
+                void* shouldBeNull2);
+
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static unsafe extern int WSAIoctl(
                 SafeHandle socketHandle,

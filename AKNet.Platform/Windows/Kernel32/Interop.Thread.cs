@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -42,6 +43,10 @@ namespace AKNet.Platform
             public static unsafe partial void WaitForSingleObject(IntPtr hHandle, long dwMilliseconds);
             [LibraryImport(Interop.Libraries.Kernel32)]
             public static unsafe partial void Sleep(long dwMilliseconds);
+            [LibraryImport(Interop.Libraries.Kernel32)]
+            public static unsafe partial IntPtr GetCurrentThread();
+            [LibraryImport(Interop.Libraries.Kernel32)]
+            public static partial int GetCurrentThreadId();
         }
 #else
         public static unsafe partial class Kernel32
@@ -74,6 +79,10 @@ namespace AKNet.Platform
             public static unsafe extern void WaitForSingleObject(IntPtr hHandle, long dwMilliseconds);
             [DllImport(Interop.Libraries.Kernel32)]
             public static unsafe extern void Sleep(long dwMilliseconds);
+            [DllImport(Interop.Libraries.Kernel32)]
+            public static unsafe extern IntPtr GetCurrentThread();
+            [DllImport(Interop.Libraries.Kernel32)]
+            public static extern int GetCurrentThreadId();
         }
 
 #endif

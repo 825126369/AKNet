@@ -1,9 +1,6 @@
-﻿
-using AKNet.Common;
-using System;
+﻿using AKNet.Common;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -230,7 +227,7 @@ namespace AKNet.Udp1MSQuic.Common
             Worker.InitializedShutdownSqe = true;
             Worker.InitializedWakeSqe = true;
             Worker.InitializedUpdatePollSqe = true;
-
+                
             if (ThreadConfig != null)
             {
                 ThreadConfig.IdealProcessor = IdealProcessor;
@@ -323,6 +320,12 @@ namespace AKNet.Udp1MSQuic.Common
 #endif
             Worker.State.ThreadID = CxPlatCurThreadID();
             Worker.Running = 1;
+
+            SetThreadAffinity((ushort)Worker.IdealProcessor);
+
+            int id = Thread.GetCurrentProcessorId();
+            int id2 = Thread.GetCurrentProcessorId();
+
             while (!Worker.StoppedThread)
             {
                 ++Worker.State.NoWorkCount;

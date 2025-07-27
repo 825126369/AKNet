@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Platform;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -32,7 +33,8 @@ namespace AKNet.Udp1MSQuic.Common
 
         public QUIC_ADDR(IPAddress otherIp, int nPort)
         {
-            mEndPoint = new IPEndPoint(otherIp.MapToIPv6(), nPort);
+            mEndPoint = new IPEndPoint(otherIp, nPort);
+            Ip = otherIp;
             CheckFamilyError();
         }
 
@@ -318,7 +320,7 @@ namespace AKNet.Udp1MSQuic.Common
             return Status;
         }
 
-        static int SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, out CXPLAT_SOCKET NewSocket)
+        static unsafe int SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, out CXPLAT_SOCKET NewSocket)
         {
             int Status = 0;
             bool IsServerSocket = Config.RemoteAddress == null;
@@ -367,122 +369,57 @@ namespace AKNet.Udp1MSQuic.Common
                 uint BytesReturned;
 
                 SocketProc.Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false); //同时接收IPV4 和IPV6数据包    
-                if (Config.RemoteAddress == null)
+
+                if (Config.RemoteAddress == null && Datapath.PartitionCount > 1)
                 {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    //这里是把每个Socket 分配到不同的CPU 核心上，否则只会第一个Socket 接收数据
+                    uint SIO_CPU_AFFINITY = 0x98000015;
+                    NetLog.Assert(SIO_CPU_AFFINITY == OSPlatformFunc.SIO_CPU_AFFINITY);
+                    ushort Processor = (ushort)i; // API only supports 16-bit proc index.
+                    Result = Interop.Winsock.WSAIoctl(
+                            SocketProc.Socket.Handle,
+                            OSPlatformFunc.SIO_CPU_AFFINITY,
+                            &Processor,
+                            sizeof(ushort),
+                            null,
+                            0,
+                            out _,
+                            null,
+                            null);
+
+                    if (Result != OSPlatformFunc.NO_ERROR)
                     {
-                        //int Processor = i; // API only supports 16-bit proc index.
-                        //Result = SocketProc.Socket.IOControl(IOControlCode.BindToInterface, ref Processor, sizeof(Processor), null, 0, out BytesReturned);
-                        //SIO_CPU_AFFINITY,
-                        //        &Processor,
-                        //        sizeof(Processor),
-                        //        NULL,
-                        //        0,
-                        //        &BytesReturned,
-                        //        NULL,
-                        //        NULL);
-                        //if (Result != NO_ERROR)
-                        //{
-                        //    int WsaError = WSAGetLastError();
-                        //    QuicTraceEvent(
-                        //        DatapathErrorStatus,
-                        //        "[data][%p] ERROR, %u, %s.",
-                        //        Socket,
-                        //        WsaError,
-                        //        "SIO_CPU_AFFINITY");
-                        //    Status = HRESULT_FROM_WIN32(WsaError);
-                        //    goto Error;
-                        //}
+                        int WsaError = Interop.Winsock.WSAGetLastError();
+                        Status = QUIC_STATUS_INTERNAL_ERROR;
+                        goto Error;
                     }
                 }
 
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false); //同时接收IPV4 和IPV6数据包
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ECN, true);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ECN, true);
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService, 46);
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService, 46);
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HopLimit, true);
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.HopLimit, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-
-                if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING))
-                {
-                    //    SocketProc.Socket.SetSocketOption(SocketOptionLevel.Udp, SocketOptionName.ReceiveLowWater, int.MaxValue);
-
-                    //    Option = MAX_URO_PAYLOAD_LENGTH;
-                    //Result =
-                    //    setsockopt(
-                    //        SocketProc->Socket,
-                    //        IPPROTO_UDP,
-                    //        UDP_RECV_MAX_COALESCED_SIZE,
-                    //        (char*)&Option,
-                    //        sizeof(Option));
-                    //if (Result == SOCKET_ERROR)
-                    //{
-                    //    int WsaError = WSAGetLastError();
-                    //    QuicTraceEvent(
-                    //        DatapathErrorStatus,
-                    //        "[data][%p] ERROR, %u, %s.",
-                    //        Socket,
-                    //        WsaError,
-                    //        "Set UDP_RECV_MAX_COALESCED_SIZE");
-                    //    Status = HRESULT_FROM_WIN32(WsaError);
-                    //    goto Error;
-                    //}
-                }
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
                 NetLog.Assert(PartitionIndex < Datapath.PartitionCount);
                 SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex]; //这里设置 Socket分区
                 CxPlatRefIncrement(ref SocketProc.DatapathProc.RefCount);
 
-                if (Config.InterfaceIndex != 0)
-                {
-                    //SocketProc.Socket.SetSocketOption((int)SocketOptionLevel.IPv6, 41, Config.InterfaceIndex);
-                    //SocketProc.Socket.SetSocketOption((int)SocketOptionLevel.IP, 41, Config.InterfaceIndex);
-                }
-
-                if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_PORT_RESERVATIONS) && Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
-                {
-                    if (i == 0)
-                    {
-                        INET_PORT_RANGE PortRange = new INET_PORT_RANGE();
-                        PortRange.StartPort = (ushort)Config.LocalAddress.nPort;
-                        PortRange.NumberOfPorts = 1;
-
-                        //Result = SocketProc.Socket.IOControl(IOControlCode.PORT_RESERVATION)
-                        //    WSAIoctl(
-                        //        SocketProc->Socket,
-                        //        SIO_ACQUIRE_PORT_RESERVATION,
-                        //        &PortRange,
-                        //        sizeof(PortRange),
-                        //        &PortReservation,
-                        //        sizeof(PortReservation),
-                        //        &BytesReturned,
-                        //        NULL,
-                        //        NULL);
-                        //if (Result == SOCKET_ERROR)
-                        //{
-                        //    int WsaError = WSAGetLastError();
-                        //    QuicTraceEvent(
-                        //        DatapathErrorStatus,
-                        //        "[data][%p] ERROR, %u, %s.",
-                        //        Socket,
-                        //        WsaError,
-                        //        "SIO_ACQUIRE_PORT_RESERVATION");
-                        //    Status = HRESULT_FROM_WIN32(WsaError);
-                        //    goto Error;
-                        //}
-                    }
-                }
-
                 try
                 {
-                    SocketProc.Socket.Bind(Socket.LocalAddress.GetIPEndPoint());
+                    IPEndPoint bindPoint = Socket.LocalAddress.GetIPEndPoint();
+                    SocketProc.Socket.Bind(bindPoint);
                 }
                 catch (Exception e)
                 {
                     NetLog.LogError(e.ToString());
+                    Status = QUIC_STATUS_INTERNAL_ERROR;
                     goto Error;
                 }
 
@@ -497,6 +434,7 @@ namespace AKNet.Udp1MSQuic.Common
                     catch (Exception e)
                     {
                         NetLog.LogError(e.ToString());
+                        Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
                 }
@@ -612,8 +550,8 @@ namespace AKNet.Udp1MSQuic.Common
                     LocalAddr.ScopeId = mIPPacketInformation.Interface;
 
                     FoundLocalAddr = true;
-
-                    int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService);
+                    
+                    int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService);
                     TOS = (byte)TypeOfService;
                 }
 
@@ -671,7 +609,7 @@ namespace AKNet.Udp1MSQuic.Common
             }
             else
             {
-                NetLog.Assert(false); // Not expected in test scenarios
+                NetLog.Assert(false, arg.SocketError); // Not expected in test scenarios
             }
 
         Drop:
@@ -835,6 +773,7 @@ namespace AKNet.Udp1MSQuic.Common
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             var mWorker = IoBlock.SocketProc.DatapathProc.mWorker;
+            NetLog.Log("接收消息 IdealProcessor:" + mWorker.IdealProcessor);
 
             arg.Completed -= DataPathProcessCqe;
             arg.Completed += DataPathProcessCqe2;

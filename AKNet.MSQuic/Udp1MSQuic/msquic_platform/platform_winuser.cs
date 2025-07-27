@@ -1,6 +1,8 @@
 ﻿using AKNet.Common;
 using AKNet.Platform;
+using AKNet.Udp2MSQuic.Common;
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace AKNet.Udp1MSQuic.Common
@@ -73,12 +75,12 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 mThread.Name = Config.Name;
             }
-
+            
             mThread.IsBackground = true;
             mThread.Start(Config.Context);
             return 0;
         }
-
+        
         static void CxPlatThreadDelete(Thread mThread)
         {
             mThread.Abort();
@@ -87,6 +89,47 @@ namespace AKNet.Udp1MSQuic.Common
         static void CxPlatThreadWait(Thread mThread)
         {
             mThread.Join();
+        }
+
+        //static void SetThreadAffinity(ushort nProcessorId)
+        //{
+        //    Thread.BeginThreadAffinity();
+        //    SetThreadAffinity2(nProcessorId);
+        //    Thread.EndThreadAffinity();
+        //}
+
+        //static void SetThreadAffinity2(ushort nProcessorId)
+        //{
+        //    IntPtr mThreadPtr = Interop.Kernel32.GetCurrentThread();
+        //    PROCESSOR_NUMBER mData = new PROCESSOR_NUMBER();
+        //    mData.Group = 0;
+        //    mData.Number = (byte)nProcessorId;
+        //    if(!Interop.Kernel32.SetThreadIdealProcessorEx(mThreadPtr, &mData, null))
+        //    {
+        //        NetLog.LogError("线程 设置 CPU 亲和性 失败");
+        //    }
+        //}
+
+        static void SetThreadAffinity(ushort nProcessorId)
+        {
+            var curProcess = Process.GetCurrentProcess();
+            int threadId = Interop.Kernel32.GetCurrentThreadId();
+            ProcessThread currentThread = null;
+            foreach(ProcessThread pt in curProcess.Threads)
+            {
+                if (pt.Id == threadId)
+                {
+                    currentThread = pt;
+                    break;
+                }
+            }
+
+            // 设置线程亲和性（例如绑定到第0号CPU核心）
+            if (currentThread != null)
+            {
+                currentThread.IdealProcessor = nProcessorId;
+                currentThread.ProcessorAffinity = new IntPtr(nProcessorId); // 二进制 0001 -> CPU 0
+            }
         }
     }
 }

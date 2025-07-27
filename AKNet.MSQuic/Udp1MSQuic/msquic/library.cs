@@ -139,6 +139,7 @@ namespace AKNet.Udp1MSQuic.Common
         static QUIC_PARTITION QuicLibraryGetCurrentPartition()
         {
             int CurrentProc = CxPlatProcCurrentNumber();
+            int nThreadId = CxPlatCurThreadID();
             return QuicLibraryGetPartitionFromProcessorIndex(CurrentProc);
         }
 
@@ -207,22 +208,6 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 MsQuicLib.CustomPartitions = false;
                 int MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-
-                //if (MsQuicLib.Storage != null)
-                //{
-                //    uint32_t MaxPartitionCountLen = sizeof(MaxPartitionCount);
-                //    CxPlatStorageReadValue(
-                //        MsQuicLib.Storage,
-                //        QUIC_SETTING_MAX_PARTITION_COUNT,
-                //        (uint8_t*)&MaxPartitionCount,
-                //        &MaxPartitionCountLen);
-
-                //    if (MaxPartitionCount == 0)
-                //    {
-                //        MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-                //    }
-                //}
-
                 if (MsQuicLib.PartitionCount > MaxPartitionCount)
                 {
                     MsQuicLib.PartitionCount = MaxPartitionCount;
