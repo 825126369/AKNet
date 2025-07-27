@@ -51,7 +51,10 @@ namespace AKNet.Udp1MSQuic.Common
         public bool LocalAddressSet;
         public bool RemoteAddressSet;
         public bool PeerTransportParameterValid;
-        public bool UpdateWorker;
+
+        //UpdateWorker 表示当前连接是否需要被调度到一个新的工作线程（worker thread）上执行。 
+        //这通常用于多线程环境中，当连接的状态或事件发生变化时，需要确保某些操作在正确的线程上下文中执行。
+        public bool UpdateWorker; 
         public bool ShutdownCompleteTimedOut;
         public bool ProcessShutdownComplete;
         public bool ShareBinding;

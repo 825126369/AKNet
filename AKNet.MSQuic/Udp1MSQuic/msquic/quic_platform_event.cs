@@ -1,5 +1,4 @@
-﻿using AKNet.Common;
-using System.Threading;
+﻿using System.Threading;
 
 namespace AKNet.Udp1MSQuic.Common
 {
