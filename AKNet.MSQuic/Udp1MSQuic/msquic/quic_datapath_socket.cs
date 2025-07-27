@@ -773,7 +773,7 @@ namespace AKNet.Udp1MSQuic.Common
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             var mWorker = IoBlock.SocketProc.DatapathProc.mWorker;
-            NetLog.Log("接收消息 IdealProcessor:" + mWorker.IdealProcessor);
+           // NetLog.Log("接收消息 IdealProcessor:" + mWorker.IdealProcessor);
 
             arg.Completed -= DataPathProcessCqe;
             arg.Completed += DataPathProcessCqe2;
