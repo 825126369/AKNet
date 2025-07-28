@@ -13,14 +13,24 @@ namespace AKNet.Udp2MSQuic.Common
     using CXPLAT_CQE = OVERLAPPED_ENTRY;
 
     //一律强制转为IpV6地址
-    internal unsafe class QUIC_ADDR
+    internal unsafe class QUIC_ADDR:IDisposable
     {
         public string ServerName;
         public SOCKADDR_INET* RawAddr;
-        public IPEndPoint mEndPoint;
+
+        public void Dispose()
+        {
+            if(RawAddr != null)
+            {
+                OSPlatformFunc.CxPlatFree(RawAddr);
+                RawAddr = null;
+            }
+        }
 
         public QUIC_ADDR()
         {
+            RawAddr = (SOCKADDR_INET*)Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
+            RawAddr->si_family = OSPlatformFunc.AF_INET6;
             CheckFamilyError();
         }
 
@@ -34,11 +44,11 @@ namespace AKNet.Udp2MSQuic.Common
             RawAddr = SocketAddressHelper.GetRawAddr(mIPEndPoint,out _);
             var RawAddr2 = SocketAddressHelper.GetRawAddr(mIPEndPoint, out _);
             SocketAddressHelper.CxPlatConvertToMappedV6(RawAddr2, RawAddr);
-            Marshal.FreeHGlobal((IntPtr)RawAddr2);
+            OSPlatformFunc.CxPlatFree(RawAddr2);
             CheckFamilyError();
         }
 
-        public ReadOnlySpan<byte> GetBytes()
+        public ReadOnlySpan<byte> GetIPAddressSpan()
         {
             if (RawAddr->si_family == OSPlatformFunc.AF_INET)
             {
@@ -75,7 +85,12 @@ namespace AKNet.Udp2MSQuic.Common
             get
             {
                 CheckFamilyError();
-                return RawAddr->Ipv4.sin_port;
+                return RawAddr->Ipv6.sin6_port;
+            }
+
+            set
+            {
+                RawAddr->Ipv6.sin6_port = value;
             }
         }
 
@@ -337,6 +352,7 @@ namespace AKNet.Udp2MSQuic.Common
                 Socket.PerProcSockets[i].Socket = null;
             }
 
+            Interop.Winsock.EnsureInitialized();
             for (int i = 0; i < SocketCount; i++)
             {
                 CXPLAT_SOCKET_PROC SocketProc = Socket.PerProcSockets[i];
@@ -367,7 +383,7 @@ namespace AKNet.Udp2MSQuic.Common
                     OSPlatformFunc.IPPROTO_IPV6, 
                     OSPlatformFunc.IPV6_V6ONLY,
                     (byte*)&Option,
-                    sizeof(int));
+                    sizeof(byte));
 
                 //同时接收IPV4 和IPV6数据包
                 if (Result == OSPlatformFunc.SOCKET_ERROR)
@@ -432,7 +448,7 @@ namespace AKNet.Udp2MSQuic.Common
                     OSPlatformFunc.IPPROTO_IPV6,
                     OSPlatformFunc.IPV6_PKTINFO,
                     (byte*)(&Option),
-                    sizeof(bool));
+                    sizeof(int));
 
                 if (Result == OSPlatformFunc.SOCKET_ERROR)
                 {
@@ -446,7 +462,7 @@ namespace AKNet.Udp2MSQuic.Common
                     OSPlatformFunc.IPPROTO_IP,
                     OSPlatformFunc.IPV6_PKTINFO,
                     (byte*)(&Option),
-                    sizeof(bool));
+                    sizeof(int));
 
                 if (Result == OSPlatformFunc.SOCKET_ERROR)
                 {
@@ -462,7 +478,7 @@ namespace AKNet.Udp2MSQuic.Common
                         OSPlatformFunc.IPPROTO_IPV6,
                         OSPlatformFunc.IPV6_RECVTCLASS,
                         (byte*)(&Option),
-                        sizeof(bool));
+                        sizeof(int));
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -476,7 +492,7 @@ namespace AKNet.Udp2MSQuic.Common
                         OSPlatformFunc.IPPROTO_IP,
                         OSPlatformFunc.IP_RECVTOS,
                         (byte*)(&Option),
-                        sizeof(bool));
+                        sizeof(int));
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -492,7 +508,7 @@ namespace AKNet.Udp2MSQuic.Common
                         OSPlatformFunc.IPPROTO_IPV6,
                         OSPlatformFunc.IPV6_ECN,
                         (byte*)(&Option),
-                        sizeof(bool));
+                        sizeof(int));
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -506,7 +522,7 @@ namespace AKNet.Udp2MSQuic.Common
                         OSPlatformFunc.IPPROTO_IP,
                         OSPlatformFunc.IP_ECN,
                         (byte*)(&Option),
-                        sizeof(bool));
+                        sizeof(int));
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -523,7 +539,7 @@ namespace AKNet.Udp2MSQuic.Common
                         OSPlatformFunc.IPPROTO_IP,
                         OSPlatformFunc.IP_HOPLIMIT,
                         (byte*)(&Option),
-                        sizeof(bool));
+                        sizeof(int));
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -537,7 +553,7 @@ namespace AKNet.Udp2MSQuic.Common
                         OSPlatformFunc.IPPROTO_IPV6,
                         OSPlatformFunc.IPV6_HOPLIMIT,
                         (byte*)(&Option),
-                        sizeof(bool));
+                        sizeof(int));
 
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
@@ -700,11 +716,17 @@ namespace AKNet.Udp2MSQuic.Common
                 if (i == 0)
                 {
                     //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
-                    var LocalEndPoint = SocketAddressHelper.GetLocalEndPoint(SocketProc.Socket, AddressFamily.InterNetworkV6);
-                    Socket.LocalAddress.SetIPEndPoint(LocalEndPoint);
-                    if (Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
+                    int AssignedLocalAddressLength = Marshal.SizeOf<SOCKADDR_INET>();
+                    Result = Interop.Winsock.getsockname(SocketProc.Socket, (byte*)Socket.LocalAddress.RawAddr, ref AssignedLocalAddressLength);
+                    if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
-                        NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
+                        Status = QUIC_STATUS_INTERNAL_ERROR;
+                        goto Error;
+                    }
+
+                    if (Config.LocalAddress.RawAddr != null && Config.LocalAddress.RawAddr->Ipv6.sin6_port != 0)
+                    {
+                        NetLog.Assert(Config.LocalAddress.RawAddr->Ipv6.sin6_port == Socket.LocalAddress.RawAddr->Ipv6.sin6_port);
                     }
                 }
 

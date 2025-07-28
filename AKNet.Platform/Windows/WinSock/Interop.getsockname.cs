@@ -11,10 +11,10 @@ namespace AKNet.Platform
             public static unsafe partial int getsockname(
                 SafeHandle socketHandle,
                 byte* socketAddress,
-                out int socketAddressSize);
+                ref int socketAddressSize);
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            public static unsafe extern int getsockname(SafeHandle socketHandle, byte* socketAddress, out int socketAddressSize);
+            public static unsafe extern int getsockname(SafeHandle socketHandle, byte* socketAddress, ref int socketAddressSize);
 #endif
         }
     }

@@ -30,7 +30,7 @@ namespace AKNet.Platform
             {
                 var addr = new SOCKADDR_INET();
                 addr.Ipv4.sin_family = OSPlatformFunc.AF_INET; // AF_INET
-                addr.Ipv4.sin_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
+                addr.Ipv4.sin_port = (ushort)endPoint.Port;
 
                 Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv4.sin_addr.u, 4);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
@@ -44,7 +44,7 @@ namespace AKNet.Platform
             {
                 var addr = new SOCKADDR_INET();
                 addr.Ipv6.sin6_family = OSPlatformFunc.AF_INET; // AF_INET
-                addr.Ipv6.sin6_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
+                addr.Ipv6.sin6_port = (ushort)endPoint.Port;
                 addr.Ipv6.sin6_flowinfo = 0;
                 addr.Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;
                 Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv6.sin6_addr.u, 4);
@@ -66,13 +66,13 @@ namespace AKNet.Platform
             if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET (IPv4)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr->Ipv4.sin_addr.u, 4));
-                int port = (int)IPAddress.NetworkToHostOrder((short)sockaddr->Ipv4.sin_port);
+                int port = (short)sockaddr->Ipv4.sin_port;
                 return new IPEndPoint(addr, port);
             }
             else if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET6 (IPv6)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr->Ipv6.sin6_addr.u, 16));
-                int port = (int)IPAddress.NetworkToHostOrder((short)sockaddr->Ipv6.sin6_port);
+                int port = (short)sockaddr->Ipv6.sin6_port;
                 return new IPEndPoint(addr, port);
             }
             else
@@ -81,51 +81,14 @@ namespace AKNet.Platform
             }
         }
 
-        public static IPEndPoint GetLocalEndPoint(SafeHandle Socket, AddressFamily family)
-        {
-            int Result = 0;
-            Span<byte> buffer = stackalloc byte[30];
-            int bufferLength = buffer.Length;
-            fixed (byte* mTempPtr = buffer)
-            {
-                Result = Interop.Winsock.getsockname(Socket, mTempPtr, out bufferLength);
-            }
-
-            if (Result == OSPlatformFunc.SOCKET_ERROR)
-            {
-                return null;
-            }
-
-            buffer = buffer.Slice(0, bufferLength);
-            NetLog.Assert(bufferLength <= buffer.Length);
-            switch (family)
-            {
-                case AddressFamily.InterNetwork:
-                    {
-                        ushort nPort = BinaryPrimitives.ReadUInt16BigEndian(buffer.Slice(2));
-                        IPAddress mAddress = new IPAddress(BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(4)));
-                        return new IPEndPoint(mAddress, nPort);
-                    }
-                case AddressFamily.InterNetworkV6:
-                    {
-                        ushort nPort = BinaryPrimitives.ReadUInt16BigEndian(buffer.Slice(2));
-                        uint scope = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(24));
-                        IPAddress mAddress = new IPAddress(buffer.Slice(8), scope);
-                        return new IPEndPoint(mAddress, (int)nPort);
-                    }
-                default:
-                    return null;
-            }
-        }
-
         public static void CxPlatConvertFromMappedV6(SOCKADDR_INET* InAddr, SOCKADDR_INET* OutAddr)
         {
             NetLog.Assert(InAddr->si_family == OSPlatformFunc.AF_INET6);
-            if (Interop.Winsock.IN6_IS_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr))
+            if (IN6_IS_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr))
             {
                 OutAddr->si_family = OSPlatformFunc.AF_INET;
                 OutAddr->Ipv4.sin_port = InAddr->Ipv6.sin6_port;
-                OutAddr->Ipv4.sin_addr = *(IN_ADDR*)Interop.Winsock.IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
+                OutAddr->Ipv4.sin_addr = *(IN_ADDR*)IN6_GET_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr);
             }
             else if (OutAddr != InAddr)
             {
@@ -138,13 +101,55 @@ namespace AKNet.Platform
             if (InAddr->si_family == OSPlatformFunc.AF_INET)
             {
                 ulong unspecified_scope = 0;
-                Interop.Winsock.IN6ADDR_SETV4MAPPED(&OutAddr->Ipv6, &InAddr->Ipv4.sin_addr, unspecified_scope, InAddr->Ipv4.sin_port);
+                IN6ADDR_SETV4MAPPED(&OutAddr->Ipv6, &InAddr->Ipv4.sin_addr, unspecified_scope, InAddr->Ipv4.sin_port);
             } 
             else
             {
                 *OutAddr = *InAddr;
             }
         }
+
+        public static bool IN6_IS_ADDR_V4MAPPED(IN6_ADDR* a)
+        {
+            return (bool)((a->u[0] == 0) && (a->u[1] == 0) &&
+                 (a->u[2] == 0) && (a->u[3] == 0) &&
+                 (a->u[4] == 0) && (a->u[5] == 0) &&
+                 (a->u[6] == 0) && (a->u[7] == 0) &&
+                 (a->u[8] == 0) && (a->u[9] == 0) &&
+                 (a->u[10] == 0xff) && (a->u[9] == 0xff));
+        }
+
+        public static byte* IN6_GET_ADDR_V4MAPPED(IN6_ADDR* Ipv6Address)
+        {
+            return (Ipv6Address->u + 6);
+        }
+
+        public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, IN_ADDR* a4, ulong scope, ushort port)
+        {
+            a6->sin6_family = OSPlatformFunc.AF_INET6;
+            a6->sin6_port = port;
+            a6->sin6_flowinfo = 0;
+            IN6_SET_ADDR_V4MAPPED(&a6->sin6_addr, a4);
+            a6->sin6_scope_id = scope;
+            IN4_UNCANONICALIZE_SCOPE_ID(a4, &a6->sin6_scope_id);
+        }
+
+        public static void IN6_SET_ADDR_V4MAPPED(IN6_ADDR* a6, IN_ADDR* a4)
+        {
+            *a6 = new IN6_ADDR();
+            a6->u[12] = ((byte*)a4)[0];
+            a6->u[13] = ((byte*)a4)[1];
+            a6->u[14] = ((byte*)a4)[2];
+            a6->u[15] = ((byte*)a4)[3];
+        }
+
+        static void IN4_UNCANONICALIZE_SCOPE_ID(IN_ADDR* Address, ulong *ScopeId)
+        {
+            *ScopeId = 0;
+        }
+
+
+
 
     }
 }

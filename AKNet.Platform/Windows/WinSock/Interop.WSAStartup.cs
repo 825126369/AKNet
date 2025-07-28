@@ -35,7 +35,7 @@ namespace AKNet.Platform
 
             }
 
-            internal static void EnsureInitialized()
+            public static void EnsureInitialized()
             {
                 if (s_initialized == 0)
                 {

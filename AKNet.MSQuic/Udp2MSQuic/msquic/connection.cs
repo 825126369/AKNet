@@ -582,7 +582,7 @@ namespace AKNet.Udp2MSQuic.Common
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
                     Connection.ServerID[0] = CxPlatRandom.RandomByte();
-                    ReadOnlySpan<byte> IP_Array = Packet.Route.LocalAddress.GetBytes();
+                    ReadOnlySpan<byte> IP_Array = Packet.Route.LocalAddress.GetIPAddressSpan();
                     if (Packet.Route.LocalAddress.Family == AddressFamily.InterNetwork)
                     {
                         IP_Array.CopyTo(Connection.ServerID.AsSpan().Slice(1, 4));
