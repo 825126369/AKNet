@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-
-namespace AKNet.Udp1MSQuic.Common
+﻿namespace AKNet.Udp1MSQuic.Common
 {
     internal static partial class MSQuicFunc
     {

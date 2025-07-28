@@ -329,7 +329,7 @@ namespace AKNet.Udp1MSQuic.Common
                 }
             }
 
-            Status = CxPlatDataPathInitialize( DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize(DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 
