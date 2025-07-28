@@ -366,7 +366,7 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 CXPLAT_SOCKET_PROC SocketProc = Socket.PerProcSockets[i];
                 int PartitionIndex = Config.RemoteAddress != null ? Config.PartitionIndex : i % Datapath.PartitionCount;
-                uint BytesReturned;
+                int BytesReturned;
 
                 SocketProc.Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
 
