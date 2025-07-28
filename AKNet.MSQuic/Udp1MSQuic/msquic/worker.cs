@@ -313,7 +313,7 @@ namespace AKNet.Udp1MSQuic.Common
                 }
 
                 //NetLog.Log($"LastQueueTime: {Connection.Stats.Schedule.LastQueueTime}, {TimeNow}");
-               // QuicWorkerUpdateQueueDelay(Worker, Delay);
+                QuicWorkerUpdateQueueDelay(Worker, Delay);
             }
 
             Connection.WorkerThreadID = ThreadID;
