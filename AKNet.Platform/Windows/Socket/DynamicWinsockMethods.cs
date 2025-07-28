@@ -1,3 +1,4 @@
+#if TARGET_WINDOWS
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -28,17 +29,17 @@ namespace AKNet.Platform
 
         private static T CreateDelegate<T>(SafeHandle socketHandle, GUID guid) where T : Delegate
         {
-            void* ptr = null;
+            IntPtr ptr = IntPtr.Zero;
             int errorCode;
             unsafe
             {
                 errorCode = Interop.Winsock.WSAIoctl(
                    socketHandle,
-                   Interop.Winsock.IoctlSocketConstants.SIOGETEXTENSIONFUNCTIONPOINTER,
+                   OSPlatformFunc.SIO_GET_EXTENSION_FUNCTION_POINTER,
                    &guid,
                    sizeof(GUID),
                    &ptr,
-                   sizeof(void*),
+                   sizeof(IntPtr),
                    out _,
                    null,
                    null);
@@ -65,7 +66,7 @@ namespace AKNet.Platform
         {
             if (_sendMsg == null)
             {
-                _sendMsg = CreateDelegate<WSASendMsg>(socketHandle, WSARecvMsgGuid);
+                _sendMsg = CreateDelegate<WSASendMsg>(socketHandle, WSASendMsgGuid);
             }
             return _sendMsg;
         }
@@ -88,3 +89,4 @@ namespace AKNet.Platform
                 OVERLAPPED* lpOverlapped,
                 IntPtr lpCompletionRoutine);
 }
+#endif

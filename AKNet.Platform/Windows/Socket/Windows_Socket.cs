@@ -191,11 +191,15 @@ namespace AKNet.Platform
         public const byte FILE_SKIP_COMPLETION_PORT_ON_SUCCESS = 0x1;
         public const byte FILE_SKIP_SET_EVENT_ON_HANDLE = 0x2;
 
+        public const uint IOC_WS2 = 0x08000000;
+        public const uint IOC_OUT = 0x40000000;  
         public const uint IOC_IN = 0x80000000;
+        public const uint IOC_INOUT = (IOC_IN | IOC_OUT);
         public const uint IOC_VENDOR = 0x18000000;
         public static readonly uint SIO_CPU_AFFINITY = _WSAIOW(IOC_VENDOR, 21U);
         public static readonly uint SIO_ACQUIRE_PORT_RESERVATION = _WSAIOW(IOC_VENDOR, 100);
         public static readonly uint SIO_ASSOCIATE_PORT_RESERVATION = _WSAIOW(IOC_VENDOR, 102);
+        public static readonly uint SIO_GET_EXTENSION_FUNCTION_POINTER = _WSAIORW(IOC_WS2, 6);
 
         public const int IP_TOS = 3; // IP type of service.
         public const int IP_TTL = 4; // IP TTL (hop limit).
@@ -227,6 +231,11 @@ namespace AKNet.Platform
         public static uint _WSAIOW(uint x, uint y)
         {
             return (IOC_IN | (x) | (y));
+        }
+
+        public static uint _WSAIORW(uint x, uint y)
+        {
+            return (IOC_INOUT | (x) | (y));
         }
 
         public static WSACMSGHDR* WSA_CMSG_FIRSTHDR(WSAMSG* msg)
