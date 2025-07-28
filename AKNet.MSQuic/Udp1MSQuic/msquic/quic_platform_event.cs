@@ -25,27 +25,26 @@ namespace AKNet.Udp1MSQuic.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CxPlatEventSet(EventWaitHandle Event)
+        static bool CxPlatEventSet(EventWaitHandle Event)
         {
-            Event.Set();
+             return Event.Set();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CxPlatEventReset(EventWaitHandle Event)
+        static bool CxPlatEventReset(EventWaitHandle Event)
         {
-            Event.Reset();
+            return Event.Reset();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CxPlatEventWaitForever(EventWaitHandle Event)
+        static bool CxPlatEventWaitForever(EventWaitHandle Event)
         {
-            Event.WaitOne();
+            return Event.WaitOne();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool CxPlatEventWaitWithTimeout(EventWaitHandle Event, int TimeoutMs)
         {
-            //NetLog.Assert(TimeoutMs != int.MaxValue);
             return Event.WaitOne(TimeoutMs);
         }
 

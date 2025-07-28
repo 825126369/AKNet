@@ -173,7 +173,6 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 Worker.StoppingThread = true;
                 CxPlatWorkerAddNetEvent(Worker, Worker.ShutdownSqe);
-
                 CxPlatThreadWait(Worker.Thread);
                 CxPlatThreadDelete(Worker.Thread);
 #if DEBUG
@@ -468,7 +467,7 @@ namespace AKNet.Udp1MSQuic.Common
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
             {
-#if DEBUG // Debug statistics
+#if DEBUG       //Debug statistics
                 Worker.CqeCount += CqeCount;
 #endif
                 Worker.State.NoWorkCount = 0;
