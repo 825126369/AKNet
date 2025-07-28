@@ -11,7 +11,7 @@ using System.Diagnostics;
 
 namespace AKNet.Common
 {
-    public static partial class NetLogMgr
+    public static partial class NetLog
     {
         public static void SetOrPrintLog(bool bPrintLog)
         {
@@ -27,7 +27,6 @@ namespace AKNet.Common
 
         public static void AddConsoleLog()
         {
-#if !DEBUG
             Action<string> LogFunc = (string message)=>
             {
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
@@ -47,7 +46,6 @@ namespace AKNet.Common
             };
 
             AddLogFunc(LogFunc, LogErrorFunc, LogWarningFunc);
-#endif
         }
     }
     
