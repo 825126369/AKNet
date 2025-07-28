@@ -37,15 +37,13 @@ namespace AKNet.Platform
 
     public unsafe struct PROCESSOR_RELATIONSHIP
     {
-        private const int ANYSIZE_ARRAY = 1;
-
         public byte Flags;
         public byte EfficiencyClass;
         public fixed byte Reserved[20];
         public int GroupCount;
 
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = ANYSIZE_ARRAY)]
-        public GROUP_AFFINITY[] GroupMask;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = OSPlatformFunc.ANYSIZE_ARRAY)]
+        public GROUP_AFFINITY* GroupMask;
     }
 
     public unsafe struct PROCESSOR_GROUP_INFO
@@ -58,14 +56,15 @@ namespace AKNet.Platform
 
     public unsafe struct GROUP_RELATIONSHIP
     {
-        private const int ANYSIZE_ARRAY = 1;
-
-        public int MaximumGroupCount;
-        public int ActiveGroupCount;
+        public ushort MaximumGroupCount;
+        public ushort ActiveGroupCount;
         public fixed byte Reserved[20];
-
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = ANYSIZE_ARRAY)]
-        public PROCESSOR_GROUP_INFO[] GroupInfo;
+        public PROCESSOR_GROUP_INFO GroupInfo;
+        public PROCESSOR_GROUP_INFO* GetGroupInfo(int i)
+        {
+            fixed(PROCESSOR_GROUP_INFO* ptr = &GroupInfo)
+            return (ptr + i);
+        }
     }
 
     public unsafe struct SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
@@ -77,11 +76,8 @@ namespace AKNet.Platform
         public struct DUMMYUNIONNAME_DATA
         {
             [FieldOffset(0)] public PROCESSOR_RELATIONSHIP Processor;
-
             [FieldOffset(0)] public NUMA_NODE_RELATIONSHIP NumaNode;
-
             [FieldOffset(0)] public CACHE_RELATIONSHIP Cache;
-
             [FieldOffset(0)] public GROUP_RELATIONSHIP Group;
         }
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
@@ -98,8 +94,6 @@ namespace AKNet.Platform
 
     public unsafe struct CACHE_RELATIONSHIP
     {
-        private const int ANYSIZE_ARRAY = 1;
-
         public byte Level;
         public byte Associativity;
         public short LineSize;
@@ -112,15 +106,13 @@ namespace AKNet.Platform
         public struct DUMMYUNIONNAME_DATA
         {
              [FieldOffset(0)]  public GROUP_AFFINITY GroupMask;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = ANYSIZE_ARRAY)] [FieldOffset(0)] public GROUP_AFFINITY[] GroupMasks;
+             [MarshalAs(UnmanagedType.ByValArray, SizeConst = OSPlatformFunc.ANYSIZE_ARRAY)] [FieldOffset(0)] public GROUP_AFFINITY* GroupMasks;
         }
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
     }
 
     public unsafe struct NUMA_NODE_RELATIONSHIP
     {
-        private const int ANYSIZE_ARRAY = 1;
-
         public int NodeNumber;
         public fixed byte Reserved[18];
         public short GroupCount;
@@ -129,7 +121,7 @@ namespace AKNet.Platform
         public struct DUMMYUNIONNAME_DATA
         {
             [FieldOffset(0)]  public GROUP_AFFINITY GroupMask;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = ANYSIZE_ARRAY)][FieldOffset(0)]  public GROUP_AFFINITY[] GroupMasks;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = OSPlatformFunc.ANYSIZE_ARRAY)][FieldOffset(0)]  public GROUP_AFFINITY* GroupMasks;
         }
         public DUMMYUNIONNAME_DATA DUMMYUNIONNAME;
     }
@@ -143,6 +135,8 @@ namespace AKNet.Platform
     
     public static unsafe partial class OSPlatformFunc
     {
+        public const int ANYSIZE_ARRAY = 1;
+
         public const long INFINITE = 0xFFFFFFFF;  // Infinite timeout
         public const int MAXLONG = 0x7fffffff;
         public const int THREAD_DYNAMIC_CODE_ALLOW = 1;     // Opt-out of dynamic code generation.

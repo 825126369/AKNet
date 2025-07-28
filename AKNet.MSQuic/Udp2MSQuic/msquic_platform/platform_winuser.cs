@@ -2,7 +2,6 @@
 using AKNet.Common;
 using AKNet.Platform;
 using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
@@ -30,7 +29,6 @@ namespace AKNet.Udp2MSQuic.Common
     internal static unsafe partial class MSQuicFunc
     {
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
-        static CX_PLATFORM CxPlatform = new CX_PLATFORM();
         static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo;
         static CXPLAT_PROCESSOR_GROUP_INFO* CxPlatProcessorGroupInfo;
         static int CxPlatProcessorCount;
@@ -46,13 +44,6 @@ namespace AKNet.Udp2MSQuic.Common
             int Status;
             bool CryptoInitialized = false;
             bool ProcInfoInitialized = false;
-
-            CxPlatform.Heap = Interop.Kernel32.HeapCreate(0, 0, 0);
-            if (CxPlatform.Heap == IntPtr.Zero)
-            {
-                Status = 1;
-                goto Error;
-            }
 
             if (QUIC_FAILED(Status = CxPlatProcessorInfoInit()))
             {
@@ -71,27 +62,14 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     CxPlatProcessorInfoUnInit();
                 }
-                if (CxPlatform.Heap != IntPtr.Zero)
-                {
-                    Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
-                    CxPlatform.Heap = IntPtr.Zero;
-                }
             }
             return Status;
         }
 
         static void CxPlatUninitialize()
         {
-            NetLog.Assert(CxPlatform.Heap != IntPtr.Zero);
             CxPlatProcessorInfoUnInit();
-            Interop.Kernel32.HeapDestroy(CxPlatform.Heap);
-            CxPlatform.Heap = IntPtr.Zero;
         }
-
-        //public static int CxPlatProcCount()
-        //{
-        //    return CxPlatProcessorCount;
-        //}
 
         public static int CxPlatProcessorInfoInit()
         {
@@ -116,8 +94,8 @@ namespace AKNet.Udp2MSQuic.Common
 
             for (int i = 0; i < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++i)
             {
-                ActiveProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
-                MaxProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].MaximumProcessorCount;
+                ActiveProcessorCount += Info->DUMMYUNIONNAME.Group.GetGroupInfo(i)->ActiveProcessorCount;
+                MaxProcessorCount += Info->DUMMYUNIONNAME.Group.GetGroupInfo(i)->MaximumProcessorCount;
             }
 
             NetLog.Assert(ActiveProcessorCount > 0);
@@ -156,10 +134,10 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatProcessorCount = 0;
             for (int i = 0; i < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++i)
             {
-                CxPlatProcessorGroupInfo[i].Mask = Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorMask;
-                CxPlatProcessorGroupInfo[i].Count = Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
+                CxPlatProcessorGroupInfo[i].Mask = Info->DUMMYUNIONNAME.Group.GetGroupInfo(i)->ActiveProcessorMask;
+                CxPlatProcessorGroupInfo[i].Count = Info->DUMMYUNIONNAME.Group.GetGroupInfo(i)->ActiveProcessorCount;
                 CxPlatProcessorGroupInfo[i].Offset = CxPlatProcessorCount;
-                CxPlatProcessorCount += Info->DUMMYUNIONNAME.Group.GroupInfo[i].ActiveProcessorCount;
+                CxPlatProcessorCount += Info->DUMMYUNIONNAME.Group.GetGroupInfo(i)->ActiveProcessorCount;
             }
 
             for (int Proc = 0; Proc < ActiveProcessorCount; ++Proc)
@@ -167,7 +145,7 @@ namespace AKNet.Udp2MSQuic.Common
                 for (int Group = 0; Group < Info->DUMMYUNIONNAME.Group.ActiveGroupCount; ++Group)
                 {
                     if (Proc >= CxPlatProcessorGroupInfo[Group].Offset &&
-                        Proc < CxPlatProcessorGroupInfo[Group].Offset + Info->DUMMYUNIONNAME.Group.GroupInfo[Group].ActiveProcessorCount)
+                        Proc < CxPlatProcessorGroupInfo[Group].Offset + Info->DUMMYUNIONNAME.Group.GetGroupInfo(Group)->ActiveProcessorCount)
                     {
                         CxPlatProcessorInfo[Proc].Group = (ushort)Group;
                         NetLog.Assert(Proc - CxPlatProcessorGroupInfo[Group].Offset <= byte.MaxValue);
@@ -215,21 +193,21 @@ namespace AKNet.Udp2MSQuic.Common
             Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, null, out BufferLength);
             if (BufferLength == 0)
             {
-                return Interop.Kernel32.GetLastError();
+                return QUIC_STATUS_INTERNAL_ERROR;
             }
 
             *Buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)OSPlatformFunc.CxPlatAlloc(BufferLength);
             if (*Buffer == null)
             {
-                return 1;
+                return QUIC_STATUS_OUT_OF_MEMORY;
             }
 
             if (!Interop.Kernel32.GetLogicalProcessorInformationEx(Relationship, *Buffer, out BufferLength))
             {
                 OSPlatformFunc.CxPlatFree(*Buffer);
-                return Interop.Kernel32.GetLastError();
+                return QUIC_STATUS_INTERNAL_ERROR;
             }
-            return 0;
+            return QUIC_STATUS_SUCCESS;
         }
 
         public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out CXPLAT_THREAD mThread)

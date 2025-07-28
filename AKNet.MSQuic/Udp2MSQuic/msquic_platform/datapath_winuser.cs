@@ -138,7 +138,10 @@ namespace AKNet.Udp2MSQuic.Common
         private void CheckFamilyError()
         {
 #if DEBUG
-            NetLog.Assert((AddressFamily)RawAddr->si_family == AddressFamily.InterNetworkV6);
+            if (RawAddr != null)
+            {
+                NetLog.Assert((AddressFamily)RawAddr->si_family == AddressFamily.InterNetworkV6);
+            }
 #endif
         }
     }

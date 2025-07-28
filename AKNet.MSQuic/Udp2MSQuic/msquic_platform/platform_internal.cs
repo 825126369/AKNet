@@ -118,15 +118,4 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;
     }
-
-    internal unsafe class CX_PLATFORM
-    {
-        public IntPtr Heap;
-        public int dwBuildNumber;
-#if DEBUG
-        public int AllocFailDenominator;
-        public long AllocCounter;
-#endif
-    }
-
 }
