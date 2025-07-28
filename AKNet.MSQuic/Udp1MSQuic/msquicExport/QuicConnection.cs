@@ -10,7 +10,7 @@ namespace AKNet.Udp1MSQuic.Common
 {
     internal partial class QuicConnection
     {
-        public QUIC_CONNECTION _handle;
+        public readonly QUIC_CONNECTION _handle;
         public SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
         public readonly QuicConnectionOptions mOption;
@@ -23,6 +23,10 @@ namespace AKNet.Udp1MSQuic.Common
             this.mOption = mOption;
             this._handle = null;
             this.RemoteEndPoint = mOption.RemoteEndPoint;
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
+            {
+                NetLog.LogError("ConnectionOpen failed");
+            }
         }
         
         public QuicConnection(QuicListener mQuicListener, QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
@@ -46,11 +50,6 @@ namespace AKNet.Udp1MSQuic.Common
 
         private async void StartConnectAsync()
         {
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
-            {
-                NetLog.LogError("ConnectionOpen failed");
-            }
-
             if (!mOption.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
             {
                 throw new ArgumentException();
