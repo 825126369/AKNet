@@ -10,7 +10,7 @@ namespace AKNet.Udp1MSQuic.Common
 {
     internal partial class QuicConnection
     {
-        public readonly QUIC_CONNECTION _handle;
+        public QUIC_CONNECTION _handle;
         public SslConnectionOptions _sslConnectionOptions;
         private QUIC_CONFIGURATION _configuration;
         public readonly QuicConnectionOptions mOption;
@@ -23,10 +23,6 @@ namespace AKNet.Udp1MSQuic.Common
             this.mOption = mOption;
             this._handle = null;
             this.RemoteEndPoint = mOption.RemoteEndPoint;
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
-            {
-                NetLog.LogError("ConnectionOpen failed");
-            }
         }
         
         public QuicConnection(QuicListener mQuicListener, QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
@@ -41,12 +37,20 @@ namespace AKNet.Udp1MSQuic.Common
         public static QuicConnection StartConnect(QuicConnectionOptions mOption)
         {
             QuicConnection connection = new QuicConnection(mOption);
-            connection.StartConnectAsync();
+            Task.Run(() =>
+            {
+                connection.StartConnectAsync();
+            });
             return connection;
         }
 
         private async void StartConnectAsync()
         {
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionOpen(MsQuicApi.Api.Registration, NativeCallback, this, out _handle)))
+            {
+                NetLog.LogError("ConnectionOpen failed");
+            }
+
             if (!mOption.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
             {
                 throw new ArgumentException();
@@ -77,7 +81,6 @@ namespace AKNet.Udp1MSQuic.Common
             _configuration = ClientConfig.Create(true);
             string sni = mOption.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString();
             remoteQuicAddress.ServerName = sni;
-
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, remoteQuicAddress)))
             {
                 NetLog.LogError("ConnectionStart failed");

@@ -5,34 +5,25 @@ namespace AKNet.Udp1MSQuic.Common
 {
     internal sealed class MsQuicApi
     {
-        private static MsQuicApi mLock;
-        private static MsQuicApi mInstance;
+        private static readonly Lazy<MsQuicApi> _lazyInstance = new Lazy<MsQuicApi>(() => new MsQuicApi()); //线程安全
         public QUIC_REGISTRATION Registration;
         private static readonly Version s_minMsQuicVersion = new Version(2, 0, 0);
         private static bool bInit = false;
 
-        public static MsQuicApi Api
+        public static MsQuicApi Api => _lazyInstance.Value;
+
+        public MsQuicApi()
         {
-            get
-            {
-                if (mInstance == null)
-                {
-                    mInstance = new MsQuicApi();
-                    if (!mInstance.CheckAndInit())
-                    {
-                        return null;
-                    }
-                    
-                }
-                return mInstance;
-            }
+            CheckAndInit();
         }
+
 
         private bool CheckAndInit()
         {
             if(bInit)
             {
                 NetLog.LogError("单例 有问题");
+                return false;
             }
             bInit = true;
 

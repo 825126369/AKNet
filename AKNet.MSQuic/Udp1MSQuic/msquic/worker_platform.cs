@@ -122,15 +122,15 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 if (Config.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NO_IDEAL_PROC))
                 {
-                    ThreadFlags &= ~(uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC; // Remove the flag
+                   SetFlag(ref ThreadFlags, (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC, false); // Remove the flag
                 }
                 if (Config.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
                 {
-                    ThreadFlags |= (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    SetFlag(ref ThreadFlags, (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY, true);
                 }
                 if (Config.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE))
                 {
-                    ThreadFlags |= (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
+                    SetFlag(ref ThreadFlags, (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE, true);
                 }
             }
 

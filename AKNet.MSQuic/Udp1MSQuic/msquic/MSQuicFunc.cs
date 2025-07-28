@@ -19,6 +19,14 @@ namespace AKNet.Udp1MSQuic.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetFlag(ref uint Flags, uint flag, bool bEnable)
+        {
+            ulong Flags2 = Flags;
+            SetFlag(ref Flags2, flag, bEnable);
+            Flags = (uint)Flags2;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetFlag(ref ulong Flags, ulong flag, bool bEnable)
         {
             if (bEnable)
