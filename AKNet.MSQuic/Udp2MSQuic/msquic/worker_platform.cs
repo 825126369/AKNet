@@ -301,8 +301,7 @@ namespace AKNet.Udp2MSQuic.Common
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
             {
-
-#if DEBUG // Debug statistics
+#if DEBUG
                 Worker.CqeCount += CqeCount;
 #endif
                 Worker.State.NoWorkCount = 0;

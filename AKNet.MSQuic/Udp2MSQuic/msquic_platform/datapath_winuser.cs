@@ -1370,12 +1370,6 @@ namespace AKNet.Udp2MSQuic.Common
             return IoBlock;
         }
 
-        static void CxPlatSendDataComplete(SocketAsyncEventArgs arg)
-        {
-            CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
-            SendDataFree(SendData);
-        }
-
         static void CxPlatDataPathSocketProcessReceive(DATAPATH_RX_IO_BLOCK IoBlock, int BytesTransferred,ulong IoResult)
         {
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
