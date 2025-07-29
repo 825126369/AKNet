@@ -751,7 +751,7 @@ namespace AKNet.Udp2MSQuic.Common
                         goto Error;
                     }
 
-                    if (Config.LocalAddress.RawAddr != null && Config.LocalAddress.RawAddr->Ipv6.sin6_port != 0)
+                    if (Config.LocalAddress != null && Config.LocalAddress.RawAddr != null && Config.LocalAddress.RawAddr->Ipv6.sin6_port != 0)
                     {
                         NetLog.Assert(Config.LocalAddress.RawAddr->Ipv6.sin6_port == Socket.LocalAddress.RawAddr->Ipv6.sin6_port);
                     }
@@ -1107,7 +1107,7 @@ namespace AKNet.Udp2MSQuic.Common
             CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
             if (IoResult != QUIC_STATUS_SUCCESS)
             {
-                NetLog.LogError("CxPlatSendDataComplete Error");
+                NetLog.LogError("CxPlatSendDataComplete Error: " + (SocketError)IoResult);
             }
             SendDataFree(SendData);
         }
@@ -1174,7 +1174,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         static void CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData)
         {
-            SendData.LocalAddress = Route.LocalAddress;
+            *SendData.LocalAddress.RawAddr = *Route.LocalAddress.RawAddr;
             CxPlatStartDatapathIo(SendData.SocketProc, SendData.Sqe, SendData, CxPlatIoQueueSendEventComplete);
             int Status = CxPlatSocketEnqueueSqe(SendData.SocketProc, SendData.Sqe, 0);
             if (QUIC_FAILED(Status))
@@ -1343,8 +1343,8 @@ namespace AKNet.Udp2MSQuic.Common
             int WsaError = OSPlatformFunc.NO_ERROR;
             if (Result == OSPlatformFunc.SOCKET_ERROR)
             {
-                WsaError = WsaError = Marshal.GetLastWin32Error();
-                if ((ulong)WsaError == OSPlatformFunc.WSA_IO_PENDING)
+                WsaError = Marshal.GetLastWin32Error();
+                if ((uint)WsaError == OSPlatformFunc.WSA_IO_PENDING)
                 {
                     return;
                 }

@@ -252,8 +252,8 @@ namespace AKNet.Udp2MSQuic.Common
         public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
         public WSABUF* WsaBuffersInner;
         public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
-        public QUIC_ADDR LocalAddress;
-        public QUIC_ADDR MappedRemoteAddress;
+        public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
+        public readonly QUIC_ADDR MappedRemoteAddress = new QUIC_ADDR();
 
         //// IP_PKTINFO + IP_ECN or IP_TOS +  UDP_SEND_MSG_SIZE
         public Memory<byte> CtrlBuf = new byte
@@ -586,7 +586,7 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatSendDataFinalizeSendBuffer(SendData);
             SocketAddressHelper.CxPlatConvertToMappedV6(Route.RemoteAddress.GetRawAddr(out _), 
                 SendData.MappedRemoteAddress.GetRawAddr(out _));
-
+            
             if (Socket.UseRio)
             {
                 CxPlatSocketSendEnqueue(Route, SendData);

@@ -217,9 +217,9 @@ namespace AKNet.Udp2MSQuic.Common
             IntPtr Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, mThread.ThreadFunc, IntPtr.Zero, 0, out _);
             if (Thread == IntPtr.Zero)
             {
-                int Error = Interop.Kernel32.GetLastError();
+                int Error = Marshal.GetLastWin32Error();
                 NetLog.LogError(Error);
-                return Error;
+                return QUIC_STATUS_INTERNAL_ERROR;
             }
             mThread.mThreadPtr = Thread;
 

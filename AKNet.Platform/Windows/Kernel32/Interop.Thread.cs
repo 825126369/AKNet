@@ -11,8 +11,8 @@ namespace AKNet.Platform
 #if NET7_0_OR_GREATER
         public static unsafe partial class Kernel32
         {
-            [LibraryImport(Interop.Libraries.Kernel32)]
-            public static partial int GetLastError();
+            //[LibraryImport(Interop.Libraries.Kernel32)]
+            //public static partial int GetLastError();
 
             [LibraryImport(Interop.Libraries.Kernel32)]
             public static partial IntPtr CreateThread(
@@ -51,8 +51,8 @@ namespace AKNet.Platform
 #else
         public static unsafe partial class Kernel32
         {
-            [DllImport(Interop.Libraries.Kernel32)]
-            public static extern int GetLastError();
+            //[DllImport(Interop.Libraries.Kernel32)]
+            //public static extern int GetLastError();
 
             [DllImport(Interop.Libraries.Kernel32)]
             public static extern IntPtr CreateThread(

@@ -132,21 +132,21 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
 
-            CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG()
-            {
-                Flags = ThreadFlags,
-                IdealProcessor = 0,
-                Name = "cxplat_worker",
-                Callback = CxPlatWorkerThread,
-                Context = null
-            };
-
             for (int i = 0; i < WorkerPool.WorkerCount; ++i)
             {
                 int IdealProcessor = ProcessorList != null ? ProcessorList[i] : i;
                 NetLog.Assert(IdealProcessor < CxPlatProcCount());
-
                 CXPLAT_WORKER Worker = WorkerPool.Workers[i];
+
+                CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG()
+                {
+                    Flags = ThreadFlags,
+                    IdealProcessor = IdealProcessor,
+                    Name = $"cxplat_worker{i}",
+                    Callback = CxPlatWorkerThread,
+                    Context = Worker
+                };
+                
                 if (!CxPlatWorkerPoolInitWorker(Worker, IdealProcessor, null, ThreadConfig))
                 {
                     goto Error;
@@ -256,8 +256,6 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (ThreadConfig != null)
             {
-                ThreadConfig.IdealProcessor = IdealProcessor;
-                ThreadConfig.Context = Worker;
                 if (QUIC_FAILED(CxPlatThreadCreate(ThreadConfig, out Worker.Thread)))
                 {
                     return false;
@@ -376,11 +374,13 @@ namespace AKNet.Udp2MSQuic.Common
                     Worker.State.NoWorkCount = 0;
                 }
 
-                if (Worker.State.TimeNow - Worker.State.LastPoolProcessTime > DYNAMIC_POOL_PROCESSING_PERIOD)
-                {
-                    CxPlatProcessDynamicPoolAllocators(Worker);
-                    Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
-                }
+                //if (Worker.State.TimeNow - Worker.State.LastPoolProcessTime > DYNAMIC_POOL_PROCESSING_PERIOD)
+                //{
+                //    CxPlatProcessDynamicPoolAllocators(Worker);
+                //    Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
+                //}
+                
+                NetLog.Log("CxPlatWorkerThread");
             }
 
             Worker.Running = 0;
