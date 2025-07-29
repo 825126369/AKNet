@@ -55,7 +55,6 @@ namespace AKNet.Platform
         public CXPLAT_SQE_Inner* sqePtr;
         public Action<CXPLAT_CQE> Completion; //这个主要是给外部程序使用的
         public object Contex;
-        public GCHandle mGCHandle;
         public CXPLAT_SQE()
         {
             sqePtr = (CXPLAT_SQE_Inner*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(CXPLAT_SQE_Inner));
