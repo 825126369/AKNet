@@ -159,7 +159,7 @@ namespace AKNet.BoringSSL
 
         public static int SSL_set_app_data<T>(IntPtr ssl, T AppData) where T : class
         {
-            GCHandle hObject = GCHandle.Alloc(AppData, GCHandleType.Normal);
+            GCHandle hObject = GCHandle.Alloc(AppData, GCHandleType.Weak);
             return BoringSSLNativeFunc.AKNet_SSL_set_app_data(ssl, (void*)GCHandle.ToIntPtr(hObject));
         }
 
