@@ -16,14 +16,6 @@ namespace AKNet.Platform
         ScopeLevelCount = 16
     }
 
-    internal unsafe struct GUID
-    {
-        public ulong Data1;
-        public ushort Data2;
-        public ushort Data3;
-        public fixed byte Data4[8];
-    }
-
     public struct INET_PORT_RANGE
     {
         public ushort StartPort;
@@ -59,9 +51,9 @@ namespace AKNet.Platform
     {
         public ushort sin6_family;          // AF_INET6.
         public ushort sin6_port;            // Transport level port number.
-        public ulong sin6_flowinfo;         // IPv6 flow information.
+        public uint sin6_flowinfo;         // IPv6 flow information.
         public IN6_ADDR sin6_addr;            // IPv6 address.
-        public ulong sin6_scope_id;
+        public uint sin6_scope_id;
     }
 
     public unsafe struct IN_ADDR
@@ -117,7 +109,7 @@ namespace AKNet.Platform
 
     public struct WSACMSGHDR
     {
-        public int cmsg_len;
+        public ulong cmsg_len;
         public int cmsg_level;
         public int cmsg_type;
     }
@@ -125,18 +117,18 @@ namespace AKNet.Platform
     public unsafe struct IN6_PKTINFO
     {
         public IN6_ADDR ipi6_addr;    // Source/destination IPv6 address.
-        public ulong ipi6_ifindex;    // Send/receive interface index.
+        public uint ipi6_ifindex;    // Send/receive interface index.
     }
 
     public unsafe struct IN_PKTINFO
     {
         public IN_ADDR ipi_addr;     // Source/destination IPv4 address.
-        public ulong ipi_ifindex;    // Send/receive interface index.
+        public uint ipi_ifindex;    // Send/receive interface index.
     }
 
     public struct RIO_CMSG_BUFFER
     {
-        public long TotalLength;
+        public int TotalLength;
     }
 
     public class CxPlatSocketHandle : SafeHandleMinusOneIsInvalid
@@ -173,20 +165,20 @@ namespace AKNet.Platform
         public const int SOCKET_ERROR = (-1);
         public const int NO_ERROR = 0;
 
-        public const ulong ERROR_IO_PENDING = 997;    // dderror
-        public const ulong WSAENOTSOCK = 10038;
-        public const ulong ERROR_OPERATION_ABORTED = 995;
-        public const ulong WSAECONNRESET = 10054L;
-        public const ulong WSAEHOSTUNREACH = 10065L;
-        public const ulong WSAENETUNREACH = 10051L;
-        public const ulong ERROR_PORT_UNREACHABLE = 1234L;
-        public const ulong ERROR_PROTOCOL_UNREACHABLE = 1233L;
-        public const ulong ERROR_HOST_UNREACHABLE = 1232L;
-        public const ulong ERROR_NETWORK_UNREACHABLE = 1231L;
-        public const ulong ERROR_MORE_DATA = 234L;    // dderror
-        public const ulong WSA_IO_PENDING = (ERROR_IO_PENDING);
-        public const ulong WSA_OPERATION_ABORTED = (ERROR_OPERATION_ABORTED);
-        public const ulong WSAESHUTDOWN = 10058L;
+        public const uint ERROR_IO_PENDING = 997;    // dderror
+        public const uint WSAENOTSOCK = 10038;
+        public const uint ERROR_OPERATION_ABORTED = 995;
+        public const uint WSAECONNRESET = 10054;
+        public const uint WSAEHOSTUNREACH = 10065;
+        public const uint WSAENETUNREACH = 10051;
+        public const uint ERROR_PORT_UNREACHABLE = 1234;
+        public const uint ERROR_PROTOCOL_UNREACHABLE = 1233;
+        public const uint ERROR_HOST_UNREACHABLE = 1232;
+        public const uint ERROR_NETWORK_UNREACHABLE = 1231;
+        public const uint ERROR_MORE_DATA = 234;    // dderror
+        public const uint WSA_IO_PENDING = (ERROR_IO_PENDING);
+        public const uint WSA_OPERATION_ABORTED = (ERROR_OPERATION_ABORTED);
+        public const uint WSAESHUTDOWN = 10058;
 
         public const byte FILE_SKIP_COMPLETION_PORT_ON_SUCCESS = 0x1;
         public const byte FILE_SKIP_SET_EVENT_ON_HANDLE = 0x2;
@@ -270,27 +262,27 @@ namespace AKNet.Platform
             return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)));
         }
 
-        public static int WSA_CMSG_LEN(int length)
+        public static ulong WSA_CMSG_LEN(int length)
         {
-            return WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)) + length;
+            return (ulong)(WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)) + length);
         }
 
-        public static int WSA_CMSG_SPACE(int length)
+        public static int WSA_CMSG_SPACE(long length)
         {
-            return WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR) + WSA_CMSGHDR_ALIGN(length));
+            return (int)WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR) + (int)WSA_CMSGHDR_ALIGN(length));
         }
 
-        public static int WSA_CMSGHDR_ALIGN(int length)
+        public static long WSA_CMSGHDR_ALIGN(long length)
         {
             return (length + TYPE_ALIGNMENT<WSACMSGHDR>() - 1) & (~(TYPE_ALIGNMENT<WSACMSGHDR>() - 1));
         }
 
-        public static int WSA_CMSGDATA_ALIGN(int length)
+        public static long WSA_CMSGDATA_ALIGN(long length)
         {
             return (((length) + MAX_NATURAL_ALIGNMENT() - 1) & (~(MAX_NATURAL_ALIGNMENT() - 1)));
         }
 
-        public static int RIO_CMSG_BASE_SIZE()
+        public static long RIO_CMSG_BASE_SIZE()
         {
             return WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
         }
@@ -302,12 +294,12 @@ namespace AKNet.Platform
             public T value;
         }
 
-        public static int TYPE_ALIGNMENT<T>() where T : struct
+        public static long TYPE_ALIGNMENT<T>() where T : struct
         {
-            return (int)Marshal.OffsetOf<Test<T>>("value");
+            return (long)Marshal.OffsetOf<Test<T>>("value");
         }
 
-        public static int MAX_NATURAL_ALIGNMENT()
+        public static long MAX_NATURAL_ALIGNMENT()
         {
             return sizeof(ulong);
         }

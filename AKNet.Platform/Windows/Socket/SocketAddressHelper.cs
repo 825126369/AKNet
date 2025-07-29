@@ -100,7 +100,7 @@ namespace AKNet.Platform
         {
             if (InAddr->si_family == OSPlatformFunc.AF_INET)
             {
-                ulong unspecified_scope = 0;
+                uint unspecified_scope = 0;
                 IN6ADDR_SETV4MAPPED(&OutAddr->Ipv6, &InAddr->Ipv4.sin_addr, unspecified_scope, InAddr->Ipv4.sin_port);
             } 
             else
@@ -124,7 +124,7 @@ namespace AKNet.Platform
             return (Ipv6Address->u + 6);
         }
 
-        public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, IN_ADDR* a4, ulong scope, ushort port)
+        public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, IN_ADDR* a4, uint scope, ushort port)
         {
             a6->sin6_family = OSPlatformFunc.AF_INET6;
             a6->sin6_port = port;
@@ -143,7 +143,7 @@ namespace AKNet.Platform
             a6->u[15] = ((byte*)a4)[3];
         }
 
-        static void IN4_UNCANONICALIZE_SCOPE_ID(IN_ADDR* Address, ulong *ScopeId)
+        static void IN4_UNCANONICALIZE_SCOPE_ID(IN_ADDR* Address, uint* ScopeId)
         {
             *ScopeId = 0;
         }

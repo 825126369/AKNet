@@ -162,6 +162,7 @@ namespace AKNet.Platform
                 CxPlatFree(sqe.sqePtr);
                 sqe.sqePtr = null;
             }
+            sqe.Completion = null;
         }
 
         public static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE cqe)
