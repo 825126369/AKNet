@@ -389,7 +389,7 @@ namespace AKNet.Udp1MSQuic.Common
 
                     if (Result != OSPlatformFunc.NO_ERROR)
                     {
-                        int WsaError = Interop.Winsock.WSAGetLastError();
+                        int WsaError = Marshal.GetLastWin32Error();
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }

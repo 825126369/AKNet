@@ -26,7 +26,7 @@ namespace AKNet.Platform
 
             if (Result != OSPlatformFunc.NO_ERROR)
             {
-                int WsaError = Interop.Winsock.WSAGetLastError();
+                int WsaError = Marshal.GetLastWin32Error();
                 return null;
             }
 

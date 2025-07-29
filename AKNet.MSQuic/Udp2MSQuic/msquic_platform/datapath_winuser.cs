@@ -1343,7 +1343,7 @@ namespace AKNet.Udp2MSQuic.Common
             int WsaError = OSPlatformFunc.NO_ERROR;
             if (Result == OSPlatformFunc.SOCKET_ERROR)
             {
-                WsaError = Interop.Winsock.WSAGetLastError();
+                WsaError = WsaError = Marshal.GetLastWin32Error();
                 if ((ulong)WsaError == OSPlatformFunc.WSA_IO_PENDING)
                 {
                     return;
