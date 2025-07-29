@@ -45,7 +45,7 @@ namespace AKNet.Platform
         public unsafe struct CXPLAT_SQE_Inner
         {
             public const string Overlapped_FieldName = "Overlapped";
-            public CXPLAT_SQE parent;
+            public IntPtr parent;
 #if DEBUG
             public bool IsQueued;
 #endif
@@ -55,11 +55,11 @@ namespace AKNet.Platform
         public CXPLAT_SQE_Inner* sqePtr;
         public Action<CXPLAT_CQE> Completion; //这个主要是给外部程序使用的
         public object Contex;
-            
+        public GCHandle mGCHandle;
         public CXPLAT_SQE()
         {
             sqePtr = (CXPLAT_SQE_Inner*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(CXPLAT_SQE_Inner));
-            sqePtr->parent = this;
+            sqePtr->parent = GCHandle.ToIntPtr(GCHandle.Alloc(this, GCHandleType.Weak));
         }
 
         ~CXPLAT_SQE()
@@ -164,6 +164,7 @@ namespace AKNet.Platform
 
         public static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
         {
+            sqe.sqePtr->parent = IntPtr.Zero;
             if (sqe.sqePtr != null)
             {
                 CxPlatFree(sqe.sqePtr);
@@ -176,7 +177,7 @@ namespace AKNet.Platform
         {
             CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(cqe.lpOverlapped, 
                 CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
-            return data->parent;
+            return GCHandle.FromIntPtr(data->parent).Target as CXPLAT_SQE;
         }
     }
 }

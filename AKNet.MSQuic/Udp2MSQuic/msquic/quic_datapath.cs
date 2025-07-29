@@ -235,8 +235,7 @@ namespace AKNet.Udp2MSQuic.Common
         public byte ECN;
         public byte DSCP;
     }
-
-
+    
     //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
     internal unsafe class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
@@ -251,7 +250,10 @@ namespace AKNet.Udp2MSQuic.Common
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
         public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
-        public WSABUF* WsaBuffersInner;
+        public List<MemoryHandle> WsaBuffers2 = new List<MemoryHandle>();
+        public Memory<WSABUF> WsaBuffersInner = new WSABUF[MSQuicFunc.CXPLAT_MAX_BATCH_SEND];
+        public MemoryHandle WsaBuffersInnerMemoryHandle;
+
         public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
         public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
         public readonly QUIC_ADDR MappedRemoteAddress = new QUIC_ADDR();
@@ -269,17 +271,12 @@ namespace AKNet.Udp2MSQuic.Common
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
             CtrlBufHandle = CtrlBuf.Pin();
-            WsaBuffersInner = (WSABUF*)OSPlatformFunc.CxPlatAlloc(sizeof(WSABUF) * MSQuicFunc.CXPLAT_MAX_BATCH_SEND);
         }
 
         ~CXPLAT_SEND_DATA()
         {
             CtrlBufHandle.Dispose();
-            if(WsaBuffersInner != null)
-            {
-                OSPlatformFunc.CxPlatFree(WsaBuffersInner);
-                WsaBuffersInner = null;
-            }
+            WsaBuffersInnerMemoryHandle.Dispose();
         }
 
         public CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> GetEntry()
@@ -720,7 +717,6 @@ namespace AKNet.Udp2MSQuic.Common
         static void SendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_Pool_BUFFER Buffer)
         {
             QUIC_BUFFER TailBuffer = SendData.WsaBuffers[SendData.WsaBuffers.Count - 1];
-
             if (SendData.SegmentSize == 0)
             {
                 NetLog.Assert(Buffer == TailBuffer);

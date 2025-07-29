@@ -1121,8 +1121,10 @@ namespace AKNet.Udp2MSQuic.Common
         {
             for (int i = 0; i < SendData.WsaBuffers.Count; ++i)
             {
+                SendData.WsaBuffers2[i].Dispose();
                 SendData.BufferPool.CxPlatPoolFree(SendData.WsaBuffers[i]);
             }
+            SendData.WsaBuffers2.Clear();
             SendData.WsaBuffers.Clear();
             SendData.SendDataPool.CxPlatPoolFree(SendData);
         }
@@ -1209,17 +1211,16 @@ namespace AKNet.Udp2MSQuic.Common
                 WSAMhdr.name = SendData.MappedRemoteAddress.RawAddr;
                 WSAMhdr.namelen = sizeof(SOCKADDR_INET);
             }
-            
-            for(int i = 0; i < SendData.WsaBuffers.Count; i++)
+
+            for (int i = 0; i < SendData.WsaBuffers.Count; i++)
             {
-                fixed (byte* bufPtr = SendData.WsaBuffers[i].Buffer)
-                {
-                    SendData.WsaBuffersInner[i].buf = bufPtr;
-                    SendData.WsaBuffersInner[i].len = SendData.WsaBuffers[i].Buffer.Length;
-                }
+                MemoryHandle mHandle = new Memory<byte>(SendData.WsaBuffers[i].Buffer).Pin();
+                SendData.WsaBuffers2.Add(mHandle);
+                SendData.WsaBuffersInner.Span[i].buf = (byte*)mHandle.Pointer;
+                SendData.WsaBuffersInner.Span[i].len = SendData.WsaBuffers[i].Buffer.Length;
             }
 
-            WSAMhdr.lpBuffers = SendData.WsaBuffersInner;
+            WSAMhdr.lpBuffers = (WSABUF*)SendData.WsaBuffersInnerMemoryHandle.Pointer;
             WSAMhdr.dwBufferCount = SendData.WsaBuffers.Count;
             WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE() + (byte*)SendData.CtrlBufHandle.Pointer;
             WSAMhdr.Control.len = 0;
