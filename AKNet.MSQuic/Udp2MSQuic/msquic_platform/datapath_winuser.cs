@@ -27,6 +27,12 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        //C# 会调用析构函数的哦
+        ~QUIC_ADDR()
+        {
+            Dispose();
+        }
+
         public QUIC_ADDR()
         {
             RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(Marshal.SizeOf<SOCKADDR_INET>());
@@ -696,10 +702,7 @@ namespace AKNet.Udp2MSQuic.Common
                     }
                 }
 
-                int addressLen = 0;
-                SOCKADDR_INET* mTempPtr = Socket.LocalAddress.GetRawAddr(out addressLen);
-                Result = Interop.Winsock.bind(SocketProc.Socket, (byte*)mTempPtr, addressLen);
-                
+                Result = Interop.Winsock.bind(SocketProc.Socket, (byte*)Socket.LocalAddress.RawAddr, sizeof(SOCKADDR_INET));
                 if(Result == OSPlatformFunc.SOCKET_ERROR)
                 {
                     Status = QUIC_STATUS_INTERNAL_ERROR;
@@ -708,10 +711,7 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (Config.RemoteAddress != null)
                 {
-                    int nLength = 0;
-                    mTempPtr = Socket.RemoteAddress.GetRawAddr(out nLength);
-                    Interop.Winsock.connect(SocketProc.Socket, (byte*)mTempPtr, nLength);
-
+                    Interop.Winsock.connect(SocketProc.Socket, (byte*)Socket.RemoteAddress.RawAddr, sizeof(SOCKADDR_INET));
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
                         Status = QUIC_STATUS_INTERNAL_ERROR;
@@ -722,13 +722,21 @@ namespace AKNet.Udp2MSQuic.Common
                 if (i == 0)
                 {
                     //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
+                    if(Socket.LocalAddress.RawAddr != null)
+                    {
+                        OSPlatformFunc.CxPlatFree(Socket.LocalAddress.RawAddr);
+                        Socket.LocalAddress.RawAddr = null;
+                    }
+
+                    void* mAddr = OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
                     int AssignedLocalAddressLength = Marshal.SizeOf<SOCKADDR_INET>();
-                    Result = Interop.Winsock.getsockname(SocketProc.Socket, (byte*)Socket.LocalAddress.RawAddr, ref AssignedLocalAddressLength);
+                    Result = Interop.Winsock.getsockname(SocketProc.Socket, (byte*)mAddr, ref AssignedLocalAddressLength);
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
+                    Socket.LocalAddress.RawAddr = (SOCKADDR_INET*)mAddr;
 
                     if (Config.LocalAddress.RawAddr != null && Config.LocalAddress.RawAddr->Ipv6.sin6_port != 0)
                     {
