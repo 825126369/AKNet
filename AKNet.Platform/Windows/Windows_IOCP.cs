@@ -36,8 +36,7 @@ namespace AKNet.Platform
     public class CXPLAT_EVENTQ
     {
         internal IntPtr Queue;
-        public readonly CXPLAT_CQE[] events = new CXPLAT_CQE[13];
-        public int events_count = 0;
+        public readonly CXPLAT_CQE[] events = new CXPLAT_CQE[16];
     }
 
     public unsafe class CXPLAT_SQE
@@ -123,7 +122,6 @@ namespace AKNet.Platform
 
                 NetLog.Assert(out_count != 0);
                 NetLog.Assert(queue.events[0].lpOverlapped != null || out_count == 1);
-                queue.events_count = out_count;
 #if DEBUG
                 if (queue.events[0].lpOverlapped != null)
                 {

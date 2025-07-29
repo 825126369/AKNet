@@ -18,7 +18,7 @@ namespace AKNet.Platform
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static extern int connect(SafeHandle s, byte* name, int namelen);
             //[DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            //public static extern int WSAGetLastError();
+            //public static extern int WSAGetLastError(); //这个和 Marshal.GetLastWin32Error() 冲突了
 #endif
         }
     }
