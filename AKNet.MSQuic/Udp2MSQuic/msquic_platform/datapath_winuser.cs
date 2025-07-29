@@ -3,6 +3,7 @@
 using AKNet.Common;
 using AKNet.Platform;
 using System;
+using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -177,6 +178,8 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
         public readonly WSAMSG* WsaMsgHdr;            //这是消息头
         public readonly WSABUF* WsaControlBuf;        //这是实际数据
+
+        public readonly MemoryHandle ControlBufHandle;
         public readonly Memory<byte> ControlBuf = new byte[
                 OSPlatformFunc.RIO_CMSG_BASE_SIZE() +
                 OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +   // IP_PKTINFO
@@ -187,11 +190,29 @@ namespace AKNet.Udp2MSQuic.Common
 
         public byte[] mCqeBuffer = null;
         public Memory<byte> mCqeMemory = null;
+        public MemoryHandle mCqeMemoryHandle;
 
         public DATAPATH_RX_IO_BLOCK()
         {
-            WsaMsgHdr = (WSAMSG*)Marshal.AllocHGlobal(sizeof(WSAMSG));
-            WsaControlBuf = (WSABUF*)Marshal.AllocHGlobal(sizeof(WSABUF));
+            WsaMsgHdr = (WSAMSG*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(WSAMSG));
+            WsaControlBuf = (WSABUF*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(WSABUF));
+            ControlBufHandle = ControlBuf.Pin();
+        }
+
+        ~DATAPATH_RX_IO_BLOCK()
+        {
+            if (WsaMsgHdr != null)
+            {
+                OSPlatformFunc.CxPlatFree(WsaMsgHdr);
+            }
+
+            if (WsaControlBuf != null)
+            {
+                OSPlatformFunc.CxPlatFree(WsaControlBuf);
+            }
+
+            ControlBufHandle.Dispose();
+            mCqeMemoryHandle.Dispose();
         }
 
         public void Reset()
@@ -818,25 +839,24 @@ namespace AKNet.Udp2MSQuic.Common
             int Result = 0;
             int BytesRecv = 0;
 
-            IoBlock.WsaControlBuf->buf = (byte*)IoBlock.mCqeMemory.Pin().Pointer;
+            IoBlock.WsaControlBuf->buf = (byte*)IoBlock.mCqeMemoryHandle.Pointer;
             IoBlock.WsaControlBuf->len = SocketProc.Parent.RecvBufLen;
             IoBlock.WsaMsgHdr->name = IoBlock.Route.RemoteAddress.RawAddr;
             IoBlock.WsaMsgHdr->namelen = Marshal.SizeOf<SOCKADDR_INET>();
             IoBlock.WsaMsgHdr->lpBuffers = IoBlock.WsaControlBuf;
             IoBlock.WsaMsgHdr->dwBufferCount = 1;
-            IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBuf.Pin().Pointer;
+            IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBufHandle.Pointer;
             IoBlock.WsaMsgHdr->Control.len = IoBlock.ControlBuf.Length;
             IoBlock.WsaMsgHdr->dwFlags = 0;
 
             BytesRecv = 0;
             WSARecvMsg WSARecvMsg = DynamicWinsockMethods.GetWSARecvMsgDelegate(SocketProc.Socket);
-            
             Result = WSARecvMsg(
                         SocketProc.Socket,
                         IoBlock.WsaMsgHdr,
-                        ref BytesRecv,
-                        ref IoBlock.Sqe.sqePtr->Overlapped,
-                        IntPtr.Zero);
+                        &BytesRecv,
+                        &IoBlock.Sqe.sqePtr->Overlapped,
+                        null);
 
             int WsaError = OSPlatformFunc.NO_ERROR;
             if (Result == OSPlatformFunc.SOCKET_ERROR)
@@ -1319,7 +1339,7 @@ namespace AKNet.Udp2MSQuic.Common
             
             CxPlatStartDatapathIo(SocketProc, SendData.Sqe, SendData, CxPlatIoSendEventComplete);
             WSASendMsg mFunc = DynamicWinsockMethods.GetWSASendMsgDelegate(SocketProc.Socket);
-            Result = mFunc(SocketProc.Socket, &WSAMhdr,0, &BytesSent, &SendData.Sqe.sqePtr->Overlapped, IntPtr.Zero);
+            Result = mFunc(SocketProc.Socket, &WSAMhdr,0, &BytesSent, &SendData.Sqe.sqePtr->Overlapped, null);
             int WsaError = OSPlatformFunc.NO_ERROR;
             if (Result == OSPlatformFunc.SOCKET_ERROR)
             {
@@ -1406,6 +1426,7 @@ namespace AKNet.Udp2MSQuic.Common
                     }
                     
                     IoBlock.mCqeMemory = IoBlock.mCqeBuffer;
+                    IoBlock.mCqeMemoryHandle = IoBlock.mCqeMemory.Pin();
                 }
             }
             return IoBlock;

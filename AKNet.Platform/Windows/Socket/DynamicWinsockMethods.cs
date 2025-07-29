@@ -55,21 +55,21 @@ namespace AKNet.Platform
         }
     }
 
-
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public unsafe delegate int WSARecvMsg(
                 SafeHandle socketHandle,
                 WSAMSG* msg,
-                ref int bytesTransferred,
-                ref OVERLAPPED overlapped,
-                IntPtr completionRoutine);
-
-
+                int* bytesTransferred,
+                OVERLAPPED* overlapped,
+                void* completionRoutine);
+    
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public unsafe delegate int WSASendMsg(
                 SafeHandle Handle,
                 WSAMSG* lpMsg,
                 uint dwFlags,
                 int* lpNumberOfBytesSent,
                 OVERLAPPED* lpOverlapped,
-                IntPtr lpCompletionRoutine);
+                void* lpCompletionRoutine);
 }
 #endif
