@@ -62,6 +62,7 @@ namespace AKNet.Platform
             return (ulong)(1 << nr);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static T* CXPLAT_CONTAINING_RECORD<T>(void* address, string fieldName) where T : struct
         {
              IntPtr offset = Marshal.OffsetOf(typeof(T), fieldName);
@@ -69,21 +70,33 @@ namespace AKNet.Platform
         }
 
         // 内存分配
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void* CxPlatAlloc(int ByteCount, uint Tag = 0)
         {
             return (void*)Marshal.AllocHGlobal(ByteCount);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void* CxPlatAllocAndClear(int ByteCount, uint Tag = 0)
+        {
+            void* ptr = (void*)Marshal.AllocHGlobal(ByteCount);
+            CxPlatZeroMemory(ptr, ByteCount);
+            return ptr;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CxPlatFree(void* Mem, uint Tag = 0)
         {
             Marshal.FreeHGlobal((IntPtr)Mem);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CxPlatZeroMemory(void* Destination, int Length)
         {
             new Span<byte>(Destination, Length).Clear();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool memcmp(void* s1, void* s2, int n)
         {
             return new Span<byte>(s1, n) == new Span<byte>(s2, n);

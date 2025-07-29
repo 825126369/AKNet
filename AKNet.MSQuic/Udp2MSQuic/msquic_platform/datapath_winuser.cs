@@ -29,7 +29,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         public QUIC_ADDR()
         {
-            RawAddr = (SOCKADDR_INET*)Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
+            RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(Marshal.SizeOf<SOCKADDR_INET>());
             RawAddr->si_family = OSPlatformFunc.AF_INET6;
             CheckFamilyError();
         }
