@@ -842,7 +842,7 @@ namespace AKNet.Udp2MSQuic.Common
             IoBlock.WsaControlBuf->buf = (byte*)IoBlock.mCqeMemoryHandle.Pointer;
             IoBlock.WsaControlBuf->len = SocketProc.Parent.RecvBufLen;
             IoBlock.WsaMsgHdr->name = IoBlock.Route.RemoteAddress.RawAddr;
-            IoBlock.WsaMsgHdr->namelen = Marshal.SizeOf<SOCKADDR_INET>();
+            IoBlock.WsaMsgHdr->namelen = sizeof(SOCKADDR_INET);
             IoBlock.WsaMsgHdr->lpBuffers = IoBlock.WsaControlBuf;
             IoBlock.WsaMsgHdr->dwBufferCount = 1;
             IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBufHandle.Pointer;
@@ -861,7 +861,7 @@ namespace AKNet.Udp2MSQuic.Common
             int WsaError = OSPlatformFunc.NO_ERROR;
             if (Result == OSPlatformFunc.SOCKET_ERROR)
             {
-                WsaError = Interop.Winsock.WSAGetLastError();
+                WsaError = Marshal.GetLastWin32Error();
                 NetLog.Assert(WsaError != OSPlatformFunc.NO_ERROR);
                 if ((ulong)WsaError == OSPlatformFunc.WSA_IO_PENDING)
                 {

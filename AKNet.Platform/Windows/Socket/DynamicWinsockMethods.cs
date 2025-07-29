@@ -9,27 +9,24 @@ namespace AKNet.Platform
         private static readonly Guid WSARecvMsgGuid = new Guid(0xf689d7c8, 0x6f1f, 0x436b, 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22);
         static WSARecvMsg _recvMsg;
         static WSASendMsg _sendMsg;
-        
+
         private static T CreateDelegate<T>(SafeHandle socketHandle, Guid guid) where T : Delegate
         {
             IntPtr ptr = IntPtr.Zero;
-            int errorCode;
-            unsafe
-            {
-                errorCode = Interop.Winsock.WSAIoctl(
-                   socketHandle,
-                   OSPlatformFunc.SIO_GET_EXTENSION_FUNCTION_POINTER,
-                   &guid,
-                   sizeof(Guid),
-                   &ptr,
-                   sizeof(IntPtr),
-                   out _,
-                   null,
-                   null);
-            }
+            int Result = Interop.Winsock.WSAIoctl(
+               socketHandle,
+               OSPlatformFunc.SIO_GET_EXTENSION_FUNCTION_POINTER,
+               &guid,
+               sizeof(Guid),
+               &ptr,
+               sizeof(IntPtr),
+               out _,
+               null,
+               null);
 
-            if (errorCode != 0)
+            if (Result != OSPlatformFunc.NO_ERROR)
             {
+                int WsaError = Interop.Winsock.WSAGetLastError();
                 return null;
             }
 
