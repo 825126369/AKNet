@@ -722,21 +722,13 @@ namespace AKNet.Udp2MSQuic.Common
                 if (i == 0)
                 {
                     //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
-                    if(Socket.LocalAddress.RawAddr != null)
-                    {
-                        OSPlatformFunc.CxPlatFree(Socket.LocalAddress.RawAddr);
-                        Socket.LocalAddress.RawAddr = null;
-                    }
-
-                    void* mAddr = OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
                     int AssignedLocalAddressLength = Marshal.SizeOf<SOCKADDR_INET>();
-                    Result = Interop.Winsock.getsockname(SocketProc.Socket, (byte*)mAddr, ref AssignedLocalAddressLength);
+                    Result = Interop.Winsock.getsockname(SocketProc.Socket, (byte*)Socket.LocalAddress.RawAddr, ref AssignedLocalAddressLength);
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
-                    Socket.LocalAddress.RawAddr = (SOCKADDR_INET*)mAddr;
 
                     if (Config.LocalAddress.RawAddr != null && Config.LocalAddress.RawAddr->Ipv6.sin6_port != 0)
                     {
@@ -815,9 +807,6 @@ namespace AKNet.Udp2MSQuic.Common
             ref int SyncBytesReceived,
             ref DATAPATH_RX_IO_BLOCK SyncIoBlock)
         {
-            NetLog.Assert((SyncIoResult != null) == (SyncBytesReceived != null));
-            NetLog.Assert((SyncIoResult != null) == (SyncIoBlock != null));
-
             CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
             if (IoBlock == null)

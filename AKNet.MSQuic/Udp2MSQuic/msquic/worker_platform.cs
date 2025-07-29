@@ -308,6 +308,7 @@ namespace AKNet.Udp2MSQuic.Common
                 for (int i = 0; i < CqeCount; ++i)
                 {
                     CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Worker.EventQ.events[i]);
+                    NetLog.Assert(Sqe.Completion != null);
                     Sqe.Completion(Worker.EventQ.events[i]);
                 }
                 OSPlatformFunc.CxPlatEventQReturn(Worker.EventQ, CqeCount);

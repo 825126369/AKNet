@@ -59,8 +59,17 @@ namespace AKNet.Platform
             
         public CXPLAT_SQE()
         {
-            sqePtr = (CXPLAT_SQE.CXPLAT_SQE_Inner*)OSPlatformFunc.CxPlatAlloc(sizeof(CXPLAT_SQE.CXPLAT_SQE_Inner));
+            sqePtr = (CXPLAT_SQE_Inner*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(CXPLAT_SQE_Inner));
             sqePtr->parent = this;
+        }
+
+        ~CXPLAT_SQE()
+        {
+            if (sqePtr != null)
+            {
+                OSPlatformFunc.CxPlatFree(sqePtr);
+                sqePtr = null;
+            }
         }
     }
 

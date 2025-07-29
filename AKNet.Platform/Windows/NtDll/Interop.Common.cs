@@ -6,13 +6,13 @@ namespace AKNet.Platform
 #if NET7_0_OR_GREATER
         public static unsafe partial class Kernel32
         {
-            [LibraryImport(Libraries.Kernel32)]
+            [LibraryImport(Libraries.NtDll)]
             public static partial uint RtlNtStatusToDosError(int Status);
         }
 #else
         public static unsafe partial class Kernel32
         {
-            [DllImport(Libraries.Kernel32)]
+            [DllImport(Libraries.NtDll)]
             public static extern uint RtlNtStatusToDosError(int Status);
         }
 #endif
