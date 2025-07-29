@@ -1206,17 +1206,10 @@ namespace AKNet.Udp2MSQuic.Common
             }
             else
             {
-                int addressLen = 0;
-                WSAMhdr.name = SendData.MappedRemoteAddress.GetRawAddr(out addressLen);
-                WSAMhdr.namelen = addressLen;
+                WSAMhdr.name = SendData.MappedRemoteAddress.RawAddr;
+                WSAMhdr.namelen = sizeof(SOCKADDR_INET);
             }
-
-            ///这个自己加的代码，给lpBuffers 赋值
-            if(SendData.WsaBuffersInner == null)
-            {
-                SendData.WsaBuffersInner = (WSABUF*)OSPlatformFunc.CxPlatAlloc(sizeof(WSABUF) * CXPLAT_MAX_BATCH_SEND);
-            }
-
+            
             for(int i = 0; i < SendData.WsaBuffers.Count; i++)
             {
                 fixed (byte* bufPtr = SendData.WsaBuffers[i].Buffer)
@@ -1228,7 +1221,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             WSAMhdr.lpBuffers = SendData.WsaBuffersInner;
             WSAMhdr.dwBufferCount = SendData.WsaBuffers.Count;
-            WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE() + (byte*)SendData.CtrlBuf.Pin().Pointer;
+            WSAMhdr.Control.buf = OSPlatformFunc.RIO_CMSG_BASE_SIZE() + (byte*)SendData.CtrlBufHandle.Pointer;
             WSAMhdr.Control.len = 0;
 
             WSACMSGHDR* CMsg = null;
