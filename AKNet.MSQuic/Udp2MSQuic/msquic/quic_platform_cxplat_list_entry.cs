@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -9,7 +8,7 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_LIST_ENTRY Prev; //指向链表中当前节点的 [上一个] 节点。
     }
 
-    internal class CXPLAT_LIST_ENTRY<T>: CXPLAT_LIST_ENTRY
+    internal class CXPLAT_LIST_ENTRY<T> : CXPLAT_LIST_ENTRY
     {
         public readonly T value; //当前节点的值
         public CXPLAT_LIST_ENTRY(T value)
@@ -20,14 +19,10 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry) where T:class
+        static T CXPLAT_CONTAINING_RECORD<T>(CXPLAT_LIST_ENTRY Entry)
         {
             CXPLAT_LIST_ENTRY<T> t = Entry as CXPLAT_LIST_ENTRY<T>;
-            if (t != null)
-            {
-                return t.value;
-            }
-            return null;
+            return t.value;
         }
 
         static void EntryInQueueStateOk(CXPLAT_LIST_ENTRY Entry)
@@ -74,10 +69,23 @@ namespace AKNet.Udp2MSQuic.Common
             Queue.Prev = Entry;
         }
 
+        //这种适合中间元素插入
+        public static void CxPlatListInsertMiddle(CXPLAT_LIST_ENTRY Queue, CXPLAT_LIST_ENTRY EntryInQueue, CXPLAT_LIST_ENTRY Entry)
+        {
+            EntryNotInQueueStateOk(Entry);
+            EntryInQueueStateOk(Queue);
+            EntryInQueueStateOk(EntryInQueue);
+
+            Entry.Next = EntryInQueue.Next;
+            Entry.Prev = EntryInQueue;
+            EntryInQueue.Next.Prev = Entry;
+            EntryInQueue.Next = Entry;
+        }
+
         static void CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             EntryInQueueStateOk(Entry);
-            
+
             CXPLAT_LIST_ENTRY Next = Entry.Next;
             CXPLAT_LIST_ENTRY Prev = Entry.Prev;
             Prev.Next = Next;
@@ -93,9 +101,8 @@ namespace AKNet.Udp2MSQuic.Common
             if (!CxPlatListIsEmpty(ListHead))
             {
                 CXPLAT_LIST_ENTRY Entry = ListHead.Next; // cppcheck-suppress shadowFunction
-                CXPLAT_LIST_ENTRY Next = Entry.Next;
-                ListHead.Next = Next;
-                Next.Prev = ListHead;
+                ListHead.Next = Entry.Next;
+                Entry.Next.Prev = ListHead;
 
                 Entry.Next = null;
                 Entry.Prev = null;
@@ -107,8 +114,12 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        //从一个队列，移动到另一个队列里
         static void CxPlatListMoveItems(CXPLAT_LIST_ENTRY Source, CXPLAT_LIST_ENTRY Destination)
         {
+            EntryInQueueStateOk(Source);
+            EntryInQueueStateOk(Destination);
+
             if (!CxPlatListIsEmpty(Source))
             {
                 if (CxPlatListIsEmpty(Destination))
@@ -120,10 +131,13 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 else
                 {
-                    Source.Next.Prev = Destination.Prev;
-                    Destination.Prev.Next = Source.Next;
-                    Source.Prev.Next = Destination;
-                    Destination.Prev = Source.Prev;
+                    CXPLAT_LIST_ENTRY AddEntryHead = Source.Next;
+                    CXPLAT_LIST_ENTRY AddEntryTail = Source.Prev;
+
+                    Destination.Prev.Next = AddEntryHead;
+                    AddEntryHead.Prev = Destination.Prev;
+                    Destination.Prev = AddEntryTail;
+                    AddEntryTail.Next = Destination;
                 }
                 CxPlatListInitializeHead(Source);
             }

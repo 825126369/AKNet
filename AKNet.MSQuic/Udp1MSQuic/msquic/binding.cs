@@ -1318,7 +1318,7 @@ namespace AKNet.Udp1MSQuic.Common
                     continue;
                 }
 
-                if (NewFamily != AddressFamily.Unspecified && NewAddr != ExistingAddr)
+                if (NewFamily != AddressFamily.Unspecified && !QuicAddrCompareIp(NewAddr, ExistingAddr))
                 {
                     continue;
                 }
@@ -1339,10 +1339,7 @@ namespace AKNet.Udp1MSQuic.Common
                 }
                 else
                 {
-                    NewListener.Link.Next = Link;
-                    NewListener.Link.Prev = Link.Prev;
-                    NewListener.Link.Prev.Next = NewListener.Link;
-                    Link.Prev = NewListener.Link;
+                    CxPlatListInsertMiddle(Binding.Listeners, Link.Prev, NewListener.Link);
                 }
             }
 
