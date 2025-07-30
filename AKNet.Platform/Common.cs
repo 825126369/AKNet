@@ -97,9 +97,19 @@ namespace AKNet.Platform
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CxPlatCopyMemory(void* s1, void* s2, int n)
+        {
+            Span<byte> ptr1 = new Span<byte>(s1, n);
+            Span<byte> ptr2 = new Span<byte>(s2, n);
+            ptr2.CopyTo(ptr1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool memcmp(void* s1, void* s2, int n)
         {
-            return new Span<byte>(s1, n) == new Span<byte>(s2, n);
+            Span<byte> ptr1 = new Span<byte>(s1, n);
+            Span<byte> ptr2 = new Span<byte>(s2, n);
+            return ptr1.SequenceEqual(ptr2);
         }
     }
 }

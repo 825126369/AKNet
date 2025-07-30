@@ -4,6 +4,7 @@ using AKNet.Common;
 using AKNet.Platform;
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -36,7 +37,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         public QUIC_ADDR()
         {
-            RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(Marshal.SizeOf<SOCKADDR_INET>());
+            RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(SOCKADDR_INET));
             RawAddr->si_family = OSPlatformFunc.AF_INET6;
             CheckFamilyError();
         }
@@ -92,12 +93,12 @@ namespace AKNet.Udp2MSQuic.Common
             get
             {
                 CheckFamilyError();
-                return RawAddr->Ipv6.sin6_port;
+                return (ushort)IPAddress.NetworkToHostOrder((short)RawAddr->Ipv6.sin6_port);
             }
 
             set
             {
-                RawAddr->Ipv6.sin6_port = value;
+                RawAddr->Ipv6.sin6_port = (ushort)IPAddress.HostToNetworkOrder((short)value);
             }
         }
 
@@ -970,6 +971,7 @@ namespace AKNet.Udp2MSQuic.Common
                             LocalRawAddr->Ipv6.sin6_family = OSPlatformFunc.AF_INET6;
                             LocalRawAddr->Ipv6.sin6_addr = PktInfo6->ipi6_addr;
                             LocalRawAddr->Ipv6.sin6_port = (ushort)SocketProc.Parent.LocalAddress.nPort;
+                            SocketAddressHelper.CxPlatConvertFromMappedV6(LocalRawAddr, LocalRawAddr);
                             LocalRawAddr->Ipv6.sin6_scope_id = PktInfo6->ipi6_ifindex;
                             FoundLocalAddr = true;
                         }

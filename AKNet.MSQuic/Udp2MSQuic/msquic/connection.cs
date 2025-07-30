@@ -1465,9 +1465,17 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             NetLog.Assert(Path.Binding == null);
+            QuicConnApplyNewSettings(Connection, false, Configuration.Settings);
+
             if (!Connection.State.RemoteAddressSet)
             {
                 NetLog.Assert(ServerName != null);
+                QuicAddrSetFamily(Path.Route.RemoteAddress, Family);
+                Status = CxPlatDataPathResolveAddress(MsQuicLib.Datapath, ServerName, Path.Route.RemoteAddress);
+                if (QUIC_FAILED(Status))
+                {
+                    goto Exit;
+                }
                 Connection.State.RemoteAddressSet = true;
             }
 

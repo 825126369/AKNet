@@ -12,6 +12,14 @@ namespace AKNet.Platform
             public static partial int connect(SafeHandle s, byte* name, int namelen);
             //[LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             //public static partial int WSAGetLastError();
+            [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            public static partial void FreeAddrInfoW(ADDRINFOW* pAddrInfo);
+            [LibraryImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            public static partial int GetAddrInfoW(
+                [MarshalAs(UnmanagedType.LPWStr)] string pNodeName,
+                [MarshalAs(UnmanagedType.LPWStr)] string pServiceName, 
+                ADDRINFOW* pHints, 
+                ADDRINFOW** ppResult);
 #else
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static extern int bind(SafeHandle socketHandle, byte* socketAddress, int socketAddressSize);
@@ -19,6 +27,10 @@ namespace AKNet.Platform
             public static extern int connect(SafeHandle s, byte* name, int namelen);
             //[DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             //public static extern int WSAGetLastError(); //这个和 Marshal.GetLastWin32Error() 冲突了
+            [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
+            public static extern void FreeAddrInfoW(ADDRINFOW* pAddrInfo);
+            [DllImport(Interop.Libraries.Ws2_32, SetLastError = true, CharSet = CharSet.Unicode)]
+            public static extern int GetAddrInfoW(string pNodeName, string pServiceName, ADDRINFOW* pHints, ADDRINFOW** ppResult);
 #endif
         }
     }

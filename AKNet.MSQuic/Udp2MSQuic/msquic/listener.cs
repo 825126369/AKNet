@@ -209,8 +209,8 @@ namespace AKNet.Udp2MSQuic.Common
             if (LocalAddress != null)
             {
                 Listener.LocalAddress.nPort = LocalAddress.nPort;
-                Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
-                PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
+                Listener.WildCard = QuicAddrIsWildCard(Listener.LocalAddress);
+                PortUnspecified = QuicAddrGetPort(Listener.LocalAddress) == 0;
             }
             else
             {

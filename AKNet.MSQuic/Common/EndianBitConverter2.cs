@@ -108,6 +108,5 @@ namespace AKNet.Common
         {
             return BinaryPrimitives.ReadUInt64BigEndian(mBuffer.Slice(nBeginIndex));
         }
-
     }
 }

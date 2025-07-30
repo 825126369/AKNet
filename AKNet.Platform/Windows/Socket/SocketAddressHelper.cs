@@ -1,4 +1,5 @@
-﻿using System.Buffers.Binary;
+﻿using System;
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -30,7 +31,7 @@ namespace AKNet.Platform
             {
                 SOCKADDR_INET* pAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
                 pAddr->Ipv4.sin_family = OSPlatformFunc.AF_INET; // AF_INET
-                pAddr->Ipv4.sin_port = (ushort)endPoint.Port;
+                pAddr->Ipv4.sin_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
 
                 Span<byte> addrSpan = new Span<byte>(pAddr->Ipv4.sin_addr.u, 4);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
@@ -41,7 +42,7 @@ namespace AKNet.Platform
             {
                 SOCKADDR_INET* pAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
                 pAddr->Ipv6.sin6_family = OSPlatformFunc.AF_INET6; // AF_INET
-                pAddr->Ipv6.sin6_port = (ushort)endPoint.Port;
+                pAddr->Ipv6.sin6_port = (ushort)IPAddress.HostToNetworkOrder((short)endPoint.Port);
                 pAddr->Ipv6.sin6_flowinfo = 0;
                 pAddr->Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;
                 Span<byte> addrSpan = new Span<byte>(pAddr->Ipv6.sin6_addr.u, 16);
@@ -60,13 +61,13 @@ namespace AKNet.Platform
             if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET (IPv4)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv4.sin_addr.u, 4));
-                int port = (short)sockaddr->Ipv4.sin_port;
+                int port = IPAddress.NetworkToHostOrder((short)sockaddr->Ipv4.sin_port);
                 return new IPEndPoint(addr, port);
             }
             else if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET6 (IPv6)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv6.sin6_addr.u, 16));
-                int port = (short)sockaddr->Ipv6.sin6_port;
+                int port = IPAddress.NetworkToHostOrder(sockaddr->Ipv6.sin6_port);
                 return new IPEndPoint(addr, port);
             }
             else
@@ -77,6 +78,7 @@ namespace AKNet.Platform
 
         public static void CxPlatConvertFromMappedV6(SOCKADDR_INET* InAddr, SOCKADDR_INET* OutAddr)
         {
+            //判断是否是IPV4映射的IPV6地址，如果是转换为IPV4地址
             NetLog.Assert(InAddr->si_family == OSPlatformFunc.AF_INET6);
             if (IN6_IS_ADDR_V4MAPPED(&InAddr->Ipv6.sin6_addr))
             {
@@ -110,12 +112,18 @@ namespace AKNet.Platform
                  (a->u[4] == 0) && (a->u[5] == 0) &&
                  (a->u[6] == 0) && (a->u[7] == 0) &&
                  (a->u[8] == 0) && (a->u[9] == 0) &&
-                 (a->u[10] == 0xff) && (a->u[9] == 0xff));
+                 (a->u[10] == 0xff) && (a->u[11] == 0xff));
+        }
+
+        public static bool IN6ADDR_ISV4MAPPED(SOCKADDR_IN6* a)
+        {
+            NetLog.Assert(a->sin6_family == OSPlatformFunc.AF_INET6);
+            return IN6_IS_ADDR_V4MAPPED(&a->sin6_addr);
         }
 
         public static byte* IN6_GET_ADDR_V4MAPPED(IN6_ADDR* Ipv6Address)
         {
-            return (Ipv6Address->u + 6);
+            return (Ipv6Address->u + 12);
         }
 
         public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, IN_ADDR* a4, uint scope, ushort port)
@@ -143,9 +151,5 @@ namespace AKNet.Platform
         {
             *ScopeId = 0;
         }
-
-
-
-
     }
 }

@@ -95,12 +95,5 @@ namespace AKNet.Common
 
             return mtu_cache;
         }
-
-        public static byte[] ConvertIPToByte(IPAddress ip)
-        {
-            byte[] bytes = ip.GetAddressBytes();
-            return bytes;
-        }
-
     }
 }

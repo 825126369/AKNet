@@ -2,6 +2,7 @@
 using AKNet.Common;
 using AKNet.Platform;
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
@@ -293,19 +294,24 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        static int QuicAddrGetPort(QUIC_ADDR Addr)
+        static ushort QuicAddrGetPort(QUIC_ADDR Addr)
         {
-            return Addr.RawAddr->Ipv4.sin_port;
+            return (ushort)IPAddress.NetworkToHostOrder((short)Addr.RawAddr->Ipv4.sin_port);
         }
 
-        static void QuicAddrSetPort(QUIC_ADDR Addr, int Port)
+        static void QuicAddrSetPort(QUIC_ADDR Addr, ushort Port)
         {
-            Addr.RawAddr->Ipv4.sin_port = (ushort)Port;
+            Addr.RawAddr->Ipv4.sin_port = (ushort)IPAddress.HostToNetworkOrder((short)Port);
         }
 
         static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
         {
             return (AddressFamily)Addr.RawAddr->si_family;
+        }
+
+        static void QuicAddrSetFamily(QUIC_ADDR Addr, AddressFamily Family)
+        {
+            Addr.RawAddr->si_family = (ushort)Family;
         }
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
@@ -318,19 +324,19 @@ namespace AKNet.Udp2MSQuic.Common
             public static readonly IPAddress IPv6Any = new IPAddress((ReadOnlySpan<byte>)[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0);
              */
 
-            if (Addr.RawAddr->si_family == (ushort)AddressFamily.Unspecified)
-            {
-                return true;
-            }
-            else if (Addr.RawAddr->si_family == OSPlatformFunc.AF_INET)
+            if (Addr.RawAddr->si_family == OSPlatformFunc.AF_INET)
             {
                 IN_ADDR ZeroAddr = new IN_ADDR();
                 return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv4.sin_addr, &ZeroAddr, sizeof(IN_ADDR));
             }
-            else
+            else if(Addr.RawAddr->si_family == OSPlatformFunc.AF_INET6)
             {
                 IN6_ADDR ZeroAddr = new IN6_ADDR();
                 return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR));
+            }
+            else
+            {
+                return true;
             }
         }
 
@@ -388,6 +394,55 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
             return Hash;
+        }
+
+        static void CxPlatDataPathPopulateTargetAddress(AddressFamily Family, ADDRINFOW* Ai, SOCKADDR_INET* Address)
+        {
+            if (Ai->ai_addr->sa_family == OSPlatformFunc.AF_INET6)
+            {
+                SOCKADDR_IN6* SockAddr6 = (SOCKADDR_IN6*)Ai->ai_addr;
+                if (Family == OSPlatformFunc.AF_UNSPEC && SocketAddressHelper.IN6ADDR_ISV4MAPPED(SockAddr6))
+                {
+                    SOCKADDR_IN* SockAddr4 = &Address->Ipv4;
+                    SockAddr4->sin_family = OSPlatformFunc.AF_INET;
+                    SockAddr4->sin_addr = *(IN_ADDR*)SocketAddressHelper.IN6_GET_ADDR_V4MAPPED(&SockAddr6->sin6_addr);
+                    SockAddr4->sin_port = SockAddr6->sin6_port;
+                    return;
+                }
+            }
+
+            OSPlatformFunc.CxPlatCopyMemory(Address, Ai->ai_addr, (int)Ai->ai_addrlen);
+        }
+
+        static int CxPlatDataPathResolveAddress(CXPLAT_DATAPATH Datapath, string HostName, QUIC_ADDR Address)
+        {
+            int Status;
+            string HostNameW = null;
+            ADDRINFOW Hints;
+            ADDRINFOW* Ai = null;
+
+            Hints.ai_family = Address.RawAddr->si_family;
+            Hints.ai_flags = OSPlatformFunc.AI_NUMERICHOST;
+            if (Interop.Winsock.GetAddrInfoW(HostNameW, null, &Hints, &Ai) == 0)
+            {
+                CxPlatDataPathPopulateTargetAddress((AddressFamily)Hints.ai_family, Ai, Address.RawAddr);
+                Interop.Winsock.FreeAddrInfoW(Ai);
+                Status = QUIC_STATUS_SUCCESS;
+                goto Exit;
+            }
+
+            Hints.ai_flags = OSPlatformFunc.AI_CANONNAME;
+            if (Interop.Winsock.GetAddrInfoW(HostNameW, null, &Hints, &Ai) == 0)
+            {
+                CxPlatDataPathPopulateTargetAddress((AddressFamily)Hints.ai_family, Ai, Address.RawAddr);
+                Interop.Winsock.FreeAddrInfoW(Ai);
+                Status = QUIC_STATUS_SUCCESS;
+                goto Exit;
+            }
+
+            Status = QUIC_STATUS_INTERNAL_ERROR;
+        Exit:
+            return Status;
         }
 
     }

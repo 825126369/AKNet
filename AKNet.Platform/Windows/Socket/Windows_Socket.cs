@@ -41,25 +41,24 @@ namespace AKNet.Platform
 
     public unsafe struct SOCKADDR_IN
     {
-        public ushort sin_family;
-        public ushort sin_port;
-        public IN_ADDR sin_addr;
+        public ushort sin_family; //主机字节序
+        public ushort sin_port; //网络字节序
+        public IN_ADDR sin_addr; //网络字节序
         public fixed byte sin_zero[8];
     }
 
     public unsafe struct SOCKADDR_IN6
     {
-        public ushort sin6_family;          // AF_INET6.
-        public ushort sin6_port;            // Transport level port number.
-        public uint sin6_flowinfo;         // IPv6 flow information.
-        public IN6_ADDR sin6_addr;            // IPv6 address.
-        public uint sin6_scope_id;
+        public ushort sin6_family; // 主机字节序
+        public ushort sin6_port;   //网络字节序
+        public uint sin6_flowinfo; //主机字节序
+        public IN6_ADDR sin6_addr; //网络字节序
+        public uint sin6_scope_id;//主机字节序
     }
 
     public unsafe struct IN_ADDR
     {
         public fixed byte u[4];
-
         public Span<byte> GetSpan()
         {
             fixed (void* uPtr = u)
@@ -109,7 +108,7 @@ namespace AKNet.Platform
 
     public struct WSACMSGHDR
     {
-        public ulong cmsg_len;
+        public nuint cmsg_len;
         public int cmsg_level;
         public int cmsg_type;
     }
@@ -131,6 +130,18 @@ namespace AKNet.Platform
         public int TotalLength;
     }
 
+    public unsafe struct ADDRINFOW
+    {
+        public int ai_flags;       // AI_PASSIVE, AI_CANONNAME, AI_NUMERICHOST
+        public int ai_family;      // PF_xxx
+        public int ai_socktype;    // SOCK_xxx
+        public int ai_protocol;    // 0 or IPPROTO_xxx for IPv4 and IPv6
+        public nuint ai_addrlen;     // Length of ai_addr
+        [MarshalAs(UnmanagedType.LPWStr)]  public string ai_canonname;   // Canonical name for nodename
+        public SOCKADDR* ai_addr;        // Binary address
+        public ADDRINFOW*  ai_next;        // Next structure in linked list
+    }
+
     public class CxPlatSocketHandle : SafeHandleMinusOneIsInvalid
     {
         public CxPlatSocketHandle() : base(true) { }
@@ -149,6 +160,7 @@ namespace AKNet.Platform
 
     public static unsafe partial class OSPlatformFunc
     {
+        public const int AF_UNSPEC = 0;
         public const int AF_INET = 2;               // internetwork: UDP, TCP, etc.
         public const int AF_INET6 = 23;            // Internetwork Version 6
         public const int SOCK_DGRAM = 2;             /* datagram socket */
@@ -216,9 +228,11 @@ namespace AKNet.Platform
         public const int RIO_SEND_QUEUE_DEPTH = 256;
         //public static readonly int RIO_CMSG_BASE_SIZE = WSA_CMSGHDR_ALIGN(sizeof(RIO_CMSG_BUFFER));
 
-
         public const int UDP_SEND_MSG_SIZE = 2;
         public const int UDP_RECV_MAX_COALESCED_SIZE = 3;
+
+        public const int AI_CANONNAME = 0x00000002;  // Return canonical name in first ai_canonname
+        public const int AI_NUMERICHOST = 0x00000004;  // Nodename must be a numeric address string
 
         public static uint _WSAIOW(uint x, uint y)
         {
@@ -262,9 +276,9 @@ namespace AKNet.Platform
             return ((byte*)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)));
         }
 
-        public static ulong WSA_CMSG_LEN(int length)
+        public static nuint WSA_CMSG_LEN(int length)
         {
-            return (ulong)(WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)) + length);
+            return (nuint)(WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)) + length);
         }
 
         public static int WSA_CMSG_SPACE(long length)
