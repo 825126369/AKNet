@@ -271,6 +271,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
             CtrlBufHandle = CtrlBuf.Pin();
+            WsaBuffersInnerMemoryHandle = WsaBuffersInner.Pin();
         }
 
         ~CXPLAT_SEND_DATA()

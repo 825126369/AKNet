@@ -994,18 +994,11 @@ namespace AKNet.Udp2MSQuic.Common
                     {
                         if (CMsg->cmsg_type == OSPlatformFunc.IP_PKTINFO)
                         {
-                            //IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
-                            //LocalAddr.si_family = QUIC_ADDRESS_FAMILY_INET;
-                            //LocalAddr.Ipv4.sin_addr = PktInfo->ipi_addr;
-                            //LocalAddr.Ipv4.sin_port = SocketProc.Parent.LocalAddress.Ipv6.sin6_port;
-                            //LocalAddr.Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
-                            
-                            //SOCKADDR_INET mAddr = new SOCKADDR_INET();
-                            //mAddr.Ipv4.sin_family = OSPlatformFunc.AF_INET6;
-                            //mAddr.Ipv4.sin_addr = PktInfo->ipi_addr;
-                            //mAddr.Ipv4.sin_port = (ushort)SocketProc.Parent.LocalAddress.nPort;
-                            //mAddr.Ipv4.sin6_scope_id = PktInfo->ipi_ifindex;
-                            NetLog.Assert(false);
+                            IN_PKTINFO* PktInfo = (IN_PKTINFO*)OSPlatformFunc.WSA_CMSG_DATA(CMsg);
+                            LocalRawAddr->si_family = OSPlatformFunc.AF_INET;
+                            LocalRawAddr->Ipv4.sin_addr = PktInfo->ipi_addr;
+                            LocalRawAddr->Ipv4.sin_port = SocketProc.Parent.LocalAddress.RawAddr->Ipv6.sin6_port;
+                            LocalRawAddr->Ipv6.sin6_scope_id = PktInfo->ipi_ifindex;
                             FoundLocalAddr = true;
                         }
                         else if (CMsg->cmsg_type == OSPlatformFunc.IP_TOS)

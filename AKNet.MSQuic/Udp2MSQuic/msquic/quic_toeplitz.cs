@@ -18,8 +18,8 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal class CXPLAT_TOEPLITZ_HASH
     {
-        public CXPLAT_TOEPLITZ_LOOKUP_TABLE[] LookupTableArray = new CXPLAT_TOEPLITZ_LOOKUP_TABLE[MSQuicFunc.CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT];
-        public byte[] HashKey = new byte[MSQuicFunc.CXPLAT_TOEPLITZ_KEY_SIZE];
+        public CXPLAT_TOEPLITZ_LOOKUP_TABLE[] LookupTableArray = new CXPLAT_TOEPLITZ_LOOKUP_TABLE[MSQuicFunc.CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT_MAX];
+        public byte[] HashKey = new byte[MSQuicFunc.CXPLAT_TOEPLITZ_KEY_SIZE_MAX];
         public CXPLAT_TOEPLITZ_INPUT_SIZE InputSize;
         public CXPLAT_TOEPLITZ_HASH()
         {
@@ -34,15 +34,14 @@ namespace AKNet.Udp2MSQuic.Common
     {
         public const int NIBBLES_PER_BYTE = 2;
         public const int BITS_PER_NIBBLE = 4;
-        public const int CXPLAT_TOEPLITZ_INPUT_SIZE = 38;
         public const int CXPLAT_TOEPLITZ_OUPUT_SIZE = sizeof(uint);
-        public const int CXPLAT_TOEPLITZ_KEY_SIZE = (CXPLAT_TOEPLITZ_INPUT_SIZE + CXPLAT_TOEPLITZ_OUPUT_SIZE);
         public const int CXPLAT_TOEPLITZ_LOOKUP_TABLE_SIZE = 16;
-        public const int CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT = (CXPLAT_TOEPLITZ_INPUT_SIZE * NIBBLES_PER_BYTE);
+        public const int CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT_MAX = ((int)CXPLAT_TOEPLITZ_INPUT_SIZE.CXPLAT_TOEPLITZ_INPUT_SIZE_MAX * NIBBLES_PER_BYTE);
+        public const int CXPLAT_TOEPLITZ_KEY_SIZE_MAX = ((int)CXPLAT_TOEPLITZ_INPUT_SIZE.CXPLAT_TOEPLITZ_INPUT_SIZE_MAX + CXPLAT_TOEPLITZ_OUPUT_SIZE);
 
         static void CxPlatToeplitzHashInitialize(CXPLAT_TOEPLITZ_HASH Toeplitz)
         {
-            for (int i = 0; i < CXPLAT_TOEPLITZ_LOOKUP_TABLE_COUNT; i++)
+            for (int i = 0; i < (int)Toeplitz.InputSize * NIBBLES_PER_BYTE; i++)
             {
                 int StartByteOfKey = i / NIBBLES_PER_BYTE;
 

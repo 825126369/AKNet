@@ -379,8 +379,6 @@ namespace AKNet.Udp2MSQuic.Common
                 //    CxPlatProcessDynamicPoolAllocators(Worker);
                 //    Worker.State.LastPoolProcessTime = Worker.State.TimeNow;
                 //}
-                
-                NetLog.Log("CxPlatWorkerThread");
             }
 
             Worker.Running = 0;
@@ -469,8 +467,11 @@ namespace AKNet.Udp2MSQuic.Common
                 for (int i = 0; i < CqeCount; ++i)
                 {
                     CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Worker.EventQ.events[i]);
-                    NetLog.Assert(Sqe.Completion != null);
-                    Sqe.Completion(Worker.EventQ.events[i]);
+                    if (Sqe != null)
+                    {
+                        NetLog.Assert(Sqe.Completion != null);
+                        Sqe.Completion(Worker.EventQ.events[i]);
+                    }
                 }
                 OSPlatformFunc.CxPlatEventQReturn(Worker.EventQ, CqeCount);
             }

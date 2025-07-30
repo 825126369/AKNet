@@ -971,6 +971,7 @@ namespace AKNet.Udp1MSQuic.Common
             Array.Clear(MsQuicLib.PerfCounterSamples, 0, MsQuicLib.PerfCounterSamples.Length);
 
             CxPlatRandom.Random(MsQuicLib.ToeplitzHash.HashKey);
+            MsQuicLib.ToeplitzHash.InputSize = CXPLAT_TOEPLITZ_INPUT_SIZE.CXPLAT_TOEPLITZ_INPUT_SIZE_QUIC;
             CxPlatToeplitzHashInitialize(MsQuicLib.ToeplitzHash);
 
             if (QUIC_FAILED(Status))
