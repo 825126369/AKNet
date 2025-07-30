@@ -117,22 +117,19 @@ namespace AKNet.Udp2MSQuic.Common
 
         public void WriteFrom(ReadOnlySpan<byte> Buffer)
         {
-            RawAddr = (SOCKADDR_INET*)Marshal.AllocHGlobal(sizeof(SOCKADDR_INET));
+            RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
             Span<byte> mTarget = new Span<byte>(RawAddr, sizeof(SOCKADDR_INET));
             Buffer.CopyTo(mTarget);
         }
 
         public void WriteFrom(QUIC_ADDR other)
         {
-            RawAddr = (SOCKADDR_INET*)Marshal.AllocHGlobal(sizeof(SOCKADDR_INET));
-            Span<byte> mTarget = new Span<byte>(RawAddr, sizeof(SOCKADDR_INET));
-            Span<byte> mSource = new Span<byte>(other.RawAddr, sizeof(SOCKADDR_INET));
-            mSource.CopyTo(mTarget);
+            *RawAddr = *other.RawAddr;
         }
 
         public QUIC_SSBuffer ToSSBuffer()
         {
-            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[30]);
+            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[28]);
             int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
             qUIC_SSBuffer.Length = nLength;
             return qUIC_SSBuffer;

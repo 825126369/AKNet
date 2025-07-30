@@ -60,11 +60,11 @@ namespace AKNet.Platform
     {
         public fixed byte u[4];
 
-        public ReadOnlySpan<byte> GetSpan()
+        public Span<byte> GetSpan()
         {
             fixed (void* uPtr = u)
             {
-                return new ReadOnlySpan<byte>(uPtr, 4);
+                return new Span<byte>(uPtr, 4);
             }
         }
     }
@@ -73,11 +73,11 @@ namespace AKNet.Platform
     {
         public fixed byte u[16];
 
-        public ReadOnlySpan<byte> GetSpan()
+        public Span<byte> GetSpan()
         {
             fixed (void* uPtr = u)
             {
-                return new ReadOnlySpan<byte>(uPtr, 16);
+                return new Span<byte>(uPtr, 16);
             }
         }
     }

@@ -28,31 +28,25 @@ namespace AKNet.Platform
         {
             if (endPoint.AddressFamily == AddressFamily.InterNetwork) // IPv4
             {
-                var addr = new SOCKADDR_INET();
-                addr.Ipv4.sin_family = OSPlatformFunc.AF_INET; // AF_INET
-                addr.Ipv4.sin_port = (ushort)endPoint.Port;
+                SOCKADDR_INET* pAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
+                pAddr->Ipv4.sin_family = OSPlatformFunc.AF_INET; // AF_INET
+                pAddr->Ipv4.sin_port = (ushort)endPoint.Port;
 
-                Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv4.sin_addr.u, 4);
+                Span<byte> addrSpan = new Span<byte>(pAddr->Ipv4.sin_addr.u, 4);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
-
-                IntPtr pAddr = Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
-                Marshal.StructureToPtr(addr, pAddr, false);
-                addressLen = Marshal.SizeOf(addr.Ipv4);
-                return (SOCKADDR_INET*)pAddr;
+                addressLen = Marshal.SizeOf(pAddr->Ipv4);
+                return pAddr;
             }
             else if (endPoint.AddressFamily == AddressFamily.InterNetworkV6) // IPv6
             {
-                var addr = new SOCKADDR_INET();
-                addr.Ipv6.sin6_family = OSPlatformFunc.AF_INET; // AF_INET
-                addr.Ipv6.sin6_port = (ushort)endPoint.Port;
-                addr.Ipv6.sin6_flowinfo = 0;
-                addr.Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;
-                Span<byte> addrSpan = new Span<byte>((void*)addr.Ipv6.sin6_addr.u, 4);
+                SOCKADDR_INET* pAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAlloc(sizeof(SOCKADDR_INET));
+                pAddr->Ipv6.sin6_family = OSPlatformFunc.AF_INET6; // AF_INET
+                pAddr->Ipv6.sin6_port = (ushort)endPoint.Port;
+                pAddr->Ipv6.sin6_flowinfo = 0;
+                pAddr->Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId;
+                Span<byte> addrSpan = new Span<byte>(pAddr->Ipv6.sin6_addr.u, 16);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
-
-                IntPtr pAddr = Marshal.AllocHGlobal(Marshal.SizeOf<SOCKADDR_INET>());
-                Marshal.StructureToPtr(addr, pAddr, false);
-                addressLen = Marshal.SizeOf(addr.Ipv6);
+                addressLen = Marshal.SizeOf(pAddr->Ipv6);
                 return (SOCKADDR_INET*)pAddr;
             }
             else
@@ -63,13 +57,13 @@ namespace AKNet.Platform
 
         public static IPEndPoint RawAddrTo(SOCKADDR_INET* sockaddr)
         {
-            if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET (IPv4)
+            if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET (IPv4)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr->Ipv4.sin_addr.u, 4));
                 int port = (short)sockaddr->Ipv4.sin_port;
                 return new IPEndPoint(addr, port);
             }
-            else if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET6 (IPv6)
+            else if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET6 (IPv6)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr->Ipv6.sin6_addr.u, 16));
                 int port = (short)sockaddr->Ipv6.sin6_port;
@@ -137,10 +131,12 @@ namespace AKNet.Platform
         public static void IN6_SET_ADDR_V4MAPPED(IN6_ADDR* a6, IN_ADDR* a4)
         {
             *a6 = new IN6_ADDR();
-            a6->u[12] = ((byte*)a4)[0];
-            a6->u[13] = ((byte*)a4)[1];
-            a6->u[14] = ((byte*)a4)[2];
-            a6->u[15] = ((byte*)a4)[3];
+            a6->u[10] = 0xFF;
+            a6->u[11] = 0xFF;
+            a6->u[12] = a4->u[0];
+            a6->u[13] = a4->u[1];
+            a6->u[14] = a4->u[2];
+            a6->u[15] = a4->u[3];
         }
 
         static void IN4_UNCANONICALIZE_SCOPE_ID(IN_ADDR* Address, uint* ScopeId)

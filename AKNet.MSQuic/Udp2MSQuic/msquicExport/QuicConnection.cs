@@ -63,6 +63,7 @@ namespace AKNet.Udp2MSQuic.Common
                 address = addresses[0];
             }
 
+            IPEndPoint m = new IPEndPoint(address.MapToIPv6(), port);
             QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
             MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
             this._sslConnectionOptions = new SslConnectionOptions(
