@@ -37,8 +37,6 @@ namespace AKNet.Udp2MSQuic.Common
         public QUIC_ADDR()
         {
             RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(SOCKADDR_INET));
-            RawAddr->si_family = OSPlatformFunc.AF_INET6;
-            CheckFamilyError();
         }
 
         public QUIC_ADDR(IPAddress otherIp, int nPort) : this(new IPEndPoint(otherIp, nPort))
@@ -48,10 +46,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
-            SOCKADDR_INET* mTemp = SocketAddressHelper.GetRawAddr(mIPEndPoint, out _);
-            RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(SOCKADDR_INET));
-            SocketAddressHelper.CxPlatConvertToMappedV6(mTemp, RawAddr);
-            CheckFamilyError();
+            RawAddr = SocketAddressHelper.GetRawAddr(mIPEndPoint, out _);
         }
 
         public ReadOnlySpan<byte> GetIPAddressSpan()
@@ -66,11 +61,6 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        public void SetIPEndPoint(IPEndPoint mIPEndPoint)
-        {
-            CheckFamilyError();
-        }
-
         public IPEndPoint GetIPEndPoint()
         { 
             var mIpEndPoint = SocketAddressHelper.RawAddrTo(RawAddr);
@@ -81,7 +71,6 @@ namespace AKNet.Udp2MSQuic.Common
         {
             get
             {
-                CheckFamilyError();
                 return (AddressFamily)RawAddr->si_family;
             }
         }
@@ -90,7 +79,6 @@ namespace AKNet.Udp2MSQuic.Common
         {
             get
             {
-                CheckFamilyError();
                 return (ushort)IPAddress.NetworkToHostOrder((short)RawAddr->Ipv6.sin6_port);
             }
 
@@ -134,9 +122,8 @@ namespace AKNet.Udp2MSQuic.Common
             return qUIC_SSBuffer;
         }
 
-        public SOCKADDR_INET* GetRawAddr(out int addressLen)
+        public SOCKADDR_INET* GetRawAddr()
         {
-            addressLen = Marshal.SizeOf(RawAddr->Ipv6);
             return RawAddr;
         }
 
@@ -144,23 +131,11 @@ namespace AKNet.Udp2MSQuic.Common
         {
             RawAddr = null;
             ServerName = string.Empty;
-            CheckFamilyError();
         }
 
         public override string ToString()
         {
             return GetIPEndPoint().ToString();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CheckFamilyError()
-        {
-#if DEBUG
-            if (RawAddr != null)
-            {
-                NetLog.Assert((AddressFamily)RawAddr->si_family == AddressFamily.InterNetworkV6);
-            }
-#endif
         }
     }
 
@@ -355,7 +330,11 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (Config.LocalAddress != null)
             {
-                Socket.LocalAddress = Config.LocalAddress;
+                SocketAddressHelper.CxPlatConvertToMappedV6(Config.LocalAddress.RawAddr, Socket.LocalAddress.RawAddr);
+            }
+            else
+            {
+                Socket.LocalAddress.RawAddr->si_family = OSPlatformFunc.AF_INET6;
             }
 
             Socket.Mtu = CXPLAT_MAX_MTU;
@@ -722,13 +701,17 @@ namespace AKNet.Udp2MSQuic.Common
                 Result = Interop.Winsock.bind(SocketProc.Socket, (byte*)Socket.LocalAddress.RawAddr, sizeof(SOCKADDR_INET));
                 if(Result == OSPlatformFunc.SOCKET_ERROR)
                 {
+                    int WSAError = Marshal.GetLastWin32Error();
+                    NetLog.LogError("Error: " + (SocketError)WSAError);
                     Status = QUIC_STATUS_INTERNAL_ERROR;
                     goto Error;
                 }
 
                 if (Config.RemoteAddress != null)
                 {
-                    Result = Interop.Winsock.connect(SocketProc.Socket, (byte*)Config.RemoteAddress.RawAddr, sizeof(SOCKADDR_INET));
+                    SOCKADDR_INET MappedRemoteAddress;
+                    SocketAddressHelper.CxPlatConvertToMappedV6(Config.RemoteAddress.RawAddr, &MappedRemoteAddress);
+                    Result = Interop.Winsock.connect(SocketProc.Socket, (byte*)&MappedRemoteAddress, sizeof(SOCKADDR_INET));
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
                         int WSAError = Marshal.GetLastWin32Error();
@@ -756,11 +739,13 @@ namespace AKNet.Udp2MSQuic.Common
                 }
 
             }
+
+            SocketAddressHelper.CxPlatConvertFromMappedV6(Socket.LocalAddress.RawAddr, Socket.LocalAddress.RawAddr);
         Skip:
 
             if (Config.RemoteAddress != null)
             {
-                Socket.RemoteAddress = Config.RemoteAddress;
+                Socket.RemoteAddress.WriteFrom(Config.RemoteAddress);
             }
             
             NewSocket = Socket;
@@ -918,6 +903,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             SOCKADDR_INET* LocalRawAddr = IoBlock.Route.LocalAddress.RawAddr;
             SOCKADDR_INET* RemoteAddr = IoBlock.Route.RemoteAddress.RawAddr;
+            SocketAddressHelper.CxPlatConvertFromMappedV6(RemoteAddr, RemoteAddr);
             IoBlock.Route.Queue = SocketProc;
 
             if (IsUnreachableErrorCode(IoResult))

@@ -598,8 +598,8 @@ namespace AKNet.Udp2MSQuic.Common
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;
             CxPlatSendDataFinalizeSendBuffer(SendData);
-            SocketAddressHelper.CxPlatConvertToMappedV6(Route.RemoteAddress.GetRawAddr(out _), 
-                SendData.MappedRemoteAddress.GetRawAddr(out _));
+            SocketAddressHelper.CxPlatConvertToMappedV6(Route.RemoteAddress.GetRawAddr(), 
+                SendData.MappedRemoteAddress.GetRawAddr());
             
             if (Socket.UseRio)
             {

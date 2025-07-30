@@ -10,8 +10,6 @@ namespace AKNet.Udp2MSQuic.Common
     {
         public QUIC_REGISTRATION Registration;
         public QUIC_BINDING Binding;
-
-        public bool WildCardIPV6;
         public bool WildCard;
         public bool AppClosed;
         public bool Stopped;

@@ -95,8 +95,8 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal class CXPLAT_SOCKET_COMMON: CXPLAT_SOCKET_RAW
     {
-        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
-        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
+        public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
+        public readonly QUIC_ADDR RemoteAddress = new QUIC_ADDR();
         public CXPLAT_DATAPATH Datapath;
         public ushort Mtu;
     }

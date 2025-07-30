@@ -43,21 +43,25 @@ namespace AKNet.Udp2MSQuic.Common
             return (ulong)(1 << nr);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
         {
             return orBufferEqual(buffer1.GetSpan(), buffer2.GetSpan());
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
         {
-            return BufferTool.orBufferEqual(buffer1, buffer2);
+            return buffer1.SequenceEqual(buffer2);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
             return BufferTool.orBufferEqual(buffer1, 0, buffer2, 0, nLength);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(byte[] buffer1, int Offset1, byte[] buffer2,  int nOffset2, int nLength)
         {
             return BufferTool.orBufferEqual(buffer1, Offset1, buffer2, nOffset2, nLength);

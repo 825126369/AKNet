@@ -127,10 +127,12 @@ namespace AKNet.Platform
 
         public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, SOCKADDR_IN* a4)
         {
+            IN_ADDR temp = (IN_ADDR)a4->sin_addr;
+
             a6->sin6_family = OSPlatformFunc.AF_INET6;
             a6->sin6_port = a4->sin_port;
             a6->sin6_flowinfo = 0;
-            IN6_SET_ADDR_V4MAPPED(&a6->sin6_addr, &a4->sin_addr);
+            IN6_SET_ADDR_V4MAPPED(&a6->sin6_addr, &temp);
             a6->sin6_scope_id = 0;
             IN4_UNCANONICALIZE_SCOPE_ID(&a4->sin_addr, &a6->sin6_scope_id);
         }

@@ -350,6 +350,17 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        static bool QuicAddrIsWildCardIPv6Any(QUIC_ADDR Addr)
+        {
+            if (Addr.RawAddr->si_family != OSPlatformFunc.AF_INET6)
+            {
+                return false;
+            }
+
+            IN6_ADDR ZeroAddr = new IN6_ADDR();
+            return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR));
+        }
+
         static bool QuicAddrIsValid(QUIC_ADDR Addr)
         {
             return Addr.Family == AddressFamily.InterNetwork ||
