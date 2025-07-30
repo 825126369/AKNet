@@ -4,7 +4,6 @@ using AKNet.Common;
 using AKNet.Platform;
 using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -49,10 +48,9 @@ namespace AKNet.Udp2MSQuic.Common
 
         public QUIC_ADDR(IPEndPoint mIPEndPoint)
         {
-            RawAddr = SocketAddressHelper.GetRawAddr(mIPEndPoint,out _);
-            var RawAddr2 = SocketAddressHelper.GetRawAddr(mIPEndPoint, out _);
-            SocketAddressHelper.CxPlatConvertToMappedV6(RawAddr2, RawAddr);
-            OSPlatformFunc.CxPlatFree(RawAddr2);
+            SOCKADDR_INET* mTemp = SocketAddressHelper.GetRawAddr(mIPEndPoint, out _);
+            RawAddr = (SOCKADDR_INET*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(SOCKADDR_INET));
+            SocketAddressHelper.CxPlatConvertToMappedV6(mTemp, RawAddr);
             CheckFamilyError();
         }
 

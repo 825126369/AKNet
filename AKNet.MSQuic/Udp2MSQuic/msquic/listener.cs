@@ -1,5 +1,7 @@
 ﻿using AKNet.Common;
+using AKNet.Platform;
 using System;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -9,6 +11,7 @@ namespace AKNet.Udp2MSQuic.Common
         public QUIC_REGISTRATION Registration;
         public QUIC_BINDING Binding;
 
+        public bool WildCardIPV6;
         public bool WildCard;
         public bool AppClosed;
         public bool Stopped;
@@ -57,7 +60,7 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 
-    internal static partial class MSQuicFunc
+    internal unsafe static partial class MSQuicFunc
     {
         public static int MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, out QUIC_LISTENER NewListener)
         {
@@ -208,16 +211,20 @@ namespace AKNet.Udp2MSQuic.Common
             bool PortUnspecified = false;
             if (LocalAddress != null)
             {
-                Listener.LocalAddress.nPort = LocalAddress.nPort;
-                Listener.WildCard = QuicAddrIsWildCard(Listener.LocalAddress);
-                PortUnspecified = QuicAddrGetPort(Listener.LocalAddress) == 0;
+                OSPlatformFunc.CxPlatCopyMemory(Listener.LocalAddress.RawAddr, LocalAddress.RawAddr, sizeof(SOCKADDR_INET));
+                Listener.WildCard = QuicAddrIsWildCard(LocalAddress);
+                PortUnspecified = QuicAddrGetPort(LocalAddress) == 0;
             }
             else
             {
-                Listener.LocalAddress.Reset();
+                OSPlatformFunc.CxPlatZeroMemory(Listener.LocalAddress.RawAddr, sizeof(SOCKADDR_INET));
                 Listener.WildCard = true;
                 PortUnspecified = true;
             }
+
+            QUIC_ADDR BindingLocalAddress = new QUIC_ADDR();
+            QuicAddrSetFamily(BindingLocalAddress, AddressFamily.InterNetworkV6);
+            QuicAddrSetPort(BindingLocalAddress, PortUnspecified ? (ushort)0 : QuicAddrGetPort(LocalAddress));
 
             if (!QuicLibraryOnListenerRegistered(Listener))
             {
@@ -226,7 +233,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             CXPLAT_UDP_CONFIG UdpConfig = new CXPLAT_UDP_CONFIG();
-            UdpConfig.LocalAddress = LocalAddress;
+            UdpConfig.LocalAddress = BindingLocalAddress;
             UdpConfig.RemoteAddress = null;
             UdpConfig.Flags = CXPLAT_SOCKET_FLAG_SHARE | CXPLAT_SOCKET_SERVER_OWNED; // Listeners always share the binding.
             UdpConfig.InterfaceIndex = 0;
@@ -239,6 +246,19 @@ namespace AKNet.Udp2MSQuic.Common
                 NetLog.Assert(UdpConfig.CibirIdLength <= UdpConfig.CibirId.Length);
                 Array.Copy(Listener.CibirId, 2, UdpConfig.CibirId, 0, UdpConfig.CibirIdLength);
             }
+
+            //if (MsQuicLib.Settings.XdpEnabled)
+            //{
+            //    UdpConfig.Flags |= CXPLAT_SOCKET_FLAG_XDP;
+            //}
+            //if (MsQuicLib.Settings.QTIPEnabled)
+            //{
+            //    UdpConfig.Flags |= CXPLAT_SOCKET_FLAG_QTIP;
+            //}
+            //if (MsQuicLib.Settings.RioEnabled)
+            //{
+            //    UdpConfig.Flags |= CXPLAT_SOCKET_FLAG_RIO;
+            //}
 
             NetLog.Assert(Listener.Binding == null);
             Status = QuicLibraryGetBinding(UdpConfig, out Listener.Binding);
@@ -260,8 +280,8 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (PortUnspecified)
             {
-                QuicBindingGetLocalAddress(Listener.Binding, out LocalAddress);
-                QuicAddrSetPort(Listener.LocalAddress, QuicAddrGetPort(LocalAddress));
+                QuicBindingGetLocalAddress(Listener.Binding, BindingLocalAddress);
+                QuicAddrSetPort(Listener.LocalAddress, QuicAddrGetPort(BindingLocalAddress));
             }
         Error:
             if (QUIC_FAILED(Status))

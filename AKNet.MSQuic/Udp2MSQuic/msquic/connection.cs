@@ -1526,7 +1526,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             Connection.State.LocalAddressSet = true;
-            QuicBindingGetLocalAddress(Path.Binding, out Path.Route.LocalAddress);
+            QuicBindingGetLocalAddress(Path.Binding, Path.Route.LocalAddress);
             Connection.RemoteServerName = ServerName;
 
             Status = QuicCryptoInitialize(Connection.Crypto);

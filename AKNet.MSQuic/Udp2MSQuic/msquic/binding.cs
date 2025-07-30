@@ -249,10 +249,11 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatDispatchRwLockReleaseExclusive(Binding.RwLock);
         }
 
-        static int QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        static int QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, out QUIC_BINDING NewBinding)
         {
             int Status;
             QUIC_BINDING Binding = new QUIC_BINDING();
+            NewBinding = null;
             if (Binding == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -1349,14 +1350,14 @@ namespace AKNet.Udp2MSQuic.Common
             return Status;
         }
 
-        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, out QUIC_ADDR Address)
+        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, QUIC_ADDR Address)
         {
-            CxPlatSocketGetLocalAddress(Binding.Socket, out Address);
+            CxPlatSocketGetLocalAddress(Binding.Socket, Address);
         }
 
-        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, out QUIC_ADDR Address)
+        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, QUIC_ADDR Address)
         {
-            CxPlatSocketGetRemoteAddress(Binding.Socket, out Address);
+            CxPlatSocketGetRemoteAddress(Binding.Socket, Address);
         }
 
         static bool QuicBindingAddSourceConnectionID(QUIC_BINDING Binding, QUIC_CID SourceCid)

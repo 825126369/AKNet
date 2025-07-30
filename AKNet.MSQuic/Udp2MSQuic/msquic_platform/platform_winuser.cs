@@ -331,12 +331,22 @@ namespace AKNet.Udp2MSQuic.Common
             }
             else if(Addr.RawAddr->si_family == OSPlatformFunc.AF_INET6)
             {
-                IN6_ADDR ZeroAddr = new IN6_ADDR();
-                return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR));
+                if (SocketAddressHelper.IN6_IS_ADDR_V4MAPPED(&Addr.RawAddr->Ipv6.sin6_addr))
+                {
+                    byte* Addr2 = SocketAddressHelper.IN6_GET_ADDR_V4MAPPED(&Addr.RawAddr->Ipv6.sin6_addr);
+                    IN_ADDR ZeroAddr = new IN_ADDR();
+                    return OSPlatformFunc.memcmp(Addr2, &ZeroAddr, sizeof(IN_ADDR));
+                }
+                else
+                {
+                    IN6_ADDR ZeroAddr = new IN6_ADDR();
+                    return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR));
+                }
             }
             else
             {
-                return true;
+                NetLog.Assert(false);
+                return false;
             }
         }
 

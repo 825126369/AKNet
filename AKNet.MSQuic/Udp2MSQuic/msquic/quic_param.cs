@@ -271,7 +271,7 @@ namespace AKNet.Udp2MSQuic.Common
                             Connection.Paths[0].Route.Queue = null;
                             QuicBindingMoveSourceConnectionIDs(OldBinding, Connection.Paths[0].Binding, Connection);
                             QuicLibraryReleaseBinding(OldBinding);
-                            QuicBindingGetLocalAddress(Connection.Paths[0].Binding, out Connection.Paths[0].Route.LocalAddress);
+                            QuicBindingGetLocalAddress(Connection.Paths[0].Binding, Connection.Paths[0].Route.LocalAddress);
                             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
                         }
 
@@ -286,14 +286,15 @@ namespace AKNet.Udp2MSQuic.Common
                         break;
                     }
 
-                    if (QuicAddrIsWildCard((QUIC_ADDR)Buffer) || QuicConnIsServer(Connection))
+                    QUIC_ADDR mAddr = (QUIC_ADDR)Buffer;
+                    if (QuicAddrIsWildCard(mAddr) || QuicConnIsServer(Connection))
                     {
                         Status = QUIC_STATUS_INVALID_PARAMETER;
                         break;
                     }
 
                     Connection.State.RemoteAddressSet = true;
-                    Connection.Paths[0].Route.RemoteAddress.WriteFrom(Buffer);
+                    Connection.Paths[0].Route.RemoteAddress.WriteFrom(mAddr);
                     Status = QUIC_STATUS_SUCCESS;
                     break;
                 default:

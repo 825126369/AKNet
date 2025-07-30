@@ -481,18 +481,17 @@ namespace AKNet.Udp2MSQuic.Common
 
         static QUIC_BINDING QuicLibraryLookupBinding(QUIC_ADDR LocalAddress, QUIC_ADDR RemoteAddress)
         {
+            QUIC_ADDR TempAddr = new QUIC_ADDR();
             for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Next; Link != MsQuicLib.Bindings; Link = Link.Next)
             {
                 QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
-                QUIC_ADDR BindingLocalAddr = null;
-                QuicBindingGetLocalAddress(Binding, out BindingLocalAddr);
+                QuicBindingGetLocalAddress(Binding, TempAddr);
                 if (Binding.Connected)
                 {
-                    if (RemoteAddress != null && QuicAddrCompare(LocalAddress, BindingLocalAddr))
+                    if (RemoteAddress != null && QuicAddrCompare(LocalAddress, TempAddr))
                     {
-                        QUIC_ADDR BindingRemoteAddr = null;
-                        QuicBindingGetRemoteAddress(Binding, out BindingRemoteAddr);
-                        if (QuicAddrCompare(RemoteAddress, BindingRemoteAddr))
+                        QuicBindingGetRemoteAddress(Binding, TempAddr);
+                        if (QuicAddrCompare(RemoteAddress, TempAddr))
                         {
                             return Binding;
                         }
@@ -500,7 +499,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 else
                 {
-                    if (QuicAddrGetPort(BindingLocalAddr) == QuicAddrGetPort(LocalAddress))
+                    if (QuicAddrGetPort(TempAddr) == QuicAddrGetPort(LocalAddress))
                     {
                         return Binding;
                     }
@@ -552,13 +551,13 @@ namespace AKNet.Udp2MSQuic.Common
 
         NewBinding:
 
-            Status = QuicBindingInitialize(UdpConfig, ref NewBinding);
+            Status = QuicBindingInitialize(UdpConfig, out NewBinding);
             if (QUIC_FAILED(Status))
             {
                 goto Exit;
             }
 
-            QuicBindingGetLocalAddress(NewBinding, out NewLocalAddress);
+            QuicBindingGetLocalAddress(NewBinding, NewLocalAddress);
 
             CxPlatDispatchLockAcquire(MsQuicLib.DatapathLock);
             if (BoolOk(CxPlatDataPathGetSupportedFeatures(MsQuicLib.Datapath) & CXPLAT_DATAPATH_FEATURE_LOCAL_PORT_SHARING))

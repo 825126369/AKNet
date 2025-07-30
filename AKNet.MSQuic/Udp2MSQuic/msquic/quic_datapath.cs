@@ -107,8 +107,8 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_SOCKET_PROC Queue;
         public CXPLAT_DATAPATH_TYPE DatapathType;
         public CXPLAT_ROUTE_STATE State;
-        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
-        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
+        public readonly QUIC_ADDR RemoteAddress = new QUIC_ADDR();
+        public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
 
         public void CopyFrom(CXPLAT_ROUTE other)
         {
@@ -659,16 +659,16 @@ namespace AKNet.Udp2MSQuic.Common
             return Datapath.Features;
         }
 
-        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, out QUIC_ADDR Address)
+        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, QUIC_ADDR Address)
         {
             NetLog.Assert(Socket != null);
-            Address = Socket.LocalAddress;
+            Address.WriteFrom(Socket.LocalAddress);
         }
 
-        static void CxPlatSocketGetRemoteAddress(CXPLAT_SOCKET Socket, out QUIC_ADDR Address)
+        static void CxPlatSocketGetRemoteAddress(CXPLAT_SOCKET Socket, QUIC_ADDR Address)
         {
             NetLog.Assert(Socket != null);
-            Address = Socket.RemoteAddress;
+            Address.WriteFrom(Socket.RemoteAddress);
         }
 
         static CXPLAT_ECN_TYPE CXPLAT_ECN_FROM_TOS(byte ToS)

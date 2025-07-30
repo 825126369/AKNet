@@ -48,7 +48,7 @@ namespace AKNet.Platform
                 Span<byte> addrSpan = new Span<byte>(pAddr->Ipv6.sin6_addr.u, 16);
                 endPoint.Address.TryWriteBytes(addrSpan, out _);
                 addressLen = Marshal.SizeOf(pAddr->Ipv6);
-                return (SOCKADDR_INET*)pAddr;
+                return pAddr;
             }
             else
             {
@@ -67,7 +67,7 @@ namespace AKNet.Platform
             else if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET6 (IPv6)
             {
                 var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv6.sin6_addr.u, 16));
-                int port = IPAddress.NetworkToHostOrder(sockaddr->Ipv6.sin6_port);
+                int port = IPAddress.NetworkToHostOrder((short)sockaddr->Ipv6.sin6_port);
                 return new IPEndPoint(addr, port);
             }
             else
@@ -96,8 +96,7 @@ namespace AKNet.Platform
         {
             if (InAddr->si_family == OSPlatformFunc.AF_INET)
             {
-                uint unspecified_scope = 0;
-                IN6ADDR_SETV4MAPPED(&OutAddr->Ipv6, &InAddr->Ipv4.sin_addr, unspecified_scope, InAddr->Ipv4.sin_port);
+                IN6ADDR_SETV4MAPPED(&OutAddr->Ipv6, &InAddr->Ipv4);
             } 
             else
             {
@@ -126,14 +125,14 @@ namespace AKNet.Platform
             return (Ipv6Address->u + 12);
         }
 
-        public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, IN_ADDR* a4, uint scope, ushort port)
+        public static void IN6ADDR_SETV4MAPPED(SOCKADDR_IN6* a6, SOCKADDR_IN* a4)
         {
             a6->sin6_family = OSPlatformFunc.AF_INET6;
-            a6->sin6_port = port;
+            a6->sin6_port = a4->sin_port;
             a6->sin6_flowinfo = 0;
-            IN6_SET_ADDR_V4MAPPED(&a6->sin6_addr, a4);
-            a6->sin6_scope_id = scope;
-            IN4_UNCANONICALIZE_SCOPE_ID(a4, &a6->sin6_scope_id);
+            IN6_SET_ADDR_V4MAPPED(&a6->sin6_addr, &a4->sin_addr);
+            a6->sin6_scope_id = 0;
+            IN4_UNCANONICALIZE_SCOPE_ID(&a4->sin_addr, &a6->sin6_scope_id);
         }
 
         public static void IN6_SET_ADDR_V4MAPPED(IN6_ADDR* a6, IN_ADDR* a4)
