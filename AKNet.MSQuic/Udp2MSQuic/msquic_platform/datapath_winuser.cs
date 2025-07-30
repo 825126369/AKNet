@@ -413,7 +413,7 @@ namespace AKNet.Udp2MSQuic.Common
                     OSPlatformFunc.IPPROTO_IPV6, 
                     OSPlatformFunc.IPV6_V6ONLY,
                     (byte*)&Option,
-                    sizeof(byte));
+                    sizeof(int));
 
                 //同时接收IPV4 和IPV6数据包
                 if (Result == OSPlatformFunc.SOCKET_ERROR)
@@ -450,7 +450,7 @@ namespace AKNet.Udp2MSQuic.Common
                     OSPlatformFunc.IPPROTO_IP, 
                     OSPlatformFunc.IP_DONTFRAGMENT,
                     (byte*)(&Option),
-                    sizeof(bool));
+                    sizeof(int));
 
                 if(Result == OSPlatformFunc.SOCKET_ERROR)
                 {
@@ -464,7 +464,7 @@ namespace AKNet.Udp2MSQuic.Common
                     OSPlatformFunc.IPPROTO_IPV6,
                     OSPlatformFunc.IPV6_DONTFRAG,
                     (byte*)(&Option),
-                    sizeof(bool));
+                    sizeof(int));
 
                 if (Result == OSPlatformFunc.SOCKET_ERROR)
                 {

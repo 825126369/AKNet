@@ -59,13 +59,13 @@ namespace AKNet.Platform
         {
             if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET (IPv4)
             {
-                var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr->Ipv4.sin_addr.u, 4));
+                var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv4.sin_addr.u, 4));
                 int port = (short)sockaddr->Ipv4.sin_port;
                 return new IPEndPoint(addr, port);
             }
             else if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET6 (IPv6)
             {
-                var addr = new IPAddress(new ReadOnlySpan<byte>((void*)sockaddr->Ipv6.sin6_addr.u, 16));
+                var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv6.sin6_addr.u, 16));
                 int port = (short)sockaddr->Ipv6.sin6_port;
                 return new IPEndPoint(addr, port);
             }
