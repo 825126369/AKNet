@@ -729,9 +729,11 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (Config.RemoteAddress != null)
                 {
-                    Interop.Winsock.connect(SocketProc.Socket, (byte*)Socket.RemoteAddress.RawAddr, sizeof(SOCKADDR_INET));
+                    Result = Interop.Winsock.connect(SocketProc.Socket, (byte*)Config.RemoteAddress.RawAddr, sizeof(SOCKADDR_INET));
                     if (Result == OSPlatformFunc.SOCKET_ERROR)
                     {
+                        int WSAError = Marshal.GetLastWin32Error();
+                        NetLog.LogError("Error: " +(SocketError)WSAError);
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
