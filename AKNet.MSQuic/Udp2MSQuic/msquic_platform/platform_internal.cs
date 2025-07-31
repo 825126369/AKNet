@@ -31,7 +31,7 @@ namespace AKNet.Udp2MSQuic.Common
         public long RefCount;
         public int PartitionIndex;
         public bool Uninitialized;
-        public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
+        public readonly CXPLAT_SEND_DATA_POOL SendDataPool = new CXPLAT_SEND_DATA_POOL();
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly DATAPATH_RX_PACKET_POOL RecvDatagramPool = new DATAPATH_RX_PACKET_POOL();

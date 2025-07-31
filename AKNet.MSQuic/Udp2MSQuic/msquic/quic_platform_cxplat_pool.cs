@@ -171,6 +171,26 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 
+    internal class CXPLAT_SEND_DATA_POOL : CXPLAT_POOL<CXPLAT_SEND_DATA>
+    {
+        public void CxPlatPoolInitialize()
+        {
+            this.MaxDepth = CXPLAT_POOL_DEFAULT_MAX_DEPTH;
+            this.ListDepth = 0;
+            MSQuicFunc.CxPlatListInitializeHead(ListHead);
+        }
+
+        public override CXPLAT_SEND_DATA Allocate()
+        {
+            return new CXPLAT_SEND_DATA();
+        }
+
+        public override void Free(CXPLAT_SEND_DATA t)
+        {
+            t.Dispose();
+        }
+    }
+
     internal class DATAPATH_RX_PACKET_POOL : CXPLAT_POOL<DATAPATH_RX_PACKET>
     {
         int nMaxMessageCount;

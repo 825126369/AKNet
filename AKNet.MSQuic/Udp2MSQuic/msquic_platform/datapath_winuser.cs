@@ -1413,15 +1413,9 @@ namespace AKNet.Udp2MSQuic.Common
                 SendData.ClientBuffer.Buffer = null;
                 SendData.ClientBuffer.Length = 0;
                 SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
-
                 SendData.Owner = DatapathProc;
                 SendData.SendDataPool = SendDataPool;
                 SendData.BufferPool = SendData.SegmentSize > 0 ? DatapathProc.LargeSendBufferPool : DatapathProc.SendBufferPool;
-
-                if (SendData.Sqe == null)
-                {
-                    SendData.Sqe = new CXPLAT_SQE();
-                }
             }
 
             return SendData;

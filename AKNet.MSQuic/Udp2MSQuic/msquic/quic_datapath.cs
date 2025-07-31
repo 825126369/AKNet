@@ -242,7 +242,7 @@ namespace AKNet.Udp2MSQuic.Common
     }
     
     //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
-    internal unsafe class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
+    internal unsafe class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>, IDisposable
     {
         public CXPLAT_POOL<CXPLAT_SEND_DATA> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> POOL_ENTRY = null;
@@ -254,9 +254,9 @@ namespace AKNet.Udp2MSQuic.Common
         public int TotalSize;
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
-        public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
-        public List<MemoryHandle> WsaBuffers2 = new List<MemoryHandle>();
-        public Memory<WSABUF> WsaBuffersInner = new WSABUF[MSQuicFunc.CXPLAT_MAX_BATCH_SEND];
+        public readonly List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
+        public readonly List<MemoryHandle> WsaBuffers2 = new List<MemoryHandle>();
+        public readonly Memory<WSABUF> WsaBuffersInner = new WSABUF[MSQuicFunc.CXPLAT_MAX_BATCH_SEND];
         public MemoryHandle WsaBuffersInnerMemoryHandle;
 
         public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
@@ -264,14 +264,14 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly QUIC_ADDR MappedRemoteAddress = new QUIC_ADDR();
 
         //IP_PKTINFO + IP_ECN or IP_TOS +  UDP_SEND_MSG_SIZE
-        public Memory<byte> CtrlBuf = new byte[
+        public readonly Memory<byte> CtrlBuf = new byte[
             OSPlatformFunc.RIO_CMSG_BASE_SIZE() + 
             OSPlatformFunc.WSA_CMSG_SPACE(sizeof(IN6_PKTINFO)) +
             OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int)) + 
             OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int))];
         public MemoryHandle CtrlBufHandle;
 
-        public CXPLAT_SQE Sqe = null;
+        public readonly CXPLAT_SQE Sqe = new CXPLAT_SQE();
         public CXPLAT_SEND_DATA()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
@@ -281,8 +281,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         ~CXPLAT_SEND_DATA()
         {
-            CtrlBufHandle.Dispose();
-            WsaBuffersInnerMemoryHandle.Dispose();
+            Dispose();
         }
 
         public CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> GetEntry()
@@ -303,6 +302,12 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_POOL<CXPLAT_SEND_DATA> GetPool()
         {
             return this.mPool;
+        }
+
+        public void Dispose()
+        {
+            CtrlBufHandle.Dispose();
+            WsaBuffersInnerMemoryHandle.Dispose();
         }
     }
 
