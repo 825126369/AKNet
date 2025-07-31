@@ -236,7 +236,7 @@ namespace AKNet.Udp2MSQuic.Common
             DataList = new QUIC_RX_PACKET[MessageCount];
             for(int i = 0; i < MessageCount; i++)
             {
-                DataList[i] = new QUIC_RX_PACKET();
+                DataList[i] = new QUIC_RX_PACKET(this);
             }
 
             IoBlock = new DATAPATH_RX_IO_BLOCK(this, RecvDatagramLength);
@@ -1085,7 +1085,7 @@ namespace AKNet.Udp2MSQuic.Common
                     Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
                     Datagram.QueuedOnConnection = false;
 
-                    NetLogHelper.PrintByteArray("Receive: ", Datagram.Buffer.GetSpan());
+                   // NetLogHelper.PrintByteArray("Receive: ", Datagram.Buffer.GetSpan());
 
                     if (DatagramChainTail == null)
                     {
@@ -1246,9 +1246,9 @@ namespace AKNet.Udp2MSQuic.Common
                 MemoryHandle mHandle = new Memory<byte>(SendData.WsaBuffers[i].Buffer).Pin();
                 SendData.WsaBuffers2.Add(mHandle);
                 SendData.WsaBuffersInner.Span[i].buf = (byte*)mHandle.Pointer;
-                SendData.WsaBuffersInner.Span[i].len = SendData.WsaBuffers[i].Buffer.Length;
+                SendData.WsaBuffersInner.Span[i].len = SendData.WsaBuffers[i].Length;
 
-                NetLogHelper.PrintByteArray("Send: ", SendData.WsaBuffers[i].GetSpan());
+               // NetLogHelper.PrintByteArray("Send: ", SendData.WsaBuffers[i].GetSpan());
             }
 
             WSAMhdr.lpBuffers = (WSABUF*)SendData.WsaBuffersInnerMemoryHandle.Pointer;

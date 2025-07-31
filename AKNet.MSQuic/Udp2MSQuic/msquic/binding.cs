@@ -76,6 +76,11 @@ namespace AKNet.Udp2MSQuic.Common
         private QUIC_RETRY_PACKET_V1 m_Retry;   //重试数据包的指针。
         private QUIC_SHORT_HEADER_V1 m_SH;      //短头部结构的指针。
 
+        public QUIC_RX_PACKET(DATAPATH_RX_PACKET mRxPack) :base(mRxPack)
+        {
+
+        }
+
         public override void Reset()
         {
             base.Reset();

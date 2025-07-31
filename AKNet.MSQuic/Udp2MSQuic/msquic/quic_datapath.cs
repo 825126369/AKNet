@@ -137,7 +137,7 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal class CXPLAT_RECV_DATA
     {
-        public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
+        public readonly DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
 
         public CXPLAT_RECV_DATA Next;
         public CXPLAT_ROUTE Route;
@@ -150,6 +150,11 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_DATAPATH_TYPE DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
         public ushort ReservedEx;         // Header length
+
+        public CXPLAT_RECV_DATA(DATAPATH_RX_PACKET mRxPack)
+        {
+            CXPLAT_CONTAINING_RECORD = mRxPack;
+        }
 
         public virtual void Reset()
         {

@@ -61,8 +61,13 @@ namespace AKNet.Udp2MSQuic.Common
 
         public void CxPlatPoolUninitialize()
         {
-            MSQuicFunc.CxPlatListInitializeHead(ListHead); //把所有对象都扔掉
-            //--自动GC
+            //把所有对象都扔掉
+            while (!MSQuicFunc.CxPlatListIsEmpty(ListHead))
+            {
+                var mEntry = MSQuicFunc.CxPlatListRemoveHead(ListHead);
+                T t = GetValue(mEntry);
+                Free(t);
+            }
         }
 
         public T CxPlatPoolAlloc()

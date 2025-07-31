@@ -36,7 +36,7 @@ namespace AKNet.Udp2MSQuic.Common
         }
 
         //判断队列数量为0
-        static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY Queue)
+        public static bool CxPlatListIsEmpty(CXPLAT_LIST_ENTRY Queue)
         {
             return Queue.Next == Queue;
         }
