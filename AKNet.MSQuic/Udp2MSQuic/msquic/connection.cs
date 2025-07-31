@@ -3301,9 +3301,9 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(
                     VersionInfo,
-                    DestCid.Data.Slice(0, DestCid.Data.Length),
+                    DestCid.Data,
                     Packet.AvailBuffer.Slice(0, Packet.AvailBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
-                    CalculatedIntegrityValue)))
+                    ref CalculatedIntegrityValue)))
             {
                 QuicPacketLogDrop(Connection, Packet, "Failed to generate integrity field");
                 return;
