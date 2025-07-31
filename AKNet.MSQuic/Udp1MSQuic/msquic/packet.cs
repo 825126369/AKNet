@@ -701,7 +701,7 @@ namespace AKNet.Udp1MSQuic.Common
 
             NetLog.Assert(VersionInfo != null);
             if (QUIC_FAILED(QuicPacketGenerateRetryIntegrity(VersionInfo, OrigDestCid, Buffer.Slice(0, RequiredBufferLength - QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1),
-                    HeaderBuffer)))
+                    ref HeaderBuffer)))
             {
                 return 0;
             }
@@ -713,7 +713,7 @@ namespace AKNet.Udp1MSQuic.Common
         //为了验证客户端的真实性，服务器可以发送一个 Stateless Retry 包，其中包含一个 token（称为 Retry Token），
         //客户端收到后必须在下一次 Initial packet 中带上这个 token，以证明它确实收到了 Retry 包。
         //为此，服务器需要生成一个 带签名的 token，并在客户端再次连接时验证该 token 的来源和完整性。
-        static int QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Buffer, QUIC_SSBuffer IntegrityField)
+        static int QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Buffer, ref QUIC_SSBuffer IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
             Secret.Hash = CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256;

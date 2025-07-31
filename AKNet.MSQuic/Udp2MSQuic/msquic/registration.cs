@@ -176,6 +176,8 @@ namespace AKNet.Udp2MSQuic.Common
                         Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = ErrorCode;
                         Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = true;
                         Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = false;
+
+                        NetLog.LogError("MsQuicRegistrationShutdown QUIC_API_TYPE_CONN_SHUTDOWN");
                         QuicConnQueueHighestPriorityOper(Connection, Oper);
                     }
 

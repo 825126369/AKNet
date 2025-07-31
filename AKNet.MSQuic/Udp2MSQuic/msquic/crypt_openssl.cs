@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp1MSQuic.Common;
 using System;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -8,6 +9,30 @@ namespace AKNet.Udp2MSQuic.Common
     internal class EVP_aes_128_gcm
     {
         public const int KeySize = 16;
+        public const int NonceSize = 12;
+        public const int TagSize = 16;
+
+        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper, QUIC_SSBuffer Tag)
+        {
+            NetLog.Assert(Key.Length == KeySize);
+            NetLog.Assert(nonce.Length == NonceSize);
+            using AesGcm aes = new AesGcm(Key.GetSpan());
+            aes.Encrypt(nonce.GetSpan(), plaintext.GetSpan(), Ciper.GetSpan(), Tag.GetSpan(), AuthData.GetSpan());
+        }
+
+        public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
+        {
+            NetLog.Assert(Key.Length == KeySize);
+            NetLog.Assert(nonce.Length == NonceSize);
+            NetLog.Assert(Tag.Length == TagSize);
+            using AesGcm aes = new AesGcm(Key.GetSpan());
+            aes.Decrypt(nonce.GetSpan(), Cipher.GetSpan(), Tag.GetSpan(), plaintext.GetSpan(), AuthData.GetSpan());
+        }
+    }
+
+    internal class EVP_aes_256_gcm
+    {
+        public const int KeySize = 32;
         public const int NonceSize = 12;
         public const int TagSize = 16;
 
@@ -57,6 +82,7 @@ namespace AKNet.Udp2MSQuic.Common
     internal static partial class MSQuicFunc
     {
         static readonly EVP_aes_128_gcm CXPLAT_AES_128_GCM_ALG_HANDLE = new EVP_aes_128_gcm();
+        static readonly EVP_aes_256_gcm CXPLAT_AES_256_GCM_ALG_HANDLE = new EVP_aes_256_gcm();
         static readonly EVP_aes_128_ecb CXPLAT_AES_128_ECB_ALG_HANDLE = new EVP_aes_128_ecb();
 
         static int CxPlatCryptInitialize()
@@ -147,7 +173,11 @@ namespace AKNet.Udp2MSQuic.Common
                 //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
                 //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
                 //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
-                //CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+            }
+            else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            {
+                CXPLAT_AES_256_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
             }
             else
             {
@@ -171,7 +201,15 @@ namespace AKNet.Udp2MSQuic.Common
                 //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
                 //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
                 //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
-                //CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+            }
+            else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            {
+                CXPLAT_AES_256_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+            }
+            else
+            {
+                NetLog.Assert(false, Key.nType);
             }
             return QUIC_STATUS_SUCCESS;
         }

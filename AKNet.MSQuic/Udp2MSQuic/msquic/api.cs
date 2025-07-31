@@ -168,7 +168,7 @@ namespace AKNet.Udp2MSQuic.Common
             Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = ErrorCode;
             Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = false;
             Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = false;
-
+            NetLog.LogError("MsQuicConnectionShutdown");
             QuicConnQueueHighestPriorityOper(Connection, Oper);
         Error:
             return;
@@ -736,6 +736,8 @@ namespace AKNet.Udp2MSQuic.Common
                     Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = QUIC_STATUS_OUT_OF_MEMORY;
                     Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = false;
                     Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = true;
+
+                    NetLog.LogError("MsQuicStreamSend QUIC_API_TYPE_CONN_SHUTDOWN");
                     QuicConnQueueHighestPriorityOper(Connection, Oper);
                     goto Exit;
                 }
