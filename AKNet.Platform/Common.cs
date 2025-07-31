@@ -65,8 +65,8 @@ namespace AKNet.Platform
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static T* CXPLAT_CONTAINING_RECORD<T>(void* address, string fieldName) where T : struct
         {
-             IntPtr offset = Marshal.OffsetOf(typeof(T), fieldName);
-             return (T*) ((byte*) address - offset.ToInt32());
+             int offset = Marshal.OffsetOf(typeof(T), fieldName).ToInt32();
+             return (T*) (((byte*)address) - offset);
         }
 
         // 内存分配

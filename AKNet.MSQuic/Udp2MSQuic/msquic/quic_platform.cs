@@ -43,12 +43,13 @@ namespace AKNet.Udp2MSQuic.Common
         public int ThreadID;
     }
 
+
     internal class CXPLAT_THREAD_CONFIG
     {
         public uint Flags;
         public int IdealProcessor;
         public string Name;
-        public Action<object> Callback;
+        public ParameterizedThreadStart Callback;
         public object Context;
     }
 

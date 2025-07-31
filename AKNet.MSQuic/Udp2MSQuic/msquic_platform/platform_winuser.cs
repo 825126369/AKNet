@@ -1,10 +1,12 @@
 ﻿#if TARGET_WINDOWS
 using AKNet.Common;
 using AKNet.Platform;
+using AKNet.Udp1MSQuic.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -15,16 +17,11 @@ namespace AKNet.Udp2MSQuic.Common
         public int Offset; // Base process index offset this group starts at
     }
 
-    internal class CXPLAT_THREAD
+    internal class CXPLAT_THREAD()
     {
+        public Thread mThread;
         public IntPtr mThreadPtr;
-        public LPTHREAD_START_ROUTINE mFunc;
         public CXPLAT_THREAD_CONFIG mConfig;
-        public int ThreadFunc(IntPtr parm)
-        {
-             mConfig.Callback(mConfig.Context);
-            return 0;
-        }
     }
 
     internal static unsafe partial class MSQuicFunc
@@ -215,21 +212,36 @@ namespace AKNet.Udp2MSQuic.Common
         {
             mThread = new CXPLAT_THREAD();
             mThread.mConfig = Config;
-            IntPtr Thread = Interop.Kernel32.CreateThread(IntPtr.Zero, IntPtr.Zero, mThread.ThreadFunc, IntPtr.Zero, 0, out _);
-            if (Thread == IntPtr.Zero)
+            mThread.mThread = new Thread(CxPlatThreadFunc);
+            mThread.mThread.Start(mThread);
+            return 0;
+        }
+
+        static void CxPlatThreadFunc(object parm)
+        {
+            CXPLAT_THREAD mThread = parm as CXPLAT_THREAD;
+            CxPlatThreadSet(mThread);
+            mThread.mConfig.Callback(mThread.mConfig.Context);
+        }
+
+        static int CxPlatThreadSet(CXPLAT_THREAD mThread)
+        {
+            CXPLAT_THREAD_CONFIG Config = mThread.mConfig;
+            IntPtr mThreadPtr = Interop.Kernel32.GetCurrentThread();
+            if (mThreadPtr == IntPtr.Zero)
             {
                 int Error = Marshal.GetLastWin32Error();
                 NetLog.LogError(Error);
                 return QUIC_STATUS_INTERNAL_ERROR;
             }
-            mThread.mThreadPtr = Thread;
+            mThread.mThreadPtr = mThreadPtr;
 
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
             GROUP_AFFINITY Group;
             if (HasFlag(Config.Flags, (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE))
             {
-                Group.Mask = (ulong)(1ul << ProcInfo.Index);          // Fixed processor
+                Group.Mask = (ulong)(1ul << ProcInfo.Index);
             }
             else
             {
@@ -237,24 +249,24 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             Group.Group = ProcInfo.Group;
-            if (!Interop.Kernel32.SetThreadGroupAffinity(Thread, &Group, null))
+            if (!Interop.Kernel32.SetThreadGroupAffinity(mThreadPtr, &Group, null))
             {
                 NetLog.LogError("SetThreadGroupAffinity");
             }
             if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) &&
-                !Interop.Kernel32.SetThreadIdealProcessorEx(Thread, (PROCESSOR_NUMBER*)&ProcInfo, null))
+                !Interop.Kernel32.SetThreadIdealProcessorEx(mThreadPtr, (PROCESSOR_NUMBER*)&ProcInfo, null))
             {
                 NetLog.LogError("SetThreadIdealProcessorEx");
             }
             if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY) &&
-                !Interop.Kernel32.SetThreadPriority(Thread, OSPlatformFunc.THREAD_PRIORITY_HIGHEST))
+                !Interop.Kernel32.SetThreadPriority(mThreadPtr, OSPlatformFunc.THREAD_PRIORITY_HIGHEST))
             {
                 NetLog.LogError("SetThreadPriority");
             }
 
             if (Config.Name != null)
             {
-                Interop.Kernel32.SetThreadDescription(Thread, Config.Name);
+                Interop.Kernel32.SetThreadDescription(mThreadPtr, Config.Name);
             }
             return 0;
         }

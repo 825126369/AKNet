@@ -135,7 +135,15 @@ namespace AKNet.Udp2MSQuic.Common
 
         public override string ToString()
         {
-            return GetIPEndPoint().ToString();
+            var mIpEndPoint = GetIPEndPoint();
+            if (mIpEndPoint != null)
+            {
+                return GetIPEndPoint().ToString();
+            }
+            else
+            {
+                return $"mIpEndPoint = null: {Family}, {nPort}";
+            }
         }
     }
 

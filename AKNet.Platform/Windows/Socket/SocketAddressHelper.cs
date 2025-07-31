@@ -58,22 +58,28 @@ namespace AKNet.Platform
 
         public static IPEndPoint RawAddrTo(SOCKADDR_INET* sockaddr)
         {
-            if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET (IPv4)
+            IPEndPoint mEndPoint = null;
+            try
             {
-                var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv4.sin_addr.u, 4));
-                int port = IPAddress.NetworkToHostOrder((short)sockaddr->Ipv4.sin_port);
-                return new IPEndPoint(addr, port);
+                if (sockaddr->si_family == OSPlatformFunc.AF_INET) // AF_INET (IPv4)
+                {
+                    var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv4.sin_addr.u, 4));
+                    int port = (ushort)IPAddress.NetworkToHostOrder((short)sockaddr->Ipv4.sin_port);
+                    mEndPoint = new IPEndPoint(addr, port);
+                }
+                else if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET6 (IPv6)
+                {
+                    var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv6.sin6_addr.u, 16));
+                    int port = (ushort)IPAddress.NetworkToHostOrder((short)sockaddr->Ipv6.sin6_port);
+                    mEndPoint = new IPEndPoint(addr, port);
+                }
             }
-            else if (sockaddr->si_family == OSPlatformFunc.AF_INET6) // AF_INET6 (IPv6)
+            catch (Exception e)
             {
-                var addr = new IPAddress(new ReadOnlySpan<byte>(sockaddr->Ipv6.sin6_addr.u, 16));
-                int port = IPAddress.NetworkToHostOrder((short)sockaddr->Ipv6.sin6_port);
-                return new IPEndPoint(addr, port);
+                NetLog.LogError(e);
             }
-            else
-            {
-                throw new NotSupportedException("Unsupported address family.");
-            }
+
+            return mEndPoint;
         }
 
         public static void CxPlatConvertFromMappedV6(SOCKADDR_INET* InAddr, SOCKADDR_INET* OutAddr)

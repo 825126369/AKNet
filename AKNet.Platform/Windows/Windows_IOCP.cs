@@ -58,7 +58,7 @@ namespace AKNet.Platform
         public CXPLAT_SQE()
         {
             sqePtr = (CXPLAT_SQE_Inner*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(CXPLAT_SQE_Inner));
-            sqePtr->parent = GCHandle.ToIntPtr(GCHandle.Alloc(this, GCHandleType.Weak));
+            sqePtr->parent = GCHandle.ToIntPtr(GCHandle.Alloc(this, GCHandleType.Normal));
         }
 
         ~CXPLAT_SQE()
