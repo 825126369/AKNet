@@ -102,12 +102,6 @@ namespace AKNet.Udp2MSQuic.Common
                 goto Error;
             }
 
-            NetLog.Log(string.Format("[ dll] Processors: ({0} active, {1} max), Groups: ({2} active, {3} max)",
-                ActiveProcessorCount,
-                MaxProcessorCount,
-                Info->DUMMYUNIONNAME.Group.ActiveGroupCount,
-                Info->DUMMYUNIONNAME.Group.MaximumGroupCount));
-
             NetLog.Assert(CxPlatProcessorInfo == null);
             CxPlatProcessorInfo = (CXPLAT_PROCESSOR_INFO*)OSPlatformFunc.CxPlatAlloc(ActiveProcessorCount * sizeof(CXPLAT_PROCESSOR_INFO));
             if (CxPlatProcessorInfo == null)
@@ -157,7 +151,7 @@ namespace AKNet.Udp2MSQuic.Common
                 OSPlatformFunc.CxPlatFree(Info);
             }
 
-            return 0;
+            return QUIC_STATUS_SUCCESS;
         Error:
             if (Info != null)
             {
@@ -173,7 +167,7 @@ namespace AKNet.Udp2MSQuic.Common
                 OSPlatformFunc.CxPlatFree(CxPlatProcessorInfo);
                 CxPlatProcessorInfo = null;
             }
-            return 1;
+            return QUIC_STATUS_INTERNAL_ERROR;
         }
 
         static void CxPlatProcessorInfoUnInit()
@@ -250,24 +244,36 @@ namespace AKNet.Udp2MSQuic.Common
             Group.Group = ProcInfo.Group;
             if (!Interop.Kernel32.SetThreadGroupAffinity(mThreadPtr, &Group, null))
             {
-                NetLog.LogError("SetThreadGroupAffinity");
+                int Error = Marshal.GetLastWin32Error();
+                NetLog.LogError(Error);
+                return QUIC_STATUS_INTERNAL_ERROR;
             }
             if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) &&
                 !Interop.Kernel32.SetThreadIdealProcessorEx(mThreadPtr, (PROCESSOR_NUMBER*)&ProcInfo, null))
             {
-                NetLog.LogError("SetThreadIdealProcessorEx");
+                int Error = Marshal.GetLastWin32Error();
+                NetLog.LogError(Error);
+                return QUIC_STATUS_INTERNAL_ERROR;
             }
             if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY) &&
                 !Interop.Kernel32.SetThreadPriority(mThreadPtr, OSPlatformFunc.THREAD_PRIORITY_HIGHEST))
             {
-                NetLog.LogError("SetThreadPriority");
+                int Error = Marshal.GetLastWin32Error();
+                NetLog.LogError(Error);
+                return QUIC_STATUS_INTERNAL_ERROR;
             }
 
-            if (Config.Name != null)
-            {
-                Interop.Kernel32.SetThreadDescription(mThreadPtr, Config.Name);
-            }
-            return 0;
+            //if (Config.Name != null)
+            //{
+            //    int result = Interop.Kernel32.SetThreadDescription(mThreadPtr, Config.Name);
+            //    if (result != 0)
+            //    {
+            //        int Error = Marshal.GetLastWin32Error();
+            //        NetLog.LogError(Error);
+            //        return QUIC_STATUS_INTERNAL_ERROR;
+            //    }
+            //}
+            return QUIC_STATUS_SUCCESS;
         }
 
         static void CxPlatThreadDelete(CXPLAT_THREAD mThread)
@@ -354,6 +360,10 @@ namespace AKNet.Udp2MSQuic.Common
                     return OSPlatformFunc.memcmp(&Addr.RawAddr->Ipv6.sin6_addr, &ZeroAddr, sizeof(IN6_ADDR));
                 }
             }
+            else if(Addr.RawAddr->si_family == OSPlatformFunc.AF_UNSPEC)
+            {
+                return true;
+            }
             else
             {
                 NetLog.Assert(false);
@@ -375,7 +385,7 @@ namespace AKNet.Udp2MSQuic.Common
         static bool QuicAddrIsValid(QUIC_ADDR Addr)
         {
             return Addr.Family == AddressFamily.InterNetwork ||
-                Addr.Family == AddressFamily.InterNetworkV6;
+                Addr.Family == AddressFamily.InterNetworkV6 || Addr.Family == AddressFamily.Unspecified;
         }
 
         public static int QUIC_ADDR_V4_PORT_OFFSET()

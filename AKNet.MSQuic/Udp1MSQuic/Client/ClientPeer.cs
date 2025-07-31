@@ -31,7 +31,6 @@ namespace AKNet.Udp1MSQuic.Client
 
         public ClientPeer()
         {
-            NetLog.Init();
             this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();

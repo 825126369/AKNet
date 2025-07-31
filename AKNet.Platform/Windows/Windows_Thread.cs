@@ -5,15 +5,6 @@ namespace AKNet.Platform
 {
     public delegate int LPTHREAD_START_ROUTINE(IntPtr lpParameter);
 
-    public struct CXPLAT_THREAD_CONFIG
-    {
-        public ushort Flags;
-        public ushort IdealProcessor;
-        public string Name;
-        public LPTHREAD_START_ROUTINE Callback;
-        public IntPtr Context;
-    }
-
     public enum LOGICAL_PROCESSOR_RELATIONSHIP
     {
         RelationProcessorCore,
@@ -137,7 +128,7 @@ namespace AKNet.Platform
     {
         public const int ANYSIZE_ARRAY = 1;
 
-        public const long INFINITE = 0xFFFFFFFF;  // Infinite timeout
+        public const uint INFINITE = 0xFFFFFFFF;  // Infinite timeout
         public const int MAXLONG = 0x7fffffff;
         public const int THREAD_DYNAMIC_CODE_ALLOW = 1;     // Opt-out of dynamic code generation.
         public const int THREAD_BASE_PRIORITY_LOWRT = 15;  // value that gets a thread to LowRealtime-1

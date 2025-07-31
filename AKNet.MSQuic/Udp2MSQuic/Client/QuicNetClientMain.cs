@@ -17,6 +17,7 @@ namespace AKNet.Udp2MSQuic.Client
 
         public QuicNetClientMain()
         {
+            NetLog.Init();
             mClientPeer = new ClientPeer();
         }
 

@@ -17,6 +17,7 @@ namespace AKNet.Udp1MSQuic.Server
 
         public QuicNetServerMain()
         {
+            NetLog.Init();
             mServer = new QuicServer();
         }
 

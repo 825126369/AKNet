@@ -73,6 +73,11 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 return (AddressFamily)RawAddr->si_family;
             }
+
+            set
+            {
+                RawAddr->si_family = (ushort)value;
+            }
         }
 
         public ushort nPort

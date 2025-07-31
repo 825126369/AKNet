@@ -38,9 +38,9 @@ namespace AKNet.Platform
             [return: MarshalAs(UnmanagedType.Bool)]
             public static unsafe partial bool SetThreadPriority(IntPtr hThread, int nPriority);
             [LibraryImport(Interop.Libraries.Kernel32)]
-            public static unsafe partial long SetThreadDescription(IntPtr hThread, [MarshalAs(UnmanagedType.LPWStr)] string lpThreadDescription);
+            public static unsafe partial int SetThreadDescription(IntPtr hThread, [MarshalAs(UnmanagedType.LPWStr)] string lpThreadDescription);
             [LibraryImport(Interop.Libraries.Kernel32)]
-            public static unsafe partial void WaitForSingleObject(IntPtr hHandle, long dwMilliseconds);
+            public static unsafe partial int WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
             [LibraryImport(Interop.Libraries.Kernel32)]
             public static unsafe partial void Sleep(long dwMilliseconds);
             [LibraryImport(Interop.Libraries.Kernel32)]
@@ -74,9 +74,9 @@ namespace AKNet.Platform
             [DllImport(Interop.Libraries.Kernel32)]
             public static unsafe extern bool SetThreadPriority(IntPtr hThread, int nPriority);
             [DllImport(Interop.Libraries.Kernel32, CharSet = CharSet.Unicode)]
-            public static unsafe extern long SetThreadDescription(IntPtr hThread, string lpThreadDescription);
+            public static unsafe extern int SetThreadDescription(IntPtr hThread, string lpThreadDescription);
             [DllImport(Interop.Libraries.Kernel32)]
-            public static unsafe extern void WaitForSingleObject(IntPtr hHandle, long dwMilliseconds);
+            public static unsafe extern int WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
             [DllImport(Interop.Libraries.Kernel32)]
             public static unsafe extern void Sleep(long dwMilliseconds);
             [DllImport(Interop.Libraries.Kernel32)]

@@ -28,7 +28,6 @@ namespace AKNet.Udp2MSQuic.Server
 
         public QuicServer()
         {
-            NetLog.Init();
             this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();

@@ -21,13 +21,11 @@ namespace TestNetServer
         public void Update(double fElapsedTime)
         {
             mNetServer.Update(fElapsedTime);
-
             fDuringTime += fElapsedTime;
             if (fDuringTime > 5.0)
             {
                 fDuringTime = 0.0;
             }
-
         }
 
         private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)

@@ -46,7 +46,7 @@ namespace AKNet.Udp1MSQuic.Server
 
         public void InitNet(int nPort)
         {
-            InitNet(IPAddress.Any, nPort);
+            InitNet(IPAddress.IPv6Any, nPort);
         }
 
         public void InitNet(string Ip, int nPort)

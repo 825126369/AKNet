@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -373,6 +374,12 @@ namespace AKNet.Udp2MSQuic.Common
         public bool IsEmpty
         {
             get => Length == 0;
+        }
+
+        public override string ToString()
+        {
+            ReadOnlySpan<byte> mSpan = GetSpan();
+            return string.Join(',', mSpan.ToArray());
         }
     }
 }

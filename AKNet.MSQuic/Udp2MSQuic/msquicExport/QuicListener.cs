@@ -35,6 +35,11 @@ namespace AKNet.Udp2MSQuic.Common
                 mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes(v)));
             }
             QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
+            if(options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
+            {
+                address.Family = System.Net.Sockets.AddressFamily.Unspecified;
+            }
+
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, mAlpnList.ToArray(), mAlpnList.Count, address)))
             {
                 NetLog.LogError("ListenerStart failed");
