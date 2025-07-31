@@ -362,13 +362,13 @@ namespace AKNet.Udp2MSQuic.Common
         {
             OperQ.ActivelyProcessing = false;
             CxPlatListInitializeHead(OperQ.List);
-            OperQ.PriorityTail = OperQ.List.Prev;
+            OperQ.PriorityTail = OperQ.List;
         }
 
         static void QuicOperationQueueUninitialize(QUIC_OPERATION_QUEUE OperQ)
         {
             NetLog.Assert(CxPlatListIsEmpty(OperQ.List));
-            NetLog.Assert(OperQ.PriorityTail == OperQ.List.Next);
+            NetLog.Assert(OperQ.PriorityTail == OperQ.List);
         }
 
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
@@ -379,8 +379,8 @@ namespace AKNet.Udp2MSQuic.Common
             NetLog.Assert(Oper.Link.Next == null);
 #endif
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
-            CxPlatListInsertTail(OperQ.PriorityTail, Oper.Link);
-            OperQ.PriorityTail = Oper.Link.Next;
+            CxPlatListInsertMiddle(OperQ.List, OperQ.PriorityTail, Oper.Link);
+            OperQ.PriorityTail = Oper.Link;
 
             CxPlatDispatchLockRelease(OperQ.Lock);
             QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
@@ -405,14 +405,14 @@ namespace AKNet.Udp2MSQuic.Common
         {
             bool StartProcessing;
 
-            Monitor.Enter(OperQ.Lock);
+            CxPlatDispatchLockAcquire(OperQ.Lock);
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertHead(OperQ.List, Oper.Link);
-            if (OperQ.PriorityTail == OperQ.List.Next)
+            if (OperQ.PriorityTail == OperQ.List)
             {
-                OperQ.PriorityTail = Oper.Link.Next;
+                OperQ.PriorityTail = Oper.Link;
             }
-            Monitor.Exit(OperQ.Lock);
+            CxPlatDispatchLockRelease(OperQ.Lock);
 
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
@@ -432,9 +432,9 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 OperQ.ActivelyProcessing = true;
                 Oper = CXPLAT_CONTAINING_RECORD<QUIC_OPERATION>(CxPlatListRemoveHead(OperQ.List));
-                if (OperQ.PriorityTail == Oper.Link.Next)
+                if (OperQ.PriorityTail == Oper.Link)
                 {
-                    OperQ.PriorityTail = OperQ.List.Next;
+                    OperQ.PriorityTail = OperQ.List;
                 }
             }
             CxPlatDispatchLockRelease(OperQ.Lock);
@@ -454,7 +454,7 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatDispatchLockAcquire(OperQ.Lock);
             OperQ.ActivelyProcessing = false;
             CxPlatListMoveItems(OperQ.List, OldList);
-            OperQ.PriorityTail = OperQ.List.Next;
+            OperQ.PriorityTail = OperQ.List;
             CxPlatDispatchLockRelease(OperQ.Lock);
 
             int OperationsDequeued = 0;
@@ -508,7 +508,7 @@ namespace AKNet.Udp2MSQuic.Common
         static bool QuicOperationHasPriority(QUIC_OPERATION_QUEUE OperQ)
         {
             CxPlatDispatchLockAcquire(OperQ.Lock);
-            bool HasPriorityWork = OperQ.List.Next != OperQ.PriorityTail;
+            bool HasPriorityWork = OperQ.List != OperQ.PriorityTail;
             CxPlatDispatchLockRelease(OperQ.Lock);
             return HasPriorityWork;
         }

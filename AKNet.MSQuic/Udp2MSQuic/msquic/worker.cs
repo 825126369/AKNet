@@ -347,8 +347,8 @@ namespace AKNet.Udp2MSQuic.Common
                     Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
                     if (StillHasPriorityWork)
                     {
-                        CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                        Worker.PriorityConnectionsTail = Worker.PriorityConnectionsTail.Next;
+                        CxPlatListInsertMiddle(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                        Worker.PriorityConnectionsTail = Connection.WorkerLink;
                         Connection.HasPriorityWork = true;
                     }
                     else
@@ -384,8 +384,8 @@ namespace AKNet.Udp2MSQuic.Common
             Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
             if (IsPriority)
             {
-                CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = Worker.PriorityConnectionsTail.Next;
+                CxPlatListInsertMiddle(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = Connection.WorkerLink;
                 Connection.HasPriorityWork = true;
             }
             else
@@ -545,8 +545,8 @@ namespace AKNet.Udp2MSQuic.Common
                     CxPlatListEntryRemove(Connection.WorkerLink);
                 }
 
-                CxPlatListInsertTail(Worker.PriorityConnectionsTail, Connection.WorkerLink);
-                Worker.PriorityConnectionsTail = Worker.PriorityConnectionsTail.Next;
+                CxPlatListInsertMiddle(Worker.Connections, Worker.PriorityConnectionsTail, Connection.WorkerLink);
+                Worker.PriorityConnectionsTail = Connection.WorkerLink;
                 Connection.HasPriorityWork = true;
             }
 
