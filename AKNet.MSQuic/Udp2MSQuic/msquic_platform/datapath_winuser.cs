@@ -219,7 +219,7 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 
-    internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>
+    internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>, IDisposable
     {
         public CXPLAT_POOL<DATAPATH_RX_PACKET> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> POOL_ENTRY = null;
@@ -268,6 +268,14 @@ namespace AKNet.Udp2MSQuic.Common
         public void SetPool(CXPLAT_POOL<DATAPATH_RX_PACKET> mPool)
         {
             this.mPool = mPool;
+        }
+
+        public void Dispose()
+        {
+            if (IoBlock != null)
+            {
+                IoBlock.Dispose();
+            }
         }
     }
 

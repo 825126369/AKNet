@@ -91,7 +91,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             if (this.ListDepth >= this.MaxDepth)
             {
-                NetLog.Assert(true);
+                Free(t);
                 //直接GC掉
             }
             else
@@ -182,6 +182,11 @@ namespace AKNet.Udp2MSQuic.Common
         public override DATAPATH_RX_PACKET Allocate()
         {
             return new DATAPATH_RX_PACKET(nMaxMessageCount, nMaxRecvDatagramLength);
+        }
+
+        public override void Free(DATAPATH_RX_PACKET t)
+        {
+            t.Dispose();
         }
     }
 
