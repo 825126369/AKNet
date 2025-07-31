@@ -91,6 +91,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             if (this.ListDepth >= this.MaxDepth)
             {
+                NetLog.Assert(true);
                 //直接GC掉
             }
             else

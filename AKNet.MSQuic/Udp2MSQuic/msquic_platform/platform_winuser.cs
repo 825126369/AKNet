@@ -1,7 +1,6 @@
 ﻿#if TARGET_WINDOWS
 using AKNet.Common;
 using AKNet.Platform;
-using AKNet.Udp1MSQuic.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;

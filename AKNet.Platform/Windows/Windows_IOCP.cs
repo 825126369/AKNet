@@ -58,13 +58,21 @@ namespace AKNet.Platform
         public CXPLAT_SQE()
         {
             sqePtr = (CXPLAT_SQE_Inner*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(CXPLAT_SQE_Inner));
-            sqePtr->parent = GCHandle.ToIntPtr(GCHandle.Alloc(this, GCHandleType.Normal));
+            GCHandle mGCHandle = GCHandle.Alloc(this, GCHandleType.Normal);
+            NetLog.Assert(mGCHandle.IsAllocated);
+            sqePtr->parent = GCHandle.ToIntPtr(mGCHandle);
         }
 
         ~CXPLAT_SQE()
         {
             if (sqePtr != null)
             {
+                if (sqePtr->parent != IntPtr.Zero)
+                {
+                    GCHandle.FromIntPtr(sqePtr->parent).Free();
+                    sqePtr->parent = IntPtr.Zero;
+                }
+
                 OSPlatformFunc.CxPlatFree(sqePtr);
                 sqePtr = null;
             }
@@ -77,11 +85,6 @@ namespace AKNet.Platform
         {
             queue.Queue = Interop.Kernel32.CreateIoCompletionPort(new IntPtr(-1), IntPtr.Zero, IntPtr.Zero, 1);
             return queue.Queue != IntPtr.Zero;
-        }
-
-        public static void CxPlatEventQCleanup(CXPLAT_EVENTQ queue)
-        {
-            Interop.Kernel32.CloseHandle(queue.Queue);
         }
 
         public static bool CxPlatEventQAssociateHandle(CXPLAT_EVENTQ queue, IntPtr fileHandle)
@@ -161,11 +164,21 @@ namespace AKNet.Platform
 #endif
         }
 
+        public static void CxPlatEventQCleanup(CXPLAT_EVENTQ queue)
+        {
+            Interop.Kernel32.CloseHandle(queue.Queue);
+        }
+
         public static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
         {
-            sqe.sqePtr->parent = IntPtr.Zero;
             if (sqe.sqePtr != null)
             {
+                if(sqe.sqePtr->parent != IntPtr.Zero)
+                {
+                    GCHandle.FromIntPtr(sqe.sqePtr->parent).Free();
+                    sqe.sqePtr->parent = IntPtr.Zero;
+                }
+
                 CxPlatFree(sqe.sqePtr);
                 sqe.sqePtr = null;
             }
