@@ -7,19 +7,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Linq;
 
 namespace AKNet.Common
 {
-    internal static class NetLogHelper
+    public static class NetLogHelper
     {
-        internal static void PrintByteArray(string tag, byte[] message)
-        {
-            string data = tag + ": " + string.Join(' ', message);
-            NetLog.Log(data);
-        }
-
-        internal static void PrintByteArray(string tag, ReadOnlySpan<byte> message)
+        public static void PrintByteArray(string tag, ReadOnlySpan<byte> message)
         {
             string data = tag + ": " + string.Join(' ', message.ToArray());
             NetLog.Log(data);

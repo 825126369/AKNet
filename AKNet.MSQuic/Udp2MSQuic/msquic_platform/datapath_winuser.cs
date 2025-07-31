@@ -152,9 +152,9 @@ namespace AKNet.Udp2MSQuic.Common
         }
     }
 
-    internal unsafe class DATAPATH_RX_IO_BLOCK
+    internal unsafe class DATAPATH_RX_IO_BLOCK:IDisposable
     {
-        public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
+        public readonly DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
         public CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = null;
         public CXPLAT_SOCKET_PROC SocketProc;
         public long ReferenceCount;
@@ -172,19 +172,38 @@ namespace AKNet.Udp2MSQuic.Common
                 OSPlatformFunc.WSA_CMSG_SPACE(sizeof(int))             // IP_HOP_LIMIT
             ];
 
-        public byte[] mCqeBuffer = null;
-        public Memory<byte> mCqeMemory = null;
-        public MemoryHandle mCqeMemoryHandle;
+        public readonly byte[] mCqeBuffer = null;
+        public readonly Memory<byte> mCqeMemory = null;
+        public readonly MemoryHandle mCqeMemoryHandle;
+        private bool _disposed = false;
 
-        public DATAPATH_RX_IO_BLOCK()
+        public DATAPATH_RX_IO_BLOCK(DATAPATH_RX_PACKET mRxPackage, int nRecvDatagramLength)
         {
-            WsaMsgHdr = (WSAMSG*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(WSAMSG));
-            WsaControlBuf = (WSABUF*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(WSABUF));
-            ControlBufHandle = ControlBuf.Pin();
+            this.CXPLAT_CONTAINING_RECORD = mRxPackage;
+            this.WsaMsgHdr = (WSAMSG*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(WSAMSG));
+            this.WsaControlBuf = (WSABUF*)OSPlatformFunc.CxPlatAllocAndClear(sizeof(WSABUF));
+            this.ControlBufHandle = ControlBuf.Pin();
+            this.mCqeBuffer = new byte[nRecvDatagramLength];
+            this.mCqeMemory = mCqeBuffer;
+            this.mCqeMemoryHandle = mCqeMemory.Pin();
+            _disposed = false;
         }
 
         ~DATAPATH_RX_IO_BLOCK()
         {
+            Dispose();
+        }
+
+        public void Reset()
+        {
+            
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
             if (WsaMsgHdr != null)
             {
                 OSPlatformFunc.CxPlatFree(WsaMsgHdr);
@@ -198,11 +217,6 @@ namespace AKNet.Udp2MSQuic.Common
             ControlBufHandle.Dispose();
             mCqeMemoryHandle.Dispose();
         }
-
-        public void Reset()
-        {
-
-        }
     }
 
     internal class DATAPATH_RX_PACKET : CXPLAT_POOL_Interface<DATAPATH_RX_PACKET>
@@ -210,15 +224,22 @@ namespace AKNet.Udp2MSQuic.Common
         public CXPLAT_POOL<DATAPATH_RX_PACKET> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> POOL_ENTRY = null;
         public readonly DATAPATH_RX_IO_BLOCK IoBlock;
-        public readonly CXPLAT_RECV_DATA Data;
+        public readonly QUIC_RX_PACKET[] DataList;
 
         public DATAPATH_RX_PACKET()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET>(this);
-            IoBlock = new DATAPATH_RX_IO_BLOCK();
-            Data = new QUIC_RX_PACKET();
-            IoBlock.CXPLAT_CONTAINING_RECORD = this;
-            Data.CXPLAT_CONTAINING_RECORD = this;
+        }
+
+        public DATAPATH_RX_PACKET(int MessageCount, int RecvDatagramLength) :this()
+        {
+            DataList = new QUIC_RX_PACKET[MessageCount];
+            for(int i = 0; i < MessageCount; i++)
+            {
+                DataList[i] = new QUIC_RX_PACKET();
+            }
+
+            IoBlock = new DATAPATH_RX_IO_BLOCK(this, RecvDatagramLength);
         }
 
         public CXPLAT_POOL_ENTRY<DATAPATH_RX_PACKET> GetEntry()
@@ -238,9 +259,9 @@ namespace AKNet.Udp2MSQuic.Common
                 IoBlock.Reset();
             }
 
-            if (Data != null)
+            foreach(var v in DataList)
             {
-                Data.Reset();
+                v.Reset();
             }
         }
 
@@ -300,8 +321,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
-            Datapath.RecvDatagramLength = MessageCount * (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
-                MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
+            int RecvDatagramLength = (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
 
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
@@ -314,7 +334,7 @@ namespace AKNet.Udp2MSQuic.Common
                 Datapath.Partitions[i].SendDataPool.CxPlatPoolInitialize();
                 Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize(MAX_UDP_PAYLOAD_LENGTH);
                 Datapath.Partitions[i].LargeSendBufferPool.CxPlatPoolInitialize(CXPLAT_LARGE_SEND_BUFFER_SIZE);
-                Datapath.Partitions[i].RecvDatagramPool.CxPlatPoolInitialize();
+                Datapath.Partitions[i].RecvDatagramPool.CxPlatPoolInitialize(MessageCount, RecvDatagramLength);
             }
 
             NewDatapath = Datapath;
@@ -1033,29 +1053,31 @@ namespace AKNet.Udp2MSQuic.Common
                     NetLog.Assert(false); // Not expected in tests
                     goto Drop;
                 }
-
                 NetLog.Assert(NumberOfBytesTransferred <= SocketProc.Parent.RecvBufLen);
 
-                CXPLAT_RECV_DATA Datagram = IoBlock.CXPLAT_CONTAINING_RECORD.Data;
+                int RecvPayload = 0;
+                int nDatagramOffset = 0;
                 for (; NumberOfBytesTransferred != 0; NumberOfBytesTransferred -= MessageLength)
                 {
-                    Datagram.CXPLAT_CONTAINING_RECORD = IoBlock.CXPLAT_CONTAINING_RECORD;
-
                     if (MessageLength > NumberOfBytesTransferred)
                     {
                         MessageLength = NumberOfBytesTransferred;
                     }
 
+                    CXPLAT_RECV_DATA Datagram = (CXPLAT_RECV_DATA)(IoBlock.CXPLAT_CONTAINING_RECORD.DataList[nDatagramOffset]);
                     Datagram.Next = null;
                     Datagram.Buffer.Buffer = IoBlock.mCqeBuffer;
-                    Datagram.Buffer.Offset = 0;
+                    Datagram.Buffer.Offset = RecvPayload;
                     Datagram.Buffer.Length = MessageLength;
                     Datagram.Route = IoBlock.Route;
                     Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
                     Datagram.TypeOfService = (byte)TypeOfService;
+                    Datagram.HopLimitTTL = (byte)HopLimitTTL;
                     Datagram.Allocated = true;
                     Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
                     Datagram.QueuedOnConnection = false;
+
+                    NetLogHelper.PrintByteArray("Receive: ", Datagram.Buffer.GetSpan());
 
                     if (DatagramChainTail == null)
                     {
@@ -1064,9 +1086,17 @@ namespace AKNet.Udp2MSQuic.Common
                     else
                     {
                         DatagramChainTail.Next = Datagram;
-                        DatagramChainTail = DatagramChainTail.Next;
+                        DatagramChainTail = Datagram;
                     }
                     IoBlock.ReferenceCount++;
+                    nDatagramOffset++;
+                    RecvPayload += MessageLength;
+
+                    if (IsCoalesced && ++MessageCount == URO_MAX_DATAGRAMS_PER_INDICATION)
+                    {
+                        NetLog.LogWarning($"[data][{SocketProc.Parent}] Exceeded URO preallocation capacity.");
+                        break;
+                    }
                 }
 
                 IoBlock = null; //不加这个，会导致多个地方释放
@@ -1209,6 +1239,8 @@ namespace AKNet.Udp2MSQuic.Common
                 SendData.WsaBuffers2.Add(mHandle);
                 SendData.WsaBuffersInner.Span[i].buf = (byte*)mHandle.Pointer;
                 SendData.WsaBuffersInner.Span[i].len = SendData.WsaBuffers[i].Buffer.Length;
+
+                NetLogHelper.PrintByteArray("Send: ", SendData.WsaBuffers[i].GetSpan());
             }
 
             WSAMhdr.lpBuffers = (WSABUF*)SendData.WsaBuffersInnerMemoryHandle.Pointer;
@@ -1398,21 +1430,6 @@ namespace AKNet.Udp2MSQuic.Common
                 IoBlock.OwningPool = OwningPool;
                 IoBlock.ReferenceCount = 0;
                 IoBlock.SocketProc = SocketProc;
-
-                if (IoBlock.mCqeMemory.IsEmpty)
-                {
-                    if (BoolOk(SocketProc.Parent.Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING))
-                    {
-                        IoBlock.mCqeBuffer = new byte[MAX_URO_PAYLOAD_LENGTH];
-                    }
-                    else
-                    {
-                        IoBlock.mCqeBuffer = new byte[MAX_RECV_PAYLOAD_LENGTH];
-                    }
-                    
-                    IoBlock.mCqeMemory = IoBlock.mCqeBuffer;
-                    IoBlock.mCqeMemoryHandle = IoBlock.mCqeMemory.Pin();
-                }
             }
             return IoBlock;
         }

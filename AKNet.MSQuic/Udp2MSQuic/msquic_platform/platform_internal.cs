@@ -34,7 +34,7 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = new CXPLAT_POOL<CXPLAT_SEND_DATA>();
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
-        public readonly CXPLAT_POOL<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL<DATAPATH_RX_PACKET>();
+        public readonly DATAPATH_RX_PACKET_POOL RecvDatagramPool = new DATAPATH_RX_PACKET_POOL();
         public CXPLAT_EVENTQ EventQ;
     }
 
