@@ -193,7 +193,7 @@ namespace AKNet.Udp2MSQuic.Common
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
-            //Volatile.Write(ref _sendLocked, 0);
+            Volatile.Write(ref _sendLocked, 0);
             //Exception? exception = Volatile.Read(ref _sendException);
             mConnection.mOption.SendFinishFunc?.Invoke(this);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;

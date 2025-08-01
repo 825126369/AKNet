@@ -17,7 +17,6 @@ namespace AKNet.Udp2MSQuic.Server
         public QuicListenerMgr(QuicServer mQuicServer)
         {
             this.mQuicServer = mQuicServer;
-
         }
 
         public void InitNet()
@@ -66,6 +65,7 @@ namespace AKNet.Udp2MSQuic.Server
                 if (mQuicListener != null)
                 {
                     NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
+                    StartProcessAccept();
                 }
             }
             catch (Exception e)
@@ -73,6 +73,7 @@ namespace AKNet.Udp2MSQuic.Server
                 this.mState = SOCKET_SERVER_STATE.EXCEPTION;
                 NetLog.LogError(e.ToString());
             }
+
         }
 
         private QuicListenerOptions GetQuicListenerOptions(IPAddress mIPAddress, int nPort)
@@ -80,7 +81,6 @@ namespace AKNet.Udp2MSQuic.Server
             QuicListenerOptions mOption = new QuicListenerOptions();
             mOption.ListenEndPoint = new IPEndPoint(mIPAddress, nPort);
             mOption.GetConnectionOptionFunc = GetConnectionOptionFunc;
-            mOption.AcceptConnectionFunc = AcceptConnectionFunc;
             return mOption;
         }
 
@@ -98,9 +98,20 @@ namespace AKNet.Udp2MSQuic.Server
             return mOption;
         }
 
-        private void AcceptConnectionFunc(QuicConnection connection)
+        private async void StartProcessAccept()
         {
-            mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
+            while (mQuicListener != null)
+            {
+                try
+                {
+                    QuicConnection connection = await mQuicListener.AcceptConnectionAsync();
+                    mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
+                }
+                catch (Exception e)
+                {
+                    NetLog.LogError(e.ToString());
+                }
+            }
         }
 
         public int GetPort()

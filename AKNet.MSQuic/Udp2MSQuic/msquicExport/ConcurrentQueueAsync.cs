@@ -9,12 +9,12 @@ namespace AKNet.Udp2MSQuic.Common
         readonly TaskCompletionSource<T> read_tcs = new TaskCompletionSource<T>();
         readonly ConcurrentQueue<T> mQueue = new ConcurrentQueue<T>();
 
-        public Task<T> ReadAsync(CancellationToken cancellationToken)
+        public ValueTask<T> ReadAsync(CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 read_tcs.SetCanceled();
-                return read_tcs.Task;
+                return new ValueTask<T>(read_tcs.Task);
             }
 
             if (mQueue.TryDequeue(out T t))
@@ -22,7 +22,7 @@ namespace AKNet.Udp2MSQuic.Common
                 read_tcs.SetResult(t);
             }
                 
-            return read_tcs.Task;
+            return new ValueTask<T>(read_tcs.Task);
         }
 
         public bool TryDequeue(out T t)

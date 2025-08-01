@@ -1,8 +1,10 @@
 using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -11,7 +13,10 @@ namespace AKNet.Udp2MSQuic.Common
         private QUIC_LISTENER _handle = null;
         public QuicListenerOptions mOption;
         public IPEndPoint LocalEndPoint;
-        
+        private bool _disposed = false;
+        private readonly ConcurrentQueueAsync<QuicConnection> _acceptQueue = new ConcurrentQueueAsync<QuicConnection>();
+        private int currentConnectionsCount;
+
         private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)
         {
             this._handle = _handle;
@@ -22,6 +27,8 @@ namespace AKNet.Udp2MSQuic.Common
         private static QuicListener Create(QuicListenerOptions options)
         {
             QuicListener mListenerer = new QuicListener();
+            mListenerer.currentConnectionsCount = options.ListenBacklog;
+
             QUIC_LISTENER _handle = null;
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, mListenerer, out _handle)))
             {
@@ -58,25 +65,54 @@ namespace AKNet.Udp2MSQuic.Common
         {
             MSQuicFunc.MsQuicListenerStop(_handle);
         }
+        
+        public async ValueTask<QuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException("QuicListener");
+            }
+
+            QuicConnection connection = await _acceptQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref currentConnectionsCount);
+            return connection;
+        }
+
+        private async void StartOpNewConnection(QuicConnection connection)
+        {
+            await Task.Run(async()=>
+            {
+                QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
+                QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
+                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration))) //这里会开始执行连接操作
+                {
+                    NetLog.LogError("ConnectionSetConfiguration failed");
+                }
+
+                await connection.FinishHandshakeAsync();
+                _acceptQueue.Enqueue(connection);
+            });
+        }
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)
         {
+            if (Interlocked.Decrement(ref currentConnectionsCount) < 0)
+            {
+                Interlocked.Increment(ref currentConnectionsCount);
+                return MSQuicFunc.QUIC_STATUS_CONNECTION_REFUSED;
+            }
+
             QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
             QuicConnection connection = new QuicConnection(this, data.Connection, data.Info, options);
             connection._sslConnectionOptions = new QuicConnection.SslConnectionOptions(
-                  connection,
-                  isClient: false,
-                  data.Info.ServerName,
-                  options.ServerAuthenticationOptions.ClientCertificateRequired,
-                  options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
-                  options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
+                 connection,
+                 isClient: false,
+                 data.Info.ServerName,
+                 options.ServerAuthenticationOptions.ClientCertificateRequired,
+                 options.ServerAuthenticationOptions.CertificateRevocationCheckMode,
+                 options.ServerAuthenticationOptions.RemoteCertificateValidationCallback, null);
 
-            QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration)))
-            {
-                NetLog.LogError("ConnectionSetConfiguration failed");
-                return MSQuicFunc.QUIC_STATUS_INTERNAL_ERROR;
-            }
+            StartOpNewConnection(connection);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

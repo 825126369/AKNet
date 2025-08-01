@@ -18,6 +18,8 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly EndPoint RemoteEndPoint;
         private QuicListener mQuicListener;
 
+        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
+
         public QuicConnection(QuicConnectionOptions mOption)
         {
             this.mOption = mOption;
@@ -41,7 +43,10 @@ namespace AKNet.Udp2MSQuic.Common
         public static QuicConnection StartConnect(QuicConnectionOptions mOption)
         {
             QuicConnection connection = new QuicConnection(mOption);
-            connection.StartConnectAsync();
+            Task.Run(() =>
+            {
+                connection.StartConnectAsync();
+            });
             return connection;
         }
 
@@ -83,8 +88,21 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 NetLog.LogError("ConnectionStart failed");
             }
+
+            await FinishHandshakeAsync();
+            mOption.ConnectFinishFunc?.Invoke();
         }
-        
+
+        internal ValueTask FinishHandshakeAsync()
+        {
+            if (_connectedTcs.TryInitialize(out ValueTask valueTask, this))
+            {
+                
+            }
+
+            return valueTask;
+        }
+
         public QuicStream OpenSendStream(QuicStreamType nType)
         {
             QuicStream stream = new QuicStream(this, nType);
@@ -118,11 +136,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
         {
-            mOption.ConnectFinishFunc?.Invoke();
-            if (mQuicListener != null)
-            {
-                mQuicListener.mOption.AcceptConnectionFunc(this);
-            }
+            _connectedTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

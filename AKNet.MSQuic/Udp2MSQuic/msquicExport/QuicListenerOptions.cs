@@ -8,6 +8,5 @@ namespace AKNet.Udp2MSQuic.Common
         public IPEndPoint ListenEndPoint { get; set; } = null!;
         public int ListenBacklog { get; set; }
         public Func<QuicConnectionOptions> GetConnectionOptionFunc { get; set; } = null!;
-        public Action<QuicConnection> AcceptConnectionFunc { get; set; } = null!;
     }
 }
