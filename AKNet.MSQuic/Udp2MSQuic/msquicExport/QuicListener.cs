@@ -89,21 +89,18 @@ namespace AKNet.Udp2MSQuic.Common
 
         private async void StartOpNewConnection(QuicConnection connection)
         {
-            await Task.Run(async()=>
+            QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
+            QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration))) //这里会开始执行连接操作
             {
-                QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
-                QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
-                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration))) //这里会开始执行连接操作
-                {
-                    NetLog.LogError("ConnectionSetConfiguration failed");
-                }
+                NetLog.LogError("ConnectionSetConfiguration failed");
+            }
 
-                await connection.FinishHandshakeAsync();
-                if (!_acceptQueue.Writer.TryWrite(connection))
-                {
-                    await connection.DisposeAsync().ConfigureAwait(false);
-                }
-            });
+            await connection.FinishHandshakeAsync().ConfigureAwait(false);
+            if (!_acceptQueue.Writer.TryWrite(connection))
+            {
+                await connection.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)

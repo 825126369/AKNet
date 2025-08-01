@@ -203,7 +203,7 @@ namespace AKNet.Common.Channel
                             return false;
                         }
 
-                        if (parent._blockedReaders.Count > 0)
+                        if (parent._blockedReaders.Count == 0)
                         {
                             parent._items.Enqueue(item);
                             waitingReadersTail = parent._waitingReadersTail;
@@ -239,7 +239,7 @@ namespace AKNet.Common.Channel
                 Exception? doneWriting = _parent._doneWriting;
                 return
                     cancellationToken.IsCancellationRequested ? new ValueTask<bool>(Task.FromCanceled<bool>(cancellationToken)) :
-                    doneWriting == null ? new ValueTask<bool>(true) : // unbounded writing can always be done if we haven't completed
+                    doneWriting == null ? new ValueTask<bool>(true) :
                     doneWriting != ChannelUtilities.s_doneWritingSentinel ? new ValueTask<bool>(Task.FromException<bool>(doneWriting)) :
                     default;
             }
