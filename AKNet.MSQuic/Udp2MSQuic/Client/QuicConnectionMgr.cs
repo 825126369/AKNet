@@ -71,9 +71,7 @@ namespace AKNet.Udp2MSQuic.Client
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             mOption.ConnectFinishFunc = ConnectFinishFunc;
-            mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
             mOption.CloseFinishFunc = CloseFinishFunc;
-            mOption.SendFinishFunc = SendFinishFunc;
             return mOption;
         }
 
@@ -81,8 +79,7 @@ namespace AKNet.Udp2MSQuic.Client
         {
             NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
-            mQuicConnection.RequestReceiveStreamData();
+            StartProcessReceive();
         }
 
         private void CloseFinishFunc()
@@ -104,37 +101,37 @@ namespace AKNet.Udp2MSQuic.Client
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
-        private void ReceiveStreamDataFunc(QuicStream mQuicStream)
+        private async void StartProcessReceive()
         {
-            if (mQuicStream != null)
+            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            try
             {
-                do
+                while (mQuicConnection != null)
                 {
-                    int nLength = mQuicStream.Read(mReceiveBuffer);
-                    if (nLength > 0)
+                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    if (mQuicStream != null)
                     {
-                        mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                        while (true)
+                        {
+                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                            if (nLength > 0)
+                            {
+                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
                     }
-                    else
-                    {
-                        break;
-                    }
-                } while (true);
+                }
+            }
+            catch (Exception e)
+            {
+                NetLog.LogError(e.ToString());
+                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
-
-        private void SendFinishFunc(QuicStream mQuicStream)
-        {
-            if (mQuicStream == mSendQuicStream)
-            {
-                SendNetStream2();
-            }
-            else
-            {
-                NetLog.LogError("SendFinishFunc Error");
-            }
-        }
-
 
         public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
         {
@@ -154,19 +151,16 @@ namespace AKNet.Udp2MSQuic.Client
         {
             try
             {
-                if (mSendStreamList.Length > 0)
+                while (mSendStreamList.Length > 0)
                 {
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
+                    mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
-                else
-                {
-                    bSendIOContextUsed = false;
-                }
+                bSendIOContextUsed = false;
             }
             catch (Exception e)
             {

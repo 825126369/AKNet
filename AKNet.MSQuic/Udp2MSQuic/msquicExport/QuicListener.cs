@@ -112,7 +112,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
-            QuicConnection connection = new QuicConnection(this, data.Connection, data.Info, options);
+            QuicConnection connection = new QuicConnection(data.Connection, data.Info, options);
             connection._sslConnectionOptions = new QuicConnection.SslConnectionOptions(
                  connection,
                  isClient: false,

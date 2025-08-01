@@ -1,12 +1,12 @@
 using AKNet.Common;
 using AKNet.Common.Channel;
-using AKNet.Udp1MSQuic.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,10 +20,8 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly QuicConnectionOptions mOption;
         public readonly ConcurrentQueue<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueue<QuicStream>();
         public readonly EndPoint RemoteEndPoint;
-        private QuicListener mQuicListener;
 
         private readonly AKNetChannel<QuicStream> _acceptQueue = new AKNetChannel<QuicStream>(true);
-
         private int _disposed;
 
         private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
@@ -55,9 +53,8 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
         
-        public QuicConnection(QuicListener mQuicListener, QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
+        public QuicConnection(QUIC_CONNECTION handle, QUIC_NEW_CONNECTION_INFO info, QuicConnectionOptions mOption)
         {
-            this.mQuicListener = mQuicListener;
             this.mOption = mOption;
             this._handle = handle;
             this.RemoteEndPoint = info.RemoteAddress.GetIPEndPoint();
@@ -127,22 +124,56 @@ namespace AKNet.Udp2MSQuic.Common
             return valueTask;
         }
 
-        public QuicStream OpenSendStream(QuicStreamType nType)
+        public async ValueTask<QuicStream> OpenOutboundStreamAsync(QuicStreamType type, CancellationToken cancellationToken = default)
         {
-            QuicStream stream = new QuicStream(this, nType);
-            stream.Start();
-            mReceiveStreamDataQueue.Enqueue(stream);
+            if (_disposed > 0)
+            {
+                throw new ObjectDisposedException(this.ToString());
+            }
+            
+            QuicStream? stream = null;
+            try
+            {
+                stream = new QuicStream(this, type);
+                await stream.StartAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                if (stream != null)
+                {
+                    await stream.DisposeAsync().ConfigureAwait(false);
+                }
+
+                if (_disposed > 0)
+                {
+                    throw new ObjectDisposedException(this.ToString());
+                }
+
+                throw;
+            }
             return stream;
         }
-
-        public void RequestReceiveStreamData()
+        
+        public async ValueTask<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
         {
-            foreach (var v in mReceiveStreamDataQueue)
+            if (_disposed > 0)
             {
-                if (v.orHaveReceiveData())
-                {
-                    mOption.ReceiveStreamDataFunc(v);
-                }
+                throw new ObjectDisposedException(this.ToString());
+            }
+
+            GCHandle keepObject = GCHandle.Alloc(this);
+            try
+            {
+                return await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (ChannelClosedException ex) when (ex.InnerException is not null)
+            {
+                ExceptionDispatchInfo.Throw(ex.InnerException);
+                throw;
+            }
+            finally
+            {
+                keepObject.Free();
             }
         }
 
@@ -190,6 +221,12 @@ namespace AKNet.Udp2MSQuic.Common
         private int HandleEventPeerStreamStarted(ref QUIC_CONNECTION_EVENT.PEER_STREAM_STARTED_DATA data)
         {
             QuicStream stream = new QuicStream(this, data.Stream, data.Flags);
+            if (!_acceptQueue.Writer.TryWrite(stream))
+            {
+                stream.Dispose();
+                return MSQuicFunc.QUIC_STATUS_SUCCESS;
+            }
+            
             data.Flags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES;
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }

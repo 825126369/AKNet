@@ -39,11 +39,8 @@ namespace AKNet.Udp2MSQuic.Server
 		{
 			MainThreadCheck.Check();
 			this.mQuicConnection = connection;
-            this.mQuicConnection.mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
-            this.mQuicConnection.mOption.SendFinishFunc = SendFinishFunc;
-            this.mQuicConnection.RequestReceiveStreamData();
-            this.mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
             this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+            StartProcessReceive();
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -55,35 +52,36 @@ namespace AKNet.Udp2MSQuic.Server
             }
             return mRemoteEndPoint;
         }
-        
-        private void ReceiveStreamDataFunc(QuicStream mQuicStream)
-        {
-            if (mQuicStream != null)
-            {
-                do
-                {
-                    int nLength = mQuicStream.Read(mReceiveBuffer);
-                    if (nLength > 0)
-                    {
-                        mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                    }
-                    else
-                    {
-                        break;
-                    }
-                } while (true);
-            }
-        }
 
-        private void SendFinishFunc(QuicStream mQuicStream)
+        private async void StartProcessReceive()
         {
-            if (mQuicStream == mSendQuicStream)
+            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            try
             {
-                SendNetStream2();
+                while (mQuicConnection != null)
+                {
+                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    if (mQuicStream != null)
+                    {
+                        while (true)
+                        {
+                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                            if (nLength > 0)
+                            {
+                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
             }
-            else
+            catch (Exception e)
             {
-                NetLog.LogError("SendFinishFunc Error");
+                NetLog.LogError(e.ToString());
+                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
 
@@ -105,23 +103,20 @@ namespace AKNet.Udp2MSQuic.Server
         {
             try
             {
-                if (mSendStreamList.Length > 0)
+                while (mSendStreamList.Length > 0)
                 {
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
+                    mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
-                else
-                {
-                    bSendIOContextUsed = false;
-                }
+                bSendIOContextUsed = false;
             }
             catch (Exception e)
             {
-                //NetLog.LogError(e.ToString());
+                NetLog.LogError(e.ToString());
                 mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
