@@ -1,6 +1,8 @@
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -20,20 +22,56 @@ namespace AKNet.Udp2MSQuic.Common
     internal class QuicStream
     {
         private readonly QUIC_STREAM _handle;
-        private bool _disposed;
         private readonly AkCircularBuffer _receiveBuffers = new AkCircularBuffer();
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
         private Exception? _sendException;
-
-        private const ulong _defaultErrorCode = 100;
-
+        internal const int _defaultErrorCode = 100;
         private readonly bool _canRead;
         private readonly bool _canWrite;
         public ulong _id;
         public QuicStreamType nType;
         private readonly QuicConnection mConnection;
+            
+        private int _disposed = 0;
+        private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
+        private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
+        private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource()
+        {
+            CancellationAction = target =>
+            {
+                try
+                {
+                    if (target is QuicStream stream)
+                    {
+                        stream.Abort(QuicAbortDirection.Read, QuicStream._defaultErrorCode);
+                        stream._receiveTcs.TrySetResult();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        };
+
+        private readonly ResettableValueTaskSource _sendTcs = new ResettableValueTaskSource()
+        {
+            CancellationAction = target =>
+            {
+                try
+                {
+                    if (target is QuicStream stream)
+                    {
+                        stream.Abort(QuicAbortDirection.Write, QuicStream._defaultErrorCode);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        };
+
         public QuicStream(QuicConnection mConnection, QuicStreamType nType)
         {
             this.nType = nType;
@@ -108,7 +146,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         private void Write(ReadOnlyMemory<byte> buffer, bool completeWrites)
         {
-            if (_disposed)
+            if (_disposed > 0)
             {
                 return;
             }
@@ -270,6 +308,104 @@ namespace AKNet.Udp2MSQuic.Common
         public void Close()
         {
             int status = MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_NONE, 0);
+        }
+
+        public void Abort(QuicAbortDirection abortDirection, int errorCode)
+        {
+            if (_disposed > 0)
+            {
+                return;
+            }
+
+            QUIC_STREAM_SHUTDOWN_FLAGS flags = QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_NONE;
+            if (abortDirection.HasFlag(QuicAbortDirection.Read) && !_receiveTcs.IsCompleted)
+            {
+                flags |= QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE;
+            }
+            if (abortDirection.HasFlag(QuicAbortDirection.Write) && !_sendTcs.IsCompleted)
+            {
+                flags |= QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND;
+            }
+            
+            if (flags == QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_NONE)
+            {
+                return;
+            }
+            
+            unsafe
+            {
+                if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode)))               
+                {
+                    throw new Exception();
+                }
+            }
+
+            if (abortDirection.HasFlag(QuicAbortDirection.Read))
+            {
+                _receiveTcs.TrySetException(new InvalidOperationException());
+            }
+
+            if (abortDirection.HasFlag(QuicAbortDirection.Write))
+            {
+                var exception = new InvalidOperationException();
+                Interlocked.CompareExchange(ref _sendException, exception, null);
+                if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
+                {
+                    _sendTcs.TrySetException(_sendException, final: true);
+                    Volatile.Write(ref _sendLocked, 0);
+                }
+            }
+        }
+
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+
+            if (!_startedTcs.IsCompletedSuccessfully)
+            {
+                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, _defaultErrorCode);
+            }
+            else
+            {
+                if (!_receiveTcs.IsCompleted)
+                {
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE, _defaultErrorCode);
+                }
+                if (!_sendTcs.IsCompleted)
+                {
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default);
+                }
+            }
+            
+            if (_shutdownTcs.TryInitialize(out ValueTask valueTask, this))
+            {
+                await valueTask.ConfigureAwait(false);
+            }
+            Debug.Assert(_startedTcs.IsCompleted);
+
+            unsafe void StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS flags, int errorCode)
+            {
+                int status = MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode);
+                if (MSQuicFunc.QUIC_FAILED(status))
+                {
+                   
+                }
+                else
+                {
+                    if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE) && !_receiveTcs.IsCompleted)
+                    {
+                        _receiveTcs.TrySetException(new Exception(), final: true);
+                    }
+                    if (flags.HasFlag(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_SEND) && !_sendTcs.IsCompleted)
+                    {
+                        _sendTcs.TrySetException(new Exception(), final: true);
+                    }
+                }
+            }
         }
     }
 }

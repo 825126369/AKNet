@@ -127,7 +127,12 @@ namespace AKNet.Udp2MSQuic.Common
             _valueTaskSource.GetResult(token);
         }
 
-       
-       
+        public void Reset()
+        {
+            _valueTaskSource.Reset();
+        }
+
+
+
     }
 }

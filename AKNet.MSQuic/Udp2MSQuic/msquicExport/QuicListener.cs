@@ -1,4 +1,5 @@
 using AKNet.Common;
+using AKNet.Common.Channel;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -14,7 +15,8 @@ namespace AKNet.Udp2MSQuic.Common
         public QuicListenerOptions mOption;
         public IPEndPoint LocalEndPoint;
         private bool _disposed = false;
-        private readonly ConcurrentQueueAsync<QuicConnection> _acceptQueue = new ConcurrentQueueAsync<QuicConnection>();
+
+        private readonly AKNetChannel<QuicConnection> _acceptQueue = new AKNetChannel<QuicConnection>(true);
         private int currentConnectionsCount;
 
         private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)
@@ -80,7 +82,7 @@ namespace AKNet.Udp2MSQuic.Common
                 throw new ObjectDisposedException("QuicListener");
             }
 
-            QuicConnection connection = await _acceptQueue.ReadAsync(cancellationToken).ConfigureAwait(false);
+            QuicConnection connection = await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
             Interlocked.Increment(ref currentConnectionsCount);
             return connection;
         }
@@ -97,7 +99,10 @@ namespace AKNet.Udp2MSQuic.Common
                 }
 
                 await connection.FinishHandshakeAsync();
-                _acceptQueue.Enqueue(connection);
+                if (!_acceptQueue.Writer.TryWrite(connection))
+                {
+                    await connection.DisposeAsync().ConfigureAwait(false);
+                }
             });
         }
 

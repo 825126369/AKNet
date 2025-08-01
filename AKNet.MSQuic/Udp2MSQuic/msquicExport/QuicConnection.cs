@@ -1,9 +1,13 @@
 using AKNet.Common;
+using AKNet.Common.Channel;
+using AKNet.Udp1MSQuic.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -18,8 +22,28 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly EndPoint RemoteEndPoint;
         private QuicListener mQuicListener;
 
-        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
+        private readonly AKNetChannel<QuicStream> _acceptQueue = new AKNetChannel<QuicStream>(true);
 
+        private int _disposed;
+
+        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
+        private readonly ResettableValueTaskSource _shutdownTcs = new ResettableValueTaskSource()
+        {
+            CancellationAction = target =>
+            {
+                try
+                {
+                    if (target is QuicConnection connection)
+                    {
+                        connection._shutdownTcs.TrySetResult();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        };
+            
         public QuicConnection(QuicConnectionOptions mOption)
         {
             this.mOption = mOption;
@@ -227,5 +251,38 @@ namespace AKNet.Udp2MSQuic.Common
             var _handle = context as QuicConnection;
             return _handle.HandleConnectionEvent(ref connectionEvent);
         }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            {
+                return;
+            }
+                  
+            if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this))
+            {
+                unsafe
+                {
+                    MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 1);
+                }
+            }
+            else if (!valueTask.IsCompletedSuccessfully)
+            {
+                unsafe
+                {
+                    MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT, 1);
+                }
+            }
+            
+            await _shutdownTcs.GetFinalTask(this).ConfigureAwait(false);
+            Debug.Assert(_connectedTcs.IsCompleted);
+            
+            _acceptQueue.Writer.TryComplete(new Exception());
+            while (_acceptQueue.Reader.TryRead(out QuicStream? stream))
+            {
+                await stream.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
     }
 }
