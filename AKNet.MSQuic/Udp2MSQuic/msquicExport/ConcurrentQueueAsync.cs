@@ -19,7 +19,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (mQueue.TryDequeue(out T t))
             {
-                read_tcs.SetResult(t);
+                read_tcs.TrySetResult(t);
             }
                 
             return new ValueTask<T>(read_tcs.Task);
@@ -33,7 +33,7 @@ namespace AKNet.Udp2MSQuic.Common
         public void Enqueue(T t)
         {
             mQueue.Enqueue(t);
-            read_tcs.SetResult(t);
+            read_tcs.TrySetResult(t);
         }
     }
 }

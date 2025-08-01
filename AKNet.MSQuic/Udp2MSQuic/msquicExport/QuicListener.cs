@@ -27,7 +27,14 @@ namespace AKNet.Udp2MSQuic.Common
         private static QuicListener Create(QuicListenerOptions options)
         {
             QuicListener mListenerer = new QuicListener();
-            mListenerer.currentConnectionsCount = options.ListenBacklog;
+            if (options.ListenBacklog > 0)
+            {
+                mListenerer.currentConnectionsCount = options.ListenBacklog;
+            }
+            else
+            {
+                mListenerer.currentConnectionsCount = ushort.MaxValue;
+            }
 
             QUIC_LISTENER _handle = null;
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerOpen(MsQuicApi.Api.Registration, NativeCallback, mListenerer, out _handle)))
