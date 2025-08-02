@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using AKNet.Common;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace AKNet.Udp1MSQuic.Common
@@ -57,13 +58,13 @@ namespace AKNet.Udp1MSQuic.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int InterlockedFetchAndClearBoolean(ref int Target)
         {
-            return Interlocked.Exchange(ref Target, 0);
+            return InterlockedEx.And(ref Target, 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int InterlockedFetchAndSetBoolean(ref int Target)
         {
-            return Interlocked.Exchange(ref Target, 1);
+            return InterlockedEx.Or(ref Target, 1);
         }
     }
 }

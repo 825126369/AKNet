@@ -42,8 +42,7 @@ namespace AKNet.Udp2MSQuic.Common
         public bool StoppingThread;
         public bool StoppedThread;
         public bool DestroyedThread;
-        public volatile int Running;
-
+        public int Running;
         public CXPLAT_WORKER()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_WORKER>(this);

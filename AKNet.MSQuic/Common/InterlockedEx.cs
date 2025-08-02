@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -8,11 +9,44 @@ namespace AKNet.Common
     public unsafe static class InterlockedEx
     {
         //返回值：递增后的值。
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong Increment(ref ulong location)
         {
             fixed (void* ptr = &location)
             {
                 return (ulong)Interlocked.Increment(ref MemoryMarshal.GetReference(new ReadOnlySpan<long>(ptr, 1)));
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int And(ref int location1, int value)
+        {
+            int current = location1;
+            while (true)
+            {
+                int newValue = current & value;
+                int oldValue = Interlocked.CompareExchange(ref location1, newValue, current);
+                if (oldValue == current)
+                {
+                    return oldValue;
+                }
+                current = oldValue;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Or(ref int location1, int value)
+        {
+            int current = location1;
+            while (true)
+            {
+                int newValue = current | value;
+                int oldValue = Interlocked.CompareExchange(ref location1, newValue, current);
+                if (oldValue == current)
+                {
+                    return oldValue;
+                }
+                current = oldValue;
             }
         }
     }
