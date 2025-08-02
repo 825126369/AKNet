@@ -1,4 +1,5 @@
 ﻿#if TARGET_WINDOWS
+using System;
 using System.Runtime.InteropServices;
 
 namespace AKNet.Platform
@@ -123,7 +124,7 @@ namespace AKNet.Platform
         public byte Number;
         public byte Reserved;
     }
-    
+
     public static unsafe partial class OSPlatformFunc
     {
         public const int ANYSIZE_ARRAY = 1;

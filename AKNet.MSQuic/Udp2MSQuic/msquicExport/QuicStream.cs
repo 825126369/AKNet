@@ -32,7 +32,6 @@ namespace AKNet.Udp2MSQuic.Common
         private readonly bool _canWrite;
         public ulong _id;
         public QuicStreamType nType;
-        private readonly QuicConnection mConnection;
         private Action<QuicStreamType>? _decrementStreamCapacity;
         private int _disposed = 0;
         private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
@@ -75,8 +74,6 @@ namespace AKNet.Udp2MSQuic.Common
         public QuicStream(QuicConnection mConnection, QuicStreamType nType)
         {
             this.nType = nType;
-            this.mConnection = mConnection;
-
             var Flags = nType == QuicStreamType.Unidirectional ? 
                 QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
 
@@ -91,7 +88,6 @@ namespace AKNet.Udp2MSQuic.Common
 
         public QuicStream(QuicConnection mConnection, QUIC_STREAM mStreamHandle, QUIC_STREAM_OPEN_FLAGS flags)
         {
-            this.mConnection = mConnection;
             this._handle = mStreamHandle;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(mStreamHandle, NativeCallback, this);
             _canRead = true;

@@ -286,7 +286,7 @@ namespace AKNet.Udp2MSQuic.Common
         static void CxPlatWakeExecutionContext(CXPLAT_EXECUTION_CONTEXT Context)
         {
             CXPLAT_WORKER Worker = Context.CxPlatContext;
-            if (!BoolOk(InterlockedFetchAndSetBoolean(ref Worker.Running)))
+            if (InterlockedFetchAndSetBoolean(ref Worker.Running) == 0)
             {
                 OSPlatformFunc.CxPlatEventQEnqueue(Worker.EventQ, Worker.WakeSqe);
             }
@@ -353,7 +353,7 @@ namespace AKNet.Udp2MSQuic.Common
                 Worker.State.TimeNow = CxPlatTimeUs();
 
                 CxPlatRunExecutionContexts(Worker);
-                if (Worker.State.WaitTime > 0 && BoolOk(InterlockedFetchAndClearBoolean(ref Worker.Running)))
+                if (Worker.State.WaitTime > 0 && InterlockedFetchAndClearBoolean(ref Worker.Running) == 1)
                 {
                     Worker.State.TimeNow = CxPlatTimeUs();
                     CxPlatRunExecutionContexts(Worker);
