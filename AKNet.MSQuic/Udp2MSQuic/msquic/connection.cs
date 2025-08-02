@@ -303,6 +303,7 @@ namespace AKNet.Udp2MSQuic.Common
 #if DEBUG
             NetLog.Assert(Connection.RefTypeCount[(int)Ref] > 0);
             ushort result = (ushort)Interlocked.Decrement(ref Connection.RefTypeCount[(int)Ref]);
+            NetLog.Assert(result != 0xFFFF);
 #endif
             NetLog.Assert(Connection.RefCount > 0);
             if (Interlocked.Decrement(ref Connection.RefCount) == 0)

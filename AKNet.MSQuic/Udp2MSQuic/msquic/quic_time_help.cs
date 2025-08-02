@@ -1,5 +1,4 @@
-﻿using AKNet.Common;
-using AKNet.Platform;
+﻿using AKNet.Platform;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;

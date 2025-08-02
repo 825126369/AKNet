@@ -336,7 +336,9 @@ namespace AKNet.Udp2MSQuic.Common
         }
 
         public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
-            => WriteAsync(buffer, completeWrites: false, cancellationToken);
+        { 
+            return WriteAsync(buffer, completeWrites: false, cancellationToken);
+        }
 
         public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites, CancellationToken cancellationToken = default)
         {
@@ -387,10 +389,13 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (MSQuicFunc.QUIC_FAILED(status))
                 {
+                    NetLog.LogError("MsQuicStreamSend Error: " + status);
+
                     _sendBuffers.Reset();
                     Volatile.Write(ref _sendLocked, 0);
-                    NetLog.Log("MsQuicStreamSend Error: " + status);
-                    _sendTcs.TrySetException(new Exception(), true);
+                    Interlocked.CompareExchange(ref _sendException, new Exception(), null);
+                    Exception exception = Volatile.Read(ref _sendException);
+                    _sendTcs.TrySetException(exception, true);
                 }
             }
 
@@ -418,23 +423,21 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 return;
             }
-            
-            unsafe
-            {
-                if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode)))               
-                {
-                    throw new Exception();
-                }
-            }
 
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, flags, errorCode)))
+            {
+                throw new Exception();
+            }
+            
             if (abortDirection.HasFlag(QuicAbortDirection.Read))
             {
                 _receiveTcs.TrySetException(new InvalidOperationException());
             }
 
+            NetLog.LogError("Abort: " + abortDirection);
             if (abortDirection.HasFlag(QuicAbortDirection.Write))
             {
-                var exception = new InvalidOperationException();
+                var exception = new Exception();
                 Interlocked.CompareExchange(ref _sendException, exception, null);
                 if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
                 {

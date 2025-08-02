@@ -455,6 +455,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
+            NetLog.Assert(Worker.State.WaitTime <= int.MaxValue);
             int CqeCount = OSPlatformFunc.CxPlatEventQDequeue(Worker.EventQ, (int)Worker.State.WaitTime);
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
