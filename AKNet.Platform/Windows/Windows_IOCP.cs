@@ -126,7 +126,7 @@ namespace AKNet.Platform
         {
 #if DEBUG
             NetLog.Assert(!sqe.sqePtr->IsQueued);
-            sqe.sqePtr->IsQueued = true;
+            //sqe.sqePtr->IsQueued;
 #endif
             CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(OVERLAPPED));
             return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, 0, IntPtr.Zero, &sqe.sqePtr->Overlapped);
@@ -136,7 +136,7 @@ namespace AKNet.Platform
         {
 #if DEBUG
             NetLog.Assert(!sqe.sqePtr->IsQueued);
-            sqe.sqePtr->IsQueued = true;
+           // sqe.sqePtr->IsQueued = true;
 #endif
             CxPlatZeroMemory(&sqe.sqePtr->Overlapped, sizeof(OVERLAPPED));
             return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, &sqe.sqePtr->Overlapped);
