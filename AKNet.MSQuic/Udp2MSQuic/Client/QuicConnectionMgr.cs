@@ -57,9 +57,10 @@ namespace AKNet.Udp2MSQuic.Client
             try
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                //mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
                 StartProcessReceive();
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             }
             catch (Exception e)
             {
@@ -137,7 +138,7 @@ namespace AKNet.Udp2MSQuic.Client
             }
         }
 
-        private void SendNetStream2()
+        private async Task SendNetStream2()
         {
             try
             {
@@ -148,7 +149,7 @@ namespace AKNet.Udp2MSQuic.Client
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
+                    await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }

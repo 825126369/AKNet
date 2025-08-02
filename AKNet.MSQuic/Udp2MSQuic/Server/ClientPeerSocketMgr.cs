@@ -99,7 +99,7 @@ namespace AKNet.Udp2MSQuic.Server
             }
         }
 
-        private void SendNetStream2()
+        private async void SendNetStream2()
         {
             try
             {
@@ -110,7 +110,7 @@ namespace AKNet.Udp2MSQuic.Server
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
+                    await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }

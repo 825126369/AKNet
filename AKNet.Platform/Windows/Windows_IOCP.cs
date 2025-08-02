@@ -133,6 +133,10 @@ namespace AKNet.Platform
                         data->IsQueued = false;
                     }
                 }
+                else
+                {
+                    NetLog.LogError("queue.events[0].lpOverlapped == null");
+                }
 #endif
                 return queue.events[0].lpOverlapped == null ? 0 : out_count;
             }

@@ -8,10 +8,10 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 1;
-        public const int nPackageCount = 1;
+        public const int nClientCount = 10;
+        public const int nPackageCount = 100;
         public const double fFrameInternalTime = 0;
-        public const int nSumPackageCount = nClientCount * nPackageCount * 1;
+        public const int nSumPackageCount = nClientCount * nPackageCount * 100;
         int nReceivePackageCount = 0;
         List<NetClientMain> mClientList = new List<NetClientMain>();
         Stopwatch mStopWatch = new Stopwatch();
@@ -96,13 +96,12 @@ namespace TestNetClient
                                     mdata.TalkMsg = TalkMsg2;
                                 }
                                 mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
-                                IMessagePool<TESTChatMessage>.recycle(mdata);
-
                                 if (Id == nSumPackageCount)
                                 {
-                                    string msg = DateTime.Now + "客户端发送 Message: " + Id + "";
+                                    string msg = DateTime.Now + "客户端发送 Message: " + Id + ", " + mdata.CalculateSize();
                                     Console.WriteLine(msg);
                                 }
+                                IMessagePool<TESTChatMessage>.recycle(mdata);
                             }
                         }
                     }
@@ -116,7 +115,7 @@ namespace TestNetClient
             TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
 
             nReceivePackageCount++;
-            if (nReceivePackageCount % 1 == 0)
+            if (nReceivePackageCount % 1000 == 0)
             {
                 string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
                 Console.WriteLine(msg);
