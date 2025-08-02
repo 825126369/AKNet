@@ -1,5 +1,4 @@
-﻿using AKNet.Common;
-using System.Threading;
+﻿using System.Threading;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -48,12 +47,12 @@ namespace AKNet.Udp2MSQuic.Common
         //原子地获取一个布尔值，并将其设置为 false。
         static int InterlockedFetchAndClearBoolean(ref int Target)
         {
-            return Interlocked.CompareExchange(ref Target, 0, Target);
+            return Interlocked.Exchange(ref Target, 0);
         }
 
         static int InterlockedFetchAndSetBoolean(ref int Target)
         {
-            return Interlocked.CompareExchange(ref Target, 1, Target);
+            return Interlocked.Exchange(ref Target, 1);
         }
     }
 }

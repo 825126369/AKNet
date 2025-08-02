@@ -456,7 +456,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
-            int CqeCount = OSPlatformFunc.CxPlatEventQDequeueEx(Worker.EventQ, (int)Worker.State.WaitTime);
+            int CqeCount = OSPlatformFunc.CxPlatEventQDequeue(Worker.EventQ, (int)Worker.State.WaitTime);
             InterlockedFetchAndSetBoolean(ref Worker.Running);
             if (CqeCount != 0)
             {
@@ -466,11 +466,11 @@ namespace AKNet.Udp2MSQuic.Common
                 Worker.State.NoWorkCount = 0;
                 for (int i = 0; i < CqeCount; ++i)
                 {
-                    CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Worker.EventQ.events[i]);
+                    CXPLAT_SQE Sqe = OSPlatformFunc.CxPlatCqeGetSqe(Worker.EventQ.events.Span[i]);
                     if (Sqe != null)
                     {
                         NetLog.Assert(Sqe.Completion != null);
-                        Sqe.Completion(Worker.EventQ.events[i]);
+                        Sqe.Completion(Worker.EventQ.events.Span[i]);
                     }
                 }
                 OSPlatformFunc.CxPlatEventQReturn(Worker.EventQ, CqeCount);

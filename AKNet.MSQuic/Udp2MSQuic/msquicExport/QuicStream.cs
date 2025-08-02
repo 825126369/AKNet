@@ -200,6 +200,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
+
         private int HandleEventShutdownComplete(ref QUIC_STREAM_EVENT.SHUTDOWN_COMPLETE_DATA data)
         {
             if (data.ConnectionShutdown)
@@ -215,6 +216,7 @@ namespace AKNet.Udp2MSQuic.Common
             _shutdownTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
+
         private int HandleEventPeerAccepted()
         {
             _startedTcs.TrySetResult();
@@ -273,13 +275,14 @@ namespace AKNet.Udp2MSQuic.Common
             int status = MSQuicFunc.MsQuicStreamStart(_handle, QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
             if (MSQuicFunc.QUIC_FAILED(status))
             {
+                NetLog.LogError("MsQuicStreamStart Error");
                 _decrementStreamCapacity = decrementStreamCapacity;
                 _startedTcs.TrySetException(new Exception());
             }
 
             return valueTask;
         }
-        
+
         public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             if (_disposed > 0)
@@ -296,7 +299,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            
+
             int totalCopied = 0;
             do
             {
@@ -304,7 +307,7 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     throw new InvalidOperationException();
                 }
-                
+
                 int copied = _receiveBuffers.CopyTo(buffer, out bool complete, out bool empty);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
@@ -312,7 +315,7 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     _receiveTcs.TrySetResult(final: true);
                 }
-                
+
                 if (totalCopied > 0 || !empty)
                 {
                     _receiveTcs.TrySetResult();
@@ -328,12 +331,9 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
-                unsafe
+                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {
-                    if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
-                    {
-                        NetLog.LogError("StreamReceivedSetEnabled failed");
-                    }
+                    NetLog.LogError("StreamReceivedSetEnabled failed");
                 }
             }
             return totalCopied;

@@ -1,6 +1,7 @@
 ﻿#if TARGET_WINDOWS
 namespace AKNet.Platform
 {
+    using System.Buffers;
     using System.Runtime.InteropServices;
     using CXPLAT_CQE = OVERLAPPED_ENTRY;
 
@@ -33,13 +34,37 @@ namespace AKNet.Platform
         public IntPtr hEvent;
     }
 
-    public class CXPLAT_EVENTQ
+    public class CXPLAT_EVENTQ : IDisposable
     {
+        internal bool _disposed;
         internal IntPtr Queue;
-        public readonly CXPLAT_CQE[] events = new CXPLAT_CQE[16];
+        public readonly Memory<CXPLAT_CQE> events = new CXPLAT_CQE[16];
+        internal readonly MemoryHandle eventsMemoryHandle;
+        public CXPLAT_EVENTQ()
+        {
+            _disposed = false;
+            eventsMemoryHandle = events.Pin();
+        }
+
+        ~CXPLAT_EVENTQ()
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            eventsMemoryHandle.Dispose();
+            if (Queue != IntPtr.Zero)
+            {
+                Interop.Kernel32.CloseHandle(Queue);
+                Queue = IntPtr.Zero;
+            }
+        }
     }
 
-    public unsafe class CXPLAT_SQE
+    public unsafe class CXPLAT_SQE:IDisposable
     {
         [StructLayout(LayoutKind.Sequential)]
         public unsafe struct CXPLAT_SQE_Inner
@@ -64,6 +89,11 @@ namespace AKNet.Platform
         }
 
         ~CXPLAT_SQE()
+        {
+           Dispose();
+        }
+
+        public void Dispose()
         {
             if (sqePtr != null)
             {
@@ -112,34 +142,32 @@ namespace AKNet.Platform
             return Interop.Kernel32.PostQueuedCompletionStatus(queue.Queue, (uint)num_bytes, IntPtr.Zero, &sqe.sqePtr->Overlapped);
         }
 
-        public static int CxPlatEventQDequeueEx(CXPLAT_EVENTQ queue, int wait_time)
+        public static int CxPlatEventQDequeue(CXPLAT_EVENTQ queue, int wait_time)
         {
-            fixed (CXPLAT_CQE* eventPtr = queue.events)
+            int out_count = 0;
+            queue.events.Span.Clear();
+            if (!Interop.Kernel32.GetQueuedCompletionStatusEx(queue.Queue, (CXPLAT_CQE*)queue.eventsMemoryHandle.Pointer, queue.events.Length, out out_count, wait_time, false))
             {
-                int out_count = 0;
-                if (!Interop.Kernel32.GetQueuedCompletionStatusEx(queue.Queue, eventPtr, queue.events.Length, out out_count, wait_time, false))
-                {
-                    return 0;
-                }
-
-                NetLog.Assert(out_count != 0);
-                NetLog.Assert(queue.events[0].lpOverlapped != null || out_count == 1);
-#if DEBUG
-                if (queue.events[0].lpOverlapped != null)
-                {
-                    for (int i = 0; i < out_count; ++i)
-                    {
-                        CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(queue.events[i].lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
-                        data->IsQueued = false;
-                    }
-                }
-                else
-                {
-                    NetLog.LogError("queue.events[0].lpOverlapped == null");
-                }
-#endif
-                return queue.events[0].lpOverlapped == null ? 0 : out_count;
+                return 0;
             }
+
+            NetLog.Assert(out_count != 0);
+            NetLog.Assert(queue.events.Span[0].lpOverlapped != null || out_count == 1);
+#if DEBUG
+            if (queue.events.Span[0].lpOverlapped != null)
+            {
+                for (int i = 0; i < out_count; ++i)
+                {
+                    CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(queue.events.Span[i].lpOverlapped, CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
+                    data->IsQueued = false;
+                }
+            }
+            else
+            {
+                NetLog.LogError("queue.events[0].lpOverlapped == null");
+            }
+#endif
+            return queue.events.Span[0].lpOverlapped == null ? 0 : out_count;
         }
 
         public static void CxPlatEventQReturn(CXPLAT_EVENTQ queue, int count)
@@ -170,28 +198,17 @@ namespace AKNet.Platform
 
         public static void CxPlatEventQCleanup(CXPLAT_EVENTQ queue)
         {
-            Interop.Kernel32.CloseHandle(queue.Queue);
+            queue.Dispose();
         }
 
         public static void CxPlatSqeCleanup(CXPLAT_EVENTQ queue, CXPLAT_SQE sqe)
         {
-            if (sqe.sqePtr != null)
-            {
-                if(sqe.sqePtr->parent != IntPtr.Zero)
-                {
-                    GCHandle.FromIntPtr(sqe.sqePtr->parent).Free();
-                    sqe.sqePtr->parent = IntPtr.Zero;
-                }
-
-                CxPlatFree(sqe.sqePtr);
-                sqe.sqePtr = null;
-            }
-            sqe.Completion = null;
+            sqe.Dispose();
         }
 
         public static CXPLAT_SQE CxPlatCqeGetSqe(CXPLAT_CQE cqe)
         {
-            CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(cqe.lpOverlapped, 
+            CXPLAT_SQE.CXPLAT_SQE_Inner* data = CXPLAT_CONTAINING_RECORD<CXPLAT_SQE.CXPLAT_SQE_Inner>(cqe.lpOverlapped,
                 CXPLAT_SQE.CXPLAT_SQE_Inner.Overlapped_FieldName);
             return GCHandle.FromIntPtr(data->parent).Target as CXPLAT_SQE;
         }
