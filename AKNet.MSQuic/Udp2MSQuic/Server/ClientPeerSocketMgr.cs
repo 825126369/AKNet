@@ -121,13 +121,13 @@ namespace AKNet.Udp2MSQuic.Server
             }
         }
 
-        private void CloseSocket()
+        private async void CloseSocket()
 		{
 			if (mQuicConnection != null)
 			{
 				var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;
-				mQuicConnection2.StartClose();
+				await mQuicConnection2.CloseAsync(0);
 			}
 		}
 

@@ -31,8 +31,7 @@ namespace AKNet.Udp2MSQuic.Common
             _buffers = mBufferList.ToArray();
             _count = mBufferList.Count;
         }
-
-        //async await �������У�����ʹ�� ReadOnlySpan<byte>
+        
         public void Initialize(ReadOnlyMemory<byte> buffer)
         {
             Reserve(1);
@@ -50,7 +49,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         private void Reserve(int count)
         {
-            //if (count > _count)
+            if (count > _count)
             {
                 FreeNativeMemory();
                 _buffers = new QUIC_BUFFER[count];

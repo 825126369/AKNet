@@ -41,7 +41,11 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
         };
-            
+
+        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
+        internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
+        private readonly ValueTaskSource _connectionCloseTcs = new ValueTaskSource();
+
         public QuicConnection(QuicConnectionOptions mOption)
         {
             this.mOption = mOption;
@@ -61,17 +65,14 @@ namespace AKNet.Udp2MSQuic.Common
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_CONNECTION(handle, NativeCallback, this);
         }
 
-        public static QuicConnection StartConnect(QuicConnectionOptions mOption)
+        public static async ValueTask<QuicConnection> ConnectAsync(QuicConnectionOptions mOption, CancellationToken cancellationToken = default)
         {
             QuicConnection connection = new QuicConnection(mOption);
-            Task.Run(() =>
-            {
-                connection.StartConnectAsync();
-            });
+            await connection.StartConnectAsync(mOption, cancellationToken);
             return connection;
         }
 
-        private async void StartConnectAsync()
+        private async ValueTask StartConnectAsync(QuicConnectionOptions mOption, CancellationToken cancellationToken = default)
         {
             if (!mOption.RemoteEndPoint.TryParse(out string? host, out IPAddress? address, out int port))
             {
@@ -111,7 +112,6 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             await FinishHandshakeAsync();
-            mOption.ConnectFinishFunc?.Invoke();
         }
 
         internal ValueTask FinishHandshakeAsync()
@@ -135,7 +135,7 @@ namespace AKNet.Udp2MSQuic.Common
             try
             {
                 stream = new QuicStream(this, type);
-                await stream.StartAsync(cancellationToken).ConfigureAwait(false);
+                await stream.StartAsync(DecrementStreamCapacity, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -153,7 +153,21 @@ namespace AKNet.Udp2MSQuic.Common
             }
             return stream;
         }
-        
+
+        private int _bidirectionalStreamCapacity;
+        private int _unidirectionalStreamCapacity;
+        private void DecrementStreamCapacity(QuicStreamType streamType)
+        {
+            if (streamType == QuicStreamType.Unidirectional)
+            {
+                --_unidirectionalStreamCapacity;
+            }
+            if (streamType == QuicStreamType.Bidirectional)
+            {
+                --_bidirectionalStreamCapacity;
+            }
+        }
+
         public async ValueTask<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
         {
             if (_disposed > 0)
@@ -177,16 +191,22 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        public void StartClose()
+        public ValueTask CloseAsync(int errorCode, CancellationToken cancellationToken = default)
         {
-            CloseAsync();
-        }
+            if (_disposed > 0)
+            {
+                throw new ObjectDisposedException(this.ToString());
+            }
 
-        public async Task CloseAsync()
-        {
-            await Task.CompletedTask;
-            MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 0);
-            mOption.CloseFinishFunc?.Invoke();
+            if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
+            {
+                unsafe
+                {
+                    MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, errorCode);
+                }
+            }
+
+            return valueTask;
         }
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
@@ -199,6 +219,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
+
         private int HandleEventShutdownInitiatedByPeer(ref QUIC_CONNECTION_EVENT.SHUTDOWN_INITIATED_BY_PEER_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
@@ -206,8 +227,24 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventShutdownComplete()
         {
+           // _tlsSecret?.WriteSecret();
+            Exception exception = null;
+            if (_disposed > 0)
+            {
+                exception = new ObjectDisposedException(GetType().FullName).GetBaseException();
+            }
+            else
+            {
+                exception = new Exception();
+            }
+            _connectionCloseTcs.TrySetException(exception);
+            _acceptQueue.Writer.TryComplete(exception);
+            _connectedTcs.TrySetException(exception);
+            _shutdownTokenSource.Cancel();
+            _shutdownTcs.TrySetResult(final: true);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
+
         private int HandleEventLocalAddressChanged(ref QUIC_CONNECTION_EVENT.LOCAL_ADDRESS_CHANGED_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
@@ -223,7 +260,6 @@ namespace AKNet.Udp2MSQuic.Common
             QuicStream stream = new QuicStream(this, data.Stream, data.Flags);
             if (!_acceptQueue.Writer.TryWrite(stream))
             {
-                stream.Dispose();
                 return MSQuicFunc.QUIC_STATUS_SUCCESS;
             }
             

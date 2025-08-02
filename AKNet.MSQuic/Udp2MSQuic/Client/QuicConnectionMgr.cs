@@ -11,6 +11,7 @@ using AKNet.Udp2MSQuic.Common;
 using System;
 using System.Net;
 using System.Net.Security;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp2MSQuic.Client
 {
@@ -55,7 +56,13 @@ namespace AKNet.Udp2MSQuic.Client
 			
             try
             {
-                mQuicConnection = QuicConnection.StartConnect(GetQuicClientConnectionOptions(mIPEndPoint));
+                mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
+                if (mQuicConnection != null)
+                {
+                    NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
+                    StartProcessReceive();
+                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                }
             }
             catch (Exception e)
             {
@@ -70,21 +77,7 @@ namespace AKNet.Udp2MSQuic.Client
             mOption.RemoteEndPoint = mIPEndPoint;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-            mOption.ConnectFinishFunc = ConnectFinishFunc;
-            mOption.CloseFinishFunc = CloseFinishFunc;
             return mOption;
-        }
-
-        private void ConnectFinishFunc()
-        {
-            NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-            StartProcessReceive();
-        }
-
-        private void CloseFinishFunc()
-        {
-            NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
         public bool DisConnectServer()
@@ -94,10 +87,10 @@ namespace AKNet.Udp2MSQuic.Client
             return true;
 		}
 
-        private void DisConnectServer2()
+        private async Task DisConnectServer2()
         {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
-            mQuicConnection.StartClose();
+            await mQuicConnection.CloseAsync(0);
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
@@ -190,7 +183,7 @@ namespace AKNet.Udp2MSQuic.Client
             {
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
-				mQuicConnection2.StartClose();
+				await mQuicConnection2.CloseAsync(0);
             }
         }
 
