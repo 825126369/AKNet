@@ -1,6 +1,5 @@
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -23,13 +22,6 @@ namespace AKNet.Udp2MSQuic.Common
             _buffers[index] = new QUIC_BUFFER(buffer.Length);
             _buffers[index].Length = buffer.Length;
             buffer.Span.CopyTo(_buffers[index].GetSpan());
-        }
-
-        public void Initialize(List<QUIC_BUFFER> mBufferList)
-        {
-            Reserve(mBufferList.Count);
-            _buffers = mBufferList.ToArray();
-            _count = mBufferList.Count;
         }
         
         public void Initialize(ReadOnlyMemory<byte> buffer)
