@@ -124,11 +124,18 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     _startedTcs.TrySetResult();
                 }
+                else
+                {
+                    NetLog.LogError("HandleEventStartComplete Error");
+                }
             }
             else
             {
+                NetLog.LogError("HandleEventStartComplete Error");
                 _startedTcs.TrySetException(new Exception());
             }
+
+            _decrementStreamCapacity = null;
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
