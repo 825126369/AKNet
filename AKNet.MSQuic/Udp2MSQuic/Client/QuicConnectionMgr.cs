@@ -41,35 +41,32 @@ namespace AKNet.Udp2MSQuic.Client
             ConnectServer(this.ServerIp, this.nServerPort);
         }
 
-		public async void ConnectServer(string ServerAddr, int ServerPort)
-		{
-			this.ServerIp = ServerAddr;
-			this.nServerPort = ServerPort;
+        public async void ConnectServer(string ServerAddr, int ServerPort)
+        {
+            this.ServerIp = ServerAddr;
+            this.nServerPort = ServerPort;
 
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
-			Reset();
-			
-			IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
-			mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
-			
+            Reset();
+
+            IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
+            mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
+
             try
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                if (mQuicConnection != null)
-                {
-                    NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
-                    StartProcessReceive();
-                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-                }
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
+                StartProcessReceive();
             }
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
                 mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
-		}
+        }
 
         private QuicConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {

@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,7 +44,6 @@ namespace AKNet.Udp2MSQuic.Common
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
         private readonly ValueTaskSource _connectionCloseTcs = new ValueTaskSource();
-
         public QuicConnection(QuicConnectionOptions mOption)
         {
             this.mOption = mOption;
@@ -124,6 +122,11 @@ namespace AKNet.Udp2MSQuic.Common
             return valueTask;
         }
 
+        private void OnStreamCapacityIncreased(int bidirectionalIncrement, int unidirectionalIncrement)
+        {
+
+        }
+
         public async ValueTask<QuicStream> OpenOutboundStreamAsync(QuicStreamType type, CancellationToken cancellationToken = default)
         {
             if (_disposed > 0)
@@ -175,7 +178,6 @@ namespace AKNet.Udp2MSQuic.Common
                 throw new ObjectDisposedException(this.ToString());
             }
 
-            GCHandle keepObject = GCHandle.Alloc(this);
             try
             {
                 return await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
@@ -184,10 +186,6 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 ExceptionDispatchInfo.Throw(ex.InnerException);
                 throw;
-            }
-            finally
-            {
-                keepObject.Free();
             }
         }
 
@@ -269,6 +267,19 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventStreamsAvailable(ref QUIC_CONNECTION_EVENT.STREAMS_AVAILABLE_DATA data)
         {
+            int bidirectionalIncrement = 0;
+            int unidirectionalIncrement = 0;
+            if (data.BidirectionalCount > 0)
+            {
+                bidirectionalIncrement = data.BidirectionalCount - _bidirectionalStreamCapacity;
+                _bidirectionalStreamCapacity = data.BidirectionalCount;
+            }
+            if (data.UnidirectionalCount > 0)
+            {
+                unidirectionalIncrement = data.UnidirectionalCount - _unidirectionalStreamCapacity;
+                _unidirectionalStreamCapacity = data.UnidirectionalCount;
+            }
+            OnStreamCapacityIncreased(bidirectionalIncrement, unidirectionalIncrement);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
