@@ -513,7 +513,7 @@ namespace AKNet.Udp2MSQuic.Common
                 goto Exit;
             }
 
-            QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
+            QUIC_OPERATION Oper = QuicConnAllocOperation(Connection, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;

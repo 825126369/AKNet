@@ -155,7 +155,9 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly CXPLAT_LIST_ENTRY WaitingLink;
         public readonly CXPLAT_LIST_ENTRY ClosedLink;
         public readonly CXPLAT_LIST_ENTRY SendLink;
+#if DEBUG
         public readonly CXPLAT_LIST_ENTRY AllStreamsLink;
+#endif
         public QUIC_CONNECTION Connection;
         public ulong ID;
         public readonly QUIC_STREAM_FLAGS Flags = new QUIC_STREAM_FLAGS();
@@ -294,7 +296,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
             Stream.Connection = Connection;
-            Stream.ID = uint.MaxValue;
+            Stream.ID = ulong.MaxValue;
             Stream.Flags.Unidirectional = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             Stream.Flags.Opened0Rtt = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT);
             Stream.Flags.DelayIdFcUpdate = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES);
@@ -302,10 +304,11 @@ namespace AKNet.Udp2MSQuic.Common
             Stream.Flags.SendEnabled = true;
             Stream.Flags.ReceiveEnabled = true;
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
-            Stream.RecvMaxLength = int.MaxValue;
+            Stream.RecvMaxLength = long.MaxValue;
             Stream.RefCount = 1;
             Stream.SendRequestsTail = Stream.SendRequests = null;
             Stream.SendPriority = (ushort)QUIC_STREAM_PRIORITY_DEFAULT;
+
             CxPlatRefInitialize(ref Stream.RefCount);
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Stream.SparseAckRanges);
 
@@ -315,7 +318,9 @@ namespace AKNet.Udp2MSQuic.Common
             Stream.ReceiveCompleteOperation.FreeAfterProcess = false;
             Stream.ReceiveCompleteOperation.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE;
             Stream.ReceiveCompleteOperation.API_CALL.Context.STRM_RECV_COMPLETE.Stream = Stream;
-
+#if DEBUG
+            Stream.RefTypeCount[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_APP] = 1;
+#endif
             if (Stream.Flags.Unidirectional)
             {
                 if (!OpenedRemotely)
@@ -333,7 +338,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
 
-            int InitialRecvBufferLength = (int)Connection.Settings.StreamRecvBufferDefault;
+            int InitialRecvBufferLength = Connection.Settings.StreamRecvBufferDefault;
             QUIC_RECV_BUF_MODE RecvBufferMode = QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR;
             if (Stream.Flags.UseAppOwnedRecvBuffers)
             {
@@ -365,7 +370,7 @@ namespace AKNet.Udp2MSQuic.Common
             Status = QuicRecvBufferInitialize(
                     Stream.RecvBuffer,
                     InitialRecvBufferLength,
-                    (int)FlowControlWindowSize,
+                    FlowControlWindowSize,
                     RecvBufferMode,
                     PreallocatedRecvChunk);
 
@@ -383,6 +388,21 @@ namespace AKNet.Udp2MSQuic.Common
             Stream = null;
             PreallocatedRecvChunk = null;
         Exit:
+            if (Stream != null)
+            {
+#if DEBUG
+                CxPlatDispatchLockAcquire(Connection.Streams.AllStreamsLock);
+                CxPlatListEntryRemove(Stream.AllStreamsLink);
+                CxPlatDispatchLockRelease(Connection.Streams.AllStreamsLock);
+#endif
+                QuicPerfCounterDecrement(Connection.Partition,  QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
+                Stream.Flags.Freed = true;
+                Stream.GetPool().CxPlatPoolFree(Stream);
+            }
+            if (PreallocatedRecvChunk != null)
+            {
+                PreallocatedRecvChunk.GetPool().CxPlatPoolFree(PreallocatedRecvChunk);
+            }
             return Status;
         }
 

@@ -9,7 +9,7 @@ namespace AKNet.Udp2MSQuic.Common
     internal enum QuicStreamType
     {
         Unidirectional, //单向流
-        Bidirectional //双向流
+        Bidirectional   //双向流
     }
 
     internal enum QuicAbortDirection
@@ -26,7 +26,7 @@ namespace AKNet.Udp2MSQuic.Common
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
-        private Exception? _sendException;
+        private Exception _sendException;
         internal const int _defaultErrorCode = 100;
         private readonly bool _canRead;
         private readonly bool _canWrite;
@@ -84,6 +84,10 @@ namespace AKNet.Udp2MSQuic.Common
             
             _canRead = nType == QuicStreamType.Bidirectional;
             _canWrite = true;
+            if (!_canRead)
+            {
+                _receiveTcs.TrySetResult(final: true);
+            }
         }
 
         public QuicStream(QuicConnection mConnection, QUIC_STREAM mStreamHandle, QUIC_STREAM_OPEN_FLAGS flags)
@@ -93,6 +97,11 @@ namespace AKNet.Udp2MSQuic.Common
             _canRead = true;
             _canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             this.nType = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
+            if (!_canWrite)
+            {
+                _sendTcs.TrySetResult(final: true);
+            }
+            _startedTcs.TrySetResult();
         }
 
         public void CompleteWrites()
@@ -316,7 +325,7 @@ namespace AKNet.Udp2MSQuic.Common
                 totalCopied += copied;
                 if (complete)
                 {
-                    _receiveTcs.TrySetResult(final: true);
+                    _receiveTcs.TrySetResult(true);
                 }
 
                 if (totalCopied > 0 || !empty)
@@ -329,8 +338,8 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     break;
                 }
-            }
-            while (!buffer.IsEmpty && totalCopied == 0);
+
+            } while (!buffer.IsEmpty && totalCopied == 0);
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
@@ -473,7 +482,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 if (!_sendTcs.IsCompleted)
                 {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default);
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, _defaultErrorCode);
                 }
             }
             

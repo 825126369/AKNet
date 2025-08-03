@@ -14,7 +14,7 @@ namespace AKNet.Udp2MSQuic.Common
         // None -> [TrySetResult|TrySetException(final: false)] -> Ready -> [TryGetValueTask] -> [GetResult] -> None
         // None|Awaiting -> [TrySetResult|TrySetException(final: true)] -> Completed(never leaves this state)
         // Ready -> [GetResult: TrySet*(final: true) was called] -> Completed(never leaves this state)
-        private enum State
+        private enum State:byte
         {
             None,
             Awaiting,
@@ -29,6 +29,7 @@ namespace AKNet.Udp2MSQuic.Common
         private CancellationToken _cancelledToken;
         private Action<object?>? _cancellationAction;
         private FinalTaskSource _finalTaskSource;
+        private GCHandle _keepAlive;
 
         public ResettableValueTaskSource()
         {
@@ -38,6 +39,7 @@ namespace AKNet.Udp2MSQuic.Common
             _cancellationRegistration = default;
             _cancelledToken = default;
             _finalTaskSource = new FinalTaskSource();
+            _keepAlive = default;
         }
         
         public Action<object?> CancellationAction {  set{ _cancellationAction = value; } }
@@ -45,8 +47,8 @@ namespace AKNet.Udp2MSQuic.Common
         {
             get 
             {
-                byte l1 = (byte)_state;
-                return (State)Volatile.Read(ref l1) == State.Completed; 
+                return (State)Volatile.Read(ref MemoryMarshal.GetReference(MemoryMarshal.Cast<State, byte>(MemoryMarshal.CreateSpan(ref _state, 1)))) ==
+                    State.Completed; 
             }
         }
 
@@ -73,8 +75,14 @@ namespace AKNet.Udp2MSQuic.Common
                 State state = _state;
                 if (state == State.None)
                 {
+                    if (keepAlive != null)
+                    {
+                        Debug.Assert(!_keepAlive.IsAllocated);
+                        _keepAlive = GCHandle.Alloc(keepAlive);
+                    }
                     _state = State.Awaiting;
                 }
+
                 if (state == State.None || state == State.Ready || state == State.Completed)
                 {
                     _hasWaiter = true;
@@ -128,7 +136,7 @@ namespace AKNet.Udp2MSQuic.Common
 
                     if (exception != null)
                     {
-                        exception = exception.StackTrace is null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
+                        exception = exception.StackTrace == null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
                         if (state == State.None || state == State.Awaiting)
                         {
                             _valueTaskSource.SetException(exception);
@@ -155,31 +163,21 @@ namespace AKNet.Udp2MSQuic.Common
                     }
                     return state != State.Ready;
                 }
-                catch (Exception e)
+                finally
                 {
-                    return false;
+                    if (_keepAlive.IsAllocated)
+                    {
+                        _keepAlive.Free();
+                    }
                 }
             }
         }
-
-        /// <summary>
-        /// Tries to transition from <see cref="State.Awaiting"/> to either <see cref="State.Ready"/> or <see cref="State.Completed"/>, depending on the value of <paramref name="final"/>.
-        /// Only the first call (with either value for <paramref name="final"/>) is able to do that. I.e.: <c>TrySetResult()</c> followed by <c>TrySetResult(true)</c> will both return <c>true</c>.
-        /// </summary>
-        /// <param name="final">Whether this is the final transition to <see cref="State.Completed" /> or just a transition into <see cref="State.Ready"/> from which the task source can be reset back to <see cref="State.None"/>.</param>
-        /// <returns><c>true</c> if this is the first call that set the result; otherwise, <c>false</c>.</returns>
+        
         public bool TrySetResult(bool final = false)
         {
             return TryComplete(null, final);
         }
 
-        /// <summary>
-        /// Tries to transition from <see cref="State.Awaiting"/> to either <see cref="State.Ready"/> or <see cref="State.Completed"/>, depending on the value of <paramref name="final"/>.
-        /// Only the first call is able to do that with the exception of <c>TrySetResult()</c> followed by <c>TrySetResult(true)</c>, which will both return <c>true</c>.
-        /// </summary>
-        /// <param name="final">Whether this is the final transition to <see cref="State.Completed" /> or just a transition into <see cref="State.Ready"/> from which the task source can be reset back to <see cref="State.None"/>.</param>
-        /// <param name="exception">The exception to set as a result of the value task.</param>
-        /// <returns><c>true</c> if this is the first call that set the result; otherwise, <c>false</c>.</returns>
         public bool TrySetException(Exception exception, bool final = false)
         {
             return TryComplete(exception, final);
@@ -211,8 +209,6 @@ namespace AKNet.Udp2MSQuic.Common
                     {
                         _valueTaskSource.Reset();
                         _state = State.None;
-
-                        // Propagate the _finalTaskSource result into _valueTaskSource if completed.
                         if (_finalTaskSource.TrySignal(out Exception? exception))
                         {
                             _state = State.Completed;

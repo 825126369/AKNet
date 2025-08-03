@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
@@ -18,6 +20,7 @@ namespace AKNet.Udp2MSQuic.Common
         private State _state;
         private ManualResetValueTaskSourceCore<bool> _valueTaskSource;
         private CancellationTokenRegistration _cancellationRegistration;
+        private GCHandle _keepAlive;
 
         public ValueTaskSource()
         {
@@ -30,8 +33,9 @@ namespace AKNet.Udp2MSQuic.Common
         {
             get
             {
-                byte b = (byte)_state;
-                return (State)Volatile.Read(ref b) == State.Completed;
+                return (State)Volatile.Read(
+                    ref MemoryMarshal.GetReference(MemoryMarshal.Cast<State, byte>(MemoryMarshal.CreateSpan(ref _state, 1)))) == 
+                    State.Completed;
             }
         }
 
@@ -54,14 +58,21 @@ namespace AKNet.Udp2MSQuic.Common
                     }
                 }
 
-                State state = _state;
-                if (state == State.None)
+                if (_state == State.None)
                 {
+                    if (keepAlive != null)
+                    {
+                        Debug.Assert(!_keepAlive.IsAllocated);
+                        _keepAlive = GCHandle.Alloc(keepAlive);
+                    }
+
                     _state = State.Awaiting;
                     return true;
                 }
-
-                return false;
+                else
+                {
+                    return false;
+                }
             }
         }
 
@@ -72,28 +83,37 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 lock (this)
                 {
-                    State state = _state;
-                    if (state != State.Completed)
+                    try
                     {
-                        _state = State.Completed;
-                        cancellationRegistration = _cancellationRegistration;
-                        _cancellationRegistration = default;
-
-                        if (exception != null)
+                        State state = _state;
+                        if (state != State.Completed)
                         {
-                            exception = exception.StackTrace is null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
-                            _valueTaskSource.SetException(exception);
-                        }
-                        else
-                        {
-                            _valueTaskSource.SetResult(true);
+                            _state = State.Completed;
+                            cancellationRegistration = _cancellationRegistration;
+                            _cancellationRegistration = default;
+
+                            if (exception != null)
+                            {
+                                exception = exception.StackTrace != null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
+                                _valueTaskSource.SetException(exception);
+                            }
+                            else
+                            {
+                                _valueTaskSource.SetResult(true);
+                            }
+
+                            return true;
                         }
 
-                        return true;
+                        return false;
                     }
-
-                    return false;
-
+                    finally
+                    {
+                        if (_keepAlive.IsAllocated)
+                        {
+                            _keepAlive.Free();
+                        }
+                    }
                 }
             }
             finally

@@ -19,7 +19,6 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly QuicConnectionOptions mOption;
         public readonly ConcurrentQueue<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueue<QuicStream>();
         public readonly EndPoint RemoteEndPoint;
-
         private readonly AKNetChannel<QuicStream> _acceptQueue = new AKNetChannel<QuicStream>(true);
         private int _disposed;
 
@@ -142,6 +141,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
             catch (Exception ex)
             {
+                NetLog.LogError(ex.ToString());
                 if (stream != null)
                 {
                     await stream.DisposeAsync().ConfigureAwait(false);
@@ -225,7 +225,6 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventShutdownComplete()
         {
-           // _tlsSecret?.WriteSecret();
             Exception exception = null;
             if (_disposed > 0)
             {
@@ -242,7 +241,7 @@ namespace AKNet.Udp2MSQuic.Common
             _shutdownTcs.TrySetResult(final: true);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
-
+        
         private int HandleEventLocalAddressChanged(ref QUIC_CONNECTION_EVENT.LOCAL_ADDRESS_CHANGED_DATA data)
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;

@@ -92,7 +92,7 @@ namespace AKNet.Udp2MSQuic.Server
             NetLog.Assert(mCert != null, "GetCert() == null");
             var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
             ServerAuthenticationOptions.ServerCertificate = mCert;
-
+            
             QuicConnectionOptions mOption = new QuicConnectionOptions();
             mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
             return mOption;

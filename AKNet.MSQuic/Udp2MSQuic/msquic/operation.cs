@@ -513,6 +513,11 @@ namespace AKNet.Udp2MSQuic.Common
             return HasPriorityWork;
         }
 
+        static QUIC_OPERATION QuicConnAllocOperation(QUIC_CONNECTION Connection, QUIC_OPERATION_TYPE Type)
+        {
+            return QuicOperationAlloc(Connection.Partition, Type);
+        }
+
         static QUIC_OPERATION QuicOperationAlloc(QUIC_PARTITION Partition, QUIC_OPERATION_TYPE Type)
         {
             QUIC_OPERATION Oper = Partition.OperPool.CxPlatPoolAlloc();
