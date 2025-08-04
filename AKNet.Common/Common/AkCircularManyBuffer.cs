@@ -21,11 +21,6 @@ namespace AKNet.Common
                 mBuffer = new byte[nBufferLength];
                 mBufferMemory = mBuffer;
             }
-            
-            public int RemainLength
-            {
-                get { return mBuffer.Length - nLength - nOffset; }
-            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanWriteSpan()
@@ -43,11 +38,6 @@ namespace AKNet.Common
             {
                 this.nOffset = 0;
                 this.nLength = 0;
-            }
-            
-            public bool orHaveData()
-            {
-                return this.nLength > 0;
             }
         }
 
@@ -107,9 +97,9 @@ namespace AKNet.Common
                 }
 
                 BufferItem mBufferItem = nCurrentWriteBlock.Value;
-                int nRemainLength = mBufferItem.RemainLength;
-                int nCopyLength = Math.Min(mBufferItem.RemainLength, buffer.Length);
-                buffer.Slice(0, nCopyLength).CopyTo(mBufferItem.GetCanWriteSpan());
+                Span<byte> mBufferSpan = mBufferItem.GetCanWriteSpan();
+                int nCopyLength = Math.Min(mBufferSpan.Length, buffer.Length);
+                buffer.Slice(0, nCopyLength).CopyTo(mBufferSpan);
                 buffer = buffer.Slice(nCopyLength);
                 mBufferItem.nLength += nCopyLength;
 
@@ -130,6 +120,11 @@ namespace AKNet.Common
             int nReadLength = 0;
             while (true)
             {
+                if(nCurrentReadBlock == null)
+                {
+                    break;
+                }
+
                 BufferItem mBufferItem = nCurrentReadBlock.Value;
                 ReadOnlySpan<byte> mBufferSpan = mBufferItem.GetCanReadSpan();
                 if (mBufferSpan.IsEmpty)
@@ -152,6 +147,7 @@ namespace AKNet.Common
                 if (mBufferItem.GetCanReadSpan().IsEmpty)
                 {
                     nCurrentWriteBlock = nCurrentWriteBlock.Next;
+                    mBufferItem.Reset();
                     mItemList.Remove(mBufferItem.mEntry);
                     mItemList.AddLast(mBufferItem.mEntry);
                 }
