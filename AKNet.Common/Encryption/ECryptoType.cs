@@ -13,4 +13,9 @@ namespace AKNet.Common
         None = 0,
         Xor = 1,
     }
+
+    public static class ECryptoConfig
+    {
+        public const ECryptoType nECryptoType = ECryptoType.None;
+    }
 }

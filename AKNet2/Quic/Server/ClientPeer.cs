@@ -14,7 +14,7 @@ using System.Net.Quic;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeer : TcpClientPeerCommonBase, TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal class ClientPeer: TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
@@ -69,7 +69,7 @@ namespace AKNet.Quic.Server
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= mNetServer.mConfig.fMySendHeartBeatMaxTime)
+					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
 						SendHeartBeat();
 						fSendHeartBeatTime = 0.0;
@@ -77,7 +77,7 @@ namespace AKNet.Quic.Server
 
                     double fHeatTime = Math.Min(0.3, elapsed);
                     fReceiveHeartBeatTime += fHeatTime;
-					if (fReceiveHeartBeatTime >= mNetServer.mConfig.fReceiveHeartBeatTimeOut)
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 					{
 						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
@@ -179,11 +179,6 @@ namespace AKNet.Quic.Server
         public string GetName()
         {
             return this.Name;
-        }
-
-        public Config GetConfig()
-        {
-            return mNetServer.mConfig;
         }
     }
 }

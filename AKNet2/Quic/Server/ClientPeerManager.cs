@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System.Net.Quic;
 
 namespace AKNet.Quic.Server
@@ -48,7 +49,7 @@ namespace AKNet.Quic.Server
 		public bool MultiThreadingHandleConnectedSocket(QuicConnection connection)
 		{
 			int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
-			if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
+			if (nNowConnectCount >= Config.MaxPlayerCount)
 			{
 #if DEBUG
 				NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");

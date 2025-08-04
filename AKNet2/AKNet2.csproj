@@ -6,8 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
+	</ItemGroup>
 </Project>

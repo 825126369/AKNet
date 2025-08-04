@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet.Platform", "AKNet.Pla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet.MSQuic", "AKNet.MSQuic\AKNet.MSQuic.csproj", "{0352BC39-DD9A-41C3-92B4-5173B11B222E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet2", "AKNet2\AKNet2.csproj", "{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CopyrightProtectionTool", "CopyrightProtectionTool\CopyrightProtectionTool.csproj", "{B1798EC5-F6E9-4A5E-855D-00249B2E3340}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "githubExample", "githubExample\githubExample.csproj", "{A9869E10-588F-4535-84C0-32AF3FF41053}"
@@ -56,6 +54,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet.Common", "AKNet.Common\AKNet.Common.csproj", "{74369C2B-4DB4-4A1B-A0F1-E345EE4AFE44}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkNetEditorTest", "Test\AkNetTest\AkNetEditorTest\AkNetEditorTest.csproj", "{0F441667-9731-254D-9F0D-7037F3FCA9D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKNet2", "AKNet2\AKNet2.csproj", "{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -127,18 +127,6 @@ Global
 		{0352BC39-DD9A-41C3-92B4-5173B11B222E}.Release|x64.Build.0 = Release|Any CPU
 		{0352BC39-DD9A-41C3-92B4-5173B11B222E}.Release|x86.ActiveCfg = Release|Any CPU
 		{0352BC39-DD9A-41C3-92B4-5173B11B222E}.Release|x86.Build.0 = Release|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Debug|x64.Build.0 = Debug|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Debug|x86.Build.0 = Debug|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Release|x64.ActiveCfg = Release|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Release|x64.Build.0 = Release|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Release|x86.ActiveCfg = Release|Any CPU
-		{2AA0386D-EC88-45B1-BA5B-C2874EB4AD88}.Release|x86.Build.0 = Release|Any CPU
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1798EC5-F6E9-4A5E-855D-00249B2E3340}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -331,6 +319,18 @@ Global
 		{0F441667-9731-254D-9F0D-7037F3FCA9D5}.Release|x64.Build.0 = Release|Any CPU
 		{0F441667-9731-254D-9F0D-7037F3FCA9D5}.Release|x86.ActiveCfg = Release|Any CPU
 		{0F441667-9731-254D-9F0D-7037F3FCA9D5}.Release|x86.Build.0 = Release|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Debug|x64.Build.0 = Debug|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Debug|x86.Build.0 = Debug|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Release|x64.ActiveCfg = Release|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Release|x64.Build.0 = Release|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Release|x86.ActiveCfg = Release|Any CPU
+		{A8708ED6-D8AB-6C82-BA26-77E66BC0BA90}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

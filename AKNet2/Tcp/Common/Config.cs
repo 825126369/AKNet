@@ -10,16 +10,16 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    internal class Config
+    internal static class Config
     {
         //Common
         public const bool bUseSocketLock = false;
         public const int nIOContexBufferLength = 1024;
         public const int nDataMaxLength = ushort.MaxValue;
-        public readonly double fReceiveHeartBeatTimeOut = 5.0;
-        public readonly double fMySendHeartBeatMaxTime = 2.0;
-        public readonly double fReConnectMaxCdTime = 3.0;
-        public readonly int MaxPlayerCount = 10000;
-        public readonly ECryptoType nECryptoType = ECryptoType.None;
+        public const double fReceiveHeartBeatTimeOut = 5.0;
+        public const double fMySendHeartBeatMaxTime = 2.0;
+        public const double fReConnectMaxCdTime = 3.0;
+        public const int MaxPlayerCount = 10000;
+        public const ECryptoType nECryptoType = ECryptoType.None;
     }
 }

@@ -25,7 +25,6 @@ namespace AKNet.Tcp.Server
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        internal readonly Config mConfig = null;
 
         public TcpServer()
         {
@@ -39,9 +38,9 @@ namespace AKNet.Tcp.Server
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
 
-            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
-            mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
+            mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
         public SOCKET_SERVER_STATE GetServerState()

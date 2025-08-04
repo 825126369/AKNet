@@ -219,7 +219,9 @@ namespace AKNet.Udp2MSQuic.Common
             WaitingLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
             ClosedLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
             SendLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+#if DEBUG
             AllStreamsLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+#endif
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_STREAM> GetEntry()

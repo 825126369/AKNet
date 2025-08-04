@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\AKNet2\AKNet2.csproj" />
-    <ProjectReference Include="..\..\TestCommon\TestCommon.csproj" />
-	<ProjectReference Include="..\..\..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
+	  <ProjectReference Include="..\..\TestCommon\TestCommon.csproj" />
+	  <ProjectReference Include="..\..\..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
+	  <ProjectReference Include="..\..\..\AKNet2\AKNet2.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Collections.Generic;
+using AKNet.Tcp.Common;
 using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
@@ -49,7 +49,7 @@ namespace AKNet.Tcp.Server
 		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
 		{
 			int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
-			if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
+			if (nNowConnectCount >= Config.MaxPlayerCount)
 			{
 #if DEBUG
 				NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");

@@ -11,7 +11,7 @@ using System.Text;
 
 namespace AKNet.Common
 {
-    internal class XORCrypto
+    public class XORCrypto
     {
         readonly byte[] key = Encoding.ASCII.GetBytes("2024/11/23");
         public XORCrypto(string password)
