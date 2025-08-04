@@ -15,9 +15,9 @@ namespace AKNet.Tcp.Server
     {
         TcpServer mServer = null;
 
-        public TcpNetServerMain(TcpConfig mUserConfig = null)
+        public TcpNetServerMain()
         {
-            mServer = new TcpServer(mUserConfig);
+            mServer = new TcpServer();
         }
 
         public void InitNet()

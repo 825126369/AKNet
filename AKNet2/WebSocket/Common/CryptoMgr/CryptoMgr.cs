@@ -20,25 +20,14 @@ namespace AKNet.WebSocket.Common
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
         readonly NetStreamEncryptionInterface mNetStreamEncryption = null;
-        readonly Config mConfig;
-        public CryptoMgr(Config mConfig)
+        public CryptoMgr()
         {
-            this.mConfig = mConfig;
-            ECryptoType nECryptoType = mConfig.nECryptoType;
-            string password1 = mConfig.CryptoPasswrod1;
-            string password2 = mConfig.CryptoPasswrod2;
-
-            ////Test
-            //nECryptoType = ECryptoType.Xor;
-            //password1 = "2024/11/23-0208";
-            //password2 = "2026/11/23-0208";
-
-            if (nECryptoType == ECryptoType.Xor)
-            {
-                var mCryptoInterface = new XORCrypto(password1);
-                mNetStreamEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
-            }
-            else
+            //if (nECryptoType == ECryptoType.Xor)
+            //{
+            //    var mCryptoInterface = new XORCrypto(password1);
+            //    mNetStreamEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
+            //}
+            //else
             {
                 mNetStreamEncryption = new NetStreamEncryption();
             }

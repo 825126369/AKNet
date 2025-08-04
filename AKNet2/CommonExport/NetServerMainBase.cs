@@ -33,24 +33,6 @@ namespace AKNet.Common
             }
         }
 
-        public NetServerMainBase(NetConfigInterface IConfig)
-        {
-            if (IConfig == null)
-            {
-                NetLog.LogError("IConfig == null");
-                return;
-            }
-
-            if (IConfig is TcpConfig)
-            {
-                mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
-            }
-            else
-            {
-                NetLog.LogError("Unsupported network type: " + IConfig.GetType().Name);
-            }
-        }
-
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mInterface.addListenClientPeerStateFunc(mFunc);

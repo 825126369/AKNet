@@ -15,9 +15,9 @@ namespace AKNet.Quic.Server
     {
         QuicServer mServer = null;
 
-        public QuicNetServerMain(TcpConfig mUserConfig = null)
+        public QuicNetServerMain()
         {
-            mServer = new QuicServer(mUserConfig);
+            mServer = new QuicServer();
         }
 
         public void InitNet()

@@ -8,16 +8,11 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Common
 {
-    public class TcpConfig : NetConfigInterface
+    public enum NetType
     {
-        public double fReceiveHeartBeatTimeOut = 5.0;
-        public double fMySendHeartBeatMaxTime = 2.0;
-        public double fReConnectMaxCdTime = 3.0;
-        //Server
-        public int MaxPlayerCount = 10000;
-        //加解密
-        public ECryptoType nECryptoType = ECryptoType.None;
-        public string CryptoPasswrod1 = string.Empty;
-        public string CryptoPasswrod2 = string.Empty;
+        TCP,
+        Quic,
+        WebSocket,
     }
 }
+

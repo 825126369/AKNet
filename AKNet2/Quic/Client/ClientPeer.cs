@@ -29,19 +29,10 @@ namespace AKNet.Quic.Client
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
 
-        public ClientPeer(TcpConfig mUserConfig)
+        public ClientPeer()
         {
             NetLog.Init();
-            if (mUserConfig == null)
-            {
-                this.mConfig = new Config();
-            }
-            else
-            {
-                this.mConfig = new Config(mUserConfig);
-            }
-
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new QuicConnectionMgr(this);

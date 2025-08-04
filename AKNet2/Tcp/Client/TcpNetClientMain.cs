@@ -15,9 +15,9 @@ namespace AKNet.Tcp.Client
     {
         private ClientPeer mClientPeer;
 
-        public TcpNetClientMain(TcpConfig mUserConfig = null)
+        public TcpNetClientMain()
         {
-            mClientPeer = new ClientPeer(mUserConfig);
+            mClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)

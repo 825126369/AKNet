@@ -27,19 +27,11 @@ namespace AKNet.Tcp.Server
         internal readonly CryptoMgr mCryptoMgr = null;
         internal readonly Config mConfig = null;
 
-        public TcpServer(TcpConfig mUserConfig = null)
+        public TcpServer()
         {
             NetLog.Init();
-            if (mUserConfig == null)
-            {
-                this.mConfig = new Config();
-            }
-            else
-            {
-                this.mConfig = new Config(mUserConfig);
-            }
 
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new TcpNetPackage();
