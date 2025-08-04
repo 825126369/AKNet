@@ -33,6 +33,12 @@ namespace AKNet.Common
                 return mBufferMemory.Span.Slice(nLength + nOffset); 
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Span<byte> GetCanReadSpan()
+            {
+                return mBufferMemory.Span.Slice(nOffset, nLength);
+            }
+
             public void Reset()
             {
                 this.nOffset = 0;
@@ -60,7 +66,7 @@ namespace AKNet.Common
             for (int i = 0; i < nInitBlockCount; i++)
             {
                 BufferItem mItem = new BufferItem(BlockSize);
-                mItemList.AddLast(mItem);
+                mItemList.AddLast(mItem.mEntry);
             }
 
             nCurrentWriteBlock = mItemList.First;
@@ -73,9 +79,8 @@ namespace AKNet.Common
             for (int i = 0; i < nInitBlockCount; i++)
             {
                 BufferItem mItem = new BufferItem(BlockSize);
-                mItemList.AddLast(mItem);
+                mItemList.AddLast(mItem.mEntry);
             }
-
             nCurrentWriteBlock = mItemList.First;
             nCurrentReadBlock = mItemList.First;
         }
@@ -87,8 +92,20 @@ namespace AKNet.Common
 
         public void WriteFrom(ReadOnlySpan<byte> buffer)
         {
+            if (buffer.IsEmpty)
+            {
+                return;
+            }
+
             while (true)
             {
+                if(nCurrentWriteBlock == null)
+                {
+                    BufferItem mItem = new BufferItem(BlockSize);
+                    mItemList.AddLast(mItem.mEntry);
+                    nCurrentWriteBlock = mItem.mEntry;
+                }
+
                 BufferItem mBufferItem = nCurrentWriteBlock.Value;
                 int nRemainLength = mBufferItem.RemainLength;
                 int nCopyLength = Math.Min(mBufferItem.RemainLength, buffer.Length);
@@ -108,10 +125,41 @@ namespace AKNet.Common
             }
         }
 
-        public void WriteTo(ReadOnlySpan<byte> buffer, int offset, int length)
+        public int WriteTo(Span<byte> buffer)
         {
+            int nReadLength = 0;
+            while (true)
+            {
+                BufferItem mBufferItem = nCurrentReadBlock.Value;
+                ReadOnlySpan<byte> mBufferSpan = mBufferItem.GetCanReadSpan();
+                if (mBufferSpan.IsEmpty)
+                {
+                    break;
+                }
 
+                int nCopyLength = Math.Min(mBufferItem.nLength, buffer.Length);
+                mBufferSpan.Slice(0, nCopyLength).CopyTo(buffer);
+                buffer = buffer.Slice(nCopyLength);
+                mBufferItem.nOffset += nCopyLength;
+                mBufferItem.nLength -= nCopyLength;
+                nReadLength += nCopyLength;
+
+                if (buffer.Length == 0)
+                {
+                    break;
+                }
+
+                if (mBufferItem.GetCanReadSpan().IsEmpty)
+                {
+                    nCurrentWriteBlock = nCurrentWriteBlock.Next;
+                    mItemList.Remove(mBufferItem.mEntry);
+                    mItemList.AddLast(mBufferItem.mEntry);
+                }
+            }
+
+            return nReadLength;
         }
+
 
     }
 }
