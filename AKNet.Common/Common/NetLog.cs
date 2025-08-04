@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
@@ -177,9 +178,9 @@ namespace AKNet.Common
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Assert(bool bTrue, object message = null)
         {
-            if (!bPrintLog) return;
             if (!bTrue)
             {
 #if DEBUG

@@ -8,7 +8,7 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 10;
+        public const int nClientCount = 100;
         public const int nPackageCount = 100;
         public const double fFrameInternalTime = 0;
         public const int nSumPackageCount = nClientCount * nPackageCount * 100;
@@ -47,7 +47,7 @@ namespace TestNetClient
             File.Delete(logFileName);
             for (int i = 0; i < nClientCount; i++)
             {
-                NetClientMain mNetClient = new NetClientMain(NetType.Udp2MSQuic);
+                NetClientMain mNetClient = new NetClientMain(NetType.Udp1MSQuic);
                 mClientList.Add(mNetClient);
                 mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
                 mNetClient.ConnectServer("127.0.0.1", 6000);

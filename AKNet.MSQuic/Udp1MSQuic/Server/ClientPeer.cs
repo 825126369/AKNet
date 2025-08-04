@@ -64,6 +64,7 @@ namespace AKNet.Udp1MSQuic.Server
 			}
 
 			mMsgReceiveMgr.Update(elapsed);
+			mSocketMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:

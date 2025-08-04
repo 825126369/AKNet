@@ -41,9 +41,7 @@ namespace AKNet.Udp1MSQuic.Server
 			this.mQuicConnection = connection;
             this.mQuicConnection.mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
             this.mQuicConnection.mOption.SendFinishFunc = SendFinishFunc;
-            this.mQuicConnection.RequestReceiveStreamData();
             mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
-
             this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
@@ -56,11 +54,20 @@ namespace AKNet.Udp1MSQuic.Server
             }
             return mRemoteEndPoint;
         }
+
+        public void Update(double elapsed)
+        {
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                this.mQuicConnection.RequestReceiveStreamData();
+            }
+        }
         
         private void ReceiveStreamDataFunc(QuicStream mQuicStream)
         {
             if (mQuicStream != null)
             {
+                int nLoopCount = 0;
                 do
                 {
                     int nLength = mQuicStream.Read(mReceiveBuffer);
@@ -72,7 +79,7 @@ namespace AKNet.Udp1MSQuic.Server
                     {
                         break;
                     }
-                } while (true);
+                } while (nLoopCount++ < 8);
             }
         }
 

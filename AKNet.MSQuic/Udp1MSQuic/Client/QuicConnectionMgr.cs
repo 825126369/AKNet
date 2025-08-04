@@ -82,7 +82,6 @@ namespace AKNet.Udp1MSQuic.Client
             NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
             mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
-            mQuicConnection.RequestReceiveStreamData();
         }
 
         private void CloseFinishFunc()
@@ -104,10 +103,19 @@ namespace AKNet.Udp1MSQuic.Client
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
+        public void Update(double elapsed)
+        {
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                this.mQuicConnection.RequestReceiveStreamData();
+            }
+        }
+
         private void ReceiveStreamDataFunc(QuicStream mQuicStream)
         {
             if (mQuicStream != null)
             {
+                int nLoopCount = 0;
                 do
                 {
                     int nLength = mQuicStream.Read(mReceiveBuffer);
@@ -119,7 +127,7 @@ namespace AKNet.Udp1MSQuic.Client
                     {
                         break;
                     }
-                } while (true);
+                } while (nLoopCount++ < 8);
             }
         }
 

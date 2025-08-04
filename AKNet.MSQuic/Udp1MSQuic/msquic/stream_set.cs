@@ -352,7 +352,6 @@ namespace AKNet.Udp1MSQuic.Common
             if (StreamCount <= Info.TotalStreamCount)
             {
                 Stream = QuicStreamSetLookupStream(StreamSet, StreamId);
-
             }
             else if (CreateIfMissing)
             {
@@ -400,7 +399,6 @@ namespace AKNet.Udp1MSQuic.Common
                     Info.TotalStreamCount++;
 
                     QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
-
                     QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                     Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED;
                     Event.PEER_STREAM_STARTED.Stream = Stream;

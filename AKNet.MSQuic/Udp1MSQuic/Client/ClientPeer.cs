@@ -53,7 +53,8 @@ namespace AKNet.Udp1MSQuic.Client
             }
 
             mMsgReceiveMgr.Update(elapsed);
-			switch (mSocketPeerState)
+            mSocketMgr.Update(elapsed);
+            switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;

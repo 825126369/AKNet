@@ -90,7 +90,6 @@ namespace AKNet.Udp1MSQuic.Common
         {
             QuicStream stream = new QuicStream(this, nType);
             stream.Start();
-            mReceiveStreamDataQueue.Enqueue(stream);
             return stream;
         }
 
@@ -154,6 +153,7 @@ namespace AKNet.Udp1MSQuic.Common
         {
             QuicStream stream = new QuicStream(this, data.Stream, data.Flags);
             data.Flags |= QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES;
+            mReceiveStreamDataQueue.Enqueue(stream);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 

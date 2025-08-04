@@ -24,11 +24,9 @@ namespace AKNet.Udp1MSQuic.Common
         private readonly AkCircularBuffer _receiveBuffers = new AkCircularBuffer();
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
-        private int _sendLocked;
         private Exception? _sendException;
 
         private const ulong _defaultErrorCode = 100;
-
         private readonly bool _canRead;
         private readonly bool _canWrite;
         public ulong _id;
@@ -101,42 +99,6 @@ namespace AKNet.Udp1MSQuic.Common
             }
         }
 
-        private void WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites)
-        {
-            Write(buffer, completeWrites);
-        }
-
-        private void Write(ReadOnlyMemory<byte> buffer, bool completeWrites)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            if (!_canWrite)
-            {
-                return;
-            }
-
-            if (buffer.IsEmpty)
-            {
-                return;
-            }
-
-            if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
-            {
-                _sendBuffers.Initialize(buffer);
-                QUIC_SEND_FLAGS Flag = completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE;
-                int status = MSQuicFunc.MsQuicStreamSend(_handle, _sendBuffers.Buffers, _sendBuffers.Count, Flag, this);
-                if (MSQuicFunc.QUIC_FAILED(status))
-                {
-                    NetLog.LogError("MsQuicStreamSend Error");
-                    _sendBuffers.Reset();
-                    Volatile.Write(ref _sendLocked, 0);
-                }
-            }
-        }
-
         public void CompleteWrites()
         {
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
@@ -178,8 +140,6 @@ namespace AKNet.Udp1MSQuic.Common
             }
             
             data.TotalBufferLength = (int)totalCopied;
-            mConnection.mOption.ReceiveStreamDataFunc?.Invoke(this);
-
             if (_receiveBuffers.Length < MaxBufferedBytes && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;
@@ -193,11 +153,10 @@ namespace AKNet.Udp1MSQuic.Common
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
-            //Volatile.Write(ref _sendLocked, 0);
-            //Exception? exception = Volatile.Read(ref _sendException);
             mConnection.mOption.SendFinishFunc?.Invoke(this);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
+
         private int HandleEventPeerSendShutdown()
         {
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
