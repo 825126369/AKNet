@@ -9,7 +9,7 @@ namespace TestNetClient
     public class NetHandler
     {
         public const int nClientCount = 100;
-        public const int nSingleSendPackageCount = 1;
+        public const int nSingleSendPackageCount = 100;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
@@ -77,19 +77,20 @@ namespace TestNetClient
             if (fSumTime > fFrameInternalTime)
             {
                 fSumTime = 0;
-                for (int i = 0; i < nClientCount; i++)
+                for (int j = 0; j < nSingleSendPackageCount; j++)
                 {
-                    var mNetClient = mClientList[i];
-                    if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                    for (int i = 0; i < nClientCount; i++)
                     {
-                        if (mClientSendPackageCount[i] < nSingleCleintSendMaxPackageCount)
+                        var mNetClient = mClientList[i];
+                        if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                         {
-                            for (int j = 0; j < nSingleSendPackageCount; j++)
+                            if (mClientSendPackageCount[i] < nSingleCleintSendMaxPackageCount)
                             {
+
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                 mdata.NSortId = ++mClientSendIdArray[i];
                                 mdata.NClientId = (uint)i;
-                                if (RandomTool.Random(2, 2) == 1)
+                                if (RandomTool.Random(1, 2) == 1)
                                 {
                                     mdata.TalkMsg = TalkMsg1;
                                 }
@@ -120,6 +121,7 @@ namespace TestNetClient
                                 {
                                     break;
                                 }
+
                             }
                         }
                     }
