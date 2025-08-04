@@ -13,7 +13,7 @@ namespace TestNetServer
         private double fDuringTime;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.Udp5MSQuic);
+            mNetServer = new NetServerMain(NetType.Udp4LinuxTcp);
             mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetServer.InitNet(6000);
         }

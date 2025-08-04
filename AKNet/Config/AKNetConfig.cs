@@ -20,6 +20,5 @@ namespace AKNet.Common
         Udp2Tcp,
         Udp3Tcp,
         Udp4LinuxTcp,
-        Udp5MSQuic,
     }
 }
