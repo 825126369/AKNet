@@ -8,7 +8,9 @@
 ************************************Copyright*****************************************/
 using System.Runtime.CompilerServices;
 using System.Threading;
-
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
     internal static class MainThreadCheck

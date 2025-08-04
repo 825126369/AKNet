@@ -7,10 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
-    public static class NetLogHelper
+    internal static class NetLogHelper
     {
         public static void PrintByteArray(string tag, ReadOnlySpan<byte> message)
         {
