@@ -8,10 +8,13 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
-
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
-    public class ListenNetPackageMgr
+    internal class ListenNetPackageMgr
 	{
 		private readonly Dictionary<ushort, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
 		private event Action<ClientPeerBase, NetPackage> mCommonListenFunc = null;

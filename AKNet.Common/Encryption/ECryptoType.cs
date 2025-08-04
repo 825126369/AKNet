@@ -6,15 +6,19 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
-    public enum ECryptoType
+    internal enum ECryptoType
     {
         None = 0,
         Xor = 1,
     }
 
-    public static class ECryptoConfig
+    internal static class ECryptoConfig
     {
         public const ECryptoType nECryptoType = ECryptoType.None;
     }
