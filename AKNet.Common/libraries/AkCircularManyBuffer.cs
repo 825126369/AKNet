@@ -48,6 +48,7 @@ namespace AKNet.Common
         private readonly int BlockSize = 16 * 1024;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
         private LinkedListNode<BufferItem> nCurrentReadBlock;
+        private int nSumByteCount;
 
         public AkCircularManyBuffer()
         {
@@ -63,6 +64,7 @@ namespace AKNet.Common
 
             nCurrentWriteBlock = mItemList.First;
             nCurrentReadBlock = mItemList.First;
+            nSumByteCount = 0;
         }
 
         public AkCircularManyBuffer(int nInitBlockCount, int nBlockSize)
@@ -75,11 +77,15 @@ namespace AKNet.Common
             }
             nCurrentWriteBlock = mItemList.First;
             nCurrentReadBlock = mItemList.First;
+            nSumByteCount = 0;
         }
 
-        public void ResizeItemList()
+        public int Length
         {
-
+            get
+            {
+                return nSumByteCount;
+            }
         }
 
         public void WriteFrom(ReadOnlySpan<byte> buffer)
@@ -104,7 +110,7 @@ namespace AKNet.Common
                 buffer.Slice(0, nCopyLength).CopyTo(mBufferSpan);
                 buffer = buffer.Slice(nCopyLength);
                 mBufferItem.nLength += nCopyLength;
-
+                nSumByteCount += nCopyLength;
                 if (buffer.IsEmpty)
                 {
                     break;
@@ -122,7 +128,7 @@ namespace AKNet.Common
             int nReadLength = 0;
             while (true)
             {
-                if(nCurrentReadBlock == null)
+                if (nCurrentReadBlock == null)
                 {
                     break;
                 }
@@ -134,12 +140,13 @@ namespace AKNet.Common
                     break;
                 }
 
-                int nCopyLength = Math.Min(mBufferItem.nLength, buffer.Length);
+                int nCopyLength = Math.Min(mBufferSpan.Length, buffer.Length);
                 mBufferSpan.Slice(0, nCopyLength).CopyTo(buffer);
                 buffer = buffer.Slice(nCopyLength);
                 mBufferItem.nOffset += nCopyLength;
                 mBufferItem.nLength -= nCopyLength;
                 nReadLength += nCopyLength;
+                nSumByteCount -= nCopyLength;
 
                 if (buffer.Length == 0)
                 {
@@ -148,10 +155,17 @@ namespace AKNet.Common
 
                 if (mBufferItem.GetCanReadSpan().IsEmpty)
                 {
-                    nCurrentWriteBlock = nCurrentWriteBlock.Next;
-                    mBufferItem.Reset();
-                    mItemList.Remove(mBufferItem.mEntry);
-                    mItemList.AddLast(mBufferItem.mEntry);
+                    if (nCurrentReadBlock == nCurrentWriteBlock)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        nCurrentReadBlock = nCurrentReadBlock.Next;
+                        mBufferItem.Reset();
+                        mItemList.Remove(mBufferItem.mEntry);
+                        mItemList.AddLast(mBufferItem.mEntry);
+                    }
                 }
             }
 

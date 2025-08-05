@@ -21,7 +21,7 @@ namespace AKNet.Udp1MSQuic.Common
     {
         private readonly QUIC_STREAM _handle;
         private bool _disposed;
-        private readonly AkCircularBuffer _receiveBuffers = new AkCircularBuffer();
+        private readonly AkCircularManyBuffer _receiveBuffers = new AkCircularManyBuffer();
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private Exception? _sendException;
@@ -73,7 +73,7 @@ namespace AKNet.Udp1MSQuic.Common
             int totalCopied = 0;
             lock (_receiveBuffers)
             {
-                int copied = _receiveBuffers.WriteToMax(0, buffer.Span);
+                int copied = _receiveBuffers.WriteTo(buffer.Span);
                 totalCopied += copied;
             }
             
