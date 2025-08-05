@@ -117,20 +117,33 @@ namespace AKNet.Quic.Client
                 while (mQuicConnection != null)
                 {
                     QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    if (mQuicStream != null)
+                    StartProcessStreamReceive(mQuicStream);
+                }
+            }
+            catch (Exception e)
+            {
+                NetLog.LogError(e.ToString());
+                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            }
+        }
+
+        private async void StartProcessStreamReceive(QuicStream mQuicStream)
+        {
+            try
+            {
+                if (mQuicStream != null)
+                {
+                    while (true)
                     {
-                        while (true)
+                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                        if (nLength > 0)
                         {
-                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
-                            if (nLength > 0)
-                            {
-                                //NetLog.Log("Receive NetStream: " + nLength);
-                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                        }
+                        else
+                        {
+                            NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
+                            break;
                         }
                     }
                 }
@@ -141,7 +154,7 @@ namespace AKNet.Quic.Client
                 this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
-        
+
         public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
         {
             lock (mSendStreamList)

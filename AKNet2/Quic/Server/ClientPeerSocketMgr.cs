@@ -64,29 +64,42 @@ namespace AKNet.Quic.Server
 				while (mQuicConnection != null)
 				{
 					QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    if (mQuicStream != null)
-                    {
-                        while (true)
-						{
-                            int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
-							if (nLength > 0)
-							{
-                                //NetLog.Log("Receive NetStream: " + nLength);
-                                mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-							}
-							else
-							{
-								break;
-                            }
-                        }
-					}
+                    StartProcessStreamReceive(mQuicStream);
                 }
 			}
 			catch (Exception e)
 			{
-				//NetLog.LogError(e.ToString());
+				NetLog.LogError(e.ToString());
 				this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			}
+        }
+
+        private async void StartProcessStreamReceive(QuicStream mQuicStream)
+        {
+            try
+            {
+                if (mQuicStream != null)
+                {
+                    while (true)
+                    {
+                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                        if (nLength > 0)
+                        {
+                            mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                        }
+                        else
+                        {
+                            NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                NetLog.LogError(e.ToString());
+                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            }
         }
 
         public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
