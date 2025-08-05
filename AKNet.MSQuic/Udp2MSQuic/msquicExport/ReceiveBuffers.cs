@@ -1,93 +1,52 @@
 
 
+using AKNet.Common;
 using System;
 
 namespace AKNet.Udp2MSQuic.Common
 {
-    internal struct ReceiveBuffers
+    internal class ReceiveBuffers
     {
-        private const int MaxBufferedBytes = 64 * 1024;
-
-        private readonly object _syncRoot;
-        private MultiArrayBuffer _buffer;
-        private bool _final;
-
-        public ReceiveBuffers()
-        {
-            _syncRoot = new object();
-            _buffer = default;
-            _final = default;
-        }
-
-        public void Init()
-        {
-
-        }
-
-        public void SetFinal()
-        {
-            lock (_syncRoot)
-            {
-                _final = true;
-            }
-        }
+        private const int MaxBufferedBytes = int.MaxValue;
+        private readonly object _syncRoot = new object();
+        private readonly AkCircularManyBuffer _buffer = new AkCircularManyBuffer();
 
         public bool HasCapacity()
         {
             lock (_syncRoot)
             {
-                return _buffer.ActiveMemory.Length < MaxBufferedBytes;
+                return _buffer.Length < MaxBufferedBytes;
             }
         }
 
-        public int CopyFrom(QUIC_BUFFER[] quicBuffers, int BufferCount, int totalLength, bool final)
+        public int CopyFrom(QUIC_BUFFER[] quicBuffers, int BufferCount, int totalLength)
         {
             lock (_syncRoot)
             {
-                if (_buffer.ActiveMemory.Length > MaxBufferedBytes - totalLength)
-                {
-                    totalLength = MaxBufferedBytes - _buffer.ActiveMemory.Length;
-                    final = false;
-                }
-
-                _final = final;
-                _buffer.EnsureAvailableSpace(totalLength);
-
                 int totalCopied = 0;
-                for (int i = 0; i < BufferCount; ++i)
+                if (_buffer.Length < MaxBufferedBytes)
                 {
-                    Span<byte> quicBuffer = quicBuffers[i].GetSpan();
-                    if (totalLength < quicBuffer.Length)
+                    foreach (var v in quicBuffers)
                     {
-                        quicBuffer = quicBuffer.Slice(0, totalLength);
+                        _buffer.WriteFrom(v.GetSpan());
+                        totalCopied += v.Length;
+                        if (_buffer.Length > MaxBufferedBytes)
+                        {
+                            break;
+                        }
                     }
-
-                    _buffer.AvailableMemory.CopyFrom(quicBuffer);
-                    _buffer.Commit(quicBuffer.Length);
-                    totalCopied += quicBuffer.Length;
-                    totalLength -= quicBuffer.Length;
                 }
                 return totalCopied;
             }
         }
 
-        public int CopyTo(Memory<byte> buffer, out bool completed, out bool empty)
+        public int CopyTo(Memory<byte> buffer)
         {
             lock (_syncRoot)
             {
-                int copied = 0;
-                if (!_buffer.IsEmpty)
-                {
-                    MultiMemory activeBuffer = _buffer.ActiveMemory;
-                    copied = Math.Min(buffer.Length, activeBuffer.Length);
-                    activeBuffer.Slice(0, copied).CopyTo(buffer.Span);
-                    _buffer.Discard(copied);
-                }
-
-                completed = _buffer.IsEmpty && _final;
-                empty = _buffer.IsEmpty;
-
-                return copied;
+                int nWriteLength = 0;
+                nWriteLength = _buffer.WriteTo(buffer.Span);
+                return nWriteLength;
             }
         }
     }

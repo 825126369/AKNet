@@ -119,7 +119,7 @@ namespace AKNet.Udp1MSQuic.Common
 
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            const int MaxBufferedBytes = 64 * 1024;
+            const int MaxBufferedBytes = int.MaxValue;
             int totalCopied = 0;
             lock (_receiveBuffers)
             {

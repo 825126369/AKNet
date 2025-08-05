@@ -151,7 +151,7 @@ namespace AKNet.Udp2MSQuic.Common
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
             int totalCopied = _receiveBuffers.CopyFrom(data.Buffers, data.BufferCount,
-                (int)data.TotalBufferLength, data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
+                (int)data.TotalBufferLength);
 
             if (totalCopied < data.TotalBufferLength)
             {
@@ -189,7 +189,6 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventPeerSendShutdown()
         {
-            _receiveBuffers.SetFinal();
             _receiveTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
@@ -320,25 +319,15 @@ namespace AKNet.Udp2MSQuic.Common
                     throw new InvalidOperationException();
                 }
 
-                int copied = _receiveBuffers.CopyTo(buffer, out bool complete, out bool empty);
+                int copied = _receiveBuffers.CopyTo(buffer);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
-                if (complete)
-                {
-                    _receiveTcs.TrySetResult(true);
-                }
-
-                if (totalCopied > 0 || !empty)
+                if (totalCopied > 0)
                 {
                     _receiveTcs.TrySetResult();
                 }
 
                 await valueTask.ConfigureAwait(false);
-                if (complete)
-                {
-                    break;
-                }
-
             } while (!buffer.IsEmpty && totalCopied == 0);
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
