@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
@@ -82,11 +83,13 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 
     internal class NetUdpFixedSizePackage : UdpNetPackage, IPoolItemInterface
 	{
+		public readonly LinkedListNode<NetUdpFixedSizePackage> mEntry;
 		public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = null;
 		public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = null;
 		public NetUdpFixedSizePackage()
 		{
-			buffer = new byte[Config.nUdpPackageFixedSize];
+			mEntry = new LinkedListNode<NetUdpFixedSizePackage>(this);
+            buffer = new byte[Config.nUdpPackageFixedSize];
 
 			if (Config.bUdpCheck)
 			{

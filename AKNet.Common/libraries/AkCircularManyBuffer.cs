@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
     //先前的循环Buffer 存在内存抖动的问题，这里就是为了缓解这个抖动问题

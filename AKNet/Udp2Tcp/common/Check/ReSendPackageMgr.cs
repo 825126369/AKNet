@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp2Tcp.Common
 {
@@ -16,7 +17,7 @@ namespace AKNet.Udp2Tcp.Common
         private UdpClientPeerCommonBase mClientPeer;
         private UdpCheckMgr mUdpCheckMgr;
 
-        private readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
+        private readonly LinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new LinkedList<NetUdpFixedSizePackage>();
         public ushort nCurrentWaitSendOrderId;
 
         private long nLastRequestOrderIdTime = 0;
@@ -49,7 +50,7 @@ namespace AKNet.Udp2Tcp.Common
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
                 int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
                 mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
-                mWaitCheckSendQueue.AddLast(mPackage);
+                mWaitCheckSendQueue.AddLast(mPackage.mEntry);
                 mPackage.mTimeOutGenerator_ReSend.Reset();
                 AddSendPackageOrderId();
             }

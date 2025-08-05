@@ -9,7 +9,9 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
     /// <summary>

@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
 
 namespace AKNet.Udp2Tcp.Common
@@ -26,6 +27,7 @@ namespace AKNet.Udp2Tcp.Common
 
 	internal class NetUdpFixedSizePackage : IPoolItemInterface
 	{
+		public LinkedListNode<NetUdpFixedSizePackage> mEntry;
 		public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = null;
 		public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = null;
 		public UInt16 nOrderId;
@@ -37,7 +39,8 @@ namespace AKNet.Udp2Tcp.Common
 
 		public NetUdpFixedSizePackage()
 		{
-			buffer = new byte[Config.nUdpPackageFixedSize];
+			mEntry = new LinkedListNode<NetUdpFixedSizePackage>(this);
+            buffer = new byte[Config.nUdpPackageFixedSize];
             mTcpStanardRTOTimer = new TcpStanardRTOTimer();
             mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
         }

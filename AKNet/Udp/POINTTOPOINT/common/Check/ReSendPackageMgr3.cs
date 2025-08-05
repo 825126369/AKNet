@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
@@ -15,7 +16,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
     {
         private UdpClientPeerCommonBase mClientPeer;
 
-        private readonly AkLinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new AkLinkedList<NetUdpFixedSizePackage>(100);
+        private readonly LinkedList<NetUdpFixedSizePackage> mWaitCheckSendQueue = new LinkedList<NetUdpFixedSizePackage>();
 
         private long nLastRequestOrderIdTime = 0;
         private int nLastRequestOrderId = 0;
@@ -34,7 +35,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public void Add(NetUdpFixedSizePackage mPackage)
         {
             mPackage.mTimeOutGenerator_ReSend.Reset();
-            mWaitCheckSendQueue.AddLast(mPackage);
+            mWaitCheckSendQueue.AddLast(mPackage.mEntry);
         }
 
         public void Update(double elapsed)
