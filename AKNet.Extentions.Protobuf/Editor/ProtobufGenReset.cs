@@ -6,6 +6,7 @@
 *        CreateTime:2024/11/28 7:14:05
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using Google.Protobuf;
 using System;
 using System.Collections.Generic;
@@ -65,7 +66,7 @@ namespace AKNet.Extentions.Protobuf.Editor
 
             foreach (var v in mClassList)
             {
-                EditorLog.Log("��ǰ����: " + v.Namespace + " | " + v.Name);
+                NetLog.Log("��ǰ����: " + v.Namespace + " | " + v.Name);
                 string mClassStr = string.Empty;
                 mClassStr += $"\tpublic sealed partial class {v.Name} : IProtobufResetInterface\n";
                 mClassStr += $"\t{{\n";
@@ -109,7 +110,7 @@ namespace AKNet.Extentions.Protobuf.Editor
                         }
                         else
                         {
-                            EditorLog.LogError($"��֧�ֵ����ͣ�{v2.PropertyType.Name} : {v2.Name}");
+                            NetLog.LogError($"��֧�ֵ����ͣ�{v2.PropertyType.Name} : {v2.Name}");
                         }
                     }
                 }
