@@ -7,11 +7,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using Google.Protobuf;
-using System;
 using System.Collections.Generic;
 
 namespace AKNet.Extentions.Protobuf
 {
+    internal static class MessageParserEx<T> where T : class, IMessage, IMessage<T>, new()
+    {
+        public static readonly MessageParser<T> Parser = new MessageParser<T>(factory);
+        private static T factory()
+        {
+            return new T();
+        }
+    }
+
     internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
 		public static readonly MessageParser<T> Parser = new MessageParser<T>(factory);
@@ -30,6 +38,11 @@ namespace AKNet.Extentions.Protobuf
 	{
 		readonly static Stack<T> mObjectPool = new Stack<T>();
 		private static int nMaxCapacity = 0;
+
+        static IMessagePool()
+        {
+            nMaxCapacity = 1;
+        }
 
         public static void SetMaxCapacity(int nCapacity)
         {

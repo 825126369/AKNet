@@ -129,7 +129,7 @@ namespace AKNet.Extentions.Protobuf.Editor
             {
                 NetLog.LogError(strOutput);
             }
-            process.WaitForExit();
+            process.WaitForExit(10 * 1000);
             process.Close();
         }
     }
