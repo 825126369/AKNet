@@ -11,6 +11,15 @@ using System.Collections.Generic;
 
 namespace AKNet.Extentions.Protobuf
 {
+    internal static class MessageParserEx<T> where T : class, IMessage, IMessage<T>, new()
+    {
+        public static readonly MessageParser<T> Parser = new MessageParser<T>(factory);
+        private static T factory()
+        {
+            return new T();
+        }
+    }
+
     internal static class MessageParserPool<T> where T : class, IMessage, IMessage<T>, IProtobufResetInterface, new()
 	{
 		public static readonly MessageParser<T> Parser = new MessageParser<T>(factory);

@@ -32,7 +32,7 @@ namespace TestNetServer
 
         private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
-            TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
+            TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
             //Console.WriteLine("ReceiveMessage: " + mdata.TalkMsg);
             peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
             IMessagePool<TESTChatMessage>.recycle(mdata);

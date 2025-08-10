@@ -23,7 +23,7 @@ namespace githubExample
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
-            TESTChatMessage mReceiveMsg = Protocol3Utility.getData<TESTChatMessage>(package);
+            TESTChatMessage mReceiveMsg = Proto3Tool.GetData<TESTChatMessage>(package);
             Console.WriteLine(mReceiveMsg.TalkMsg);
 
             SendMsg(clientPeer);

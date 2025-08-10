@@ -19,7 +19,7 @@ namespace AKNet.Extentions.Protobuf
         {
             if (mInterface.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ReadOnlySpan<byte> stream = Protocol3Utility.SerializePackage(data);
+                ReadOnlySpan<byte> stream = Proto3Tool.SerializePackage(data);
                 mInterface.SendNetData(nPackageId, stream);
             }
         }

@@ -132,7 +132,7 @@ namespace TestNetClient
 
         void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
-            TESTChatMessage mdata = Protocol3Utility.getData<TESTChatMessage>(mPackage);
+            TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
 
             nReceivePackageCount++;
             if (nReceivePackageCount % 1000 == 0)
