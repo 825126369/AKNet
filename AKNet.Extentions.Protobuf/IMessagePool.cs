@@ -6,7 +6,9 @@
 *        CreateTime:2024/11/28 7:14:04
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using Google.Protobuf;
+using System;
 using System.Collections.Generic;
 
 namespace AKNet.Extentions.Protobuf
@@ -82,7 +84,7 @@ namespace AKNet.Extentions.Protobuf
 		public static void recycle(T t)
 		{
 #if DEBUG
-            EditorLog.Assert(!orContain(t));
+            NetLog.Assert(!orContain(t));
 #endif
 
             t.Reset();
