@@ -10,7 +10,7 @@
 特点3： 实现了一个C# Quic版本，原封不动的保留了MSQuic最精华的代码，可以很轻松的与 MSQuic 保持代码同步。（Demo阶段）
 
 # 商务合作
-找份工作: 1426186059@qq.com, 微信: AAA-2025-666-888
+找份工作20K左右: 邮箱：1426186059@qq.com, 微信: AAA-2025-666-888
 
 ``` Main Example:
 using System.Diagnostics;
