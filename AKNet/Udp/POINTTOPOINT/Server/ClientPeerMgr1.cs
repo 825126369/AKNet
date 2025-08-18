@@ -57,7 +57,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 mClientDic.Remove(v);
                 PrintRemoveClientMsg(mClientPeer);
                 mClientPeer.CloseSocket();
-                mNetServer.GetClientPeerPool().recycle(mClientPeer);
             }
             mRemovePeerList.Clear();
         }
@@ -103,7 +102,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                     }
                     else
                     {
-                        mClientPeer = mNetServer.GetClientPeerPool().Pop();
+                        mClientPeer = new ClientPeer(mNetServer);
                         mClientDic.Add(nPeerId, mClientPeer);
                         FakeSocket mSocket = new FakeSocket(mNetServer);
                         mSocket.RemoteEndPoint = endPoint;

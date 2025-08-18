@@ -41,7 +41,6 @@ namespace AKNet.Tcp.Server
 				{
 					mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
-					mNetServer.mClientPeerPool.recycle(mClientPeer);
 				}
 			}
 		}
@@ -75,7 +74,7 @@ namespace AKNet.Tcp.Server
 			}
 			if (mSocket != null)
 			{
-				ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
+				ClientPeer clientPeer = new ClientPeer(mNetServer);
 				clientPeer.HandleConnectedSocket(mSocket);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

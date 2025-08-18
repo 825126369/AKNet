@@ -22,7 +22,6 @@ namespace AKNet.Udp3Tcp.Server
         private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ClientPeerMgr mClientPeerMgr = null;
 
-        public readonly ClientPeerPool mClientPeerPool = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig;
@@ -45,7 +44,6 @@ namespace AKNet.Udp3Tcp.Server
             mCryptoMgr = new CryptoMgr(mConfig);
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
-            mClientPeerPool = new ClientPeerPool(this, 0, GetConfig().MaxPlayerCount);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mFakeSocketMgr = new FakeSocketMgr(this);
@@ -94,11 +92,6 @@ namespace AKNet.Udp3Tcp.Server
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
-        }
-
-        public ClientPeerPool GetClientPeerPool()
-        {
-            return mClientPeerPool;
         }
 
         public SocketUdp_Server GetSocketMgr()

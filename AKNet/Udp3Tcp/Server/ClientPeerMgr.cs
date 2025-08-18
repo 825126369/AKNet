@@ -41,7 +41,6 @@ namespace AKNet.Udp3Tcp.Server
                     mClientList.RemoveAt(i);
                     mClientPeer.CloseSocket();
                     PrintRemoveClientMsg(mClientPeer);
-                    mNetServer.GetClientPeerPool().recycle(mClientPeer);
                 }
             }
         }
@@ -66,7 +65,7 @@ namespace AKNet.Udp3Tcp.Server
 
             if (mSocket != null)
             {
-                ClientPeer clientPeer = mNetServer.GetClientPeerPool().Pop();
+                ClientPeer clientPeer = new ClientPeer(mNetServer);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
