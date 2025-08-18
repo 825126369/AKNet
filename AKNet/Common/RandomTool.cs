@@ -7,12 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Security.Cryptography;
 
 namespace AKNet.Common
 {
     internal static partial class RandomTool
     {
-        private static readonly Random mRandom = new Random((int)(DateTime.Now.Ticks % int.MaxValue));
+        private static readonly Random mRandom = new Random(RandomNumberGenerator.GetInt32(int.MaxValue));
 
         public static double Random()
         {

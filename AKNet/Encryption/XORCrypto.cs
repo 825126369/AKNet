@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace AKNet.Common
@@ -16,7 +17,7 @@ namespace AKNet.Common
         readonly byte[] key = new byte[64];
         public XORCrypto(string password)
         {
-            RandomTool.Random(key);
+            RandomNumberGenerator.Fill(key);
             if (!string.IsNullOrWhiteSpace(password))
             {
                 key = Encoding.ASCII.GetBytes(password);

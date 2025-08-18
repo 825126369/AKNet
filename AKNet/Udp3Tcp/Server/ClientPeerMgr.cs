@@ -16,7 +16,7 @@ namespace AKNet.Udp3Tcp.Server
         private UdpServer mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeer> mClientList = new List<ClientPeer>();
-
+        
         public ClientPeerMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
