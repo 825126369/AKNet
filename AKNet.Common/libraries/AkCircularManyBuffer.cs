@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.QuicNet")]
 namespace AKNet.Common
 {
     //先前的循环Buffer 存在内存抖动的问题，这里就是为了缓解这个抖动问题
@@ -43,7 +44,7 @@ namespace AKNet.Common
             }
         }
 
-        private int nSumItemCount = 0;
+        private int nMaxBlockCount = 0;
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
         private readonly int BlockSize = 16 * 1024;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
@@ -55,7 +56,6 @@ namespace AKNet.Common
             int nInitBlockCount = 10;
             int nBlockSize = 16 * 1024;
             this.BlockSize = nBlockSize;
-
             for (int i = 0; i < nInitBlockCount; i++)
             {
                 BufferItem mItem = new BufferItem(BlockSize);
@@ -78,6 +78,11 @@ namespace AKNet.Common
             nCurrentWriteBlock = mItemList.First;
             nCurrentReadBlock = mItemList.First;
             nSumByteCount = 0;
+        }
+
+        public void SetMaxBlockCount(int nCount)
+        {
+            this.nMaxBlockCount = nCount;
         }
 
         public int Length
@@ -164,7 +169,10 @@ namespace AKNet.Common
                         nCurrentReadBlock = nCurrentReadBlock.Next;
                         mBufferItem.Reset();
                         mItemList.Remove(mBufferItem.mEntry);
-                        mItemList.AddLast(mBufferItem.mEntry);
+                        if (nMaxBlockCount == 0 || mItemList.Count < nMaxBlockCount)
+                        {
+                            mItemList.AddLast(mBufferItem.mEntry);
+                        }
                     }
                 }
             }
