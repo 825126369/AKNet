@@ -12,9 +12,12 @@ namespace AKNet.Common
         private static readonly string logFilePath = "aknet_Log.txt";
         private static readonly ConcurrentQueue<string> mLogQueue = new ConcurrentQueue<string>();
         private static readonly List<string> tempList = new List<string>();
+        private static bool IsShuttingDown = true;
+        private static bool bInWriteToFile = true;
 
         static LogFileMgr()
         {
+            IsShuttingDown = false;
             if (!Directory.Exists(logFileDir))
             {
                 Directory.CreateDirectory(logFileDir);
@@ -47,6 +50,7 @@ namespace AKNet.Common
 
         private static async void OnProcessExit(object sender, EventArgs e)
         {
+            IsShuttingDown = true;
             await FlushLogs(true);
         }
 
@@ -66,22 +70,49 @@ namespace AKNet.Common
 
         private static async Task FlushLogs(bool bFlushAll = false)
         {
-            tempList.Clear();
-            int nFlushMaxCount = bFlushAll ? int.MaxValue : 1000;
-            while (tempList.Count < nFlushMaxCount && mLogQueue.TryDequeue(out string log))
-            {
-                tempList.Add(log);
-            }
-
-            if (tempList.Count > 0)
+            if (bFlushAll)
             {
                 try
                 {
-                    await File.AppendAllLinesAsync(logFilePath, tempList);
+                    if (!bInWriteToFile)
+                    {
+                        bInWriteToFile = true;
+                        File.AppendAllLines(logFilePath, tempList);
+                        bInWriteToFile = false;
+                    }
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("File.AppendAllLinesAsync Error: " + e.ToString());
+                }
+            }
+            else
+            {
+                if (!bInWriteToFile)
+                {
+                    tempList.Clear();
+                    int nFlushMaxCount = bFlushAll ? int.MaxValue : 1000;
+                    while (tempList.Count < nFlushMaxCount && mLogQueue.TryDequeue(out string log))
+                    {
+                        tempList.Add(log);
+                    }
+
+                    if (tempList.Count > 0)
+                    {
+                        try
+                        {
+                            if (!bInWriteToFile)
+                            {
+                                bInWriteToFile = true;
+                                await File.AppendAllLinesAsync(logFilePath, tempList);
+                                bInWriteToFile = false;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("File.AppendAllLinesAsync Error: " + e.ToString());
+                        }
+                    }
                 }
             }
         }
