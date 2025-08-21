@@ -37,48 +37,46 @@ namespace AKNet.QuicNet.Server
 		{
 			MainThreadCheck.Check();
 			this.mQuicConnection = connection;
-            this.mQuicConnection.mOption.ReceiveStreamDataFunc = ReceiveStreamDataFunc;
-            this.mQuicConnection.mOption.SendFinishFunc = SendFinishFunc;
-            mSendQuicStream = mQuicConnection.OpenSendStream(QuicStreamType.Unidirectional);
+            mSendQuicStream = connection.OpenStream();
             this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         public IPEndPoint GetIPEndPoint()
         {
 			IPEndPoint mRemoteEndPoint = null;
-            if (mQuicConnection != null)
-            {
-                mRemoteEndPoint = mQuicConnection.RemoteEndPoint as IPEndPoint;
-            }
+            //if (mQuicConnection != null)
+            //{
+            //    mRemoteEndPoint = mQuicConnection.RemoteEndPoint as IPEndPoint;
+            //}
             return mRemoteEndPoint;
         }
 
         public void Update(double elapsed)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                this.mQuicConnection.RequestReceiveStreamData();
-            }
+            //if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            //{
+            //    this.mQuicConnection.RequestReceiveStreamData();
+            //}
         }
         
         private void ReceiveStreamDataFunc(QuicStream mQuicStream)
         {
-            if (mQuicStream != null)
-            {
-                int nLoopCount = 0;
-                do
-                {
-                    int nLength = mQuicStream.Read(mReceiveBuffer);
-                    if (nLength > 0)
-                    {
-                        mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                    }
-                    else
-                    {
-                        break;
-                    }
-                } while (nLoopCount++ < 8);
-            }
+            //if (mQuicStream != null)
+            //{
+            //    int nLoopCount = 0;
+            //    do
+            //    {
+            //        int nLength = mQuicStream.Read(mReceiveBuffer);
+            //        if (nLength > 0)
+            //        {
+            //            mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+            //        }
+            //        else
+            //        {
+            //            break;
+            //        }
+            //    } while (nLoopCount++ < 8);
+            //}
         }
 
         private void SendFinishFunc(QuicStream mQuicStream)
@@ -109,27 +107,27 @@ namespace AKNet.QuicNet.Server
 
         private void SendNetStream2()
         {
-            try
-            {
-                if (mSendStreamList.Length > 0)
-                {
-                    int nLength = 0;
-                    lock (mSendStreamList)
-                    {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
-                    }
-                    mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
-                }
-                else
-                {
-                    bSendIOContextUsed = false;
-                }
-            }
-            catch (Exception e)
-            {
-                //NetLog.LogError(e.ToString());
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
+            //try
+            //{
+            //    if (mSendStreamList.Length > 0)
+            //    {
+            //        int nLength = 0;
+            //        lock (mSendStreamList)
+            //        {
+            //            nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+            //        }
+            //        mSendQuicStream.Send(mSendBuffer.Slice(0, nLength));
+            //    }
+            //    else
+            //    {
+            //        bSendIOContextUsed = false;
+            //    }
+            //}
+            //catch (Exception e)
+            //{
+            //    //NetLog.LogError(e.ToString());
+            //    mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            //}
         }
 
         private void CloseSocket()
@@ -138,7 +136,7 @@ namespace AKNet.QuicNet.Server
 			{
 				var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;
-				mQuicConnection2.StartClose();
+				//mQuicConnection2.StartClose();
 			}
 		}
 

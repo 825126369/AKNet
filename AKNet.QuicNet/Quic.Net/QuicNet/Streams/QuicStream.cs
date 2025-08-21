@@ -151,7 +151,7 @@
             // Terminate connection if maximum stream data is reached
             if (_currentTransferRate >= _maximumStreamData)
             {
-                ShortHeaderPacket errorPacket = _connection.PacketCreator.CreateConnectionClosePacket(Infrastructure.ErrorCode.FLOW_CONTROL_ERROR, frame.ActualType, ErrorConstants.MaxDataTransfer);
+                ShortHeaderPacket errorPacket = _connection.PacketCreator.CreateConnectionClosePacket(ErrorCode.FLOW_CONTROL_ERROR, frame.ActualType, ErrorConstants.MaxDataTransfer);
                 _connection.SendData(errorPacket);
                 _connection.TerminateConnection();
 

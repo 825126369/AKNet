@@ -84,7 +84,7 @@ namespace AKNet.QuicNet.Client
         private void DisConnectServer2()
         {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
-            mQuicClient.StartClose();
+            //mQuicClient.cl();
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
@@ -98,7 +98,7 @@ namespace AKNet.QuicNet.Client
                     var mReceiveBuffer = mQuicStream.Receive();
                     if (mReceiveBuffer.Length > 0)
                     {
-                        mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                       // mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                     }
                     else
                     {
@@ -108,16 +108,21 @@ namespace AKNet.QuicNet.Client
             }
         }
 
+        public void Update(double elapsed)
+        {
+
+        }
+
         private void SendFinishFunc(QuicStream mQuicStream)
         {
-            if (mQuicStream == mSendQuicStream)
-            {
-                SendNetStream2();
-            }
-            else
-            {
-                NetLog.LogError("SendFinishFunc Error");
-            }
+            //if (mQuicStream == mSendQuicStream)
+            //{
+            //    SendNetStream2();
+            //}
+            //else
+            //{
+            //    NetLog.LogError("SendFinishFunc Error");
+            //}
         }
 
 
@@ -181,7 +186,7 @@ namespace AKNet.QuicNet.Client
             {
                 QuicClient mQuicConnection2 = mQuicClient;
                 mQuicClient = null;
-				mQuicConnection2.di();
+				//mQuicConnection2.();
             }
         }
 

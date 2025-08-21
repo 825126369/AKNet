@@ -84,7 +84,7 @@ namespace AKNet.Common
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
             Exception exception = args.ExceptionObject as Exception;
-            string msg = Get_OnUncaughtExceptionMsg(exception.ToString(), GetStackTraceInfo());
+            string msg = Get_OnUncaughtExceptionMsg(exception, GetStackTraceInfo());
             LogErrorToFile(msg);
         }
 
@@ -162,7 +162,7 @@ namespace AKNet.Common
         public static void LogException(Exception e)
         {
             if (!bPrintLog) return;
-            string msg = GetErrorMsg(e.ToString(), GetStackTraceInfo());
+            string msg = GetErrorMsg(e, GetStackTraceInfo());
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(msg);

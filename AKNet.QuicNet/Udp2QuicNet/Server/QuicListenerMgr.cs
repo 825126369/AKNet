@@ -1,9 +1,6 @@
 ﻿using AKNet.Common;
-using AKNet.Udp1MSQuic.Common;
-using System;
-using System.Collections.Generic;
+using AKNet.QuicNet.Common;
 using System.Net;
-using System.Net.Security;
 
 namespace AKNet.QuicNet.Server
 {
@@ -61,8 +58,7 @@ namespace AKNet.QuicNet.Server
 
             try
             {
-                var options = GetQuicListenerOptions(mIPAddress, nPort);
-                mQuicListener = QuicListener.StartListen(options);
+                mQuicListener = new QuicListener(nPort);
                 if (mQuicListener != null)
                 {
                     NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
@@ -73,29 +69,6 @@ namespace AKNet.QuicNet.Server
                 this.mState = SOCKET_SERVER_STATE.EXCEPTION;
                 NetLog.LogError(e.ToString());
             }
-        }
-
-        private QuicListenerOptions GetQuicListenerOptions(IPAddress mIPAddress, int nPort)
-        {
-            QuicListenerOptions mOption = new QuicListenerOptions();
-            mOption.ListenEndPoint = new IPEndPoint(mIPAddress, nPort);
-            mOption.GetConnectionOptionFunc = GetConnectionOptionFunc;
-            mOption.AcceptConnectionFunc = AcceptConnectionFunc;
-            return mOption;
-        }
-
-        private QuicConnectionOptions GetConnectionOptionFunc()
-        {
-            var mCert = X509CertTool.GetPfxCert();
-            //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
-
-            NetLog.Assert(mCert != null, "GetCert() == null");
-            var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
-            ServerAuthenticationOptions.ServerCertificate = mCert;
-
-            QuicConnectionOptions mOption = new QuicConnectionOptions();
-            mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
-            return mOption;
         }
 
         private void AcceptConnectionFunc(QuicConnection connection)

@@ -31,7 +31,7 @@
             if (_state != ConnectionState.Open)
                 return null;
 
-            QuicStream stream = new QuicStream(this, new QuickNet.Utilities.StreamId(streamId, type));
+            QuicStream stream = new QuicStream(this, new StreamId(streamId, type));
             _streams.Add(streamId, stream);
 
             return stream;
@@ -253,7 +253,7 @@
 
         internal void SendMaximumStreamReachedError()
         {
-            ShortHeaderPacket packet = PacketCreator.CreateConnectionClosePacket(Infrastructure.ErrorCode.STREAM_LIMIT_ERROR, 0x00, ErrorConstants.MaxNumberOfStreams);
+            ShortHeaderPacket packet = PacketCreator.CreateConnectionClosePacket(ErrorCode.STREAM_LIMIT_ERROR, 0x00, ErrorConstants.MaxNumberOfStreams);
             Send(packet);
         }
 
@@ -273,7 +273,7 @@
             // If the maximum transfer rate is reached, send FLOW_CONTROL_ERROR
             if (MaximumReached())
             {
-                packet = PacketCreator.CreateConnectionClosePacket(Infrastructure.ErrorCode.FLOW_CONTROL_ERROR, 0x00, ErrorConstants.MaxDataTransfer);
+                packet = PacketCreator.CreateConnectionClosePacket(ErrorCode.FLOW_CONTROL_ERROR, 0x00, ErrorConstants.MaxDataTransfer);
 
                 TerminateConnection();
             }
