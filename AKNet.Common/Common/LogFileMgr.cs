@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AKNet.Common
 {
-    internal class LogFileMgr
+    internal static class LogFileMgr
     {
         private const string logFileDir = "aknet_Log/";
-        private const string logFilePath = "aknet_Log.txt";
-        private readonly object mFileStreamLock = new object();
-        private readonly FileStream mFileStream;
-        private readonly StreamWriter mFileStreamWriter = null;
-        private readonly ConcurrentQueue<string> mLogQueue = new ConcurrentQueue<string>();
+        private static readonly string logFilePath = "aknet_Log.txt";
+        private static readonly ConcurrentQueue<string> mLogQueue = new ConcurrentQueue<string>();
+        private static readonly List<string> tempList = new List<string>();
 
-        public LogFileMgr()
+        static LogFileMgr()
         {
             if (!Directory.Exists(logFileDir))
             {
@@ -27,39 +25,66 @@ namespace AKNet.Common
             {
                 try
                 {
-                    string logFileName = $"{logFileDir + Path.GetFileName(logFilePath)}_{nLogIndex}.txt";
-                    File.Delete(logFileName);
-
-                    //string logFileName = $"{logFileDir + Path.GetFileName(logFilePath)}_{DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss")}_{nLogIndex}.txt";
-                    mFileStream = File.Open(logFileName, FileMode.OpenOrCreate);
-                    mFileStreamWriter = new StreamWriter(mFileStream);
+                    logFilePath = $"{logFileDir + Path.GetFileName(logFilePath)}_{nLogIndex}.txt";
+                    File.Delete(logFilePath); //每次启动删掉原来的日志
+                    var mFileStream = File.Open(logFilePath, FileMode.OpenOrCreate); // 如果报错，说明文件被占用，那么就新建文件
                     break;
                 }
                 catch (Exception e)
                 {
                     nLogIndex++;
-                    if (nLogIndex > 100)
+                    if (nLogIndex > 10)
                     {
-                        Console.WriteLine("创建日志文件失败: " + e.ToString());
+                        Console.WriteLine("File.Open Error: " + e.ToString());
                         break;
                     }
                 }
             }
+
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+            WriteLogToFileThreadFunc();
         }
 
-        public void AddMsg(string msg)
+        private static async void OnProcessExit(object sender, EventArgs e)
         {
-            Task.Run(() =>
+            await FlushLogs(true);
+        }
+
+        public static void AddMsg(string msg)
+        {
+            mLogQueue.Enqueue(msg);
+        }
+
+        public static async void WriteLogToFileThreadFunc()
+        {
+            while (true)
             {
-                WriteToFile(msg);
-            });
+                await Task.Delay(1000).ConfigureAwait(false); //这里必须加个 false,因为上层有可能自定义了同步上下文
+                await FlushLogs().ConfigureAwait(false); //捕获上下文，性能会很差
+            }
         }
 
-        private void WriteToFile(string Message)
+        private static async Task FlushLogs(bool bFlushAll = false)
         {
-            Monitor.Enter(mFileStreamLock);
-            mFileStreamWriter.WriteLine(Message);
-            Monitor.Exit(mFileStreamLock);
+            tempList.Clear();
+            int nFlushMaxCount = bFlushAll ? int.MaxValue : 1000;
+            while (tempList.Count < nFlushMaxCount && mLogQueue.TryDequeue(out string log))
+            {
+                tempList.Add(log);
+            }
+
+            if (tempList.Count > 0)
+            {
+                try
+                {
+                    await File.AppendAllLinesAsync(logFilePath, tempList);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("File.AppendAllLinesAsync Error: " + e.ToString());
+                }
+            }
         }
+
     }
 }

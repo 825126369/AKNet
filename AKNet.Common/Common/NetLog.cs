@@ -56,8 +56,7 @@ namespace AKNet.Common
         public static event Action<string> LogFunc;
         public static event Action<string> LogWarningFunc;
         public static event Action<string> LogErrorFunc;
-
-        private static readonly LogFileMgr mLogFileMgr = new LogFileMgr();
+        
         static NetLog()
         {
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
@@ -79,13 +78,14 @@ namespace AKNet.Common
 
         static void LogErrorToFile(string Message)
         {
-            mLogFileMgr.AddMsg(Message);
+            LogFileMgr.AddMsg(Message);
         }
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
             Exception exception = args.ExceptionObject as Exception;
-            mLogFileMgr.AddMsg(GetMsgStr("_OnUncaughtExceptionHandler", exception.Message, exception.StackTrace));
+            string msg = Get_OnUncaughtExceptionMsg(exception.ToString(), GetStackTraceInfo());
+            LogErrorToFile(msg);
         }
 
         private static string GetMsgStr(string logTag, object msgObj, string StackTraceObj)
@@ -98,6 +98,11 @@ namespace AKNet.Common
         private static string GetAssertMsg(object msgObj, string StackTraceInfo)
         {
             return GetMsgStr("Assert Error", msgObj, StackTraceInfo);
+        }
+
+        private static string Get_OnUncaughtExceptionMsg(object msgObj, string StackTraceInfo)
+        {
+            return GetMsgStr("_OnUncaughtException", msgObj, StackTraceInfo);
         }
 
         private static string GetExceptionMsg(object msgObj, string StackTraceInfo)
@@ -122,59 +127,63 @@ namespace AKNet.Common
 
         private static string GetStackTraceInfo()
         {
-            StackTrace st = new StackTrace(true);
+            StackTrace st = new StackTrace(1, true);
             return st.ToString();
         }
 
         public static void Log(object message)
         {
             if (!bPrintLog) return;
+            string msg = GetLogMsg(message);
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine(GetLogMsg(message));
+            Console.WriteLine(msg);
 #endif
             if (LogFunc != null)
             {
-                LogFunc(GetLogMsg(message));
+                LogFunc(msg);
             }
         }
 
         public static void LogWarning(object message)
         {
             if (!bPrintLog) return;
+            string msg = GetWarningMsg(message);
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine(GetWarningMsg(message));
+            Console.WriteLine(msg);
 #endif
             if (LogWarningFunc != null)
             {
-                LogWarningFunc(GetWarningMsg(message));
+                LogWarningFunc(msg);
             }
         }
 
         public static void LogException(Exception e)
         {
             if (!bPrintLog) return;
+            string msg = GetErrorMsg(e.ToString(), GetStackTraceInfo());
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(GetExceptionMsg(e.Message, e.StackTrace));
+            Console.WriteLine(msg);
 #endif
             if (LogErrorFunc != null)
             {
-                LogErrorFunc(GetExceptionMsg(e.Message, e.StackTrace));
+                LogErrorFunc(msg);
             }
         }
 
         public static void LogError(object message)
         {
             if (!bPrintLog) return;
+            string msg = GetErrorMsg(message, GetStackTraceInfo());
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine(GetErrorMsg(message, GetStackTraceInfo()));
+            Console.WriteLine(msg);
 #endif
             if (LogErrorFunc != null)
             {
-                LogErrorFunc(GetErrorMsg(message, GetStackTraceInfo()));
+                LogErrorFunc(msg);
             }
         }
 
@@ -183,13 +192,14 @@ namespace AKNet.Common
         {
             if (!bTrue)
             {
+                string msg = GetAssertMsg(message, GetStackTraceInfo());
 #if DEBUG
                 Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.WriteLine(GetAssertMsg(message, GetStackTraceInfo()));
+                Console.WriteLine(msg);
 #endif
                 if (LogErrorFunc != null)
                 {
-                    LogErrorFunc(GetAssertMsg(message, GetStackTraceInfo()));
+                    LogErrorFunc(msg);
                 }
             }
         }
