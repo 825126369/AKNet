@@ -23,9 +23,6 @@ namespace AKNet.Udp3Tcp.Common
         public readonly double fReceiveHeartBeatTimeOut = 5.0;
 		public readonly double fMySendHeartBeatMaxTime = 2.0;
         public readonly double fReConnectMaxCdTime = 3.0;
-
-        public readonly int client_socket_receiveBufferSize = 0;
-        public readonly int server_socket_receiveBufferSize = 0;
         public readonly int MaxPlayerCount = 10000;
 
         //加解密

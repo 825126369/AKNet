@@ -32,9 +32,6 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		public double fReceiveHeartBeatTimeOut = 5.0;
 		public double fMySendHeartBeatMaxTime = 2.0;
         public double fReConnectMaxCdTime = 3.0;
-
-        public int client_socket_receiveBufferSize = 0;
-        public int server_socket_receiveBufferSize = 0;
         public int MaxPlayerCount = 10000;
 
         //加解密

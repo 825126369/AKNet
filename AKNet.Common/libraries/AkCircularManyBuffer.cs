@@ -193,7 +193,9 @@ namespace AKNet.Common
                     int nCopyLength = Math.Min(mTempSpan.Length - nReadLength, mSpan.Length);
                     mSpan.Slice(0, nCopyLength).CopyTo(mTempSpan.Slice(nReadLength));
                     nReadLength += nCopyLength;
-                    if (nReadLength >= mTempSpan.Length)
+
+                    NetLog.Assert(nReadLength <= mTempSpan.Length);
+                    if (nReadLength == mTempSpan.Length)
                     {
                         break;
                     }

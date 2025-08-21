@@ -37,9 +37,7 @@ namespace AKNet.Udp3Tcp.Client
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-            NetLog.Log("Default: ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, mClientPeer.GetConfig().client_socket_receiveBufferSize);
-            NetLog.Log("Fix ReceiveBufferSize: " + mSocket.ReceiveBufferSize);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
 
             ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
