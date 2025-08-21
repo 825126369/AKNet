@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
@@ -30,9 +31,9 @@ namespace AKNet.Udp.POINTTOPOINT.Client
             return this.mNetClientPeer.DisConnectServer();
         }
 
-        public string GetIPAddress()
+        public IPEndPoint GetIPEndPoint()
         {
-            return mNetClientPeer.GetIPAddress();
+            return mNetClientPeer.GetIPEndPoint();
         }
 
         public SOCKET_PEER_STATE GetSocketState()

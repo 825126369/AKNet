@@ -9,6 +9,7 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Net;
 
 namespace AKNet.Tcp.Client
 {
@@ -31,9 +32,9 @@ namespace AKNet.Tcp.Client
             return mInstance.DisConnectServer();
         }
 
-        public string GetIPAddress()
+        public IPEndPoint GetIPEndPoint()
         {
-            return mInstance.GetIPAddress();
+            return mInstance.GetIPEndPoint();
         }
 
         public SOCKET_PEER_STATE GetSocketState()

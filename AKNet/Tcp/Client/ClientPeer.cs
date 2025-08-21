@@ -9,6 +9,7 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 
@@ -21,17 +22,6 @@ namespace AKNet.Tcp.Client
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
 
-        private double fReConnectServerCdTime = 0.0;
-        private double fSendHeartBeatTime = 0.0;
-        private double fReceiveHeartBeatTime = 0.0;
-
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private bool b_SOCKET_PEER_STATE_Changed = false;
-        private string Name = string.Empty;
-
-        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
-        private readonly TcpNetPackage mNetPackage = new TcpNetPackage();
-
         private Socket mSocket = null;
         private string ServerIp = "";
         private int nServerPort = 0;
@@ -40,13 +30,23 @@ namespace AKNet.Tcp.Client
         private bool bDisConnectIOContexUsed = false;
         private bool bSendIOContextUsed = false;
         private bool bReceiveIOContextUsed = false;
-
+        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
         private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
+        private readonly IMemoryOwner<byte> mIMemoryOwner_ForSend = null;
+        private readonly IMemoryOwner<byte> mIMemoryOwner_ForReceive = null;
+        private readonly TcpNetPackage mNetPackage = new TcpNetPackage();
+
+        private double fReConnectServerCdTime = 0.0;
+        private double fSendHeartBeatTime = 0.0;
+        private double fReceiveHeartBeatTime = 0.0;
+        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private bool b_SOCKET_PEER_STATE_Changed = false;
+        private string Name = string.Empty;
 
         public ClientPeer()
         {
@@ -55,7 +55,17 @@ namespace AKNet.Tcp.Client
             mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            OpenSocket();
+
+            mIMemoryOwner_ForSend = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+            mIMemoryOwner_ForReceive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+            mSendIOContex.SetBuffer(mIMemoryOwner_ForSend.Memory);
+            mReceiveIOContex.SetBuffer(mIMemoryOwner_ForReceive.Memory);
+
+            mSendIOContex.Completed += OnIOCompleted;
+            mReceiveIOContex.Completed += OnIOCompleted;
+            mConnectIOContex.Completed += OnIOCompleted;
+            mDisConnectIOContex.Completed += OnIOCompleted;
+            SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
 		public void Update(double elapsed)
@@ -71,32 +81,7 @@ namespace AKNet.Tcp.Client
                 b_SOCKET_PEER_STATE_Changed = false;
             }
 
-            var mSocketPeerState = GetSocketState();
-            switch (mSocketPeerState)
-            {
-                case SOCKET_PEER_STATE.CONNECTED:
-                    int nPackageCount = 0;
-
-                    while (NetPackageExecute())
-                    {
-                        nPackageCount++;
-                    }
-
-                    if (nPackageCount > 0)
-                    {
-                        ReceiveHeartBeat();
-                    }
-
-                    //if (nPackageCount > 100)
-                    //{
-                    //	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
-                    //}
-
-                    break;
-                default:
-                    break;
-            }
-
+            Update_Receive(elapsed);
             switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
@@ -246,11 +231,6 @@ namespace AKNet.Tcp.Client
 		public void Release()
 		{
             CloseSocket();
-        }
-
-        public string GetIPAddress()
-        {
-            return GetIPEndPoint().Address.ToString();
         }
 
         public Config GetConfig()

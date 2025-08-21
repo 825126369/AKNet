@@ -62,9 +62,9 @@ namespace AKNet.Common
             return mInterface.DisConnectServer();
         }
 
-        public string GetIPAddress()
+        public IPEndPoint GetIPEndPoint()
         {
-            return mInterface.GetIPAddress();
+            return mInterface.GetIPEndPoint();
         }
 
         public SOCKET_PEER_STATE GetSocketState()

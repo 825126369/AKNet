@@ -98,11 +98,6 @@ namespace AKNet.Udp4LinuxTcp.Server
             return mSocketMgr.GetIPEndPoint();
         }
 
-        public string GetIPAddress()
-        {
-            return GetIPEndPoint().Address.ToString();
-        }
-
         public void SendNetPackage(sk_buff skb)
         {
             mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();

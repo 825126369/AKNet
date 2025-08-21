@@ -462,7 +462,7 @@
 //            //            {
 //            //                if (_remoteEndPoint!.AddressFamily == AddressFamily.InterNetworkV6 && _socketAddress!.Family == AddressFamily.InterNetwork)
 //            //                {
-//            //                    _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPAddress().MapToIPv6(), _socketAddress.GetPort());
+//            //                    _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPEndPoint().MapToIPv6(), _socketAddress.GetPort());
 //            //                }
 //            //                else
 //            //                {
@@ -483,7 +483,7 @@
 //            //            {
 //            //                if (_remoteEndPoint!.AddressFamily == AddressFamily.InterNetworkV6 && _socketAddress!.Family == AddressFamily.InterNetwork)
 //            //                {
-//            //                    _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPAddress().MapToIPv6(), _socketAddress.GetPort());
+//            //                    _remoteEndPoint = new IPEndPoint(_socketAddress.GetIPEndPoint().MapToIPv6(), _socketAddress.GetPort());
 //            //                }
 //            //                else
 //            //                {

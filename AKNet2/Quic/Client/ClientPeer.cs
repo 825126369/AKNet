@@ -214,7 +214,7 @@ namespace AKNet.Quic.Client
             return mSocketMgr.DisConnectServer();
         }
 
-        public string GetIPAddress()
+        public IPEndPoint GetIPEndPoint()
         {
             return mSocketMgr.GetIPEndPoint().Address.ToString();
         }

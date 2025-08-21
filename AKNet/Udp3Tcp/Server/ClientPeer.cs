@@ -95,11 +95,6 @@ namespace AKNet.Udp3Tcp.Server
             return mSocketMgr.GetIPEndPoint();
         }
 
-        public string GetIPAddress()
-        {
-            return GetIPEndPoint().Address.ToString();
-        }
-
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
             bool bCanSendPackage = mPackage.orInnerCommandPackage() ||

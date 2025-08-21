@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Net;
 namespace AKNet.Common
 {
     public class NetClientMainBase : NetClientInterface,ClientPeerBase
@@ -75,11 +76,6 @@ namespace AKNet.Common
             return mInterface.DisConnectServer();
         }
 
-        public string GetIPAddress()
-        {
-            return mInterface.GetIPAddress();
-        }
-
         public SOCKET_PEER_STATE GetSocketState()
         {
             return mInterface.GetSocketState();
@@ -138,6 +134,11 @@ namespace AKNet.Common
         public void Update(double elapsed)
         {
             mInterface.Update(elapsed);
+        }
+
+        public IPEndPoint GetIPEndPoint()
+        {
+            return mInterface.GetIPEndPoint();
         }
     }
 }

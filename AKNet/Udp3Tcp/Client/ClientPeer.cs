@@ -164,11 +164,6 @@ namespace AKNet.Udp3Tcp.Client
             return mSocketMgr.GetIPEndPoint();
         }
 
-        public string GetIPAddress()
-        {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
-        }
-
         public void SendNetData(NetPackage mNetPackage)
         {
             mMsgSendMgr.SendNetData(mNetPackage);

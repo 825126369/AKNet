@@ -30,9 +30,9 @@ namespace AKNet.WebSocket.Client
             return mClientPeer.DisConnectServer();
         }
 
-        public string GetIPAddress()
+        public IPEndPoint GetIPEndPoint()
         {
-            return mClientPeer.GetIPAddress();
+            return mClientPeer.GetIPEndPoint();
         }
 
         public SOCKET_PEER_STATE GetSocketState()

@@ -215,7 +215,7 @@ namespace AKNet.WebSocket.Client
             return mSocketMgr.DisConnectServer();
         }
 
-        public string GetIPAddress()
+        public IPEndPoint GetIPEndPoint()
         {
             return mSocketMgr.GetIPEndPoint().Address.ToString();
         }

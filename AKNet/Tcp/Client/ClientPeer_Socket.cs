@@ -16,17 +16,6 @@ namespace AKNet.Tcp.Client
 {
     internal partial class ClientPeer
     {
-        public void OpenSocket()
-		{
-			mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            mSendIOContex.Completed += OnIOCompleted;
-            mReceiveIOContex.Completed += OnIOCompleted;
-            mConnectIOContex.Completed += OnIOCompleted;
-            mDisConnectIOContex.Completed += OnIOCompleted;
-            SetSocketState(SOCKET_PEER_STATE.NONE);
-        }
-
 		public void ReConnectServer()
 		{
             bool Connected = false;

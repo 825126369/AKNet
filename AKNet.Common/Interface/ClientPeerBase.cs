@@ -7,12 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Net;
 
 namespace AKNet.Common
 {
     public interface ClientPeerBase
     {
-        string GetIPAddress();
+        IPEndPoint GetIPEndPoint();
         SOCKET_PEER_STATE GetSocketState();
         void SendNetData(ushort nPackageId);
         void SendNetData(ushort nPackageId, byte[] data);

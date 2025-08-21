@@ -192,11 +192,6 @@ namespace AKNet.Tcp.Server
             }
         }
 
-        public string GetIPAddress()
-        {
-            return GetIPEndPoint().Address.ToString();
-        }
-
         public void SetName(string Name)
         {
             this.Name = Name;
