@@ -13,7 +13,7 @@ namespace AKNet.QuicNet.Server
 {
     internal class MsgReceiveMgr
 	{
-		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
 		private QuicServer mTcpServer;
@@ -89,7 +89,7 @@ namespace AKNet.QuicNet.Server
 		{
 			lock (mReceiveStreamList)
 			{
-				mReceiveStreamList.reset();
+				mReceiveStreamList.Reset();
 			}
 		}
 

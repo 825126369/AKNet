@@ -10,11 +10,6 @@ namespace AKNet.Common
 {
     public class NetClientMain : NetClientMainBase
     {
-        public NetClientMain()
-        {
-            mInterface = new AKNet.Quic.Client.QuicNetClientMain();
-        }
-
         public NetClientMain(NetType nNetType) :base(nNetType)
         {
             

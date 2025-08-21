@@ -7,27 +7,28 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
 
 namespace AKNet.QuicNet.Common
 {
-    internal interface NetStreamEncryptionInterface
-    {
-        Memory<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
-        bool Decode(AkCircularBuffer mReceiveStreamList, TcpNetPackage mPackage);
-    }
-
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
         readonly NetStreamEncryptionInterface mNetStreamEncryption = null;
-        readonly Config mConfig;
+
         public CryptoMgr(Config mConfig)
         {
-            this.mConfig = mConfig;
-            mNetStreamEncryption = new NetStreamEncryption();
+            ECryptoType nECryptoType = mConfig.nECryptoType;
+            if (nECryptoType == ECryptoType.Xor)
+            {
+                var mCryptoInterface = new XORCrypto();
+                mNetStreamEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
+            }
+            else
+            {
+                mNetStreamEncryption = new NetStreamEncryption();
+            }
         }
 
-        public Memory<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
+        public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
         {
 #if DEBUG
             if (mBufferSegment.Length > Config.nDataMaxLength)
@@ -38,7 +39,7 @@ namespace AKNet.QuicNet.Common
             return mNetStreamEncryption.Encode(nPackageId, mBufferSegment);
         }
 
-        public bool Decode(AkCircularBuffer mReceiveStreamList, TcpNetPackage mPackage)
+        public bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage)
         {
             return mNetStreamEncryption.Decode(mReceiveStreamList, mPackage);
         }

@@ -6,13 +6,10 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.Common
+namespace AKNet.QuicNet.Common
 {
-    public class NetServerMain : NetServerMainBase
+    internal interface PrivateConfigInterface
     {
-        public NetServerMain(NetType nNetType) : base(nNetType)
-        {
-
-        }
+        Config GetConfig();
     }
 }

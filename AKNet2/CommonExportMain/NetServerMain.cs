@@ -10,11 +10,6 @@ namespace AKNet.Common
 {
     public class NetServerMain : NetServerMainBase
     {
-        public NetServerMain()
-        {
-            mInterface = new AKNet.Quic.Server.QuicNetServerMain();
-        }
-
         public NetServerMain(NetType nNetType) : base(nNetType)
         {
 

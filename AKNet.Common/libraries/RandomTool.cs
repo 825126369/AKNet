@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.Other")]
 namespace AKNet.Common
 {
     internal static partial class RandomTool

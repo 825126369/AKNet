@@ -13,9 +13,9 @@ namespace AKNet.Common
     public class NetClientMainBase : NetClientInterface,ClientPeerBase
     {
         protected NetClientInterface mInterface = null;
-        public NetClientMainBase()
+        public NetClientInterface GetInstance()
         {
-            mInterface = new AKNet.Quic.Client.QuicNetClientMain();
+            return mInterface;
         }
 
         public NetClientMainBase(NetType nNetType = NetType.Quic)
