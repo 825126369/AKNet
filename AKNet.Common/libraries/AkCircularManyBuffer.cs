@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
@@ -112,17 +113,24 @@ namespace AKNet.Common
 
                 BufferItem mBufferItem = nCurrentWriteBlock.Value;
                 Span<byte> mBufferSpan = mBufferItem.GetCanWriteSpan();
+                if (mBufferSpan.Length == 0)
+                {
+                    goto NextBlock;
+                }
+
                 int nCopyLength = Math.Min(mBufferSpan.Length, buffer.Length);
                 buffer.Slice(0, nCopyLength).CopyTo(mBufferSpan);
                 buffer = buffer.Slice(nCopyLength);
                 mBufferItem.nLength += nCopyLength;
                 nSumByteCount += nCopyLength;
+
                 if (buffer.IsEmpty)
                 {
                     break;
                 }
 
-                if(mBufferItem.GetCanWriteSpan().IsEmpty)
+            NextBlock:
+                if (mBufferItem.GetCanWriteSpan().IsEmpty)
                 {
                     nCurrentWriteBlock = nCurrentWriteBlock.Next;
                 }
@@ -132,18 +140,13 @@ namespace AKNet.Common
         public int WriteTo(Span<byte> buffer)
         {
             int nReadLength = 0;
-            while (true)
+            while (nCurrentReadBlock != null)
             {
-                if (nCurrentReadBlock == null)
-                {
-                    break;
-                }
-
                 BufferItem mBufferItem = nCurrentReadBlock.Value;
                 ReadOnlySpan<byte> mBufferSpan = mBufferItem.GetCanReadSpan();
                 if (mBufferSpan.IsEmpty)
                 {
-                    break;
+                    goto NextBlock;
                 }
 
                 int nCopyLength = Math.Min(mBufferSpan.Length, buffer.Length);
@@ -159,6 +162,7 @@ namespace AKNet.Common
                     break;
                 }
 
+            NextBlock:
                 if (mBufferItem.GetCanReadSpan().IsEmpty)
                 {
                     if (nCurrentReadBlock == nCurrentWriteBlock)
@@ -170,7 +174,7 @@ namespace AKNet.Common
                         nCurrentReadBlock = nCurrentReadBlock.Next;
                         mBufferItem.Reset();
                         mItemList.Remove(mBufferItem.mEntry);
-                        if (nMaxBlockCount == 0 || mItemList.Count < nMaxBlockCount)
+                        if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
                         {
                             mItemList.AddLast(mBufferItem.mEntry);
                         }
@@ -221,7 +225,7 @@ namespace AKNet.Common
                 ReadOnlySpan<byte> mBufferSpan = mBufferItem.GetCanReadSpan();
                 if (mBufferSpan.IsEmpty)
                 {
-                    break;
+                    goto NextBlock;
                 }
 
                 int nClearLength = Math.Min(mBufferSpan.Length, nLength);
@@ -235,7 +239,8 @@ namespace AKNet.Common
                 {
                     break;
                 }
-                
+
+            NextBlock:
                 if (nCurrentReadBlock == nCurrentWriteBlock)
                 {
                     break;
@@ -245,7 +250,7 @@ namespace AKNet.Common
                     nCurrentReadBlock = nCurrentReadBlock.Next;
                     mBufferItem.Reset();
                     mItemList.Remove(mBufferItem.mEntry);
-                    if (nMaxBlockCount == 0 || mItemList.Count < nMaxBlockCount)
+                    if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
                     {
                         mItemList.AddLast(mBufferItem.mEntry);
                     }
@@ -269,6 +274,29 @@ namespace AKNet.Common
             nCurrentWriteBlock = mItemList.First;
             nCurrentReadBlock = mItemList.First;
             nSumByteCount = 0;
+        }
+
+        public static void Test()
+        {
+            AkCircularManyBuffer mAkCircularManyBuffer = new AkCircularManyBuffer(1, 0, 100);
+
+            for (int i = 0; i < 100000; i++)
+            {
+                int nLength = RandomTool.Random(0, 10000);
+                Span<byte> mArray = new byte[nLength];
+                RandomNumberGenerator.Fill(mArray);
+                mAkCircularManyBuffer.WriteFrom(mArray);
+                NetLog.Assert(mAkCircularManyBuffer.Length == nLength);
+
+                Span<byte> mArray2 = new byte[nLength];
+                NetLog.Assert(mAkCircularManyBuffer.CopyTo(mArray2) == nLength);
+
+                mAkCircularManyBuffer.ClearBuffer(nLength);
+                NetLog.Assert(mAkCircularManyBuffer.Length == 0);
+
+                NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray2));
+                //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
+            }
         }
     }
 }
