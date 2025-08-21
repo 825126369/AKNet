@@ -44,7 +44,7 @@ namespace AKNet.Common
 				return false;
 			}
 
-            int nHeadLength = mReceiveStreamList.Peek(mCacheHead);
+            int nHeadLength = mReceiveStreamList.CopyTo(mCacheHead);
             byte nEncodeToken = mCacheHead[0];
 			for (int i = 0; i < 4 ; i++)
 			{

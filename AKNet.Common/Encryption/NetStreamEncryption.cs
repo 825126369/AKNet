@@ -38,7 +38,7 @@ namespace AKNet.Common
 				return false;
 			}
 
-            int nHeadLength = mReceiveStreamList.Peek(mCacheHead);
+            int nHeadLength = mReceiveStreamList.CopyTo(mCacheHead);
 
             for (int i = 0; i < 4; i++)
 			{

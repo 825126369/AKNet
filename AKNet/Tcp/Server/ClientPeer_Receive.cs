@@ -15,11 +15,6 @@ namespace AKNet.Tcp.Server
 {
     internal partial class ClientPeer
 	{
-		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
-		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
-		private TcpServer mTcpServer;
-
 		public void UpdateReceive(double elapsed)
 		{
 			switch (GetSocketState())
@@ -73,7 +68,7 @@ namespace AKNet.Tcp.Server
 				}
 				else
 				{
-                    this.mNetServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+                    this.mNetServer.mPackageManager.NetPackageExecute(this, mNetPackage);
 				}
 			}
 

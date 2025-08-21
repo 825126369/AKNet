@@ -1,6 +1,6 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
@@ -11,31 +11,35 @@ namespace AKNet.Common
     //先前的循环Buffer 存在内存抖动的问题，这里就是为了缓解这个抖动问题
     internal class AkCircularManyBuffer
     {
-        public class BufferItem
+        public class BufferItem:IDisposable
         {
             public readonly LinkedListNode<BufferItem> mEntry = null;
-            public readonly byte[] mBuffer;
-            public readonly Memory<byte> mBufferMemory;
+            private readonly IMemoryOwner<byte> mBufferMemory;
             public int nOffset;
             public int nLength;
+            private bool bDispose = false;
+            ~BufferItem() 
+            {
+                Dispose();
+            }
 
             public BufferItem(int nBufferLength)
             {
+                this.bDispose = false;
                 mEntry = new LinkedListNode<BufferItem>(this);
-                mBuffer = new byte[nBufferLength];
-                mBufferMemory = mBuffer;
+                mBufferMemory = MemoryPool<byte>.Shared.Rent(nBufferLength);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanWriteSpan()
             {
-                return mBufferMemory.Span.Slice(nLength + nOffset); 
+                return mBufferMemory.Memory.Span.Slice(nLength + nOffset);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanReadSpan()
             {
-                return mBufferMemory.Span.Slice(nOffset, nLength);
+                return mBufferMemory.Memory.Span.Slice(nOffset, nLength);
             }
 
             public void Reset()
@@ -43,18 +47,30 @@ namespace AKNet.Common
                 this.nOffset = 0;
                 this.nLength = 0;
             }
+
+            public void Dispose()
+            {
+                if (bDispose) return;
+                this.nOffset = 0;
+                this.nLength = 0;
+                this.bDispose = true;
+                mBufferMemory.Dispose();
+            }
         }
 
-        private int nMaxBlockCount = 0;
+        private readonly int nInitBlockCount = 1;
+        private readonly int nMaxBlockCount = 1;
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
-        private readonly int BlockSize = 16 * 1024;
+        private readonly int BlockSize = 1024;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
         private LinkedListNode<BufferItem> nCurrentReadBlock;
         private int nSumByteCount;
 
-        public AkCircularManyBuffer(int nInitBlockCount = 10, int nBlockSize = 1024)
+        public AkCircularManyBuffer(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = 1024)
         {
             this.BlockSize = nBlockSize;
+            this.nInitBlockCount = nInitBlockCount;
+            this.nMaxBlockCount = nMaxBlockCount;
             for (int i = 0; i < nInitBlockCount; i++)
             {
                 BufferItem mItem = new BufferItem(BlockSize);
@@ -65,11 +81,6 @@ namespace AKNet.Common
             nSumByteCount = 0;
         }
 
-        public void SetMaxBlockCount(int nCount)
-        {
-            this.nMaxBlockCount = nCount;
-        }
-
         public int Length
         {
             get
@@ -78,7 +89,7 @@ namespace AKNet.Common
             }
         }
 
-        public int Peek(Span<byte> mTempSpan)
+        public int CopyTo(Span<byte> mTempSpan)
         {
             var mNode = nCurrentReadBlock;
             int nReadLength = 0;
@@ -242,11 +253,20 @@ namespace AKNet.Common
 
         public void Reset()
         {
+            while (mItemList.Count > nInitBlockCount)
+            {
+                mItemList.Last.Value.Dispose();
+                mItemList.RemoveLast();
+            }
+
+            foreach(var v in mItemList)
+            {
+                v.Reset();
+            }
+
             nCurrentWriteBlock = mItemList.First;
             nCurrentReadBlock = mItemList.First;
             nSumByteCount = 0;
-            nCurrentWriteBlock.Value.Reset();
-            nCurrentReadBlock.Value.Reset();
         }
     }
 }

@@ -22,11 +22,34 @@ namespace AKNet.Tcp.Server
 		private TcpServer mNetServer;
 		private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
+        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+        private readonly object lock_mReceiveStreamList_object = new object();
+
+        private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
+        private bool bSendIOContextUsed = false;
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+        private Socket mSocket = null;
+        private readonly object lock_mSocket_object = new object();
 
         public ClientPeer(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
-			OpenSocket();
+
+            if (mSendIOContex.Buffer == null)
+            {
+                mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            }
+
+            if (mReceiveIOContex.Buffer == null)
+            {
+                mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            }
+
+            mReceiveIOContex.Completed += OnIOCompleted;
+            mSendIOContex.Completed += OnIOCompleted;
+            bSendIOContextUsed = false;
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
@@ -161,6 +184,11 @@ namespace AKNet.Tcp.Server
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
+            }
+
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
             }
         }
 

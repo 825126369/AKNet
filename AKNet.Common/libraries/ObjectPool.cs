@@ -19,22 +19,17 @@ namespace AKNet.Common
 	//Object 池子
 	internal class ObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
-		readonly Stack<T> mObjectPool = null;
-		private int nMaxCapacity = 0;
+		private readonly Stack<T> mObjectPool = null;
+		private readonly int nMaxCapacity = 0;
 		public ObjectPool(int initCapacity = 16, int MaxCapacity = 0)
 		{
-            SetMaxCapacity(MaxCapacity);
+            this.nMaxCapacity = MaxCapacity;
             mObjectPool = new Stack<T>(initCapacity);
 			for (int i = 0; i < initCapacity; i++)
 			{
 				mObjectPool.Push(new T());
 			}
 			mObjectPool.TrimExcess();
-		}
-
-		public void SetMaxCapacity(int nCapacity)
-		{
-			this.nMaxCapacity = nCapacity;
 		}
 
 		public int Count()
@@ -71,20 +66,15 @@ namespace AKNet.Common
 	internal class SafeObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
 		private readonly Stack<T> mObjectPool = null;
-		private int nMaxCapacity = 0;
+		private readonly int nMaxCapacity = 0;
 		public SafeObjectPool(int initCapacity = 16, int MaxCapacity = 0)
 		{
-			SetMaxCapacity(MaxCapacity);
+            this.nMaxCapacity = MaxCapacity;
             mObjectPool = new Stack<T>(initCapacity);
             for (int i = 0; i < initCapacity; i++)
 			{
 				recycle(new T());
 			}
-		}
-
-		public void SetMaxCapacity(int nCapacity)
-		{
-			this.nMaxCapacity = nCapacity;
 		}
 
 		public int Count()

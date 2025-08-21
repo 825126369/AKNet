@@ -440,7 +440,7 @@ namespace AKNet.Tcp.Client
 
 				lock (mSendStreamList)
 				{
-					mSendStreamList.Peek(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
+					mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
 				}
 
 				mSendIOContex.SetBuffer(0, nLength);
