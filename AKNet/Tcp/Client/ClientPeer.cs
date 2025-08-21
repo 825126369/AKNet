@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
-    internal partial class ClientPeer : TcpClientPeerBase, PrivateInterface, ClientPeerBase
+    internal partial class ClientPeer : TcpClientPeerBase, PrivateConfigInterface, ClientPeerBase
     {
         internal readonly CryptoMgr mCryptoMgr;
         internal readonly Config mConfig;

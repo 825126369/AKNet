@@ -14,9 +14,9 @@ namespace AKNet.Udp3Tcp.Server
     public class Udp3TcpNetServerMain : NetServerInterface
     {
         private UdpServer mNetServer;
-        public Udp3TcpNetServerMain(Udp3TcpConfig mUserConfig = null)
+        public Udp3TcpNetServerMain()
         {
-            mNetServer = new UdpServer(mUserConfig);
+            mNetServer = new UdpServer();
         }
 
         public void Update(double elapsed)

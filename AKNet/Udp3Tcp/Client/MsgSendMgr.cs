@@ -41,7 +41,7 @@ namespace AKNet.Udp3Tcp.Client
 		{
 			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
+				ReadOnlySpan<byte> mData = mClientPeer.mCryptoMgr.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
 				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
 			}
 		}
@@ -55,7 +55,7 @@ namespace AKNet.Udp3Tcp.Client
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(nLogicPackageId, data);
+                ReadOnlySpan<byte> mData = mClientPeer.mCryptoMgr.Encode(nLogicPackageId, data);
                 mClientPeer.mUdpCheckPool.SendTcpStream(mData);
             }
         }

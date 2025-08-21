@@ -40,7 +40,7 @@ namespace AKNet.Udp2Tcp.Server
             mPackage.SetPackageId(nId);
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
             mPackage.remoteEndPoint = removeEndPoint;
-            mNetServer.GetCryptoMgr().Encode(mPackage);
+            UdpPackageEncryption.Encode(mPackage);
             SendNetPackage(mPackage);
         }
 

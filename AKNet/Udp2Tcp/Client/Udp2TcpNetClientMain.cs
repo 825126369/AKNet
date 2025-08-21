@@ -7,18 +7,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp2Tcp.Common;
 using System;
 using System.Net;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    public class Udp2TcpNetClientMain:NetClientInterface, ClientPeerBase
-	{
-        private ClientPeer mNetClientPeer;
+    public class Udp2TcpNetClientMain:NetClientInterface, ClientPeerBase, PrivateConfigInterface
+    {
+        private readonly ClientPeer mNetClientPeer;
 
-        public Udp2TcpNetClientMain(Udp2TcpConfig mUserConfig = null)
+        public Udp2TcpNetClientMain()
         {
-            this.mNetClientPeer = new ClientPeer(mUserConfig);
+            this.mNetClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)
@@ -114,6 +115,11 @@ namespace AKNet.Udp2Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mNetClientPeer.GetConfig();
         }
     }
 }

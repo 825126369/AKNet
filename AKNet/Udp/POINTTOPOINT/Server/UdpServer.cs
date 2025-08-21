@@ -30,20 +30,11 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
-        public UdpServer(UdpConfig mUserConfig)
+        public UdpServer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-
-            if (mUserConfig == null)
-            {
-                mConfig = new Config();
-            }
-            else
-            {
-                mConfig = new Config(mUserConfig);
-            }
-
+            mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();

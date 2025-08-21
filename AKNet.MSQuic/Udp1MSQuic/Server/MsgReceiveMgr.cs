@@ -6,16 +6,15 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp1MSQuic.Common;
+using System;
 
 namespace AKNet.Udp1MSQuic.Server
 {
     internal class MsgReceiveMgr
 	{
-		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
 		private QuicServer mTcpServer;
@@ -91,7 +90,7 @@ namespace AKNet.Udp1MSQuic.Server
 		{
 			lock (mReceiveStreamList)
 			{
-				mReceiveStreamList.reset();
+				mReceiveStreamList.Reset();
 			}
 		}
 

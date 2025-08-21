@@ -16,15 +16,15 @@ namespace AKNet.Udp3Tcp.Client
 {
     internal class MsgReceiveMgr
     {
-        private readonly AkCircularBuffer mReceiveStreamList = null;
-        protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
+        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         internal ClientPeer mClientPeer = null;
         private int nCurrentCheckPackageCount = 0;
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer();
+            mReceiveStreamList = new AkCircularManyBuffer();
         }
 
         public int GetCurrentFrameRemainPackageCount()
@@ -70,7 +70,7 @@ namespace AKNet.Udp3Tcp.Client
             while (true)
             {
                 var mPackage = mClientPeer.GetObjectPoolManager().UdpReceivePackage_Pop();
-                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
+                bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
@@ -95,7 +95,7 @@ namespace AKNet.Udp3Tcp.Client
                 else
                 {
                     mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                    NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
+                    NetLog.LogError($"解码失败: {e.MemoryBuffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                     break;
                 }
             }
@@ -103,7 +103,7 @@ namespace AKNet.Udp3Tcp.Client
 
         private bool NetTcpPackageExecute()
         {
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
                 mClientPeer.NetPackageExecute(mNetPackage);

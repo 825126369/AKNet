@@ -14,7 +14,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 {
     internal class UdpServer:NetServerInterface
 	{
-        private readonly LikeTcpNetPackage mLikeTcpNetPackage = new LikeTcpNetPackage();
+        private readonly TcpNetPackage mLikeTcpNetPackage = new TcpNetPackage();
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
@@ -24,13 +24,14 @@ namespace AKNet.Udp4LinuxTcp.Server
         
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig = new Config();
-
-        public UdpServer(Udp3TcpConfig mUserConfig)
+        internal readonly CryptoMgr mCryptoMgr;
+        public UdpServer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
             IPAddressHelper.GetMtu();
 
+            mCryptoMgr = new CryptoMgr(mConfig);
             mSocketMgr = new SocketUdp_Server(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
@@ -53,7 +54,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             return mConfig;
         }
 
-        public LikeTcpNetPackage GetLikeTcpNetPackage()
+        public TcpNetPackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
         }

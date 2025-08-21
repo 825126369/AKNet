@@ -7,11 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp1MSQuic.Common;
 using System;
+using System.Net;
 
 namespace AKNet.Udp1MSQuic.Client
 {
-    public class QuicNetClientMain : NetClientInterface, ClientPeerBase
+    public class QuicNetClientMain : NetClientInterface, ClientPeerBase,PrivateConfigInterface
     {
         private ClientPeer mClientPeer;
 
@@ -116,6 +118,10 @@ namespace AKNet.Udp1MSQuic.Client
             mClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
 
+        public Config GetConfig()
+        {
+            return mClientPeer.GetConfig();
+        }
     }
 
 }

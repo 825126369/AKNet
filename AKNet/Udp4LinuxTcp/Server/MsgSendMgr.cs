@@ -47,7 +47,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, data);
+                ReadOnlySpan<byte> mData = mNetServer.mCryptoMgr.Encode(id, data);
                 mClientPeer.mUdpCheckPool.SendTcpStream(mData);
             }
         }

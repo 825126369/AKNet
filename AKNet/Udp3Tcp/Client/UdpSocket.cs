@@ -179,7 +179,7 @@ namespace AKNet.Udp3Tcp.Client
             lock (mSendStreamList)
             {
                 mSendStreamList.BeginSpan();
-                mSendStreamList.WriteFrom(mClientPeer.GetCryptoMgr().EncodeHead(mPackage));
+                mSendStreamList.WriteFrom(UdpPackageEncryption.EncodeHead(mPackage));
                 mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
                 mSendStreamList.FinishSpan();
             }

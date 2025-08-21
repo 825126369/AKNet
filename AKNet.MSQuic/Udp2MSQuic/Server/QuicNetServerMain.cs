@@ -7,11 +7,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp2MSQuic.Common;
 using System;
 
 namespace AKNet.Udp2MSQuic.Server
 {
-    public class QuicNetServerMain : NetServerInterface
+    public class QuicNetServerMain : NetServerInterface,PrivateConfigInterface
     {
         QuicServer mServer = null;
 
@@ -39,6 +40,11 @@ namespace AKNet.Udp2MSQuic.Server
         public void Update(double elapsed)
         {
             mServer.Update(elapsed);
+        }
+
+        public Config GetConfig()
+        {
+            return mServer.GetConfig();
         }
 
         public SOCKET_SERVER_STATE GetServerState()

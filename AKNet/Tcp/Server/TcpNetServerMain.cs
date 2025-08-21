@@ -12,7 +12,7 @@ using System;
 
 namespace AKNet.Tcp.Server
 {
-    public class TcpNetServerMain : NetServerInterface, PrivateInterface
+    public class TcpNetServerMain : NetServerInterface, PrivateConfigInterface
     {
         readonly TcpServer mInstance = null;
 

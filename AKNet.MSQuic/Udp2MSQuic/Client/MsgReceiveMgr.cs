@@ -15,7 +15,7 @@ namespace AKNet.Udp2MSQuic.Client
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		protected readonly TcpNetPackage mNetPackage = null;
 		private ClientPeer mClientPeer;
 		public MsgReceiveMgr(ClientPeer mClientPeer)
@@ -89,7 +89,7 @@ namespace AKNet.Udp2MSQuic.Client
 		{
 			lock (mReceiveStreamList)
 			{
-				mReceiveStreamList.reset();
+				mReceiveStreamList.Reset();
 			}
 		}
 	}

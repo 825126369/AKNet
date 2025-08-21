@@ -14,7 +14,7 @@ namespace AKNet.Udp2Tcp.Server
 {
     internal class UdpServer:NetServerInterface
 	{
-        private readonly LikeTcpNetPackage mLikeTcpNetPackage = new LikeTcpNetPackage();
+        private readonly TcpNetPackage mLikeTcpNetPackage = new TcpNetPackage();
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
@@ -28,20 +28,11 @@ namespace AKNet.Udp2Tcp.Server
         private readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
-        public UdpServer(Udp2TcpConfig mUserConfig)
+        public UdpServer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-
-            if (mUserConfig == null)
-            {
-                mConfig = new Config();
-            }
-            else
-            {
-                mConfig = new Config(mUserConfig);
-            }
-
+            mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
@@ -66,7 +57,7 @@ namespace AKNet.Udp2Tcp.Server
             return mConfig;
         }
 
-        public LikeTcpNetPackage GetLikeTcpNetPackage()
+        public TcpNetPackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
         }

@@ -6,15 +6,10 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-
-namespace AKNet.Common
+namespace AKNet.Udp1MSQuic.Common
 {
-    public interface NetPackage
+    internal interface PrivateConfigInterface
     {
-        ushort GetPackageId();
-        ReadOnlySpan<byte> GetData();
-        internal void SetData(Memory<byte> mData);
+        Config GetConfig();
     }
 }
-

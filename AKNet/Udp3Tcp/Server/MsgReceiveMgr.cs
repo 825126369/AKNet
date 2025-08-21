@@ -15,13 +15,13 @@ namespace AKNet.Udp3Tcp.Server
 	{
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
-        private readonly AkCircularBuffer mReceiveStreamList = null;
+        private readonly AkCircularManyBuffer mReceiveStreamList = null;
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer();
+            mReceiveStreamList = new AkCircularManyBuffer();
         }
 
         public int GetCurrentFrameRemainPackageCount()
@@ -62,7 +62,7 @@ namespace AKNet.Udp3Tcp.Server
         private bool NetTcpPackageExecute()
         {
             var mNetPackage = mNetServer.GetLikeTcpNetPackage();
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mNetServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
                 mClientPeer.NetPackageExecute(mNetPackage);

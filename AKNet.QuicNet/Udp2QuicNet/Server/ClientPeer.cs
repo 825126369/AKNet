@@ -165,11 +165,6 @@ namespace AKNet.QuicNet.Server
             return mSocketMgr.GetIPEndPoint();
         }
 
-        public IPEndPoint GetIPEndPoint()
-        {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
-        }
-
         public void SetName(string Name)
         {
             this.Name = Name;

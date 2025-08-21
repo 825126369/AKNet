@@ -33,7 +33,7 @@ namespace AKNet.Udp2Tcp.Server
             while (true)
             {
                 var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
+                bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.Length;

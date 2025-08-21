@@ -49,17 +49,12 @@ namespace AKNet.Udp2Tcp.Server
             }
         }
 
-        public void SendNetData(UInt16 id, byte[] data)
-        {
-            SendNetData(id, data.AsSpan());
-        }
-
         public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                ReadOnlySpan<byte> mData = LikeTcpNetPackageEncryption.Encode(id, data);
+                ReadOnlySpan<byte> mData = mNetServer.mCryptoMgr.Encode(id, data);
                 mClientPeer.mUdpCheckPool.SendTcpStream(mData);
             }
         }

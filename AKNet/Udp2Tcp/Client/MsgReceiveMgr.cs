@@ -16,8 +16,8 @@ namespace AKNet.Udp2Tcp.Client
 {
     internal class MsgReceiveMgr
     {
-        private readonly AkCircularBuffer mReceiveStreamList = null;
-        protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
+        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         internal ClientPeer mClientPeer = null;
@@ -25,7 +25,7 @@ namespace AKNet.Udp2Tcp.Client
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer();
+            mReceiveStreamList = new AkCircularManyBuffer();
         }
 
         public int GetCurrentFrameRemainPackageCount()
@@ -76,7 +76,7 @@ namespace AKNet.Udp2Tcp.Client
             while (true)
             {
                 var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
+                bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.Length;
@@ -110,7 +110,7 @@ namespace AKNet.Udp2Tcp.Client
 
         private bool NetTcpPackageExecute()
         {
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
                 mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);

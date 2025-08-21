@@ -12,7 +12,7 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal class TcpServer : NetServerInterface, PrivateInterface
+    internal class TcpServer : NetServerInterface, PrivateConfigInterface
     {
         internal readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;

@@ -16,8 +16,8 @@ namespace AKNet.Udp4LinuxTcp.Client
 {
     internal class MsgReceiveMgr
     {
-        private readonly AkCircularBuffer mReceiveStreamList = null;
-        protected readonly LikeTcpNetPackage mNetPackage = new LikeTcpNetPackage();
+        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
         private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         internal ClientPeer mClientPeer = null;
         private readonly msghdr mTcpMsg = null;
@@ -25,7 +25,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularBuffer();
+            mReceiveStreamList = new AkCircularManyBuffer();
             mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 
@@ -70,7 +70,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 
         private bool NetTcpPackageExecute()
         {
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
                 mClientPeer.NetPackageExecute(mNetPackage);

@@ -15,14 +15,14 @@ namespace AKNet.Udp4LinuxTcp.Server
 	{
         private UdpServer mNetServer = null;
         private ClientPeer mClientPeer = null;
-        private readonly AkCircularBuffer mReceiveStreamList = null;
+        private readonly AkCircularManyBuffer mReceiveStreamList = null;
         private readonly msghdr mTcpMsg = null; 
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
-            this.mReceiveStreamList = new AkCircularBuffer();
+            this.mReceiveStreamList = new AkCircularManyBuffer();
             this.mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 
@@ -60,7 +60,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         private bool NetTcpPackageExecute()
         {
             var mNetPackage = mNetServer.GetLikeTcpNetPackage();
-            bool bSuccess = LikeTcpNetPackageEncryption.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mNetServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
                 mClientPeer.NetPackageExecute(mNetPackage);

@@ -12,7 +12,7 @@ using System;
 
 namespace AKNet.Udp2MSQuic.Server
 {
-    internal class QuicServer : NetServerInterface
+    internal class QuicServer : NetServerInterface,PrivateConfigInterface
     {
         private readonly QuicListenerMgr mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
@@ -124,6 +124,11 @@ namespace AKNet.Udp2MSQuic.Server
         public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
         {
             mPackageManager.removeNetListenFunc(func);
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig;
         }
     }
 }

@@ -9,6 +9,7 @@
 using AKNet.Common;
 using AKNet.Udp1MSQuic.Common;
 using System;
+using System.Net;
 
 namespace AKNet.Udp1MSQuic.Client
 {
@@ -218,7 +219,7 @@ namespace AKNet.Udp1MSQuic.Client
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public Config GetConfig()

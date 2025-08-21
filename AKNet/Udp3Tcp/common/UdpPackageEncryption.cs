@@ -14,12 +14,12 @@ namespace AKNet.Udp3Tcp.Common
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    internal class NetPackageEncryption : NetPackageEncryptionInterface
+    internal static class UdpPackageEncryption
     {
-        private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-        private readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
+        private static readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
 
-        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
+        public static bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -51,7 +51,7 @@ namespace AKNet.Udp3Tcp.Common
             return true;
         }
         
-        public byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
+        public static byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
         {
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;

@@ -67,7 +67,7 @@ namespace AKNet.Common
 			}
 
 			mPackage.nPackageId = nPackageId;
-			mPackage.InitData(mCacheReceiveBuffer, 0, nBodyLength);
+			mPackage.SetData(new Memory<byte>(mCacheReceiveBuffer, 0, nBodyLength));
 			return true;
 		}
 

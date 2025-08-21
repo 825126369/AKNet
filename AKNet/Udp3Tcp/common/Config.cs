@@ -7,7 +7,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
 
 namespace AKNet.Udp3Tcp.Common
 {
@@ -30,42 +29,6 @@ namespace AKNet.Udp3Tcp.Common
         public readonly int MaxPlayerCount = 10000;
 
         //加解密
-        public readonly ECryptoType nECryptoType = ECryptoType.None;
-        public readonly string CryptoPasswrod1 = string.Empty;
-        public readonly string CryptoPasswrod2 = string.Empty;
-
-        public Config(Udp3TcpConfig mUserConfig = null)
-        {
-            server_socket_receiveBufferSize = nUdpPackageFixedSize * MaxPlayerCount;
-            client_socket_receiveBufferSize = nUdpPackageFixedSize * 64;
-
-            if (mUserConfig != null)
-            {
-                if (mUserConfig.fReceiveHeartBeatTimeOut > 0)
-                {
-                    fReceiveHeartBeatTimeOut = mUserConfig.fReceiveHeartBeatTimeOut;
-                }
-                if (mUserConfig.fMySendHeartBeatMaxTime > 0)
-                {
-                    fMySendHeartBeatMaxTime = mUserConfig.fMySendHeartBeatMaxTime;
-                }
-                if (mUserConfig.fReConnectMaxCdTime > 0)
-                {
-                    fReConnectMaxCdTime = mUserConfig.fReConnectMaxCdTime;
-                }
-                if (mUserConfig.MaxPlayerCount > 0)
-                {
-                    MaxPlayerCount = mUserConfig.MaxPlayerCount;
-                }
-
-                client_socket_receiveBufferSize = Math.Max(client_socket_receiveBufferSize, mUserConfig.client_socket_receiveBufferSize);
-                server_socket_receiveBufferSize = Math.Max(server_socket_receiveBufferSize, mUserConfig.server_socket_receiveBufferSize);
-
-                nECryptoType = mUserConfig.nECryptoType;
-                CryptoPasswrod1 = mUserConfig.CryptoPasswrod1;
-                CryptoPasswrod2 = mUserConfig.CryptoPasswrod2;
-            }
-        }
-
+        public ECryptoType nECryptoType = ECryptoType.None;
 	}
 }

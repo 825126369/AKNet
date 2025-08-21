@@ -209,7 +209,7 @@ namespace AKNet.Udp2Tcp.Client
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            mClientPeer.GetCryptoMgr().Encode(mPackage);
+            UdpPackageEncryption.Encode(mPackage);
             mPackage.remoteEndPoint = GetIPEndPoint();
 
             MainThreadCheck.Check();

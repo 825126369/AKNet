@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net;
 
 namespace AKNet.QuicNet.Client
 {

@@ -8,15 +8,16 @@
 ************************************Copyright*****************************************/
 using System;
 using AKNet.Common;
+using AKNet.Udp2Tcp.Common;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    public class Udp2TcpNetServerMain : NetServerInterface
+    public class Udp2TcpNetServerMain : NetServerInterface,PrivateConfigInterface
     {
         private UdpServer mNetServer;
-        public Udp2TcpNetServerMain(Udp2TcpConfig mUserConfig = null)
+        public Udp2TcpNetServerMain()
         {
-            mNetServer = new UdpServer(mUserConfig);
+            mNetServer = new UdpServer();
         }
 
         public void Update(double elapsed)
@@ -92,6 +93,11 @@ namespace AKNet.Udp2Tcp.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mNetServer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mNetServer.GetConfig();
         }
     }
 

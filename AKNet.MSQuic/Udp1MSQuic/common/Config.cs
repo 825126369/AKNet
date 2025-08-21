@@ -10,7 +10,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp1MSQuic.Common
 {
-    internal class Config
+    public class Config
     {
         //Common
         public const bool bUseSocketLock = false;
@@ -24,7 +24,7 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly int MaxPlayerCount = 10000;
         public readonly string CryptoPasswrod1 = string.Empty;
         public readonly string CryptoPasswrod2 = string.Empty;
-
+        public ECryptoType nECryptoType;
         public Config()
         {
 

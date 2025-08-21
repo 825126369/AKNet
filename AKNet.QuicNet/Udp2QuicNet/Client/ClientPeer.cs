@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.QuicNet.Common;
+using System.Net;
 
 namespace AKNet.QuicNet.Client
 {
@@ -217,7 +218,7 @@ namespace AKNet.QuicNet.Client
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public Config GetConfig()

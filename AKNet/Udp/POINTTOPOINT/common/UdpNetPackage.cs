@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Common
 {
-    internal abstract class UdpNetPackage : NetPackage
+    internal abstract class UdpNetPackage:NetPackage
 	{
         public ushort nPackageId = 0;
         public UInt16 nOrderId;
@@ -63,6 +63,11 @@ namespace AKNet.Udp.POINTTOPOINT.Common
         public ushort GetPackageId()
         {
 			return nPackageId;
+        }
+
+        void NetPackage.SetData(Memory<byte> mData)
+        {
+            throw new NotImplementedException();
         }
     }
 

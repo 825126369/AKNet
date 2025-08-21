@@ -15,11 +15,11 @@ namespace AKNet.Common
         public ushort nPackageId = 0;
         private ReadOnlyMemory<byte> mReadOnlyMemory;
 
-        public void InitData(byte[] mBuffer, int nOffset, int nLength)
+        public void SetData(Memory<byte> mData)
         {
-            mReadOnlyMemory = new ReadOnlyMemory<byte>(mBuffer, nOffset, nLength);
+            mReadOnlyMemory = mData;
         }
-        
+
         public ReadOnlySpan<byte> GetData()
         {
             return mReadOnlyMemory.Span;

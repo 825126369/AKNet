@@ -7,12 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 using System;
 using System.Net;
 
 namespace AKNet.Udp4LinuxTcp.Client
 {
-    public class Udp4LinuxTcpNetClientMain : NetClientInterface, ClientPeerBase
+    public class Udp4LinuxTcpNetClientMain : NetClientInterface, ClientPeerBase,PrivateConfigInterface
 	{
         private ClientPeer mNetClientPeer;
 
@@ -114,6 +115,11 @@ namespace AKNet.Udp4LinuxTcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mNetClientPeer.GetConfig();
         }
     }
 }

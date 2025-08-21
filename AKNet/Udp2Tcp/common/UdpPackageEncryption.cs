@@ -14,11 +14,10 @@ namespace AKNet.Udp2Tcp.Common
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    internal class NetPackageEncryption : NetPackageEncryptionInterface
+    internal static class UdpPackageEncryption
     {
-        private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-
-        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
+        private static readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        public static bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -55,7 +54,7 @@ namespace AKNet.Udp2Tcp.Common
             return true;
         }
 
-        public void Encode(NetUdpFixedSizePackage mPackage)
+        public static void Encode(NetUdpFixedSizePackage mPackage)
         {
             ushort nOrderId = mPackage.nOrderId;
             ushort nRequestOrderId = mPackage.nRequestOrderId;

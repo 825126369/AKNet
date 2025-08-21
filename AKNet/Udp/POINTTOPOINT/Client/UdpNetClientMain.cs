@@ -7,18 +7,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp.POINTTOPOINT.Common;
 using System;
 using System.Net;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
-    public class UdpNetClientMain:NetClientInterface, ClientPeerBase
+    public class UdpNetClientMain:NetClientInterface, ClientPeerBase,PrivateConfigInterface
 	{
-        private ClientPeer mNetClientPeer;
+        private readonly ClientPeer mNetClientPeer;
 
-        public UdpNetClientMain(UdpConfig mUserConfig = null)
+        public UdpNetClientMain()
         {
-            this.mNetClientPeer = new ClientPeer(mUserConfig);
+            this.mNetClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)
@@ -114,6 +115,11 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mNetClientPeer.GetConfig();
         }
     }
 }

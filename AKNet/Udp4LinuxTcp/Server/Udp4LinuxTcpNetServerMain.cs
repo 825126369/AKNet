@@ -8,15 +8,16 @@
 ************************************Copyright*****************************************/
 using System;
 using AKNet.Common;
+using AKNet.Udp4LinuxTcp.Common;
 
 namespace AKNet.Udp4LinuxTcp.Server
 {
-    public class Udp4LinuxTcpNetServerMain : NetServerInterface
+    public class Udp4LinuxTcpNetServerMain : NetServerInterface, PrivateConfigInterface
     {
         private UdpServer mNetServer;
-        public Udp4LinuxTcpNetServerMain(Udp3TcpConfig mUserConfig = null)
+        public Udp4LinuxTcpNetServerMain()
         {
-            mNetServer = new UdpServer(mUserConfig);
+            mNetServer = new UdpServer();
         }
 
         public void Update(double elapsed)
@@ -92,6 +93,11 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mNetServer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mNetServer.GetConfig();
         }
     }
 

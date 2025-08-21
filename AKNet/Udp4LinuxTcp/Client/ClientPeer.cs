@@ -24,7 +24,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly Config mConfig = new Config();
         internal readonly UdpCheckMgr mUdpCheckPool;
-
+        internal readonly CryptoMgr mCryptoMgr;
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
@@ -35,6 +35,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             MainThreadCheck.Check();
             IPAddressHelper.GetMtu();
 
+            mCryptoMgr = new CryptoMgr(mConfig);
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);

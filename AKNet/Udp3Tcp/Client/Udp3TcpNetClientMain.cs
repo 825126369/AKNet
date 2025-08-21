@@ -14,11 +14,11 @@ namespace AKNet.Udp3Tcp.Client
 {
     public class Udp3TcpNetClientMain : NetClientInterface, ClientPeerBase
 	{
-        private ClientPeer mNetClientPeer;
+        private readonly ClientPeer mNetClientPeer;
 
-        public Udp3TcpNetClientMain(Udp3TcpConfig mUserConfig = null)
+        public Udp3TcpNetClientMain()
         {
-            this.mNetClientPeer = new ClientPeer(mUserConfig);
+            this.mNetClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)

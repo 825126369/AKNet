@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace AKNet.Common
 {
-    internal static partial class RandomTool
+    internal static partial class RandomTool2
     {
         public static void Random(Span<byte> randomBytes)
         {

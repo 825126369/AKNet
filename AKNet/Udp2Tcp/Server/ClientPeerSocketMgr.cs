@@ -122,7 +122,7 @@ namespace AKNet.Udp2Tcp.Server
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
             mPackage.remoteEndPoint = GetIPEndPoint();
-            mNetServer.GetCryptoMgr().Encode(mPackage);
+            UdpPackageEncryption.Encode(mPackage);
 
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
