@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
-    internal partial class ClientPeer : TcpClientPeerBase, TcpClientPeerCommonBase, ClientPeerBase
+    internal partial class ClientPeer : TcpClientPeerBase, PrivateInterface, ClientPeerBase
     {
         internal readonly CryptoMgr mCryptoMgr;
         internal readonly Config mConfig;
@@ -28,6 +28,9 @@ namespace AKNet.Tcp.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
+
+        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+        private readonly TcpNetPackage mNetPackage = new TcpNetPackage();
 
         private Socket mSocket = null;
         private string ServerIp = "";
@@ -45,22 +48,13 @@ namespace AKNet.Tcp.Client
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
 
-        public ClientPeer(TcpConfig mUserConfig)
+        public ClientPeer()
         {
             NetLog.Init();
-            if (mUserConfig == null)
-            {
-                this.mConfig = new Config();
-            }
-            else
-            {
-                this.mConfig = new Config(mUserConfig);
-            }
-
+            this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-
             OpenSocket();
         }
 

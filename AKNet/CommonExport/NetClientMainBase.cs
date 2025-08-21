@@ -12,9 +12,9 @@ namespace AKNet.Common
     public class NetClientMainBase : NetClientInterface,ClientPeerBase
     {
         protected NetClientInterface mInterface = null;
-        public NetClientMainBase()
+        public NetClientInterface GetInstance()
         {
-            mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
+            return mInterface;
         }
 
         public NetClientMainBase(NetType nNetType = NetType.UDP)

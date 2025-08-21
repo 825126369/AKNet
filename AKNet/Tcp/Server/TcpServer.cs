@@ -12,10 +12,9 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal class TcpServer : NetServerInterface
+    internal class TcpServer : NetServerInterface, PrivateInterface
     {
-        private readonly TCPSocket_Server mSocketMgr = null;
-
+        internal readonly TCPSocket_Server mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly TcpNetPackage mNetPackage = null;
@@ -26,18 +25,9 @@ namespace AKNet.Tcp.Server
         internal readonly CryptoMgr mCryptoMgr = null;
         internal readonly Config mConfig = null;
 
-        public TcpServer(TcpConfig mUserConfig = null)
+        public TcpServer()
         {
-            NetLog.Init();
-            if (mUserConfig == null)
-            {
-                this.mConfig = new Config();
-            }
-            else
-            {
-                this.mConfig = new Config(mUserConfig);
-            }
-
+            this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr(mConfig);
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
@@ -48,6 +38,11 @@ namespace AKNet.Tcp.Server
 
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig; 
         }
 
         public SOCKET_SERVER_STATE GetServerState()

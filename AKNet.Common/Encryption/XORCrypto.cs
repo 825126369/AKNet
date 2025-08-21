@@ -15,7 +15,7 @@ namespace AKNet.Common
     internal class XORCrypto
     {
         readonly byte[] key = new byte[64];
-        public XORCrypto(string password)
+        public XORCrypto(string password = null)
         {
             RandomNumberGenerator.Fill(key);
             if (!string.IsNullOrWhiteSpace(password))

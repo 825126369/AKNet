@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal partial class ClientPeer : TcpClientPeerCommonBase, TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal partial class ClientPeer : PrivateInterface, TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private double fSendHeartBeatTime = 0.0;

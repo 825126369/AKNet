@@ -89,36 +89,6 @@ namespace AKNet.Common
             }
         }
 
-        public int CopyTo(Span<byte> mTempSpan)
-        {
-            var mNode = nCurrentReadBlock;
-            int nReadLength = 0;
-            while (mNode != null)
-            {
-                ReadOnlySpan<byte> mSpan = mNode.Value.GetCanReadSpan();
-                if (mSpan.Length > 0)
-                {
-                    int nCopyLength = Math.Min(mTempSpan.Length - nReadLength, mSpan.Length);
-                    mSpan.Slice(0, nCopyLength).CopyTo(mTempSpan.Slice(nReadLength));
-                    nReadLength += nCopyLength;
-                    if (nReadLength >= mTempSpan.Length)
-                    {
-                        break;
-                    }
-                }
-
-                if (mNode == nCurrentWriteBlock)
-                {
-                    break;
-                }
-                else
-                {
-                    mNode = mNode.Next;
-                }
-            }
-            return nReadLength;
-        }
-
         public bool isCanWriteTo(int countT)
         {
             return this.Length >= countT;
@@ -208,6 +178,36 @@ namespace AKNet.Common
                 }
             }
 
+            return nReadLength;
+        }
+
+        public int CopyTo(Span<byte> mTempSpan)
+        {
+            var mNode = nCurrentReadBlock;
+            int nReadLength = 0;
+            while (mNode != null)
+            {
+                ReadOnlySpan<byte> mSpan = mNode.Value.GetCanReadSpan();
+                if (mSpan.Length > 0)
+                {
+                    int nCopyLength = Math.Min(mTempSpan.Length - nReadLength, mSpan.Length);
+                    mSpan.Slice(0, nCopyLength).CopyTo(mTempSpan.Slice(nReadLength));
+                    nReadLength += nCopyLength;
+                    if (nReadLength >= mTempSpan.Length)
+                    {
+                        break;
+                    }
+                }
+
+                if (mNode == nCurrentWriteBlock)
+                {
+                    break;
+                }
+                else
+                {
+                    mNode = mNode.Next;
+                }
+            }
             return nReadLength;
         }
 

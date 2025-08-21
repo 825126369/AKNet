@@ -8,7 +8,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Common
 {
-    public class Udp2TcpConfig : NetConfigInterface
+    public class Udp2TcpConfig
     {
         public double fReceiveHeartBeatTimeOut = 5.0;
         public double fMySendHeartBeatMaxTime = 2.0;

@@ -12,9 +12,9 @@ namespace AKNet.Common
     public class NetServerMainBase : NetServerInterface
     {
         protected NetServerInterface mInterface = null;
-        public NetServerMainBase()
+        public NetServerInterface GetInstance()
         {
-            mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
+            return mInterface;
         }
 
         public NetServerMainBase(NetType nNetType = NetType.UDP)

@@ -15,9 +15,6 @@ namespace AKNet.Tcp.Client
     //和线程打交道
     internal partial class ClientPeer
     {
-        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
-        private readonly TcpNetPackage mNetPackage = new TcpNetPackage();
-
         public void Update_Receive(double elapsed)
 		{
 			var mSocketPeerState = GetSocketState();
