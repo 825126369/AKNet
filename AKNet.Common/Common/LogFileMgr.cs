@@ -12,12 +12,9 @@ namespace AKNet.Common
         private static readonly string logFilePath = "aknet_Log.txt";
         private static readonly ConcurrentQueue<string> mLogQueue = new ConcurrentQueue<string>();
         private static readonly List<string> tempList = new List<string>();
-        private static bool IsShuttingDown = true;
-        private static bool bInWriteToFile = true;
 
         static LogFileMgr()
         {
-            IsShuttingDown = false;
             if (!Directory.Exists(logFileDir))
             {
                 Directory.CreateDirectory(logFileDir);
@@ -44,14 +41,7 @@ namespace AKNet.Common
                 }
             }
 
-            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             WriteLogToFileThreadFunc();
-        }
-
-        private static async void OnProcessExit(object sender, EventArgs e)
-        {
-            IsShuttingDown = true;
-            await FlushLogs(true);
         }
 
         public static void AddMsg(string msg)
@@ -64,55 +54,31 @@ namespace AKNet.Common
             while (true)
             {
                 await Task.Delay(1000).ConfigureAwait(false); //这里必须加个 false,因为上层有可能自定义了同步上下文
-                await FlushLogs().ConfigureAwait(false); //捕获上下文，性能会很差
+                while (!mLogQueue.IsEmpty)
+                {
+                    await FlushLogs().ConfigureAwait(false); //捕获上下文，性能会很差
+                }
             }
         }
 
         private static async Task FlushLogs(bool bFlushAll = false)
         {
-            if (bFlushAll)
+            tempList.Clear();
+            int nFlushMaxCount = bFlushAll ? int.MaxValue : 1000;
+            while (tempList.Count < nFlushMaxCount && mLogQueue.TryDequeue(out string log))
+            {
+                tempList.Add(log);
+            }
+
+            if (tempList.Count > 0)
             {
                 try
                 {
-                    if (!bInWriteToFile)
-                    {
-                        bInWriteToFile = true;
-                        File.AppendAllLines(logFilePath, tempList);
-                        bInWriteToFile = false;
-                    }
+                    await File.AppendAllLinesAsync(logFilePath, tempList);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("File.AppendAllLinesAsync Error: " + e.ToString());
-                }
-            }
-            else
-            {
-                if (!bInWriteToFile)
-                {
-                    tempList.Clear();
-                    int nFlushMaxCount = bFlushAll ? int.MaxValue : 1000;
-                    while (tempList.Count < nFlushMaxCount && mLogQueue.TryDequeue(out string log))
-                    {
-                        tempList.Add(log);
-                    }
-
-                    if (tempList.Count > 0)
-                    {
-                        try
-                        {
-                            if (!bInWriteToFile)
-                            {
-                                bInWriteToFile = true;
-                                await File.AppendAllLinesAsync(logFilePath, tempList);
-                                bInWriteToFile = false;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine("File.AppendAllLinesAsync Error: " + e.ToString());
-                        }
-                    }
                 }
             }
         }
