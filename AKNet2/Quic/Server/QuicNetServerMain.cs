@@ -7,11 +7,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System;
 
 namespace AKNet.Quic.Server
 {
-    public class QuicNetServerMain : NetServerInterface
+    public class QuicNetServerMain : NetServerInterface,PrivateConfigInterface
     {
         QuicServer mServer = null;
 
@@ -93,6 +94,11 @@ namespace AKNet.Quic.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mServer.GetConfig();
         }
     }
 }

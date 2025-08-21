@@ -6,17 +6,16 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.WebSocket.Common;
+using System.Net.Sockets;
 
 namespace AKNet.WebSocket.Client
 {
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		protected readonly TcpNetPackage mNetPackage = null;
 		private ClientPeer mClientPeer;
 		public MsgReceiveMgr(ClientPeer mClientPeer)
@@ -58,7 +57,7 @@ namespace AKNet.WebSocket.Client
 		{
 			lock (mReceiveStreamList)
 			{
-                mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
             }
         }
 
@@ -90,7 +89,7 @@ namespace AKNet.WebSocket.Client
 		{
 			lock (mReceiveStreamList)
 			{
-				mReceiveStreamList.reset();
+				mReceiveStreamList.Reset();
 			}
 		}
 	}

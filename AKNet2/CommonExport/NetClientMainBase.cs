@@ -6,6 +6,8 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Net;
+
 namespace AKNet.Common
 {
     public class NetClientMainBase : NetClientInterface,ClientPeerBase

@@ -24,11 +24,11 @@ namespace AKNet.Quic.Server
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-
+        internal readonly Config mConfig = new Config();
         public QuicServer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr();
+            mCryptoMgr = new CryptoMgr(mConfig);
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new TcpNetPackage();
@@ -39,6 +39,11 @@ namespace AKNet.Quic.Server
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig;
         }
 
         public SOCKET_SERVER_STATE GetServerState()

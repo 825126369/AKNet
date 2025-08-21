@@ -6,9 +6,11 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+
 namespace AKNet.Quic.Common
 {
-    internal static class Config
+    public class Config
     {
         //Common
         public const bool bUseSocketLock = false;
@@ -18,5 +20,6 @@ namespace AKNet.Quic.Common
         public const double fMySendHeartBeatMaxTime = 2.0;
         public const double fReConnectMaxCdTime = 3.0;
         public const int MaxPlayerCount = 10000;
+        public ECryptoType nECryptoType;
     }
 }

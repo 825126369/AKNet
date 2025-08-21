@@ -9,16 +9,18 @@
 using AKNet.Common;
 using AKNet.Quic.Common;
 using System;
+using System.Net;
 
 namespace AKNet.Quic.Client
 {
-    internal class ClientPeer : QuicClientPeerBase, ClientPeerBase
+    internal class ClientPeer : QuicClientPeerBase, ClientPeerBase,PrivateConfigInterface
     {
         internal readonly QuicConnectionMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
+        private readonly Config mConfig = new Config();
 
         private double fReConnectServerCdTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
@@ -31,7 +33,7 @@ namespace AKNet.Quic.Client
         public ClientPeer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr();
+            mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new QuicConnectionMgr(this);
@@ -216,7 +218,7 @@ namespace AKNet.Quic.Client
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
@@ -257,6 +259,11 @@ namespace AKNet.Quic.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig;
         }
     }
 }

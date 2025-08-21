@@ -9,6 +9,7 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Net;
 
 namespace AKNet.Tcp.Client
 {
@@ -27,11 +28,11 @@ namespace AKNet.Tcp.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
-
+        internal readonly Config mConfig = new Config();
         public ClientPeer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr();
+            mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new TCPSocketMgr(this);
@@ -216,7 +217,7 @@ namespace AKNet.Tcp.Client
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
@@ -257,6 +258,11 @@ namespace AKNet.Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig;
         }
     }
 }

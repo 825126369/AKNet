@@ -155,11 +155,11 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetStream(ReadOnlyMemory<byte> mBufferSegment)
+        public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.WriteFrom(mBufferSegment.Span);
+                mSendStreamList.WriteFrom(mBufferSegment);
             }
 
             if (!bSendIOContextUsed)

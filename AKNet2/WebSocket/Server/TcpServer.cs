@@ -25,12 +25,12 @@ namespace AKNet.WebSocket.Server
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        internal readonly Config mConfig = null;
+        internal readonly Config mConfig = new Config();
 
         public TcpServer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr();
+            mCryptoMgr = new CryptoMgr(mConfig);
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new TcpNetPackage();
@@ -41,6 +41,11 @@ namespace AKNet.WebSocket.Server
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
             mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+        }
+
+        public Config GetConfig()
+        {
+            return mConfig;
         }
 
         public SOCKET_SERVER_STATE GetServerState()

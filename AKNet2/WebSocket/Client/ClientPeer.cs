@@ -9,6 +9,7 @@
 using AKNet.Common;
 using AKNet.WebSocket.Common;
 using System;
+using System.Net;
 
 namespace AKNet.WebSocket.Client
 {
@@ -17,7 +18,7 @@ namespace AKNet.WebSocket.Client
         internal readonly TCPSocketMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
-        internal readonly Config mConfig;
+        internal readonly Config mConfig = new Config();
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
 
@@ -28,11 +29,10 @@ namespace AKNet.WebSocket.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
-
         public ClientPeer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr();
+            mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new TCPSocketMgr(this);
@@ -217,7 +217,7 @@ namespace AKNet.WebSocket.Client
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public Config GetConfig()

@@ -10,7 +10,7 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    internal static class Config
+    public class Config
     {
         //Common
         public const bool bUseSocketLock = false;
@@ -20,6 +20,6 @@ namespace AKNet.Tcp.Common
         public const double fMySendHeartBeatMaxTime = 2.0;
         public const double fReConnectMaxCdTime = 3.0;
         public const int MaxPlayerCount = 10000;
-        public const ECryptoType nECryptoType = ECryptoType.None;
+        public ECryptoType nECryptoType = ECryptoType.None;
     }
 }

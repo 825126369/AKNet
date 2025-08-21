@@ -8,10 +8,11 @@
 ************************************Copyright*****************************************/
 using System;
 using AKNet.Common;
+using AKNet.WebSocket.Common;
 
 namespace AKNet.WebSocket.Server
 {
-    public class TcpNetServerMain : NetServerInterface
+    public class TcpNetServerMain : NetServerInterface, PrivateConfigInterface
     {
         TcpServer mServer = null;
 
@@ -93,6 +94,11 @@ namespace AKNet.WebSocket.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public Config GetConfig()
+        {
+            return mServer.GetConfig();
         }
     }
 }
