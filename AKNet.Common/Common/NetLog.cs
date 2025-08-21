@@ -162,7 +162,7 @@ namespace AKNet.Common
         public static void LogException(Exception e)
         {
             if (!bPrintLog) return;
-            string msg = GetErrorMsg(e, GetStackTraceInfo());
+            string msg = GetExceptionMsg(e, GetStackTraceInfo());
 #if DEBUG
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(msg);
