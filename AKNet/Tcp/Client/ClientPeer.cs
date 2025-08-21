@@ -9,6 +9,8 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
@@ -27,6 +29,22 @@ namespace AKNet.Tcp.Client
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
 
+        private Socket mSocket = null;
+        private string ServerIp = "";
+        private int nServerPort = 0;
+        private IPEndPoint mIPEndPoint = null;
+        private bool bConnectIOContexUsed = false;
+        private bool bDisConnectIOContexUsed = false;
+        private bool bSendIOContextUsed = false;
+        private bool bReceiveIOContextUsed = false;
+
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+        private readonly object lock_mSocket_object = new object();
+        private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
+
         public ClientPeer(TcpConfig mUserConfig)
         {
             NetLog.Init();
@@ -42,6 +60,8 @@ namespace AKNet.Tcp.Client
             mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
+
+            OpenSocket();
         }
 
 		public void Update(double elapsed)

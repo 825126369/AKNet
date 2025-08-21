@@ -7,9 +7,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using AKNet.Common;
 
-namespace AKNet.Tcp.Common
+namespace AKNet.Common
 {
     internal class TcpNetPackage : NetPackage
     {

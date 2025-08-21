@@ -6,20 +6,19 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System.Runtime.CompilerServices;
-[assembly: InternalsVisibleTo("AKNet")]
-[assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
+using System;
+
 namespace AKNet.Common
 {
-    internal enum ECryptoType
+    public enum ECryptoType
     {
         None = 0,
         Xor = 1,
     }
 
-    internal static class ECryptoConfig
+    internal interface NetStreamEncryptionInterface
     {
-        public const ECryptoType nECryptoType = ECryptoType.None;
+        ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
+        bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage);
     }
 }

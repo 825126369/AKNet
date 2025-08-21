@@ -24,7 +24,7 @@ namespace AKNet.Common
         {
             randomBytes = (byte)RandomNumberGenerator.GetInt32(0, byte.MaxValue);
         }
-
+        
         public static void Random(ref uint randomBytes)
         {
             randomBytes = (uint)RandomNumberGenerator.GetInt32(0, int.MaxValue);

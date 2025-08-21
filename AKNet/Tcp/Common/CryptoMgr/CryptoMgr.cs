@@ -11,16 +11,11 @@ using System;
 
 namespace AKNet.Tcp.Common
 {
-    internal interface NetStreamEncryptionInterface
-    {
-        ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
-        bool Decode(AkCircularBuffer mReceiveStreamList, TcpNetPackage mPackage);
-    }
-
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
         readonly NetStreamEncryptionInterface mNetStreamEncryption = null;
         readonly Config mConfig;
+
         public CryptoMgr(Config mConfig)
         {
             this.mConfig = mConfig;
@@ -55,7 +50,7 @@ namespace AKNet.Tcp.Common
             return mNetStreamEncryption.Encode(nPackageId, mBufferSegment);
         }
 
-        public bool Decode(AkCircularBuffer mReceiveStreamList, TcpNetPackage mPackage)
+        public bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage)
         {
             return mNetStreamEncryption.Decode(mReceiveStreamList, mPackage);
         }

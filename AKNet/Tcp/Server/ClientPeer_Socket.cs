@@ -20,18 +20,11 @@ namespace AKNet.Tcp.Server
 		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;
 		private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
-
 		private Socket mSocket = null;
 		private readonly object lock_mSocket_object = new object();
 		
-        private ClientPeer mClientPeer;
-		private TcpServer mTcpServer;
-		
-		public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+		public void OpenSocket()
 		{
-			this.mClientPeer = mClientPeer;
-			this.mTcpServer = mTcpServer;
-
 			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
 			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
             if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))
@@ -55,7 +48,7 @@ namespace AKNet.Tcp.Server
 			MainThreadCheck.Check();
 
 			this.mSocket = otherSocket;
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+			SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			bSendIOContextUsed = false;
 
             StartReceiveEventArg();
@@ -189,7 +182,7 @@ namespace AKNet.Tcp.Server
 			{
 				if (e.BytesTransferred > 0)
 				{
-					mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(e);
+					MultiThreadingReceiveSocketStream(e);
                     StartReceiveEventArg();
                 }
 				else
@@ -272,22 +265,27 @@ namespace AKNet.Tcp.Server
 
         private void DisConnectedWithNormal()
         {
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         private void DisConnectedWithException(Exception e)
 		{
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
 		private void DisConnectedWithSocketError(SocketError mError)
 		{
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		void CloseSocket()
 		{
-			if (Config.bUseSocketLock)
+            lock (mSendStreamList)
+            {
+                mSendStreamList.reset();
+            }
+
+            if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -325,15 +323,6 @@ namespace AKNet.Tcp.Server
 						mSocket2.Close();
 					}
 				}
-			}
-		}
-
-		public void Reset()
-		{
-			CloseSocket();
-			lock (mSendStreamList)
-			{
-				mSendStreamList.reset();
 			}
 		}
 	}

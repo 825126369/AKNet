@@ -7,18 +7,17 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
-[assembly: InternalsVisibleTo("AKNet")]
-[assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
+
 namespace AKNet.Common
 {
     internal class XORCrypto
     {
-        readonly byte[] key = Encoding.ASCII.GetBytes("2024/11/23");
+        readonly byte[] key = new byte[64];
         public XORCrypto(string password)
         {
+            RandomNumberGenerator.Fill(key);
             if (!string.IsNullOrWhiteSpace(password))
             {
                 key = Encoding.ASCII.GetBytes(password);

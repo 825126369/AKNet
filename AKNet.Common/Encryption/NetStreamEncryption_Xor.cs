@@ -8,21 +8,27 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Runtime.CompilerServices;
-using AKNet.Common;
 
-namespace AKNet.Tcp.Common
+namespace AKNet.Common
 {
-    internal class NetStreamEncryption:NetStreamEncryptionInterface
+    internal class NetStreamEncryption_Xor : NetStreamEncryptionInterface
     {
-        private const int nPackageFixedHeadSize = 8;
+		private const int nPackageFixedHeadSize = 9;
+        readonly XORCrypto mCryptoInterface = null;
         private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-		private byte[] mCacheSendBuffer = new byte[Config.nIOContexBufferLength];
-		private byte[] mCacheReceiveBuffer = new byte[Config.nIOContexBufferLength];
+		private byte[] mCacheSendBuffer = new byte[1024];
+		private byte[] mCacheReceiveBuffer = new byte[1024];
+        private byte[] mCacheHead = new byte[nPackageFixedHeadSize];
+
+        public NetStreamEncryption_Xor(XORCrypto mCryptoInterface)
+		{
+			this.mCryptoInterface = mCryptoInterface;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureSendBufferOk(int nSumLength)
 		{
-			BufferTool.EnSureBufferOk(ref mCacheSendBuffer, nSumLength);
+            BufferTool.EnSureBufferOk(ref mCacheSendBuffer, nSumLength);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -31,24 +37,26 @@ namespace AKNet.Tcp.Common
             BufferTool.EnSureBufferOk(ref mCacheReceiveBuffer, nSumLength);
         }
 
-		public bool Decode(AkCircularBuffer mReceiveStreamList, TcpNetPackage mPackage)
+		public bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage)
 		{
 			if (mReceiveStreamList.Length < nPackageFixedHeadSize)
 			{
 				return false;
 			}
 
-			for (int i = 0; i < 4; i++)
+            int nHeadLength = mReceiveStreamList.Peek(mCacheHead);
+            byte nEncodeToken = mCacheHead[0];
+			for (int i = 0; i < 4 ; i++)
 			{
-				if (mReceiveStreamList[i] != mCheck[i])
+				if (mCacheHead[i + 1] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
 				{
 					return false;
 				}
 			}
 
-			ushort nPackageId = EndianBitConverter.ToUInt16(mReceiveStreamList, 4);
-			int nBodyLength = EndianBitConverter.ToUInt16(mReceiveStreamList, 6);
-			NetLog.Assert(nBodyLength >= 0);
+            ushort nPackageId = EndianBitConverter.ToUInt16(mCacheHead, 5);
+            int nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 7);
+            NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
 			if (!mReceiveStreamList.isCanWriteTo(nSumLength))
@@ -61,7 +69,7 @@ namespace AKNet.Tcp.Common
 			{
 				EnSureReceiveBufferOk(nBodyLength);
 				Span<byte> mCacheReceiveBufferSpan = mCacheReceiveBuffer.AsSpan();
-				mReceiveStreamList.WriteTo(0, mCacheReceiveBufferSpan.Slice(0, nBodyLength));
+				mReceiveStreamList.WriteTo(mCacheReceiveBufferSpan.Slice(0, nBodyLength));
 			}
 
 			mPackage.nPackageId = nPackageId;
@@ -74,12 +82,21 @@ namespace AKNet.Tcp.Common
 			int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
 
-			Buffer.BlockCopy(mCheck, 0, mCacheSendBuffer, 0, 4);
-            EndianBitConverter.SetBytes(mCacheSendBuffer, 4, nPackageId);
-            EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)mBufferSegment.Length);
+			byte nEncodeToken = (byte)RandomTool.Random(0, 255);
+			mCacheSendBuffer[0] = nEncodeToken;
+			for (int i = 0; i < 4; i++)
+			{
+				mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
+			}
 
-            Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
-            mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 5, nPackageId);
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 7, (ushort)mBufferSegment.Length);
+
+			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
+			if (mBufferSegment.Length > 0)
+			{
+				mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));
+			}
 			return mCacheSendBufferSpan.Slice(0, nSumLength);
 		}
 

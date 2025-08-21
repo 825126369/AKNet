@@ -9,7 +9,9 @@
 using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
-
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
 namespace AKNet.Common
 {
     //这里默认使用大端存储的
@@ -108,5 +110,6 @@ namespace AKNet.Common
         {
             return BinaryPrimitives.ReadUInt64BigEndian(mBuffer.Slice(nBeginIndex));
         }
+
     }
 }

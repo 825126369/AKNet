@@ -51,7 +51,7 @@ namespace AKNet.Tcp.Client
 		{
 			lock (mReceiveStreamList)
 			{
-                mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.Count));
             }
         }
 
@@ -61,7 +61,7 @@ namespace AKNet.Tcp.Client
 
 			lock (mReceiveStreamList)
 			{
-				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -72,19 +72,11 @@ namespace AKNet.Tcp.Client
 				}
 				else
 				{
-					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+					mPackageManager.NetPackageExecute(this, mNetPackage);
 				}
 			}
 
 			return bSuccess;
-		}
-
-		public void Reset()
-		{
-			lock (mReceiveStreamList)
-			{
-				mReceiveStreamList.Reset();
-			}
 		}
 	}
 }

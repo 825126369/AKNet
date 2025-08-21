@@ -15,19 +15,14 @@ namespace AKNet.Tcp.Server
 {
     internal partial class ClientPeer
 	{
-		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
 		private TcpServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
-		{
-			this.mTcpServer = mTcpServer;
-			this.mClientPeer = mClientPeer;
-		}
 
-		public void Update(double elapsed)
+		public void UpdateReceive(double elapsed)
 		{
-			switch (mClientPeer.GetSocketState())
+			switch (GetSocketState())
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
@@ -39,7 +34,7 @@ namespace AKNet.Tcp.Server
 
 					if (nPackageCount > 0)
 					{
-						mClientPeer.ReceiveHeartBeat();
+						ReceiveHeartBeat();
 					}
 
 					//if (nPackageCount > 100)
@@ -57,17 +52,17 @@ namespace AKNet.Tcp.Server
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-                mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
 			}
 		}
 
 		private bool NetPackageExecute()
 		{
-			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
+			TcpNetPackage mNetPackage = this.mNetServer.mNetPackage;
 			bool bSuccess = false;
 			lock (lock_mReceiveStreamList_object)
 			{
-				bSuccess = mTcpServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = this.mNetServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -78,19 +73,11 @@ namespace AKNet.Tcp.Server
 				}
 				else
 				{
-					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+                    this.mNetServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 
 			return bSuccess;
-		}
-
-		public void Reset()
-		{
-			lock (mReceiveStreamList)
-			{
-				mReceiveStreamList.reset();
-			}
 		}
 
 	}
