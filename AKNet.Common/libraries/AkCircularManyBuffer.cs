@@ -276,7 +276,7 @@ namespace AKNet.Common
             nSumByteCount = 0;
         }
 
-        public static void Test()
+        private static void Test()
         {
             AkCircularManyBuffer mAkCircularManyBuffer = new AkCircularManyBuffer(1, 0, 100);
 
@@ -298,5 +298,6 @@ namespace AKNet.Common
                 //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
             }
         }
+
     }
 }
