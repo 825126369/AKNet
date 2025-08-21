@@ -314,7 +314,7 @@ namespace AKNet.Tcp.Client
         {
             if (e.SocketError == SocketError.Success)
             {
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
+                NetLog.Log($"Client 连接服务器: {this.mIPEndPoint} 成功");
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
 				if (!bReceiveIOContextUsed)
@@ -325,7 +325,7 @@ namespace AKNet.Tcp.Client
             }
             else
             {
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 失败：{2}", this.ServerIp, this.nServerPort, e.SocketError));
+                NetLog.Log($"Client 连接服务器: {this.mIPEndPoint} 失败");
                 if (GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
                 {
                     SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
