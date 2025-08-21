@@ -6,28 +6,22 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Tcp.Common;
+using System.Net.Sockets;
 
-namespace AKNet.Tcp.Server
+namespace AKNet.Tcp.Client
 {
-    internal class MsgReceiveMgr
-	{
-		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
-		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
-		private TcpServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
-		{
-			this.mTcpServer = mTcpServer;
-			this.mClientPeer = mClientPeer;
-		}
+    //和线程打交道
+    internal partial class ClientPeer
+    {
+        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+        private readonly TcpNetPackage mNetPackage = new TcpNetPackage();
 
-		public void Update(double elapsed)
+        public void Update_Receive(double elapsed)
 		{
-			switch (mClientPeer.GetSocketState())
+			var mSocketPeerState = GetSocketState();
+			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
@@ -39,12 +33,12 @@ namespace AKNet.Tcp.Server
 
 					if (nPackageCount > 0)
 					{
-						mClientPeer.ReceiveHeartBeat();
+						ReceiveHeartBeat();
 					}
 
 					//if (nPackageCount > 100)
 					//{
-					//	NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
+					//	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
 					//}
 
 					break;
@@ -52,22 +46,22 @@ namespace AKNet.Tcp.Server
 					break;
 			}
 		}
-		
+
         public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
-			lock (lock_mReceiveStreamList_object)
+			lock (mReceiveStreamList)
 			{
                 mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
-			}
-		}
+            }
+        }
 
 		private bool NetPackageExecute()
 		{
-			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
-			lock (lock_mReceiveStreamList_object)
+
+			lock (mReceiveStreamList)
 			{
-				bSuccess = mTcpServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -78,7 +72,7 @@ namespace AKNet.Tcp.Server
 				}
 				else
 				{
-					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 
@@ -89,9 +83,8 @@ namespace AKNet.Tcp.Server
 		{
 			lock (mReceiveStreamList)
 			{
-				mReceiveStreamList.reset();
+				mReceiveStreamList.Reset();
 			}
 		}
-
 	}
 }

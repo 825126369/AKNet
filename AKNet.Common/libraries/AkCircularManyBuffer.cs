@@ -51,23 +51,7 @@ namespace AKNet.Common
         private LinkedListNode<BufferItem> nCurrentReadBlock;
         private int nSumByteCount;
 
-        public AkCircularManyBuffer()
-        {
-            int nInitBlockCount = 10;
-            int nBlockSize = 16 * 1024;
-            this.BlockSize = nBlockSize;
-            for (int i = 0; i < nInitBlockCount; i++)
-            {
-                BufferItem mItem = new BufferItem(BlockSize);
-                mItemList.AddLast(mItem.mEntry);
-            }
-
-            nCurrentWriteBlock = mItemList.First;
-            nCurrentReadBlock = mItemList.First;
-            nSumByteCount = 0;
-        }
-
-        public AkCircularManyBuffer(int nInitBlockCount, int nBlockSize)
+        public AkCircularManyBuffer(int nInitBlockCount = 10, int nBlockSize = 1024)
         {
             this.BlockSize = nBlockSize;
             for (int i = 0; i < nInitBlockCount; i++)
@@ -180,6 +164,13 @@ namespace AKNet.Common
             return nReadLength;
         }
 
-
+        public void Reset()
+        {
+            nCurrentWriteBlock = mItemList.First;
+            nCurrentReadBlock = mItemList.First;
+            nSumByteCount = 0;
+            nCurrentWriteBlock.Value.Reset();
+            nCurrentReadBlock.Value.Reset();
+        }
     }
 }

@@ -14,8 +14,8 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Client
 {
-    internal class TCPSocketMgr
-	{
+    internal partial class ClientPeer
+    {
 		private Socket mSocket = null;
 		private string ServerIp = "";
 		private int nServerPort = 0;
@@ -28,20 +28,14 @@ namespace AKNet.Tcp.Client
         private ClientPeer mClientPeer;
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
 		private readonly object lock_mSocket_object = new object();
-        private readonly SocketAsyncEventArgs mConnectIOContex = null;
-        private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
-		private readonly SocketAsyncEventArgs mSendIOContex = null;
-        private readonly SocketAsyncEventArgs mReceiveIOContex = null;
+        private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
+		private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
 
-        public TCPSocketMgr(ClientPeer mClientPeer)
+        public ClientPeer(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			
-            mConnectIOContex = new SocketAsyncEventArgs();
-			mDisConnectIOContex = new SocketAsyncEventArgs();
-            mSendIOContex = new SocketAsyncEventArgs();
-            mReceiveIOContex = new SocketAsyncEventArgs();
-			
 			mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
 			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             
@@ -553,7 +547,12 @@ namespace AKNet.Tcp.Client
 
 		private void CloseSocket()
 		{
-			if (Config.bUseSocketLock)
+            lock (mSendStreamList)
+            {
+                mSendStreamList.reset();
+            }
+
+            if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -591,19 +590,5 @@ namespace AKNet.Tcp.Client
 				}
 			}
 		}
-
-		public void Reset()
-		{
-            CloseSocket();
-            lock (mSendStreamList)
-			{
-				mSendStreamList.reset();
-			}
-		}
-
-		public void Release()
-		{
-            CloseSocket();
-        }
     }
 }

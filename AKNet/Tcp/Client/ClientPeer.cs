@@ -12,10 +12,8 @@ using System;
 
 namespace AKNet.Tcp.Client
 {
-    internal class ClientPeer : TcpClientPeerBase, TcpClientPeerCommonBase, ClientPeerBase
+    internal partial class ClientPeer : TcpClientPeerBase, TcpClientPeerCommonBase, ClientPeerBase
     {
-        internal readonly TCPSocketMgr mSocketMgr;
-        internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
         internal readonly Config mConfig;
         internal readonly ListenNetPackageMgr mPackageManager = null;
@@ -44,8 +42,6 @@ namespace AKNet.Tcp.Client
             mCryptoMgr = new CryptoMgr(mConfig);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mSocketMgr = new TCPSocketMgr(this);
-            mMsgReceiveMgr = new MsgReceiveMgr(this);
         }
 
 		public void Update(double elapsed)
@@ -61,8 +57,33 @@ namespace AKNet.Tcp.Client
                 b_SOCKET_PEER_STATE_Changed = false;
             }
 
-            mMsgReceiveMgr.Update(elapsed);
-			switch (mSocketPeerState)
+            var mSocketPeerState = GetSocketState();
+            switch (mSocketPeerState)
+            {
+                case SOCKET_PEER_STATE.CONNECTED:
+                    int nPackageCount = 0;
+
+                    while (NetPackageExecute())
+                    {
+                        nPackageCount++;
+                    }
+
+                    if (nPackageCount > 0)
+                    {
+                        ReceiveHeartBeat();
+                    }
+
+                    //if (nPackageCount > 100)
+                    //{
+                    //	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+                    //}
+
+                    break;
+                default:
+                    break;
+            }
+
+            switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
@@ -97,7 +118,7 @@ namespace AKNet.Tcp.Client
 				default:
 					break;
 			}
-		}
+        }
 
         private void SendHeartBeat()
         {
@@ -113,16 +134,6 @@ namespace AKNet.Tcp.Client
 		{
 			fReceiveHeartBeatTime = 0f;
 		}
-        
-        public void ConnectServer(string Ip, int nPort)
-		{
-			mSocketMgr.ConnectServer(Ip, nPort);
-		}
-
-        public void ReConnectServer()
-        {
-            mSocketMgr.ReConnectServer();
-        }
 
         public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
         {
@@ -152,7 +163,7 @@ namespace AKNet.Tcp.Client
             {
                 ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
-                mSocketMgr.SendNetStream(mBufferSegment);
+                SendNetStream(mBufferSegment);
             }
             else
             {
@@ -166,7 +177,7 @@ namespace AKNet.Tcp.Client
             {
                 ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, data);
-                mSocketMgr.SendNetStream(mBufferSegment);
+                SendNetStream(mBufferSegment);
             }
             else
             {
@@ -180,7 +191,7 @@ namespace AKNet.Tcp.Client
             {
                 ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
-                mSocketMgr.SendNetStream(mBufferSegment);
+                SendNetStream(mBufferSegment);
             }
             else
             {
@@ -194,7 +205,7 @@ namespace AKNet.Tcp.Client
             {
                 ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
-                mSocketMgr.SendNetStream(mBufferSegment);
+                SendNetStream(mBufferSegment);
             }
             else
             {
@@ -210,23 +221,22 @@ namespace AKNet.Tcp.Client
             fSendHeartBeatTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
 
-            mSocketMgr.Reset();
-            mMsgReceiveMgr.Reset();
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Reset();
+            }
+
+            CloseSocket();
         }
 
 		public void Release()
 		{
-			mSocketMgr.Release();
-        }
-
-        public bool DisConnectServer()
-        {
-            return mSocketMgr.DisConnectServer();
+            CloseSocket();
         }
 
         public string GetIPAddress()
         {
-            return mSocketMgr.GetIPEndPoint().Address.ToString();
+            return GetIPEndPoint().Address.ToString();
         }
 
         public Config GetConfig()

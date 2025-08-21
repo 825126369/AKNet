@@ -14,8 +14,8 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeerSocketMgr
-	{
+    internal partial class ClientPeer
+    {
 		private SocketAsyncEventArgs mReceiveIOContex = null;
 		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;

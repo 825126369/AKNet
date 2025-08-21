@@ -11,24 +11,23 @@ using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Tcp.Common;
 
-namespace AKNet.Tcp.Client
+namespace AKNet.Tcp.Server
 {
-	//和线程打交道
-	internal class MsgReceiveMgr
+    internal partial class ClientPeer
 	{
 		private readonly AkCircularBuffer mReceiveStreamList = new AkCircularBuffer();
-		protected readonly TcpNetPackage mNetPackage = null;
+		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeer mClientPeer;
-		public MsgReceiveMgr(ClientPeer mClientPeer)
+		private TcpServer mTcpServer;
+        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
 		{
+			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
-			mNetPackage = new TcpNetPackage();
 		}
 
 		public void Update(double elapsed)
 		{
-			var mSocketPeerState = mClientPeer.GetSocketState();
-			switch (mSocketPeerState)
+			switch (mClientPeer.GetSocketState())
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
@@ -45,7 +44,7 @@ namespace AKNet.Tcp.Client
 
 					//if (nPackageCount > 100)
 					//{
-					//	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+					//	NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
 					//}
 
 					break;
@@ -53,22 +52,22 @@ namespace AKNet.Tcp.Client
 					break;
 			}
 		}
-
+		
         public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
-			lock (mReceiveStreamList)
+			lock (lock_mReceiveStreamList_object)
 			{
                 mReceiveStreamList.WriteFrom(e.Buffer, e.Offset, e.BytesTransferred);
-            }
-        }
+			}
+		}
 
 		private bool NetPackageExecute()
 		{
+			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
-
-			lock (mReceiveStreamList)
+			lock (lock_mReceiveStreamList_object)
 			{
-				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mTcpServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -79,7 +78,7 @@ namespace AKNet.Tcp.Client
 				}
 				else
 				{
-					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 
@@ -93,5 +92,6 @@ namespace AKNet.Tcp.Client
 				mReceiveStreamList.reset();
 			}
 		}
+
 	}
 }
