@@ -8,9 +8,9 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 1;
-        public const int nPackageCount = 1;
-        public const double fFrameInternalTime = 1;
+        public const int nClientCount = 100;
+        public const int nPackageCount = 100;
+        public const double fFrameInternalTime = 0;
         public const int nSumPackageCount = nClientCount * nPackageCount * 100;
         int nReceivePackageCount = 0;
         List<NetClientMain> mClientList = new List<NetClientMain>();
@@ -116,7 +116,7 @@ namespace TestNetClient
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
 
             nReceivePackageCount++;
-            if (nReceivePackageCount % 1 == 0)
+            if (nReceivePackageCount % 1000 == 0)
             {
                 string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
                 Console.WriteLine(msg);
