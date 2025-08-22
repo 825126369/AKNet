@@ -12,9 +12,10 @@ namespace AKNet.Udp3Tcp.Common
 {
     internal class TcpSlidingWindow:AkCircularManyBuffer
     {
-        public uint nBeginOrderId;
+        public uint nBeginOrderId; //待确认的OrderId
 
-        public TcpSlidingWindow()
+        public TcpSlidingWindow(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = Config.nUdpPackageFixedBodySize):
+            base(nInitBlockCount, nMaxBlockCount, nBlockSize)
         {
             nBeginOrderId = Config.nUdpMinOrderId;
         }

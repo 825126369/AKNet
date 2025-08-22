@@ -44,14 +44,20 @@ namespace AKNet.Common
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void AddSpan(ReadOnlySpan<byte> mSpan)
             {
-				mSpan.CopyTo(mBufferMemory.Memory.Span.Slice(this.nSpanLength));
+				mSpan.CopyTo(GetCanWriteSpan());
 				this.nSpanLength += mSpan.Length;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Span<byte> GetSpan()
+            public Span<byte> GetCanReadSpan()
             {
                 return mBufferMemory.Memory.Span.Slice(0, nSpanLength);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Span<byte> GetCanWriteSpan()
+            {
+                return mBufferMemory.Memory.Span.Slice(nSpanLength);
             }
 
             public void Reset()
@@ -158,11 +164,12 @@ namespace AKNet.Common
             nCurrentWriteBlock.Value.AddSpan(readOnlySpan);
         }
 
-		public int WriteTo(Span<byte> readBuffer)
+        public int WriteTo(Span<byte> readBuffer)
 		{
-			ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetSpan();
+			ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetCanReadSpan();
             mReadSpan.CopyTo(readBuffer);
-			return mReadSpan.Length;
+            RemoveFirstNodeToLast();
+            return mReadSpan.Length;
 		}
 
 		public int WriteToMax(Span<byte> readBuffer)
@@ -176,7 +183,7 @@ namespace AKNet.Common
                 }
 
                 BufferItem mItem = nCurrentReadBlock.Value;
-                ReadOnlySpan<byte> mReadSpan = mItem.GetSpan();
+                ReadOnlySpan<byte> mReadSpan = mItem.GetCanReadSpan();
                 if (mReadSpan.Length > 0)
                 {
                     mReadSpan.CopyTo(readBuffer);
@@ -200,7 +207,7 @@ namespace AKNet.Common
             var mNode = mItemList.First;
 			while(mNode != null)
 			{
-                ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetSpan();
+                ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetCanReadSpan();
                 if(mReadSpan.Length > readBuffer.Length)
                 {
                     break;
@@ -238,7 +245,7 @@ namespace AKNet.Common
                     break;
                 }
 
-                ReadOnlySpan<byte> mReadSpan = mItem.GetSpan();
+                ReadOnlySpan<byte> mReadSpan = mItem.GetCanReadSpan();
                 nReadLength += mReadSpan.Length;
 
                 // 回收/销毁这个Item
@@ -261,7 +268,7 @@ namespace AKNet.Common
             mItemList.Remove(mItem.mEntry);
             if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
             {
-                mItemList.AddLast(mItem);
+                mItemList.AddLast(mItem.mEntry);
             }
         }
 

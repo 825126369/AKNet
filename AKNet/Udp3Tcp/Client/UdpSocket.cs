@@ -50,7 +50,7 @@ namespace AKNet.Udp3Tcp.Client
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
 
-            mSendStreamList = new AkCircularManySpanBuffer();
+            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         }
 
         public void ConnectServer(string ip, int nPort)
@@ -176,9 +176,13 @@ namespace AKNet.Udp3Tcp.Client
 
             lock (mSendStreamList)
             {
-                mSendStreamList.BeginSpan();
-                mSendStreamList.WriteFrom(UdpPackageEncryption.EncodeHead(mPackage));
-                mSendStreamList.WriteFrom(mPackage.WindowBuff, mPackage.WindowOffset, mPackage.WindowLength);
+                var mBufferItem = mSendStreamList.BeginSpan();
+                mBufferItem.AddSpan(UdpPackageEncryption.EncodeHead(mPackage));
+                if (mPackage.WindowBuff != null)
+                {
+                    mPackage.WindowBuff.CopyTo(mBufferItem.GetCanWriteSpan(), mPackage.WindowOffset, mPackage.WindowLength);
+                    mBufferItem.nSpanLength += mPackage.WindowLength;
+                }
                 mSendStreamList.FinishSpan();
             }
 
@@ -271,7 +275,7 @@ namespace AKNet.Udp3Tcp.Client
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.reset();
+                mSendStreamList.Reset();
             }
         }
 

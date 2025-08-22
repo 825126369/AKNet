@@ -171,16 +171,7 @@ namespace AKNet.Common
                     }
                     else
                     {
-                        mBufferItem.Reset();
-                        mItemList.Remove(mBufferItem.mEntry);
-                        if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
-                        {
-                            mItemList.AddLast(mBufferItem.mEntry);
-                        }
-                        else
-                        {
-                            mBufferItem.Dispose();
-                        }
+                        RemoveFirstNodeToLast();
                     }
                 }
             }
@@ -206,6 +197,43 @@ namespace AKNet.Common
                     {
                         break;
                     }
+                }
+
+                if (mNode == nCurrentWriteBlock)
+                {
+                    break;
+                }
+                else
+                {
+                    mNode = mNode.Next;
+                }
+            }
+            return nReadLength;
+        }
+
+        public int CopyTo(Span<byte> mTempSpan, int nOffset, int nCount)
+        {
+            var mNode = nCurrentReadBlock;
+            int nReadLength = 0;
+            while (true)
+            {
+                ReadOnlySpan<byte> mSpan = mNode.Value.GetCanReadSpan();
+                if (mSpan.Length > 0)
+                {
+                    int nBeginIndex = nOffset - nReadLength;
+                    if (nBeginIndex < mSpan.Length)
+                    {
+                        int nCopyLength = Math.Min(nCount, mSpan.Length - nBeginIndex);
+                        mSpan.Slice(nBeginIndex, nCopyLength).CopyTo(mTempSpan);
+                        mTempSpan = mTempSpan.Slice(nCopyLength);
+                        nOffset += nCopyLength;
+                        nCount -= nCopyLength;
+                        if (nCount == 0)
+                        {
+                            break;
+                        }
+                    }
+                    nReadLength += mSpan.Length;
                 }
 
                 if (mNode == nCurrentWriteBlock)
@@ -250,17 +278,21 @@ namespace AKNet.Common
                 }
                 else
                 {
-                    mBufferItem.Reset();
-                    mItemList.Remove(mBufferItem.mEntry);
-                    if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
-                    {
-                        mItemList.AddLast(mBufferItem.mEntry);
-                    }
-                    else
-                    {
-                        mBufferItem.Dispose();
-                    }
+                    RemoveFirstNodeToLast();
                 }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void RemoveFirstNodeToLast()
+        {
+            // 回收/销毁这个Item
+            var mItem = nCurrentReadBlock.Value;
+            mItem.Reset();
+            mItemList.Remove(mItem.mEntry);
+            if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
+            {
+                mItemList.AddLast(mItem.mEntry);
             }
         }
 

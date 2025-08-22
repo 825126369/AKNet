@@ -67,7 +67,6 @@ namespace AKNet.Udp3Tcp.Common
                 var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
-
                 int nRemainLength = mTcpSlidingWindow.Length - nOffset;
                 NetLog.Assert(nRemainLength >= 0);
 

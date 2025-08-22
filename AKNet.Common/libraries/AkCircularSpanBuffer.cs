@@ -354,7 +354,6 @@ namespace AKNet.Common
 			}
 
 			int tempBeginIndex = nBeginReadIndex;
-
 			if (tempBeginIndex + copyLength <= this.Capacity)
 			{
                 MemoryBuffer.Span.Slice(tempBeginIndex, copyLength).CopyTo(readBuffer);
