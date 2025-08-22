@@ -8,6 +8,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Tcp.Common;
+using System;
 using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
@@ -43,7 +44,7 @@ namespace AKNet.Tcp.Client
 		{
 			lock (mReceiveStreamList)
 			{
-                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.Count));
+                mReceiveStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.Count));
             }
         }
 

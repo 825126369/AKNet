@@ -47,7 +47,7 @@ namespace AKNet.Tcp.Server
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                mReceiveStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred));
 			}
 		}
 
