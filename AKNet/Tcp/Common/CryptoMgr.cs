@@ -13,36 +13,29 @@ namespace AKNet.Tcp.Common
 {
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
-        readonly NetStreamEncryptionInterface mNetStreamEncryption = null;
-
+        readonly NetStreamEncryptionInterface mNetPackageEncryption = null;
         public CryptoMgr(Config mConfig)
         {
             ECryptoType nECryptoType = mConfig.nECryptoType;
             if (nECryptoType == ECryptoType.Xor)
             {
                 var mCryptoInterface = new XORCrypto();
-                mNetStreamEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
+                mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
             }
             else
             {
-                mNetStreamEncryption = new NetStreamEncryption();
+                mNetPackageEncryption = new NetStreamEncryption();
             }
         }
 
         public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
         {
-#if DEBUG
-            if (mBufferSegment.Length > Config.nDataMaxLength)
-            {
-                NetLog.LogError("发送尺寸超出最大限制" + mBufferSegment.Length + " | " + Config.nDataMaxLength);
-            }
-#endif
-            return mNetStreamEncryption.Encode(nPackageId, mBufferSegment);
+            return mNetPackageEncryption.Encode(nPackageId, mBufferSegment);
         }
 
         public bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage)
         {
-            return mNetStreamEncryption.Decode(mReceiveStreamList, mPackage);
+            return mNetPackageEncryption.Decode(mReceiveStreamList, mPackage);
         }
     }
 }

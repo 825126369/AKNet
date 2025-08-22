@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Tcp.Common;
 using System.Collections.Generic;
 using System.Net.Sockets;
 
@@ -41,6 +42,7 @@ namespace AKNet.Tcp.Server
 				{
 					mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
+					mNetServer.mClientPeerPool.recycle(mClientPeer);
 				}
 			}
 		}
@@ -48,7 +50,7 @@ namespace AKNet.Tcp.Server
 		public bool MultiThreadingHandleConnectedSocket(Socket mSocket)
 		{
 			int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
-			if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
+			if (nNowConnectCount >= Config.MaxPlayerCount)
 			{
 #if DEBUG
 				NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");
@@ -74,7 +76,7 @@ namespace AKNet.Tcp.Server
 			}
 			if (mSocket != null)
 			{
-				ClientPeer clientPeer = new ClientPeer(mNetServer);
+				ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
 				clientPeer.HandleConnectedSocket(mSocket);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

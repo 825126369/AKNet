@@ -13,11 +13,21 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal partial class ClientPeer
+    internal class MsgReceiveMgr
 	{
-		public void UpdateReceive(double elapsed)
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+		private readonly object lock_mReceiveStreamList_object = new object();
+		private ClientPeer mClientPeer;
+		private TcpServer mTcpServer;
+        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
 		{
-			switch (GetSocketState())
+			this.mTcpServer = mTcpServer;
+			this.mClientPeer = mClientPeer;
+		}
+
+		public void Update(double elapsed)
+		{
+			switch (mClientPeer.GetSocketState())
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					int nPackageCount = 0;
@@ -29,7 +39,7 @@ namespace AKNet.Tcp.Server
 
 					if (nPackageCount > 0)
 					{
-						ReceiveHeartBeat();
+						mClientPeer.ReceiveHeartBeat();
 					}
 
 					//if (nPackageCount > 100)
@@ -47,17 +57,17 @@ namespace AKNet.Tcp.Server
 		{
 			lock (lock_mReceiveStreamList_object)
 			{
-                mReceiveStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.BytesTransferred));
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
 			}
 		}
 
 		private bool NetPackageExecute()
 		{
-			TcpNetPackage mNetPackage = this.mNetServer.mNetPackage;
+			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
 			lock (lock_mReceiveStreamList_object)
 			{
-				bSuccess = this.mNetServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mTcpServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -68,11 +78,19 @@ namespace AKNet.Tcp.Server
 				}
 				else
 				{
-                    this.mNetServer.mPackageManager.NetPackageExecute(this, mNetPackage);
+					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 
 			return bSuccess;
+		}
+
+		public void Reset()
+		{
+			lock (mReceiveStreamList)
+			{
+				mReceiveStreamList.Reset();
+			}
 		}
 
 	}

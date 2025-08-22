@@ -9,47 +9,30 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Server
 {
-    internal partial class ClientPeer : PrivateConfigInterface, TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal class ClientPeer : TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
+
+        internal ClientPeerSocketMgr mSocketMgr;
+		internal MsgReceiveMgr mMsgReceiveMgr;
 		private TcpServer mNetServer;
 		private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
-        private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
-        private readonly object lock_mReceiveStreamList_object = new object();
-        private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
-        private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
-        private bool bSendIOContextUsed = false;
-        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
-        private Socket mSocket = null;
-        private readonly object lock_mSocket_object = new object();
 
         public ClientPeer(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
-
-            if (mSendIOContex.Buffer == null)
-            {
-                mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            }
-
-            if (mReceiveIOContex.Buffer == null)
-            {
-                mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            }
-
-            mReceiveIOContex.Completed += OnIOCompleted;
-            mSendIOContex.Completed += OnIOCompleted;
-            bSendIOContextUsed = false;
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-        }
+			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);
+			mMsgReceiveMgr = new MsgReceiveMgr(this, mNetServer);
+		}
 
 		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
 		{
@@ -81,20 +64,20 @@ namespace AKNet.Tcp.Server
 				b_SOCKET_PEER_STATE_Changed = false;
 			}
 
-			UpdateReceive(elapsed);
+			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= mNetServer.mConfig.fMySendHeartBeatMaxTime)
+					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
 						SendHeartBeat();
 						fSendHeartBeatTime = 0.0;
 					}
 
-					double fHeatTime = Math.Min(0.3, elapsed);
-					fReceiveHeartBeatTime += fHeatTime;
-					if (fReceiveHeartBeatTime >= mNetServer.mConfig.fReceiveHeartBeatTimeOut)
+                    double fHeatTime = Math.Min(0.3, elapsed);
+                    fReceiveHeartBeatTime += fHeatTime;
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 					{
 						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
@@ -102,25 +85,23 @@ namespace AKNet.Tcp.Server
 						NetLog.Log("心跳超时");
 #endif
 					}
+
 					break;
 				default:
 					break;
 			}
 		}
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SendHeartBeat()
+		private void SendHeartBeat()
 		{
 			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetSendHeartBeatTime()
         {
             fSendHeartBeatTime = 0f;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
@@ -132,7 +113,7 @@ namespace AKNet.Tcp.Server
 			{
 				ResetSendHeartBeatTime();
 				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
-				SendNetStream(mBufferSegment);
+				mSocketMgr.SendNetStream(mBufferSegment);
 			}
 		}
 
@@ -142,7 +123,7 @@ namespace AKNet.Tcp.Server
 			{
 				ResetSendHeartBeatTime();
 				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, data);
-				SendNetStream(mBufferSegment);
+				mSocketMgr.SendNetStream(mBufferSegment);
 			}
         }
 
@@ -152,7 +133,7 @@ namespace AKNet.Tcp.Server
 			{
 				ResetSendHeartBeatTime();
 				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
-				SendNetStream(mBufferSegment);
+				this.mSocketMgr.SendNetStream(mBufferSegment);
 			}
         }
 
@@ -162,25 +143,27 @@ namespace AKNet.Tcp.Server
 			{
 				ResetSendHeartBeatTime();
 				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, buffer);
-				SendNetStream(mBufferSegment);
+				mSocketMgr.SendNetStream(mBufferSegment);
 			}
 		}
 
         public void Reset()
 		{
-            CloseSocket();
-            fSendHeartBeatTime = 0.0;
+			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
+			mSocketMgr.Reset();
+			mMsgReceiveMgr.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Reset();
-            }
+		}
 
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Reset();
-            }
+		public void HandleConnectedSocket(Socket mSocket)
+		{
+			mSocketMgr.HandleConnectedSocket(mSocket);
+		}
+
+        public IPEndPoint GetIPEndPoint()
+        {
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public void SetName(string Name)
@@ -191,11 +174,6 @@ namespace AKNet.Tcp.Server
         public string GetName()
         {
             return this.Name;
-        }
-
-        public Config GetConfig()
-        {
-            return mNetServer.mConfig;
         }
     }
 }

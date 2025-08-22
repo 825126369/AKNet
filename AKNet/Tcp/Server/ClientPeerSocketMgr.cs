@@ -14,14 +14,50 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal partial class ClientPeer
-    {
+    internal class ClientPeerSocketMgr
+	{
+		private SocketAsyncEventArgs mReceiveIOContex = null;
+		private SocketAsyncEventArgs mSendIOContex = null;
+		private bool bSendIOContextUsed = false;
+		private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+
+		private Socket mSocket = null;
+		private readonly object lock_mSocket_object = new object();
+		
+        private ClientPeer mClientPeer;
+		private TcpServer mTcpServer;
+		
+		public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+		{
+			this.mClientPeer = mClientPeer;
+			this.mTcpServer = mTcpServer;
+
+			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
+			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
+            if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))
+            {
+                mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            }
+            if (!mTcpServer.mBufferManager.SetBuffer(mReceiveIOContex))
+            {
+                mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            }
+
+            mReceiveIOContex.Completed += OnIOCompleted;
+			mSendIOContex.Completed += OnIOCompleted;
+			bSendIOContextUsed = false;
+
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+		}
+
 		public void HandleConnectedSocket(Socket otherSocket)
 		{
 			MainThreadCheck.Check();
+
 			this.mSocket = otherSocket;
-			SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			bSendIOContextUsed = false;
+
             StartReceiveEventArg();
 		}
 
@@ -153,7 +189,7 @@ namespace AKNet.Tcp.Server
 			{
 				if (e.BytesTransferred > 0)
 				{
-					MultiThreadingReceiveSocketStream(e);
+					mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(e);
                     StartReceiveEventArg();
                 }
 				else
@@ -222,10 +258,10 @@ namespace AKNet.Tcp.Server
 
 				lock (mSendStreamList)
 				{
-					mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan());
+					mSendStreamList.CopyTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
 
-				mSendIOContex.SetBuffer(0, nLength);
+				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
                 StartSendEventArg();
             }
 			else
@@ -236,22 +272,22 @@ namespace AKNet.Tcp.Server
 
         private void DisConnectedWithNormal()
         {
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         private void DisConnectedWithException(Exception e)
 		{
-			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
 		private void DisConnectedWithSocketError(SocketError mError)
 		{
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		void CloseSocket()
 		{
-            if (Config.bUseSocketLock)
+			if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -289,6 +325,15 @@ namespace AKNet.Tcp.Server
 						mSocket2.Close();
 					}
 				}
+			}
+		}
+
+		public void Reset()
+		{
+			CloseSocket();
+			lock (mSendStreamList)
+			{
+				mSendStreamList.reset();
 			}
 		}
 	}

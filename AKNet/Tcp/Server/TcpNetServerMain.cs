@@ -6,99 +6,99 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using AKNet.Common;
 using AKNet.Tcp.Common;
-using System;
 
 namespace AKNet.Tcp.Server
 {
     public class TcpNetServerMain : NetServerInterface, PrivateConfigInterface
     {
-        readonly TcpServer mInstance = null;
+        TcpServer mServer = null;
 
         public TcpNetServerMain()
         {
-            mInstance = new TcpServer();
+            mServer = new TcpServer();
         }
 
         public void InitNet()
         {
-            mInstance.InitNet();
+            mServer.InitNet();
         }
 
         public void InitNet(int nPort)
         {
-            mInstance.InitNet(nPort);
+            mServer.InitNet(nPort);
         }
 
         public void InitNet(string Ip, int nPort)
         {
-            mInstance.InitNet(Ip, nPort);
+            mServer.InitNet(Ip, nPort);
         }
 
         public void Update(double elapsed)
         {
-            mInstance.Update(elapsed);
+            mServer.Update(elapsed);
         }
 
         public SOCKET_SERVER_STATE GetServerState()
         {
-            return mInstance.GetServerState();
+            return mServer.GetServerState();
         }
 
         public int GetPort()
         {
-            return mInstance.GetPort();
+            return mServer.GetPort();
         }
 
         public void Release()
         {
-            mInstance.Release();
+            mServer.Release();
         }
 
         public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-            mInstance.addNetListenFunc(id, func);
+            mServer.addNetListenFunc(id, func);
         }
 
         public void removeNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)
         {
-            mInstance.removeNetListenFunc(id, func);
+            mServer.removeNetListenFunc(id, func);
         }
 
         public void addNetListenFunc(Action<ClientPeerBase, NetPackage> func)
         {
-            mInstance.addNetListenFunc(func);
+            mServer.addNetListenFunc(func);
         }
 
         public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
         {
-            mInstance.removeNetListenFunc(func);
+            mServer.removeNetListenFunc(func);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            mInstance.addListenClientPeerStateFunc(mFunc);
+            mServer.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            mInstance.removeListenClientPeerStateFunc(mFunc);
+            mServer.removeListenClientPeerStateFunc(mFunc);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            mInstance.addListenClientPeerStateFunc(mFunc);
+            mServer.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            mInstance.removeListenClientPeerStateFunc(mFunc);
+            mServer.removeListenClientPeerStateFunc(mFunc);
         }
 
         public Config GetConfig()
         {
-            return mInstance.mConfig;
+            return mServer.GetConfig();
         }
     }
 }

@@ -14,8 +14,45 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Client
 {
-    internal partial class ClientPeer
-    {
+    internal class TCPSocketMgr
+	{
+		private Socket mSocket = null;
+		private string ServerIp = "";
+		private int nServerPort = 0;
+		private IPEndPoint mIPEndPoint = null;
+        private bool bConnectIOContexUsed = false;
+        private bool bDisConnectIOContexUsed = false;
+        private bool bSendIOContextUsed = false;
+        private bool bReceiveIOContextUsed = false;
+
+        private ClientPeer mClientPeer;
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+		private readonly object lock_mSocket_object = new object();
+        private readonly SocketAsyncEventArgs mConnectIOContex = null;
+        private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
+		private readonly SocketAsyncEventArgs mSendIOContex = null;
+        private readonly SocketAsyncEventArgs mReceiveIOContex = null;
+
+        public TCPSocketMgr(ClientPeer mClientPeer)
+		{
+			this.mClientPeer = mClientPeer;
+			
+            mConnectIOContex = new SocketAsyncEventArgs();
+			mDisConnectIOContex = new SocketAsyncEventArgs();
+            mSendIOContex = new SocketAsyncEventArgs();
+            mReceiveIOContex = new SocketAsyncEventArgs();
+			
+			mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            
+            mSendIOContex.Completed += OnIOCompleted;
+            mReceiveIOContex.Completed += OnIOCompleted;
+            mConnectIOContex.Completed += OnIOCompleted;
+            mDisConnectIOContex.Completed += OnIOCompleted;
+
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
+        }
+
 		public void ReConnectServer()
 		{
             bool Connected = false;
@@ -37,7 +74,7 @@ namespace AKNet.Tcp.Client
 
             if (Connected)
             {
-                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             }
             else
             {
@@ -50,7 +87,7 @@ namespace AKNet.Tcp.Client
 			this.ServerIp = ServerAddr;
 			this.nServerPort = ServerPort;
 
-			SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
 			Reset();
@@ -99,20 +136,20 @@ namespace AKNet.Tcp.Client
 
 				if (Connected)
 				{
-					SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
 					mDisConnectIOContex.RemoteEndPoint = mIPEndPoint;
 					StartDisconnectEventArg();
 				}
 				else
 				{
 					NetLog.Log("客户端 主动 断开服务器 Finish......");
-					SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+					mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 					bDisConnectIOContexUsed = false;
 
 				}
 			}
 
-			return GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED;
+			return mClientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED;
 		}
 
 		private void StartConnectEventArg()
@@ -314,8 +351,8 @@ namespace AKNet.Tcp.Client
         {
             if (e.SocketError == SocketError.Success)
             {
-                NetLog.Log($"Client 连接服务器: {this.mIPEndPoint} 成功");
-                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
 				if (!bReceiveIOContextUsed)
 				{
@@ -325,10 +362,10 @@ namespace AKNet.Tcp.Client
             }
             else
             {
-                NetLog.Log($"Client 连接服务器: {this.mIPEndPoint} 失败");
-                if (GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
+                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 失败：{2}", this.ServerIp, this.nServerPort, e.SocketError));
+                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
                 {
-                    SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
             }
 
@@ -340,7 +377,7 @@ namespace AKNet.Tcp.Client
         {
             if (e.SocketError == SocketError.Success)
             {
-                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 NetLog.Log("客户端 主动 断开服务器 Finish");
             }
             else
@@ -358,7 +395,7 @@ namespace AKNet.Tcp.Client
 			{
 				if (e.BytesTransferred > 0)
 				{
-                    MultiThreadingReceiveSocketStream(e);
+                    mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(e);
 					StartReceiveEventArg();
 				}
 				else
@@ -429,10 +466,10 @@ namespace AKNet.Tcp.Client
 
 				lock (mSendStreamList)
 				{
-					mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan());
+					mSendStreamList.CopyTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
 
-				mSendIOContex.SetBuffer(0, nLength);
+				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
                 StartSendEventArg();
             }
 			else
@@ -470,14 +507,14 @@ namespace AKNet.Tcp.Client
 
         private void DisConnectedWithError()
         {
-            var mSocketPeerState = GetSocketState();
+            var mSocketPeerState = mClientPeer.GetSocketState();
             if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
             {
-                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
             else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
-                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 
@@ -516,7 +553,7 @@ namespace AKNet.Tcp.Client
 
 		private void CloseSocket()
 		{
-            if (Config.bUseSocketLock)
+			if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)
 				{
@@ -554,5 +591,19 @@ namespace AKNet.Tcp.Client
 				}
 			}
 		}
+
+		public void Reset()
+		{
+            CloseSocket();
+            lock (mSendStreamList)
+			{
+				mSendStreamList.reset();
+			}
+		}
+
+		public void Release()
+		{
+            CloseSocket();
+        }
     }
 }

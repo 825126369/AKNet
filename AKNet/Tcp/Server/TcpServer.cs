@@ -12,22 +12,24 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    internal class TcpServer : NetServerInterface, PrivateConfigInterface
+    internal class TcpServer : NetServerInterface
     {
-        internal readonly TCPSocket_Server mSocketMgr = null;
+        private readonly TCPSocket_Server mSocketMgr = null;
+
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly TcpNetPackage mNetPackage = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
+        internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        internal readonly Config mConfig = null;
-
+        internal readonly Config mConfig = new Config();
         public TcpServer()
         {
-            this.mConfig = new Config();
+            NetLog.Init();
+
             mCryptoMgr = new CryptoMgr(mConfig);
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
@@ -36,13 +38,14 @@ namespace AKNet.Tcp.Server
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
 
-            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
-            mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
+            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
+            mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
         public Config GetConfig()
         {
-            return mConfig; 
+            return mConfig;
         }
 
         public SOCKET_SERVER_STATE GetServerState()

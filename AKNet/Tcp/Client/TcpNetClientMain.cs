@@ -13,113 +13,113 @@ using System.Net;
 
 namespace AKNet.Tcp.Client
 {
-    public class TcpNetClientMain : NetClientInterface, PrivateConfigInterface
+    public class TcpNetClientMain : NetClientInterface, ClientPeerBase, PrivateConfigInterface
     {
-        private readonly ClientPeer mInstance;
+        private ClientPeer mClientPeer;
 
         public TcpNetClientMain()
         {
-            mInstance = new ClientPeer();
+            mClientPeer = new ClientPeer();
         }
 
         public void ConnectServer(string Ip, int nPort)
         {
-            mInstance.ConnectServer(Ip, nPort);
+            mClientPeer.ConnectServer(Ip, nPort);
         }
 
         public bool DisConnectServer()
         {
-            return mInstance.DisConnectServer();
+            return mClientPeer.DisConnectServer();
         }
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mInstance.GetIPEndPoint();
+            return mClientPeer.GetIPEndPoint();
         }
 
         public SOCKET_PEER_STATE GetSocketState()
         {
-            return mInstance.GetSocketState();
+            return mClientPeer.GetSocketState();
         }
 
         public void ReConnectServer()
         {
-            mInstance.ReConnectServer();
+            mClientPeer.ReConnectServer();
         }
 
         public void Release()
         {
-            mInstance.Release();
+            mClientPeer.Release();
         }
 
         public void SendNetData(ushort nPackageId)
         {
-            mInstance.SendNetData(nPackageId);
+            mClientPeer.SendNetData(nPackageId);
         }
 
         public void SendNetData(ushort nPackageId, byte[] buffer)
         {
-            mInstance.SendNetData(nPackageId, buffer);
+            mClientPeer.SendNetData(nPackageId, buffer);
         }
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            mInstance.SendNetData(mNetPackage);
+            mClientPeer.SendNetData(mNetPackage);
         }
 
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
-            mInstance.SendNetData(nPackageId, buffer);
+            mClientPeer.SendNetData(nPackageId, buffer);
         }
 
         public void Update(double elapsed)
         {
-            mInstance.Update(elapsed);
+            mClientPeer.Update(elapsed);
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc)
         {
-            mInstance.addNetListenFunc(nPackageId, mFunc);
+            mClientPeer.addNetListenFunc(nPackageId, mFunc);
         }
 
         public void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc)
         {
-            mInstance.removeNetListenFunc(nPackageId, mFunc);
+            mClientPeer.removeNetListenFunc(nPackageId, mFunc);
         }
 
         public void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
         {
-            mInstance.addNetListenFunc(mFunc);
+            mClientPeer.addNetListenFunc(mFunc);
         }
 
         public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
         {
-            mInstance.removeNetListenFunc(mFunc);
+            mClientPeer.removeNetListenFunc(mFunc);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            mInstance.addListenClientPeerStateFunc(mFunc);
+            mClientPeer.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
-            mInstance.removeListenClientPeerStateFunc(mFunc);
+            mClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            mInstance.addListenClientPeerStateFunc(mFunc);
+            mClientPeer.addListenClientPeerStateFunc(mFunc);
         }
 
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
-            mInstance.removeListenClientPeerStateFunc(mFunc);
+            mClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
 
         public Config GetConfig()
         {
-            return mInstance.GetConfig();
+            return mClientPeer.GetConfig();
         }
     }
 

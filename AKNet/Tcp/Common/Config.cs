@@ -12,13 +12,14 @@ namespace AKNet.Tcp.Common
 {
     public class Config
     {
+        //Common
         public const bool bUseSocketLock = false;
         public const int nIOContexBufferLength = 1024;
         public const int nDataMaxLength = ushort.MaxValue;
-        public readonly double fReceiveHeartBeatTimeOut = 5.0;
-        public readonly double fMySendHeartBeatMaxTime = 2.0;
-        public readonly double fReConnectMaxCdTime = 3.0;
-        public readonly int MaxPlayerCount = 10000;
-        public readonly ECryptoType nECryptoType = ECryptoType.None;
+        public const double fReceiveHeartBeatTimeOut = 5.0;
+        public const double fMySendHeartBeatMaxTime = 2.0;
+        public const double fReConnectMaxCdTime = 3.0;
+        public const int MaxPlayerCount = 10000;
+        public ECryptoType nECryptoType = ECryptoType.None;
     }
 }

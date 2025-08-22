@@ -8,17 +8,25 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Tcp.Common;
-using System;
 using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
-    //和线程打交道
-    internal partial class ClientPeer
-    {
-        private void Update_Receive(double elapsed)
+	//和线程打交道
+	internal class MsgReceiveMgr
+	{
+		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+		protected readonly TcpNetPackage mNetPackage = null;
+		private ClientPeer mClientPeer;
+		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
-			var mSocketPeerState = GetSocketState();
+			this.mClientPeer = mClientPeer;
+			mNetPackage = new TcpNetPackage();
+		}
+
+		public void Update(double elapsed)
+		{
+			var mSocketPeerState = mClientPeer.GetSocketState();
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
@@ -31,8 +39,13 @@ namespace AKNet.Tcp.Client
 
 					if (nPackageCount > 0)
 					{
-						ReceiveHeartBeat();
+						mClientPeer.ReceiveHeartBeat();
 					}
+
+					//if (nPackageCount > 100)
+					//{
+					//	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
+					//}
 
 					break;
 				default:
@@ -40,11 +53,11 @@ namespace AKNet.Tcp.Client
 			}
 		}
 
-        private void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
+        public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
 			lock (mReceiveStreamList)
 			{
-                mReceiveStreamList.WriteFrom(e.Buffer.AsSpan().Slice(e.Offset, e.Count));
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
             }
         }
 
@@ -54,7 +67,7 @@ namespace AKNet.Tcp.Client
 
 			lock (mReceiveStreamList)
 			{
-				bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -65,11 +78,19 @@ namespace AKNet.Tcp.Client
 				}
 				else
 				{
-					mPackageManager.NetPackageExecute(this, mNetPackage);
+					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
 
 			return bSuccess;
+		}
+
+		public void Reset()
+		{
+			lock (mReceiveStreamList)
+			{
+				mReceiveStreamList.Reset();
+			}
 		}
 	}
 }
