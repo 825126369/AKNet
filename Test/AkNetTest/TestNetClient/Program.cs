@@ -1,5 +1,4 @@
 ﻿using TestCommon;
-using System.Net.WebSockets;
 
 namespace TestNetClient
 {
@@ -15,11 +14,6 @@ namespace TestNetClient
 
         static void Update(double fElapsed)
         {
-            if (fElapsed >= 0.3)
-            {
-                Console.WriteLine("TestUdpClient 帧 时间 太长: " + fElapsed);
-            }
-
             mTest.Update(fElapsed);
         }
     }
