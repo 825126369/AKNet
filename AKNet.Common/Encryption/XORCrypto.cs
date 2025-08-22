@@ -17,10 +17,14 @@ namespace AKNet.Common
         readonly byte[] key = new byte[64];
         public XORCrypto(string password = null)
         {
-            RandomNumberGenerator.Fill(key);
             if (!string.IsNullOrWhiteSpace(password))
             {
                 key = Encoding.ASCII.GetBytes(password);
+            }
+            else
+            {
+                key = Encoding.ASCII.GetBytes(password);
+                RandomNumberGenerator.Fill(key);
             }
         }
 

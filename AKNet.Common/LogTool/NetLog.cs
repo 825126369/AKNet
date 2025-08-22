@@ -61,6 +61,7 @@ namespace AKNet.Common
         {
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
+            LogErrorToFile("");
 #if DEBUG
             try
             {
@@ -84,8 +85,7 @@ namespace AKNet.Common
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
             Exception exception = args.ExceptionObject as Exception;
-            string msg = Get_OnUncaughtExceptionMsg(exception, GetStackTraceInfo());
-            LogErrorToFile(msg);
+            LogUncaughtException(exception);
         }
 
         private static string GetMsgStr(string logTag, object msgObj, string StackTraceObj)
@@ -156,6 +156,20 @@ namespace AKNet.Common
             if (LogWarningFunc != null)
             {
                 LogWarningFunc(msg);
+            }
+        }
+
+        private static void LogUncaughtException(Exception e)
+        {
+            if (!bPrintLog) return;
+            string msg = Get_OnUncaughtExceptionMsg(e, GetStackTraceInfo());
+#if DEBUG
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(msg);
+#endif
+            if (LogErrorFunc != null)
+            {
+                LogErrorFunc(msg);
             }
         }
 

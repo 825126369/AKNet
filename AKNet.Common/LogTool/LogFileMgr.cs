@@ -27,7 +27,7 @@ namespace AKNet.Common
 
                     logFilePath = Path.Combine(logFileDir, $"{Path.GetFileName(logFilePath)}_{nLogIndex}.txt");
                     File.Delete(logFilePath); //每次启动删掉原来的日志
-                    var mFileStream = File.Open(logFilePath, FileMode.OpenOrCreate); // 如果报错，说明文件被占用，那么就新建文件
+                    using var mFileStream = File.Open(logFilePath, FileMode.OpenOrCreate); // 如果报错，说明文件被占用，那么就新建文件
                     break;
                 }
                 catch (Exception e)
@@ -74,7 +74,7 @@ namespace AKNet.Common
             {
                 try
                 {
-                    await File.AppendAllLinesAsync(logFilePath, tempList);
+                    await File.AppendAllLinesAsync(logFilePath, tempList).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
