@@ -13,9 +13,6 @@ namespace githubExample
         {
             mNetServer = new NetServerMain(NetType.UDP);
             mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
-
-            var mInstance = mNetServer.GetInstance() as AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain;
-            mInstance.GetConfig().nECryptoType = ECryptoType.Xor;
             mNetServer.InitNet(6000);
         }
 
