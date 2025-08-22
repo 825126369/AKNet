@@ -39,7 +39,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             var mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                bool bSucccess = mNetServer.GetCryptoMgr().InnerCommandPeek(mBuff, mInnerCommandCheckPackage);
+                bool bSucccess = UdpPackageEncryption.InnerCommandPeek(mBuff, mInnerCommandCheckPackage);
                 if (bSucccess)
                 {
                     if (mInnerCommandCheckPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)
@@ -71,7 +71,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             var mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                bool bSucccess = mNetServer.GetCryptoMgr().InnerCommandPeek(mBuff, mInnerCommandCheckPackage);
+                bool bSucccess = UdpPackageEncryption.InnerCommandPeek(mBuff, mInnerCommandCheckPackage);
                 if (bSucccess)
                 {
                     if (mInnerCommandCheckPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)

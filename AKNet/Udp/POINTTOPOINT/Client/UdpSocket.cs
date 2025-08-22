@@ -224,7 +224,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
         {
-            mClientPeer.GetCryptoMgr().Encode(mPackage);
+            UdpPackageEncryption.Encode(mPackage);
             mPackage.remoteEndPoint = GetIPEndPoint();
 
             MainThreadCheck.Check();

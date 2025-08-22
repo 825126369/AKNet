@@ -32,7 +32,7 @@ namespace AKNet.Tcp.Client
         public ClientPeer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new TCPSocketMgr(this);

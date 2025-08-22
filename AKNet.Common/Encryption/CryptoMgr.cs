@@ -6,26 +6,25 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System;
 
-namespace AKNet.Udp2MSQuic.Common
+namespace AKNet.Common
 {
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
         readonly NetStreamEncryptionInterface mNetPackageEncryption = null;
-        public CryptoMgr(Config mConfig)
+        public CryptoMgr()
         {
-            ECryptoType nECryptoType = mConfig.nECryptoType;
-            if (nECryptoType == ECryptoType.Xor)
-            {
-                var mCryptoInterface = new XORCrypto();
+#if DEBUG
+            mNetPackageEncryption = new NetStreamEncryption();
+            var mCryptoInterface = new XORCrypto();
+            mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
+
+#else
+          var mCryptoInterface = new XORCrypto();
                 mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
-            }
-            else
-            {
-                mNetPackageEncryption = new NetStreamEncryption();
-            }
+
+#endif
         }
 
         public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)

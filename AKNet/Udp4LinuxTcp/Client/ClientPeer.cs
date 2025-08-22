@@ -35,7 +35,7 @@ namespace AKNet.Udp4LinuxTcp.Client
             MainThreadCheck.Check();
             IPAddressHelper.GetMtu();
 
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);

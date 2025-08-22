@@ -35,7 +35,7 @@ namespace AKNet.Udp3Tcp.Client
             NetLog.Init();
             MainThreadCheck.Check();
             mConfig = new Config();
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
             mMsgSendMgr = new MsgSendMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);

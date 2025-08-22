@@ -14,10 +14,10 @@ namespace AKNet.Udp.POINTTOPOINT.Common
     /// <summary>
     /// 把数据拿出来
     /// </summary>
-    internal class NetPackageEncryption: NetPackageEncryptionInterface
+    internal static class UdpPackageEncryption
     {
-        private readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-        public bool Decode(NetUdpFixedSizePackage mPackage)
+        private static readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        public static bool Decode(NetUdpFixedSizePackage mPackage)
         {
             if (mPackage.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -39,7 +39,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return true;
         }
 
-        public bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
+        public static bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -81,7 +81,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return true;
         }
 
-        public bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
+        public static bool InnerCommandPeek(ReadOnlySpan<byte> mBuff, InnectCommandPeekPackage mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
             {
@@ -107,7 +107,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
             return true;
         }
 
-        public void Encode(NetUdpFixedSizePackage mPackage)
+        public static void Encode(NetUdpFixedSizePackage mPackage)
         {
             ushort nOrderId = mPackage.nOrderId;
             ushort nGroupCount = mPackage.nGroupCount;

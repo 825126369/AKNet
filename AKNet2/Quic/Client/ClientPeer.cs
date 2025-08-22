@@ -33,7 +33,7 @@ namespace AKNet.Quic.Client
         public ClientPeer()
         {
             NetLog.Init();
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new QuicConnectionMgr(this);

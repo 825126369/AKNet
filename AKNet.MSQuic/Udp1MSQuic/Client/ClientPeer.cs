@@ -33,7 +33,7 @@ namespace AKNet.Udp1MSQuic.Client
         public ClientPeer()
         {
             this.mConfig = new Config();
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new QuicConnectionMgr(this);

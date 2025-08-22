@@ -30,7 +30,7 @@ namespace AKNet.Tcp.Server
         {
             NetLog.Init();
 
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new TcpNetPackage();

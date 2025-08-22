@@ -63,7 +63,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 while (true)
                 {
                     var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                    bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mBuff, mPackage);
+                    bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                     if (bSucccess)
                     {
                         int nReadBytesCount = mPackage.Length;
@@ -95,7 +95,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
                 NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                 Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
                 mPackage.Length = e.BytesTransferred;
-                bool bSucccess = mClientPeer.GetCryptoMgr().Decode(mPackage);
+                bool bSucccess = UdpPackageEncryption.Decode(mPackage);
                 if (bSucccess)
                 {
                     lock (mWaitCheckPackageQueue)

@@ -32,7 +32,7 @@ namespace AKNet.Udp3Tcp.Server
             NetLog.Init();
             MainThreadCheck.Check();
             mConfig = new Config();
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();

@@ -31,7 +31,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             MainThreadCheck.Check();
             IPAddressHelper.GetMtu();
 
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mSocketMgr = new SocketUdp_Server(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);

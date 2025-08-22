@@ -36,7 +36,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                     mPackage.remoteEndPoint = e.RemoteEndPoint;
-                    bool bSucccess = mNetServer.GetCryptoMgr().Decode(mBuff, mPackage);
+                    bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                     if (bSucccess)
                     {
                         int nReadBytesCount = mPackage.Length;
@@ -64,7 +64,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 Buffer.BlockCopy(e.Buffer, e.Offset, mPackage.buffer, 0, e.BytesTransferred);
                 mPackage.Length = e.BytesTransferred;
                 mPackage.remoteEndPoint = e.RemoteEndPoint;
-                bool bSucccess = mNetServer.GetCryptoMgr().Decode(mPackage);
+                bool bSucccess = UdpPackageEncryption.Decode(mPackage);
                 if (bSucccess)
                 {
                     MultiThreading_HandleSinglePackage(mPackage);
