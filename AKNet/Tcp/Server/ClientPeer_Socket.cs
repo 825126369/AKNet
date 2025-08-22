@@ -222,7 +222,7 @@ namespace AKNet.Tcp.Server
 
 				lock (mSendStreamList)
 				{
-					mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
+					mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan());
 				}
 
 				mSendIOContex.SetBuffer(0, nLength);

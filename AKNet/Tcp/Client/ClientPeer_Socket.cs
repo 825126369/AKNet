@@ -429,7 +429,7 @@ namespace AKNet.Tcp.Client
 
 				lock (mSendStreamList)
 				{
-					mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
+					mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan());
 				}
 
 				mSendIOContex.SetBuffer(0, nLength);
@@ -516,11 +516,6 @@ namespace AKNet.Tcp.Client
 
 		private void CloseSocket()
 		{
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Reset();
-            }
-
             if (Config.bUseSocketLock)
 			{
 				lock (lock_mSocket_object)

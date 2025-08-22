@@ -32,6 +32,7 @@ namespace AKNet.Tcp.Client
         private bool bReceiveIOContextUsed = false;
         private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
         private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
@@ -56,6 +57,7 @@ namespace AKNet.Tcp.Client
 
             mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             mConnectIOContex.Completed += OnIOCompleted;
@@ -221,6 +223,10 @@ namespace AKNet.Tcp.Client
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
+            }
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
             }
 
             CloseSocket();
