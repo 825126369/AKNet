@@ -7,13 +7,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace AKNet.Common
 {
     internal class XORCrypto
     {
+        readonly string default_password = "qwertyuiopasd";
         readonly byte[] key = new byte[64];
         public XORCrypto(string password = null)
         {
@@ -23,8 +23,7 @@ namespace AKNet.Common
             }
             else
             {
-                key = Encoding.ASCII.GetBytes(password);
-                RandomNumberGenerator.Fill(key);
+                key = Encoding.ASCII.GetBytes(default_password);
             }
         }
 

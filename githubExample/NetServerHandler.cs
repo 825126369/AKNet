@@ -25,9 +25,7 @@ namespace githubExample
         {
             TESTChatMessage mReceiveMsg = Proto3Tool.GetData<TESTChatMessage>(package);
             Console.WriteLine(mReceiveMsg.TalkMsg);
-
             SendMsg(clientPeer);
-            IMessagePool<TESTChatMessage>.recycle(mReceiveMsg);
         }
 
         private static void SendMsg(ClientPeerBase peer)
@@ -36,7 +34,6 @@ namespace githubExample
             mdata.TalkMsg = "Hello, AkNet Client";
             peer.SendNetData(COMMAND_TESTCHAT, mdata.ToByteArray());
             IMessagePool<TESTChatMessage>.recycle(mdata);
-
         }
     }
 }

@@ -18,7 +18,6 @@ namespace AKNet.Common
     /// <summary>
     /// 循环Buffer块，对于 实现 UDP的滑动窗口，TCP的流接受，以及UDP 发送流的吞吐能力，都至关重要
     /// </summary>
-	[Obsolete("To Use AkCircularManySpanBuffer")]
     internal class AkCircularSpanBuffer
 	{
         private byte[] mBuffer = null;

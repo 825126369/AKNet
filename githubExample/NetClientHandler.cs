@@ -21,7 +21,7 @@ namespace githubExample
         {
             if (peer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                SendMsg(mNetClient);
+                SendMsg();
             }
         }
 
@@ -34,10 +34,9 @@ namespace githubExample
         {
             TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetData());
             Console.WriteLine(mdata.TalkMsg);
-            IMessagePool<TESTChatMessage>.recycle(mdata);
         }
 
-        private void SendMsg(ClientPeerBase peer)
+        private void SendMsg()
         {
             TESTChatMessage mdata = new TESTChatMessage();
             mdata.TalkMsg = "Hello, AkNet Server";
