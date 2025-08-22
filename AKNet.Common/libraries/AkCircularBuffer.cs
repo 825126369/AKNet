@@ -14,9 +14,10 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet.Other")]
 namespace AKNet.Common
 {
-    /// <summary>
-    /// 循环Buffer，对于实现UDP的滑动窗口，TCP的流接受，以及UDP发送流的吞吐能力，都至关重要
-    /// </summary>
+	/// <summary>
+	/// 循环Buffer，对于实现UDP的滑动窗口，TCP的流接受，以及UDP发送流的吞吐能力，都至关重要
+	/// </summary>
+	[Obsolete("To Use AkCircularManyBuffer")]
     internal class AkCircularBuffer
 	{
 		private byte[] mBuffer = null;

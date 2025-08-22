@@ -20,7 +20,7 @@ namespace AKNet.Udp3Tcp.Client
         private readonly SocketAsyncEventArgs SendArgs;
         private readonly object lock_mSocket_object = new object();
 
-        readonly AkCircularSpanBuffer mSendStreamList = null;
+        readonly AkCircularManySpanBuffer mSendStreamList = null;
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ip;
@@ -50,7 +50,7 @@ namespace AKNet.Udp3Tcp.Client
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
 
-            mSendStreamList = new AkCircularSpanBuffer();
+            mSendStreamList = new AkCircularManySpanBuffer();
         }
 
         public void ConnectServer(string ip, int nPort)
