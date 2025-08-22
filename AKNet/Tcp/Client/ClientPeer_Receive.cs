@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Client
     //和线程打交道
     internal partial class ClientPeer
     {
-        public void Update_Receive(double elapsed)
+        private void Update_Receive(double elapsed)
 		{
 			var mSocketPeerState = GetSocketState();
 			switch (mSocketPeerState)
@@ -39,7 +39,7 @@ namespace AKNet.Tcp.Client
 			}
 		}
 
-        public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
+        private void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
 			lock (mReceiveStreamList)
 			{

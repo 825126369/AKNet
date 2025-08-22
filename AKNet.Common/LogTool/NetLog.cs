@@ -61,7 +61,6 @@ namespace AKNet.Common
         {
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
-            LogErrorToFile("");
 #if DEBUG
             try
             {

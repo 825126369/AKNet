@@ -9,8 +9,8 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
-using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Server
 {
@@ -24,7 +24,6 @@ namespace AKNet.Tcp.Server
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
         private readonly object lock_mReceiveStreamList_object = new object();
-
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
         private bool bSendIOContextUsed = false;
@@ -82,6 +81,7 @@ namespace AKNet.Tcp.Server
 				b_SOCKET_PEER_STATE_Changed = false;
 			}
 
+			UpdateReceive(elapsed);
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
@@ -102,34 +102,25 @@ namespace AKNet.Tcp.Server
 						NetLog.Log("心跳超时");
 #endif
 					}
-
-					int nPackageCount = 0;
-					while (NetPackageExecute())
-					{
-						nPackageCount++;
-					}
-
-					if (nPackageCount > 0)
-					{
-						ReceiveHeartBeat();
-					}
-
 					break;
 				default:
 					break;
 			}
 		}
 
-		private void SendHeartBeat()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SendHeartBeat()
 		{
 			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetSendHeartBeatTime()
         {
             fSendHeartBeatTime = 0f;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;

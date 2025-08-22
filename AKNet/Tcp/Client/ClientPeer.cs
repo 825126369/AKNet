@@ -9,9 +9,9 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
-using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Client
 {
@@ -37,8 +37,6 @@ namespace AKNet.Tcp.Client
         private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
-        private readonly IMemoryOwner<byte> mIMemoryOwner_ForSend = null;
-        private readonly IMemoryOwner<byte> mIMemoryOwner_ForReceive = null;
         private readonly TcpNetPackage mNetPackage = new TcpNetPackage();
 
         private double fReConnectServerCdTime = 0.0;
@@ -56,11 +54,8 @@ namespace AKNet.Tcp.Client
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
 
-            mIMemoryOwner_ForSend = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-            mIMemoryOwner_ForReceive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-            mSendIOContex.SetBuffer(mIMemoryOwner_ForSend.Memory);
-            mReceiveIOContex.SetBuffer(mIMemoryOwner_ForReceive.Memory);
-
+            mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             mConnectIOContex.Completed += OnIOCompleted;
@@ -119,22 +114,25 @@ namespace AKNet.Tcp.Client
 			}
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
         {
             SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetSendHeartBeatTime()
         {
             fSendHeartBeatTime = 0f;
         }
 
-        public void ReceiveHeartBeat()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0f;
 		}
 
-        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
         {
             if (this.mSocketPeerState != mSocketPeerState)
             {

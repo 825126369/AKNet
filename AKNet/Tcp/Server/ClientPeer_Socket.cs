@@ -19,11 +19,9 @@ namespace AKNet.Tcp.Server
 		public void HandleConnectedSocket(Socket otherSocket)
 		{
 			MainThreadCheck.Check();
-
 			this.mSocket = otherSocket;
 			SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			bSendIOContextUsed = false;
-
             StartReceiveEventArg();
 		}
 

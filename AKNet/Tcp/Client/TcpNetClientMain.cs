@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Tcp.Client
 {
-    public class TcpNetClientMain : NetClientInterface, ClientPeerBase, PrivateConfigInterface
+    public class TcpNetClientMain : NetClientInterface, PrivateConfigInterface
     {
         private readonly ClientPeer mInstance;
 
