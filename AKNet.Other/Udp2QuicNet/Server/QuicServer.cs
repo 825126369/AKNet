@@ -28,7 +28,7 @@ namespace AKNet.QuicNet.Server
         public QuicServer()
         {
             this.mConfig = new Config();
-            mCryptoMgr = new CryptoMgr(mConfig);
+            mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new TcpNetPackage();

@@ -1,12 +1,14 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
 [assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.Test")]
 namespace AKNet.Common
 {
     //先前的循环Buffer 存在内存抖动的问题，这里就是为了缓解这个抖动问题
@@ -323,11 +325,12 @@ namespace AKNet.Common
 
         private static void Test()
         {
-            AkCircularManyBuffer mAkCircularManyBuffer = new AkCircularManyBuffer(1, 0, 100);
+            AkCircularManyBuffer mAkCircularManyBuffer = new AkCircularManyBuffer();
 
-            for (int i = 0; i < 100000; i++)
+            var mTimer = Stopwatch.StartNew();
+            for (int i = 0; i < 1000; i++)
             {
-                int nLength = RandomTool.Random(0, 10000);
+                int nLength = 1000000;
                 Span<byte> mArray = new byte[nLength];
                 RandomNumberGenerator.Fill(mArray);
                 mAkCircularManyBuffer.WriteFrom(mArray);
@@ -342,6 +345,7 @@ namespace AKNet.Common
                 NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray2));
                 //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
             }
+            NetLog.Log($"花费时间: {mTimer.ElapsedMilliseconds}");
         }
     }
 }

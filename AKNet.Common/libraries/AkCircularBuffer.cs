@@ -7,11 +7,14 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
 [assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.Test")]
 namespace AKNet.Common
 {
 	/// <summary>
@@ -380,7 +383,32 @@ namespace AKNet.Common
 				}
 			}
 		}
-	}
+
+        private static void Test()
+        {
+            AkCircularBuffer mAkCircularManyBuffer = new AkCircularBuffer();
+
+            var mTimer = Stopwatch.StartNew();
+            for (int i = 0; i < 1000; i++)
+            {
+                int nLength = 1000000;
+                Span<byte> mArray = new byte[nLength];
+                RandomNumberGenerator.Fill(mArray);
+                mAkCircularManyBuffer.WriteFrom(mArray);
+                NetLog.Assert(mAkCircularManyBuffer.Length == nLength);
+
+                Span<byte> mArray2 = new byte[nLength];
+                NetLog.Assert(mAkCircularManyBuffer.CopyTo(0, mArray2) == nLength);
+
+                mAkCircularManyBuffer.ClearBuffer(nLength);
+                NetLog.Assert(mAkCircularManyBuffer.Length == 0);
+
+                NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray2));
+                //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
+            }
+            NetLog.Log($"花费时间: {mTimer.ElapsedMilliseconds}");
+        }
+    }
 }
 
 

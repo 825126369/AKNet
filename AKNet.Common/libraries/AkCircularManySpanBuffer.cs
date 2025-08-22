@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
 [assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.Test")]
 namespace AKNet.Common
 {
     /// 存入一个Udp包后，不会考虑是否还有空间，直接开始下一个BufferItem。
