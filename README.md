@@ -82,6 +82,9 @@ namespace githubExample
         {
             mNetServer = new NetServerMain(NetType.UDP);
             mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
+
+            var mInstance = mNetServer.GetInstance() as AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain;
+            mInstance.GetConfig().nECryptoType = ECryptoType.Xor;
             mNetServer.InitNet(6000);
         }
 
@@ -92,11 +95,9 @@ namespace githubExample
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
-            TESTChatMessage mReceiveMsg = Protocol3Utility.getData<TESTChatMessage>(package);
+            TESTChatMessage mReceiveMsg = Proto3Tool.GetData<TESTChatMessage>(package);
             Console.WriteLine(mReceiveMsg.TalkMsg);
-
             SendMsg(clientPeer);
-            IMessagePool<TESTChatMessage>.recycle(mReceiveMsg);
         }
 
         private static void SendMsg(ClientPeerBase peer)
@@ -105,7 +106,6 @@ namespace githubExample
             mdata.TalkMsg = "Hello, AkNet Client";
             peer.SendNetData(COMMAND_TESTCHAT, mdata.ToByteArray());
             IMessagePool<TESTChatMessage>.recycle(mdata);
-
         }
     }
 }
@@ -128,6 +128,10 @@ namespace githubExample
             mNetClient = new NetClientMain(NetType.UDP);
             mNetClient.addListenClientPeerStateFunc(OnSocketStateChanged);
             mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveMessage);
+
+            var mInstance = mNetClient.GetInstance() as AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain;
+            mInstance.GetConfig().nECryptoType = ECryptoType.Xor;
+
             mNetClient.ConnectServer("127.0.0.1", 6000);
         }
 
@@ -135,7 +139,7 @@ namespace githubExample
         {
             if (peer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                SendMsg(mNetClient);
+                SendMsg();
             }
         }
 
@@ -148,10 +152,9 @@ namespace githubExample
         {
             TESTChatMessage mdata = TESTChatMessage.Parser.ParseFrom(mPackage.GetData());
             Console.WriteLine(mdata.TalkMsg);
-            IMessagePool<TESTChatMessage>.recycle(mdata);
         }
 
-        private void SendMsg(ClientPeerBase peer)
+        private void SendMsg()
         {
             TESTChatMessage mdata = new TESTChatMessage();
             mdata.TalkMsg = "Hello, AkNet Server";
