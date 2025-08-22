@@ -9,7 +9,6 @@
 using AKNet.Common;
 using AKNet.Udp3Tcp.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -24,7 +23,7 @@ namespace AKNet.Udp3Tcp.Server
         readonly object lock_mSocket_object =new object();
 
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularSpanBuffer mSendStreamList = null;
+        readonly AkCircularManySpanBuffer mSendStreamList = null;
         bool bSendIOContexUsed = false;
 
         IPEndPoint mIPEndPoint;
@@ -36,7 +35,7 @@ namespace AKNet.Udp3Tcp.Server
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularSpanBuffer();
+            mSendStreamList = new AkCircularManySpanBuffer();
         }
 
         public void HandleConnectedSocket(FakeSocket mSocket)

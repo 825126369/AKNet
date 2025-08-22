@@ -35,11 +35,9 @@ namespace AKNet.Udp3Tcp.Common
         {
             this.mClientPeer = mClientPeer;
             this.mUdpCheckMgr = mUdpCheckMgr;
-
             this.nSearchCount = nMinSearchCount;
-            nMaxSearchCount = this.nSearchCount * 2;
-            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-
+            this.nMaxSearchCount = this.nSearchCount * 2;
+            this.nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             InitRTO();
         }
 

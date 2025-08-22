@@ -10,7 +10,7 @@ using System.Security.Cryptography;
 namespace AKNet.Common
 {
     //先前的循环Buffer 存在内存抖动的问题，这里就是为了缓解这个抖动问题
-    internal class AkCircularManyBuffer
+    internal class AkCircularManyBuffer:IDisposable
     {
         public class BufferItem:IDisposable
         {
@@ -64,7 +64,6 @@ namespace AKNet.Common
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
         private readonly int BlockSize = 1024;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
-        private LinkedListNode<BufferItem> nCurrentReadBlock;
         private int nSumByteCount;
 
         public AkCircularManyBuffer(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = 1024)
@@ -78,9 +77,10 @@ namespace AKNet.Common
                 mItemList.AddLast(mItem.mEntry);
             }
             nCurrentWriteBlock = mItemList.First;
-            nCurrentReadBlock = mItemList.First;
             nSumByteCount = 0;
         }
+
+        private LinkedListNode<BufferItem> nCurrentReadBlock => mItemList.First;
 
         public int Length
         {
@@ -171,12 +171,15 @@ namespace AKNet.Common
                     }
                     else
                     {
-                        nCurrentReadBlock = nCurrentReadBlock.Next;
                         mBufferItem.Reset();
                         mItemList.Remove(mBufferItem.mEntry);
                         if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
                         {
                             mItemList.AddLast(mBufferItem.mEntry);
+                        }
+                        else
+                        {
+                            mBufferItem.Dispose();
                         }
                     }
                 }
@@ -247,12 +250,15 @@ namespace AKNet.Common
                 }
                 else
                 {
-                    nCurrentReadBlock = nCurrentReadBlock.Next;
                     mBufferItem.Reset();
                     mItemList.Remove(mBufferItem.mEntry);
                     if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)
                     {
                         mItemList.AddLast(mBufferItem.mEntry);
+                    }
+                    else
+                    {
+                        mBufferItem.Dispose();
                     }
                 }
             }
@@ -272,8 +278,15 @@ namespace AKNet.Common
             }
 
             nCurrentWriteBlock = mItemList.First;
-            nCurrentReadBlock = mItemList.First;
             nSumByteCount = 0;
+        }
+
+        public void Dispose()
+        {
+            foreach (var v in mItemList)
+            {
+                v.Dispose();
+            }
         }
 
         private static void Test()
@@ -298,6 +311,5 @@ namespace AKNet.Common
                 //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
             }
         }
-
     }
 }

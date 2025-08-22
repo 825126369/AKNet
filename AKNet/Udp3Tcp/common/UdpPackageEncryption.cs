@@ -51,7 +51,7 @@ namespace AKNet.Udp3Tcp.Common
             return true;
         }
         
-        public static byte[] EncodeHead(NetUdpSendFixedSizePackage mPackage)
+        public static ReadOnlySpan<byte> EncodeHead(NetUdpSendFixedSizePackage mPackage)
         {
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;

@@ -10,7 +10,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp3Tcp.Common
 {
-    internal class TcpSlidingWindow:AkCircularBuffer
+    internal class TcpSlidingWindow:AkCircularManyBuffer
     {
         public uint nBeginOrderId;
 
@@ -33,7 +33,7 @@ namespace AKNet.Udp3Tcp.Common
 
         public void WindowReset()
         {
-            base.reset();
+            base.Reset();
             nBeginOrderId = Config.nUdpMinOrderId;
         }
     }
