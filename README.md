@@ -82,9 +82,6 @@ namespace githubExample
         {
             mNetServer = new NetServerMain(NetType.UDP);
             mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
-
-            var mInstance = mNetServer.GetInstance() as AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain;
-            mInstance.GetConfig().nECryptoType = ECryptoType.Xor;
             mNetServer.InitNet(6000);
         }
 
@@ -128,10 +125,6 @@ namespace githubExample
             mNetClient = new NetClientMain(NetType.UDP);
             mNetClient.addListenClientPeerStateFunc(OnSocketStateChanged);
             mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveMessage);
-
-            var mInstance = mNetClient.GetInstance() as AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain;
-            mInstance.GetConfig().nECryptoType = ECryptoType.Xor;
-
             mNetClient.ConnectServer("127.0.0.1", 6000);
         }
 
