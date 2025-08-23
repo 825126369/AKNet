@@ -39,7 +39,7 @@ namespace AKNet.Udp2MSQuic.Server
 
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, mConfig.MaxPlayerCount / 10, mConfig.MaxPlayerCount);
         }
 
         public SOCKET_SERVER_STATE GetServerState()

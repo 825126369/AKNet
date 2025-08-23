@@ -35,7 +35,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             mSocketMgr = new SocketUdp_Server(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
-            mClientPeerPool = new ClientPeerPool(this);
+            mClientPeerPool = new ClientPeerPool(this, mConfig.MaxPlayerCount / 10, mConfig.MaxPlayerCount);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
         }
