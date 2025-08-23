@@ -14,7 +14,7 @@ namespace AKNet.Quic.Server
 {
     internal class ClientPeerManager
 	{
-		private readonly List<ClientPeer_Private> mClientList = new List<ClientPeer_Private>(0);
+		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(0);
 		private readonly Queue<QuicConnection> mConnectSocketQueue = new Queue<QuicConnection>();
 		private QuicServer mNetServer;
 
@@ -32,7 +32,7 @@ namespace AKNet.Quic.Server
 
 			for (int i = mClientList.Count - 1; i >= 0; i--)
 			{
-				ClientPeer_Private mClientPeer = mClientList[i];
+				var mClientPeer = mClientList[i];
 				if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 				{
 					mClientPeer.Update(elapsed);
@@ -41,8 +41,8 @@ namespace AKNet.Quic.Server
 				{
 					mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
-					mNetServer.mClientPeerPool.recycle(mClientPeer);
-				}
+                    mClientPeer.Reset();
+                }
 			}
 		}
 
@@ -76,7 +76,7 @@ namespace AKNet.Quic.Server
 
 			if (connection != null)
 			{
-				ClientPeer_Private clientPeer = mNetServer.mClientPeerPool.Pop();
+				var clientPeer = new ClientPeer(mNetServer);
 				clientPeer.HandleConnectedSocket(connection);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
@@ -85,7 +85,7 @@ namespace AKNet.Quic.Server
 			return false;
 		}
 
-        private void PrintAddClientMsg(ClientPeer_Private clientPeer)
+        private void PrintAddClientMsg(ClientPeer clientPeer)
 		{
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -100,7 +100,7 @@ namespace AKNet.Quic.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeer_Private clientPeer)
+        private void PrintRemoveClientMsg(ClientPeer clientPeer)
 		{
 #if DEBUG
 			var mRemoteEndPoint = clientPeer.GetIPEndPoint();

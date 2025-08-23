@@ -7,22 +7,22 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Collections.Generic;
 
-namespace AKNet.Quic.Server
+namespace AKNet.Tcp.Server
 {
-    internal class ClientPeerPool
+    internal class ClientPeerPrivatePool
     {
-        readonly Stack<ClientPeer_Private> mObjectPool = new Stack<ClientPeer_Private>();
-        QuicServer mTcpServer = null;
+        readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
+        TcpServer mTcpServer = null;
         private int nMaxCapacity = 0;
-        private ClientPeer_Private GenerateObject()
+
+        private ClientPeerPrivate GenerateObject()
         {
-            ClientPeer_Private clientPeer = new ClientPeer_Private(this.mTcpServer);
+            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mTcpServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(QuicServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPrivatePool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mTcpServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);
@@ -42,11 +42,11 @@ namespace AKNet.Quic.Server
             return mObjectPool.Count;
         }
 
-        public ClientPeer_Private Pop()
+        public ClientPeerPrivate Pop()
         {
             MainThreadCheck.Check();
 
-            ClientPeer_Private t = null;
+            ClientPeerPrivate t = null;
             if (!mObjectPool.TryPop(out t))
             {
                 t = GenerateObject();
@@ -54,7 +54,7 @@ namespace AKNet.Quic.Server
             return t;
         }
 
-        public void recycle(ClientPeer_Private t)
+        public void recycle(ClientPeerPrivate t)
         {
             MainThreadCheck.Check();
 #if DEBUG

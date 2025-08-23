@@ -20,7 +20,7 @@ namespace AKNet.Quic.Server
         internal readonly TcpNetPackage mNetPackage = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal readonly ClientPeerPool mClientPeerPool = null;
+        internal readonly ClientPeerPrivatePool mClientPeerPool = null;
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
@@ -38,7 +38,7 @@ namespace AKNet.Quic.Server
 
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
-            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPrivatePool(this, 0, Config.MaxPlayerCount);
         }
 
         public Config GetConfig()

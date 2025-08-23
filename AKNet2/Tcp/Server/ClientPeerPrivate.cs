@@ -13,7 +13,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeer_Private : TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal class ClientPeerPrivate : ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Server
 		private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
-        public ClientPeer_Private(TcpServer mNetServer)
+        public ClientPeerPrivate(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);
@@ -171,16 +171,6 @@ namespace AKNet.Tcp.Server
         public IPEndPoint GetIPEndPoint()
         {
             return mSocketMgr.GetIPEndPoint();
-        }
-
-        public void SetName(string Name)
-        {
-            this.Name = Name;
-        }
-
-        public string GetName()
-        {
-            return this.Name;
         }
     }
 }

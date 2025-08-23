@@ -14,7 +14,7 @@ using System.Net.Quic;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeer_Private : ClientPeerBase, IPoolItemInterface
+    internal class ClientPeerPrivate : ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
@@ -27,7 +27,7 @@ namespace AKNet.Quic.Server
 		private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
-        public ClientPeer_Private(QuicServer mNetServer)
+        public ClientPeerPrivate(QuicServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);

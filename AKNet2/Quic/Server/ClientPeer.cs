@@ -16,7 +16,7 @@ namespace AKNet.Quic.Server
     internal class ClientPeer : ClientPeerBase
 	{
         private string Name = null;
-        private ClientPeer_Private mInstance = null;
+        private ClientPeerPrivate mInstance = null;
         private QuicServer mNetServer;
         public ClientPeer(QuicServer mNetServer)
 		{

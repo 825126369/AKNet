@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Server
     internal class ClientPeer : ClientPeerBase
 	{
         private string Name = null;
-        private ClientPeer_Private mInstance = null;
+        private ClientPeerPrivate mInstance = null;
         private TcpServer mNetServer;
         public ClientPeer(TcpServer mNetServer)
 		{
