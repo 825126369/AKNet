@@ -144,7 +144,7 @@ namespace AKNet.Udp1MSQuic.Server
 			}
 		}
 
-		public void Reset()
+		public void Release()
 		{
 			CloseSocket();
 			lock (mSendStreamList)

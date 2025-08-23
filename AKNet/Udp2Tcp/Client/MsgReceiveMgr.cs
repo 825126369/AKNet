@@ -137,6 +137,7 @@ namespace AKNet.Udp2Tcp.Client
         public void Release()
         {
             Reset();
+            mReceiveStreamList.Dispose();
         }
     }
 

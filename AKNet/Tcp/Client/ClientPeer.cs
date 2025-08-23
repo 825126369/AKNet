@@ -208,6 +208,8 @@ namespace AKNet.Tcp.Client
 		public void Release()
 		{
 			mSocketMgr.Release();
+            mMsgReceiveMgr.Release();
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         public bool DisConnectServer()

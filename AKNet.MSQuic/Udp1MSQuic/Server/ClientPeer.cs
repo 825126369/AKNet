@@ -151,12 +151,21 @@ namespace AKNet.Udp1MSQuic.Server
 		{
 			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
-			mSocketMgr.Reset();
+			mSocketMgr.Release();
 			mMsgReceiveMgr.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
-		public void HandleConnectedSocket(QuicConnection mQuicConnection)
+        public void Release()
+        {
+            fSendHeartBeatTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
+            mSocketMgr.Release();
+            mMsgReceiveMgr.Release();
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+        }
+
+        public void HandleConnectedSocket(QuicConnection mQuicConnection)
 		{
 			mSocketMgr.HandleConnectedSocket(mQuicConnection);
 		}

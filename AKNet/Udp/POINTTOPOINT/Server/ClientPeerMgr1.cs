@@ -56,7 +56,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 ClientPeer mClientPeer = mClientDic[v];
                 mClientDic.Remove(v);
                 PrintRemoveClientMsg(mClientPeer);
-                mClientPeer.CloseSocket();
+                mClientPeer.Release();
             }
             mRemovePeerList.Clear();
         }

@@ -39,8 +39,8 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 else
                 {
                     mClientList.RemoveAt(i);
-                    mClientPeer.CloseSocket();
                     PrintRemoveClientMsg(mClientPeer);
+                    mClientPeer.Release();
                 }
             }
         }

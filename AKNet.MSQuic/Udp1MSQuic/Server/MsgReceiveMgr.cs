@@ -94,5 +94,11 @@ namespace AKNet.Udp1MSQuic.Server
 			}
 		}
 
-	}
+        public void Release()
+        {
+            Reset();
+            mReceiveStreamList.Dispose();
+        }
+
+    }
 }

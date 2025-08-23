@@ -80,9 +80,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mSocketMgr.Reset();
         }
 
-        public void CloseSocket()
+        public void Release()
         {
-            mSocketMgr.CloseSocket();
+            mSocketMgr.Release();
         }
 
         public void HandleConnectedSocket(FakeSocket mSocket)

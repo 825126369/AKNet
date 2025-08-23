@@ -336,6 +336,7 @@ namespace AKNet.Udp2Tcp.Client
 
         public void Release()
         {
+            mSendStreamList.release();
             DisConnectServer();
             CloseSocket();
             NetLog.Log("--------------- Client Release ----------------");

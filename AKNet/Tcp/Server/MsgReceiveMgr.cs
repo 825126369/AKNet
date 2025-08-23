@@ -93,5 +93,10 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-	}
+		public void Release()
+        {
+            mReceiveStreamList.Dispose();
+        }
+
+    }
 }

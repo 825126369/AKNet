@@ -16,12 +16,11 @@ namespace AKNet.Tcp.Client
 	internal class MsgReceiveMgr
 	{
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
-		protected readonly TcpNetPackage mNetPackage = null;
-		private ClientPeer mClientPeer;
+		protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
+		private readonly ClientPeer mClientPeer;
 		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			mNetPackage = new TcpNetPackage();
 		}
 
 		public void Update(double elapsed)
@@ -92,5 +91,10 @@ namespace AKNet.Tcp.Client
 				mReceiveStreamList.Reset();
 			}
 		}
+
+		public void Release()
+		{
+            mReceiveStreamList.Dispose();
+        }
 	}
 }

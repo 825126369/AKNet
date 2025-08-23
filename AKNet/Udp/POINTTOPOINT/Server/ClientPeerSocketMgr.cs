@@ -290,7 +290,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             }
         }
 
-        public void CloseSocket()
+        public void Release()
         {
             if (mSocket != null)
             {

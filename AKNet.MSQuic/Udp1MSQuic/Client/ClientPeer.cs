@@ -209,7 +209,8 @@ namespace AKNet.Udp1MSQuic.Client
 
 		public void Release()
 		{
-			mSocketMgr.Release();
+            mSocketMgr.Release();
+            mMsgReceiveMgr.Release();
         }
 
         public bool DisConnectServer()

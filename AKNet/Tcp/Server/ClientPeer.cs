@@ -156,6 +156,13 @@ namespace AKNet.Tcp.Server
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 		}
 
+		public void Release()
+		{
+            mSocketMgr.Release();
+            mMsgReceiveMgr.Release();
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+        }
+
 		public void HandleConnectedSocket(Socket mSocket)
 		{
 			mSocketMgr.HandleConnectedSocket(mSocket);

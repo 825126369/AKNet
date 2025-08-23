@@ -42,8 +42,8 @@ namespace AKNet.Tcp.Server
 				{
 					mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
-					//mNetServer.mClientPeerPool.recycle(mClientPeer);
-				}
+                    mClientPeer.Release();
+                }
 			}
 		}
 

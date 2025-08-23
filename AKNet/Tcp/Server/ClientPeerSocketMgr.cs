@@ -19,7 +19,7 @@ namespace AKNet.Tcp.Server
 		private SocketAsyncEventArgs mReceiveIOContex = null;
 		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;
-		private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+		private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
 
 		private Socket mSocket = null;
 		private readonly object lock_mSocket_object = new object();
@@ -258,7 +258,7 @@ namespace AKNet.Tcp.Server
 
 				lock (mSendStreamList)
 				{
-					mSendStreamList.CopyTo(0, mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
+					mSendStreamList.CopyTo(mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
 				}
 
 				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
@@ -333,9 +333,18 @@ namespace AKNet.Tcp.Server
 			CloseSocket();
 			lock (mSendStreamList)
 			{
-				mSendStreamList.reset();
+				mSendStreamList.Reset();
 			}
 		}
-	}
+
+        public void Release()
+        {
+            CloseSocket();
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Dispose();
+            }
+        }
+    }
 
 }

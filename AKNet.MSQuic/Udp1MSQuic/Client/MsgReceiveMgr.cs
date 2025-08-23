@@ -18,6 +18,7 @@ namespace AKNet.Udp1MSQuic.Client
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		protected readonly TcpNetPackage mNetPackage = null;
 		private ClientPeer mClientPeer;
+
 		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
@@ -91,6 +92,12 @@ namespace AKNet.Udp1MSQuic.Client
 			{
 				mReceiveStreamList.Reset();
 			}
+		}
+
+		public void Release()
+		{
+			Reset();
+			mReceiveStreamList.Dispose();
 		}
 	}
 }
