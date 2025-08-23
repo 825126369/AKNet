@@ -11,7 +11,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    public interface TcpClientPeerBase
+    public interface ServerClientPeerInterface
     {
         void SetName(string Name);
         void HandleConnectedSocket(Socket mSocket);

@@ -17,9 +17,9 @@ namespace AKNet.Tcp.Server
 	{
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
+		private ClientPeer_Private mClientPeer;
 		private TcpServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+        public MsgReceiveMgr(ClientPeer_Private mClientPeer, TcpServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;

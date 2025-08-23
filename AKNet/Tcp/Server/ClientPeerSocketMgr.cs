@@ -19,26 +19,22 @@ namespace AKNet.Tcp.Server
 	{
         private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
         private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-        private SocketAsyncEventArgs mReceiveIOContex = null;
-		private SocketAsyncEventArgs mSendIOContex = null;
-		private bool bSendIOContextUsed = false;
+        private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
+		private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
 		private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+        private readonly object lock_mSocket_object = new object();
+        private readonly ClientPeer_Private mClientPeer;
+        private readonly TcpServer mTcpServer;
 
-		private Socket mSocket = null;
-		private readonly object lock_mSocket_object = new object();
-		
-        private ClientPeer mClientPeer;
-		private TcpServer mTcpServer;
+        private Socket mSocket = null;
+        private bool bSendIOContextUsed = false;
 
-        public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+        public ClientPeerSocketMgr(ClientPeer_Private mClientPeer, TcpServer mTcpServer)
 		{
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
 
-			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
             mSendIOContex.Completed += OnIOCompleted;
-
-            mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
             mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive.Memory);
             mReceiveIOContex.Completed += OnIOCompleted;
 			bSendIOContextUsed = false;

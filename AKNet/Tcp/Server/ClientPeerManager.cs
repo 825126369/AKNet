@@ -28,7 +28,7 @@ namespace AKNet.Tcp.Server
 		{
 			while (CreateClientPeer())
 			{
-				
+
 			}
 
 			for (int i = mClientList.Count - 1; i >= 0; i--)
@@ -41,9 +41,9 @@ namespace AKNet.Tcp.Server
 				else
 				{
 					mClientList.RemoveAt(i);
-                    PrintRemoveClientMsg(mClientPeer);
-                    mClientPeer.Release();
-                }
+					PrintRemoveClientMsg(mClientPeer);
+					mClientPeer.Reset();
+				}
 			}
 		}
 
@@ -76,7 +76,7 @@ namespace AKNet.Tcp.Server
 			}
 			if (mSocket != null)
 			{
-				ClientPeer clientPeer = new ClientPeer(mNetServer);
+                ClientPeer clientPeer = new ClientPeer(mNetServer);
 				clientPeer.HandleConnectedSocket(mSocket);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
