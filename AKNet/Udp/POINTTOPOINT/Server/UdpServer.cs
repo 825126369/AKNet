@@ -20,7 +20,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private readonly ListenNetPackageMgr mPackageManager = null;
 
         private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
-
+        internal readonly ClientPeerPool mClientPeerPool = null;
         private readonly FakeSocketMgrInterface mFakeSocketMgr = null;
 
         private readonly ClientPeerMgr1 mClientPeerMgr1 = null;
@@ -41,6 +41,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
+            mClientPeerPool = new ClientPeerPool(this);
 
             if (Config.nUseFakeSocketMgrType == 1)
             {

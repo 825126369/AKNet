@@ -19,7 +19,8 @@ namespace AKNet.Udp4LinuxTcp.Server
         private UdpServer mNetServer;
         public ClientPeer(UdpServer mNetServer)
 		{
-            mInstance = mNetServer.mClientPeerPool.Pop();
+            this.mNetServer = mNetServer;
+            this.mInstance = mNetServer.mClientPeerPool.Pop();
         }
 
         public void Reset()

@@ -16,11 +16,12 @@ namespace AKNet.Tcp.Server
     internal class ClientPeer : ClientPeerBase
 	{
         private string Name = null;
-        private ClientPeer_Private mInstance = null;
+        private ClientPeerPrivate mInstance = null;
         private TcpServer mNetServer;
         public ClientPeer(TcpServer mNetServer)
 		{
-            mInstance = mNetServer.mClientPeerPool.Pop();
+            this.mNetServer = mNetServer;
+            this.mInstance = mNetServer.mClientPeerPool.Pop();
         }
 
         public void Reset()

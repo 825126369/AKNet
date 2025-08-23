@@ -56,7 +56,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 ClientPeer mClientPeer = mClientDic[v];
                 mClientDic.Remove(v);
                 PrintRemoveClientMsg(mClientPeer);
-                mClientPeer.Release();
+                mClientPeer.Reset();
             }
             mRemovePeerList.Clear();
         }
@@ -114,7 +114,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 
             if (mClientPeer != null)
             {
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                mClientPeer.GetUdpCheckPool().ReceiveNetPackage(mPackage);
             }
             else
             {

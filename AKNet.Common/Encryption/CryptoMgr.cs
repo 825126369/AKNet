@@ -10,6 +10,12 @@ using System;
 
 namespace AKNet.Common
 {
+    internal interface NetStreamEncryptionInterface
+    {
+        ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
+        bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage);
+    }
+
     internal class CryptoMgr : NetStreamEncryptionInterface
     {
         readonly NetStreamEncryptionInterface mNetPackageEncryption = null;
@@ -17,13 +23,10 @@ namespace AKNet.Common
         {
 #if !DEBUG
             mNetPackageEncryption = new NetStreamEncryption();
-            var mCryptoInterface = new XORCrypto();
-            mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
 
 #else
-          var mCryptoInterface = new XORCrypto();
-                mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
-
+            var mCryptoInterface = new XORCrypto();
+            mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
 #endif
         }
 

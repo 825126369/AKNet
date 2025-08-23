@@ -23,13 +23,13 @@ namespace AKNet.Tcp.Server
 		private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
 		private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly object lock_mSocket_object = new object();
-        private readonly ClientPeer_Private mClientPeer;
+        private readonly ClientPeerPrivate mClientPeer;
         private readonly TcpServer mTcpServer;
 
         private Socket mSocket = null;
         private bool bSendIOContextUsed = false;
 
-        public ClientPeerSocketMgr(ClientPeer_Private mClientPeer, TcpServer mTcpServer)
+        public ClientPeerSocketMgr(ClientPeerPrivate mClientPeer, TcpServer mTcpServer)
 		{
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;

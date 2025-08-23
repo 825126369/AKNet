@@ -15,9 +15,9 @@ namespace AKNet.Udp.POINTTOPOINT.Server
     internal class MsgSendMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
+        private ClientPeerPrivate mClientPeer = null;
 
-		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+		public MsgSendMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

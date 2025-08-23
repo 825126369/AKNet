@@ -16,9 +16,9 @@ namespace AKNet.Udp2MSQuic.Server
 	{
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
+		private ClientPeerPrivate mClientPeer;
 		private QuicServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, QuicServer mTcpServer)
+        public MsgReceiveMgr(ClientPeerPrivate mClientPeer, QuicServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
@@ -93,6 +93,11 @@ namespace AKNet.Udp2MSQuic.Server
 				mReceiveStreamList.Reset();
 			}
 		}
+
+		public void Release()
+		{
+			mReceiveStreamList.Dispose();
+        }
 
 	}
 }

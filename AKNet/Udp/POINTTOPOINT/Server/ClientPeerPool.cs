@@ -9,22 +9,22 @@
 using AKNet.Common;
 using System.Collections.Generic;
 
-namespace AKNet.Tcp.Server
+namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeerPool
     {
         readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
-        TcpServer mTcpServer = null;
+        UdpServer mServer = null;
         private int nMaxCapacity = 0;
         private ClientPeerPrivate GenerateObject()
         {
-            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mTcpServer);
+            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPool(UdpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
-            this.mTcpServer = mTcpServer;
+            this.mServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);
             for (int i = 0; i < initCapacity; i++)
             {

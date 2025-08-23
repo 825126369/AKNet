@@ -13,12 +13,12 @@ namespace AKNet.Udp1MSQuic.Server
 {
     internal class ClientPeerPool
     {
-        readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
+        readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
         QuicServer mTcpServer = null;
         private int nMaxCapacity = 0;
-        private ClientPeer GenerateObject()
+        private ClientPeerPrivate GenerateObject()
         {
-            ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
+            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mTcpServer);
             return clientPeer;
         }
 
@@ -42,11 +42,11 @@ namespace AKNet.Udp1MSQuic.Server
             return mObjectPool.Count;
         }
 
-        public ClientPeer Pop()
+        public ClientPeerPrivate Pop()
         {
             MainThreadCheck.Check();
 
-            ClientPeer t = null;
+            ClientPeerPrivate t = null;
             if (!mObjectPool.TryPop(out t))
             {
                 t = GenerateObject();
@@ -54,7 +54,7 @@ namespace AKNet.Udp1MSQuic.Server
             return t;
         }
 
-        public void recycle(ClientPeer t)
+        public void recycle(ClientPeerPrivate t)
         {
             MainThreadCheck.Check();
 #if DEBUG

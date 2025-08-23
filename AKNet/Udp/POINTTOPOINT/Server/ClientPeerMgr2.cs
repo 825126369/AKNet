@@ -40,7 +40,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
                 {
                     mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
-                    mClientPeer.Release();
+                    mClientPeer.Reset();
                 }
             }
         }

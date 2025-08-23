@@ -32,7 +32,7 @@ namespace AKNet.Udp2MSQuic.Server
 
 			for (int i = mClientList.Count - 1; i >= 0; i--)
 			{
-				ClientPeer mClientPeer = mClientList[i];
+				var mClientPeer = mClientList[i];
 				if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 				{
 					mClientPeer.Update(elapsed);
@@ -41,8 +41,9 @@ namespace AKNet.Udp2MSQuic.Server
 				{
 					mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
-					mNetServer.mClientPeerPool.recycle(mClientPeer);
-				}
+                    mClientPeer.Reset();
+
+                }
 			}
 		}
 
@@ -76,7 +77,7 @@ namespace AKNet.Udp2MSQuic.Server
 
 			if (connection != null)
 			{
-				ClientPeer clientPeer = mNetServer.mClientPeerPool.Pop();
+				ClientPeer clientPeer = new ClientPeer(mNetServer);
 				clientPeer.HandleConnectedSocket(connection);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

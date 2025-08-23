@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeer_Private : ClientPeerBase, IPoolItemInterface
+    internal class ClientPeerPrivate : ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 
@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Server
 		private TcpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
-        public ClientPeer_Private(TcpServer mNetServer)
+        public ClientPeerPrivate(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);

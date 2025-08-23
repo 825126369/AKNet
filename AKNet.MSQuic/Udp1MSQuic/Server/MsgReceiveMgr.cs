@@ -16,9 +16,9 @@ namespace AKNet.Udp1MSQuic.Server
 	{
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
+		private ClientPeerPrivate mClientPeer;
 		private QuicServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, QuicServer mTcpServer)
+        public MsgReceiveMgr(ClientPeerPrivate mClientPeer, QuicServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;

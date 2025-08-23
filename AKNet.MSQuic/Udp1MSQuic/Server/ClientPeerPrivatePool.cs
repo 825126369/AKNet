@@ -9,20 +9,21 @@
 using AKNet.Common;
 using System.Collections.Generic;
 
-namespace AKNet.Tcp.Server
+namespace AKNet.Udp1MSQuic.Server
 {
-    internal class ClientPeerPool
+    internal class ClientPeerPrivatePool
     {
         readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
-        TcpServer mTcpServer = null;
+        QuicServer mTcpServer = null;
         private int nMaxCapacity = 0;
+
         private ClientPeerPrivate GenerateObject()
         {
             ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mTcpServer);
             return clientPeer;
         }
 
-        public ClientPeerPool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPrivatePool(QuicServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mTcpServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);
