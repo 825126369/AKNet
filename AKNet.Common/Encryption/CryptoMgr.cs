@@ -15,7 +15,7 @@ namespace AKNet.Common
         readonly NetStreamEncryptionInterface mNetPackageEncryption = null;
         public CryptoMgr()
         {
-#if DEBUG
+#if !DEBUG
             mNetPackageEncryption = new NetStreamEncryption();
             var mCryptoInterface = new XORCrypto();
             mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);

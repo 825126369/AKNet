@@ -7,6 +7,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using AKNet.Common;
@@ -33,6 +34,9 @@ namespace AKNet.Tcp.Client
 		private readonly SocketAsyncEventArgs mSendIOContex = null;
         private readonly SocketAsyncEventArgs mReceiveIOContex = null;
 
+		private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+        private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+
         public TCPSocketMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
@@ -41,12 +45,10 @@ namespace AKNet.Tcp.Client
 			mDisConnectIOContex = new SocketAsyncEventArgs();
             mSendIOContex = new SocketAsyncEventArgs();
             mReceiveIOContex = new SocketAsyncEventArgs();
-			
-			mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            
+
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
+			mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive.Memory);
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
@@ -464,12 +466,12 @@ namespace AKNet.Tcp.Client
                     nLength = Config.nIOContexBufferLength;
 				}
 
-				lock (mSendStreamList)
+                var mMemory = mIMemoryOwner_Send.Memory.Slice(0, nLength);
+                lock (mSendStreamList)
 				{
-					mSendStreamList.CopyTo(mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
-				}
-
-				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
+                    mSendStreamList.CopyTo(mMemory.Span);
+                }
+                mSendIOContex.SetBuffer(mMemory);
                 StartSendEventArg();
             }
 			else
@@ -603,6 +605,8 @@ namespace AKNet.Tcp.Client
 
 		public void Release()
 		{
+			mIMemoryOwner_Send.Dispose();
+			mIMemoryOwner_Receive.Dispose();
             mSendStreamList.Dispose();
             CloseSocket();
         }
