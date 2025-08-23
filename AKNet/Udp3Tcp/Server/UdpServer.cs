@@ -18,7 +18,7 @@ namespace AKNet.Udp3Tcp.Server
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
-
+        internal readonly ClientPeerPool mClientPeerPool = null;
         private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ClientPeerMgr mClientPeerMgr = null;
 
@@ -39,6 +39,7 @@ namespace AKNet.Udp3Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
+            mClientPeerPool = new ClientPeerPool(this);
         }
 
         public void Update(double elapsed)

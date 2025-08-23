@@ -14,11 +14,11 @@ namespace AKNet.Udp4LinuxTcp.Server
     internal class MsgReceiveMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
+        private ClientPeer_Private mClientPeer = null;
         private readonly AkCircularManyBuffer mReceiveStreamList = null;
         private readonly msghdr mTcpMsg = null; 
 
-        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer_Private mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

@@ -31,7 +31,7 @@ namespace AKNet.Udp2Tcp.Server
 
             for (int i = mClientList.Count - 1; i >= 0; i--)
             {
-                ClientPeer mClientPeer = mClientList[i];
+                var mClientPeer = mClientList[i];
                 if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
                     mClientPeer.Update(elapsed);
@@ -39,8 +39,8 @@ namespace AKNet.Udp2Tcp.Server
                 else
                 {
                     mClientList.RemoveAt(i);
-                    mClientPeer.CloseSocket();
                     PrintRemoveClientMsg(mClientPeer);
+                    mClientPeer.Reset();
                 }
             }
         }

@@ -13,7 +13,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeer : ServerClientPeerInterface, ClientPeerBase
+    internal class ClientPeer : ClientPeerBase
 	{
         private string Name = null;
         private ClientPeer_Private mInstance = null;

@@ -6,12 +6,14 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.Common
 {
     public enum NetType
     {
         TCP,
-        UDP,
+        [Obsolete] UDP,
         Udp2Tcp,
         Udp3Tcp,
         Udp4LinuxTcp,

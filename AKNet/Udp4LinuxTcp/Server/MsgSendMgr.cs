@@ -15,9 +15,9 @@ namespace AKNet.Udp4LinuxTcp.Server
     internal class MsgSendMgr
     {
         private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
+        private ClientPeer_Private mClientPeer = null;
 
-        public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+        public MsgSendMgr(UdpServer mNetServer, ClientPeer_Private mClientPeer)
         {
             this.mNetServer = mNetServer;
             this.mClientPeer = mClientPeer;

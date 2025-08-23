@@ -7,29 +7,29 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp2Tcp.Common;
+using AKNet.Udp3Tcp.Common;
 using System;
 
-namespace AKNet.Udp2Tcp.Server
+namespace AKNet.Udp3Tcp.Server
 {
     internal class MsgSendMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
+        private ClientPeer_Private mClientPeer = null;
 
-		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+		public MsgSendMgr(UdpServer mNetServer, ClientPeer_Private mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
 		}
 
-        public void SendInnerNetData(UInt16 id)
+        public void SendInnerNetData(byte id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-            mPackage.SetPackageId(id);
-            mPackage.Length = Config.nUdpPackageFixedHeadSize;
+            NetUdpSendFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
+            mPackage.SetInnerCommandId(id);
             mClientPeer.SendNetPackage(mPackage);
+            mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
 
         public void SendNetData(NetPackage mNetPackage)
@@ -44,16 +44,19 @@ namespace AKNet.Udp2Tcp.Server
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
                 mClientPeer.mUdpCheckPool.SendTcpStream(ReadOnlySpan<byte>.Empty);
             }
+        }
+
+        public void SendNetData(UInt16 id, byte[] data)
+        {
+            SendNetData(id, data.AsSpan());
         }
 
         public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                NetLog.Assert(UdpNetCommand.orNeedCheck(id));
                 ReadOnlySpan<byte> mData = mNetServer.mCryptoMgr.Encode(id, data);
                 mClientPeer.mUdpCheckPool.SendTcpStream(mData);
             }

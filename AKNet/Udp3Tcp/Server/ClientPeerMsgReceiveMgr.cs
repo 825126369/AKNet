@@ -7,17 +7,17 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp2Tcp.Common;
+using AKNet.Udp3Tcp.Common;
 
-namespace AKNet.Udp2Tcp.Server
+namespace AKNet.Udp3Tcp.Server
 {
     internal class MsgReceiveMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
+        private ClientPeer_Private mClientPeer = null;
         private readonly AkCircularManyBuffer mReceiveStreamList = null;
 
-        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
+        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer_Private mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
@@ -35,16 +35,11 @@ namespace AKNet.Udp2Tcp.Server
             {
 
             }
-
-            while (NetTcpPackageExecute())
-            {
-
-            }
         }
 
         private bool GetReceiveCheckPackage()
         {
-            NetUdpFixedSizePackage mPackage = null;
+            NetUdpReceiveFixedSizePackage mPackage = null;
             if (mClientPeer.mSocketMgr.GetReceivePackage(out mPackage))
             {
                 UdpStatistical.AddReceivePackageCount();
@@ -55,9 +50,13 @@ namespace AKNet.Udp2Tcp.Server
             return false;
         }
 
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+            while (NetTcpPackageExecute())
+            {
+
+            }
         }
 
         private bool NetTcpPackageExecute()

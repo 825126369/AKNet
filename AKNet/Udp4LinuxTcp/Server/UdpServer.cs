@@ -18,7 +18,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
-
+        internal readonly ClientPeerPool mClientPeerPool = null;
         private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ClientPeerMgr mClientPeerMgr = null;
         
@@ -35,7 +35,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             mSocketMgr = new SocketUdp_Server(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
-            
+            mClientPeerPool = new ClientPeerPool(this);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
         }

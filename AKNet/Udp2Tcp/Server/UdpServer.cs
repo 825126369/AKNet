@@ -20,7 +20,7 @@ namespace AKNet.Udp2Tcp.Server
         private readonly ListenNetPackageMgr mPackageManager = null;
 
         private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
-
+        internal readonly ClientPeerPool mClientPeerPool = null;
         private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ClientPeerMgr mClientPeerMgr = null;
         private readonly ObjectPoolManager mObjectPoolManager;
@@ -41,6 +41,7 @@ namespace AKNet.Udp2Tcp.Server
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
+            mClientPeerPool = new ClientPeerPool(this);
         }
 
         public void Update(double elapsed)
