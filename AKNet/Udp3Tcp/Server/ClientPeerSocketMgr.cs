@@ -136,6 +136,11 @@ namespace AKNet.Udp3Tcp.Server
             }
         }
 
+        public void Release()
+        {
+
+        }
+
         int nLastSendBytesCount = 0;
         private void SendNetStream2(int BytesTransferred = -1)
         {

@@ -67,6 +67,10 @@ namespace AKNet.Tcp.Server
             {
                 mObjectPool.Push(t);
             }
+            else
+            {
+                t.Release();
+            }
         }
     }
 }

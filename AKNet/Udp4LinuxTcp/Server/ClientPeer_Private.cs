@@ -83,10 +83,8 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public void Release()
         {
-            mUDPLikeTCPMgr.Reset();
-            mMsgReceiveMgr.Reset();
-            mUdpCheckPool.Reset();
-            mSocketMgr.Reset();
+            mMsgReceiveMgr.Release();
+            mSocketMgr.Release();
         }
 
         public void CloseSocket()

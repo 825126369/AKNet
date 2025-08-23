@@ -80,6 +80,12 @@ namespace AKNet.Udp2Tcp.Server
             mSocketMgr.Reset();
         }
 
+        public void Release()
+        {
+            mMsgReceiveMgr.Release();
+            mSocketMgr.Release();
+        }
+
         public void CloseSocket()
         {
             mSocketMgr.CloseSocket();

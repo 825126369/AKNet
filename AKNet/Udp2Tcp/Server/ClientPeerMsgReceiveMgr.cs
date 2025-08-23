@@ -75,5 +75,11 @@ namespace AKNet.Udp2Tcp.Server
 		{
             
         }
-	}
+
+        public void Release()
+        {
+            mReceiveStreamList.Dispose();
+        }
+
+    }
 }

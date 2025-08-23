@@ -67,6 +67,10 @@ namespace AKNet.Udp2Tcp.Server
             {
                 mObjectPool.Push(t);
             }
+            else
+            {
+                t.Release();
+            }
         }
     }
 }

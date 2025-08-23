@@ -154,6 +154,14 @@ namespace AKNet.Udp2Tcp.Server
             }
         }
 
+        public void Release()
+        {
+            lock (mSendStreamList)
+            {
+                mSendStreamList.reset();
+            }
+        }
+
         int nLastSendBytesCount = 0;
         private void SendNetStream2(int BytesTransferred = -1)
         {

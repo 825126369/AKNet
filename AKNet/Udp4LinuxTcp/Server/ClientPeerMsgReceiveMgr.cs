@@ -70,12 +70,12 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public void Reset()
 		{
-            
+            mReceiveStreamList.Reset();
         }
 
         public void Release()
         {
-            mReceiveStreamList.Reset();
+            mReceiveStreamList.Dispose();
         }
     }
 }

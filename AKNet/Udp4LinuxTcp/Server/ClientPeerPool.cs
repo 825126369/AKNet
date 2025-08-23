@@ -67,6 +67,10 @@ namespace AKNet.Udp4LinuxTcp.Server
             {
                 mObjectPool.Push(t);
             }
+            else
+            {
+                t.Release();
+            }
         }
     }
 }

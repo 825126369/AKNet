@@ -74,5 +74,10 @@ namespace AKNet.Udp3Tcp.Server
 		{
             
         }
-	}
+
+        public void Release()
+        {
+            mReceiveStreamList.Dispose();
+        }
+    }
 }
