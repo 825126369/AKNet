@@ -72,5 +72,10 @@ namespace AKNet.Udp4LinuxTcp.Server
 		{
             
         }
-	}
+
+        public void Release()
+        {
+            mReceiveStreamList.Reset();
+        }
+    }
 }

@@ -113,14 +113,6 @@ namespace AKNet.Udp4LinuxTcp.Server
                 SendNetStream2();
             }
         }
-        
-        public void Reset()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.reset();
-            }
-        }
 
         int nLastSendBytesCount = 0;
         private void SendNetStream2(int BytesTransferred = -1)
@@ -161,6 +153,22 @@ namespace AKNet.Udp4LinuxTcp.Server
             {
                 mSocket.Close();
                 mSocket = null;
+            }
+        }
+
+        public void Reset()
+        {
+            lock (mSendStreamList)
+            {
+                mSendStreamList.reset();
+            }
+        }
+
+        public void Release()
+        {
+            lock (mSendStreamList)
+            {
+                mSendStreamList.reset();
             }
         }
 
