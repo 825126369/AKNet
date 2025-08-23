@@ -12,7 +12,7 @@ using AKNet.Tcp.Common;
 
 namespace AKNet.Tcp.Server
 {
-    public class TcpNetServerMain : NetServerInterface, PrivateConfigInterface
+    public class TcpNetServerMain : NetServerInterface
     {
         TcpServer mServer = null;
 
@@ -94,11 +94,6 @@ namespace AKNet.Tcp.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mServer.GetConfig();
         }
     }
 }

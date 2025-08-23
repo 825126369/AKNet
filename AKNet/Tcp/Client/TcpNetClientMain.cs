@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Tcp.Client
 {
-    public class TcpNetClientMain : NetClientInterface, ClientPeerBase, PrivateConfigInterface
+    public class TcpNetClientMain : NetClientInterface, ClientPeerBase
     {
         private ClientPeer mClientPeer;
 
@@ -115,11 +115,6 @@ namespace AKNet.Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mClientPeer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mClientPeer.GetConfig();
         }
     }
 
