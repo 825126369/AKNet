@@ -6,17 +6,20 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Tcp.Common;
+using System;
+using System.Buffers;
+using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
     internal class ClientPeerSocketMgr
 	{
-		private SocketAsyncEventArgs mReceiveIOContex = null;
+        private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+        private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+        private SocketAsyncEventArgs mReceiveIOContex = null;
 		private SocketAsyncEventArgs mSendIOContex = null;
 		private bool bSendIOContextUsed = false;
 		private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
@@ -26,25 +29,18 @@ namespace AKNet.Tcp.Server
 		
         private ClientPeer mClientPeer;
 		private TcpServer mTcpServer;
-		
-		public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+
+        public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
 		{
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
 
-			mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
 			mSendIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
-            if (!mTcpServer.mBufferManager.SetBuffer(mSendIOContex))
-            {
-                mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            }
-            if (!mTcpServer.mBufferManager.SetBuffer(mReceiveIOContex))
-            {
-                mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            }
+            mSendIOContex.Completed += OnIOCompleted;
 
+            mReceiveIOContex = mTcpServer.mReadWriteIOContextPool.Pop();
+            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive.Memory);
             mReceiveIOContex.Completed += OnIOCompleted;
-			mSendIOContex.Completed += OnIOCompleted;
 			bSendIOContextUsed = false;
 
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
@@ -251,17 +247,16 @@ namespace AKNet.Tcp.Server
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-				if (nLength >= Config.nIOContexBufferLength)
-				{
-					nLength = Config.nIOContexBufferLength;
-				}
+                var mMemory = mIMemoryOwner_Send.Memory;
+                nLength = Math.Min(mMemory.Length, nLength);
+                nLength = Math.Min(Config.nIOContexBufferLength * 8, nLength);
 
-				lock (mSendStreamList)
-				{
-					mSendStreamList.CopyTo(mSendIOContex.Buffer, mSendIOContex.Offset, nLength);
-				}
-
-				mSendIOContex.SetBuffer(mSendIOContex.Offset, nLength);
+                mMemory = mIMemoryOwner_Send.Memory.Slice(0, nLength);
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.CopyTo(mMemory.Span);
+                }
+                mSendIOContex.SetBuffer(mMemory);
                 StartSendEventArg();
             }
 			else
@@ -344,6 +339,8 @@ namespace AKNet.Tcp.Server
             {
                 mSendStreamList.Dispose();
             }
+			mIMemoryOwner_Send.Dispose();
+			mIMemoryOwner_Receive.Dispose();
         }
     }
 

@@ -47,9 +47,8 @@ namespace AKNet.Tcp.Client
             mReceiveIOContex = new SocketAsyncEventArgs();
 
             mSendIOContex.Completed += OnIOCompleted;
-            mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             mReceiveIOContex.Completed += OnIOCompleted;
-			mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+			mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive.Memory);
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
@@ -463,16 +462,16 @@ namespace AKNet.Tcp.Client
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-				if (nLength >= Config.nIOContexBufferLength)
-				{
-                    nLength = Config.nIOContexBufferLength;
-				}
+                var mMemory = mIMemoryOwner_Send.Memory;
+                nLength = Math.Min(mMemory.Length, nLength);
+                nLength = Math.Min(Config.nIOContexBufferLength * 8, nLength);
 
+                mMemory = mIMemoryOwner_Send.Memory.Slice(0, nLength);
                 lock (mSendStreamList)
 				{
-                    mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
+                    mSendStreamList.CopyTo(mMemory.Span);
                 }
-                mSendIOContex.SetBuffer(0, nLength);
+                mSendIOContex.SetBuffer(mMemory);
                 StartSendEventArg();
             }
 			else
