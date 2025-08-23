@@ -7,18 +7,18 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Collections.Generic;
 
 namespace AKNet.Tcp.Server
 {
     internal class ClientPeerPool
     {
-        readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
+        readonly Stack<ClientPeer_Private> mObjectPool = new Stack<ClientPeer_Private>();
         TcpServer mTcpServer = null;
         private int nMaxCapacity = 0;
-        private ClientPeer GenerateObject()
+
+        private ClientPeer_Private GenerateObject()
         {
-            ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
+            ClientPeer_Private clientPeer = new ClientPeer_Private(this.mTcpServer);
             return clientPeer;
         }
 
@@ -42,11 +42,11 @@ namespace AKNet.Tcp.Server
             return mObjectPool.Count;
         }
 
-        public ClientPeer Pop()
+        public ClientPeer_Private Pop()
         {
             MainThreadCheck.Check();
 
-            ClientPeer t = null;
+            ClientPeer_Private t = null;
             if (!mObjectPool.TryPop(out t))
             {
                 t = GenerateObject();
@@ -54,7 +54,7 @@ namespace AKNet.Tcp.Server
             return t;
         }
 
-        public void recycle(ClientPeer t)
+        public void recycle(ClientPeer_Private t)
         {
             MainThreadCheck.Check();
 #if DEBUG
@@ -66,6 +66,10 @@ namespace AKNet.Tcp.Server
             if (bRecycle)
             {
                 mObjectPool.Push(t);
+            }
+            else
+            {
+                t.Release();
             }
         }
     }

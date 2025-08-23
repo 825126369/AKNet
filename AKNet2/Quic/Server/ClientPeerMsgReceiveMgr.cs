@@ -11,13 +11,13 @@ using AKNet.Quic.Common;
 
 namespace AKNet.Quic.Server
 {
-    internal class MsgReceiveMgr
+    internal class ClientPeerMsgReceiveMgr
 	{
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
+		private ClientPeer_Private mClientPeer;
 		private QuicServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, QuicServer mTcpServer)
+        public ClientPeerMsgReceiveMgr(ClientPeer_Private mClientPeer, QuicServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
@@ -91,5 +91,11 @@ namespace AKNet.Quic.Server
 			}
 		}
 
-	}
+		public void Release()
+		{
+            mReceiveStreamList.Dispose();
+        }
+
+
+    }
 }

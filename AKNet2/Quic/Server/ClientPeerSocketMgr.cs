@@ -25,10 +25,10 @@ namespace AKNet.Quic.Server
         private QuicStream mSendQuicStream;
 
         private QuicConnection mQuicConnection;
-        private ClientPeer mClientPeer;
+        private ClientPeer_Private mClientPeer;
 		private QuicServer mQuicServer;
 		
-		public ClientPeerSocketMgr(ClientPeer mClientPeer, QuicServer mQuicServer)
+		public ClientPeerSocketMgr(ClientPeer_Private mClientPeer, QuicServer mQuicServer)
 		{
 			this.mClientPeer = mClientPeer;
 			this.mQuicServer = mQuicServer;
@@ -156,6 +156,12 @@ namespace AKNet.Quic.Server
 				mSendStreamList.reset();
 			}
 		}
-	}
+
+        public void Release()
+        {
+            mSendStreamList.reset();
+        }
+
+    }
 
 }

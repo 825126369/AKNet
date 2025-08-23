@@ -24,10 +24,10 @@ namespace AKNet.Tcp.Server
 		private Socket mSocket = null;
 		private readonly object lock_mSocket_object = new object();
 		
-        private ClientPeer mClientPeer;
+        private ClientPeer_Private mClientPeer;
 		private TcpServer mTcpServer;
 		
-		public ClientPeerSocketMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+		public ClientPeerSocketMgr(ClientPeer_Private mClientPeer, TcpServer mTcpServer)
 		{
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
@@ -336,6 +336,12 @@ namespace AKNet.Tcp.Server
 				mSendStreamList.reset();
 			}
 		}
-	}
+
+        public void Release()
+        {
+            CloseSocket();
+            mSendStreamList.release();
+        }
+    }
 
 }

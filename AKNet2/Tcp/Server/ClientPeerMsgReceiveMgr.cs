@@ -6,20 +6,20 @@
 *        ModifyTime:2025/2/27 22:28:11
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Tcp.Common;
+using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class MsgReceiveMgr
+    internal class ClientPeerMsgReceiveMgr
 	{
 		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
-		private ClientPeer mClientPeer;
+		private ClientPeer_Private mClientPeer;
 		private TcpServer mTcpServer;
-        public MsgReceiveMgr(ClientPeer mClientPeer, TcpServer mTcpServer)
+
+        public ClientPeerMsgReceiveMgr(ClientPeer_Private mClientPeer, TcpServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
 			this.mClientPeer = mClientPeer;
@@ -92,6 +92,11 @@ namespace AKNet.Tcp.Server
 				mReceiveStreamList.Reset();
 			}
 		}
+
+		public void Release()
+		{
+            mReceiveStreamList.Dispose();
+        }
 
 	}
 }
