@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class ClientPeer_Private : UdpClientPeerCommonBase, ClientPeerBase
+    internal class ClientPeerPrivate : UdpClientPeerCommonBase, ClientPeerBase
 	{
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
@@ -27,7 +27,7 @@ namespace AKNet.Udp2Tcp.Server
         private bool b_SOCKET_PEER_STATE_Changed = false;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
 
-        public ClientPeer_Private(UdpServer mNetServer)
+        public ClientPeerPrivate(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
             mSocketMgr = new ClientPeerSocketMgr(mNetServer, this);

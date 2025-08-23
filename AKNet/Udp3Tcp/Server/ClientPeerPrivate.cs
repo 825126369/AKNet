@@ -7,26 +7,26 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4LinuxTcp.Common;
+using AKNet.Udp3Tcp.Common;
 using System;
 using System.Net;
 
-namespace AKNet.Udp4LinuxTcp.Server
+namespace AKNet.Udp3Tcp.Server
 {
-    internal class ClientPeer_Private : UdpClientPeerCommonBase, ClientPeerBase
+    internal class ClientPeerPrivate : UdpClientPeerCommonBase, ClientPeerBase
 	{
         internal MsgSendMgr mMsgSendMgr;
         internal MsgReceiveMgr mMsgReceiveMgr;
         internal ClientPeerSocketMgr mSocketMgr;
 
-        private readonly ObjectPoolManager mObjectPoolManager;
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private UdpServer mNetServer;
+        private string Name = string.Empty;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
-        public ClientPeer_Private(UdpServer mNetServer)
+        public ClientPeerPrivate(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
             mSocketMgr = new ClientPeerSocketMgr(mNetServer, this);
@@ -34,8 +34,6 @@ namespace AKNet.Udp4LinuxTcp.Server
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
-
-            mObjectPoolManager = new ObjectPoolManager();
             SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
@@ -43,8 +41,8 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             if (b_SOCKET_PEER_STATE_Changed)
             {
-                b_SOCKET_PEER_STATE_Changed = false;
                 this.mNetServer.OnSocketStateChanged(this);
+                b_SOCKET_PEER_STATE_Changed = false;
             }
 
             mMsgReceiveMgr.Update(elapsed);
@@ -96,7 +94,6 @@ namespace AKNet.Udp4LinuxTcp.Server
         {
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             mSocketMgr.HandleConnectedSocket(mSocket);
-            mSocket.SetClientPeer(this);
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -104,10 +101,26 @@ namespace AKNet.Udp4LinuxTcp.Server
             return mSocketMgr.GetIPEndPoint();
         }
 
-        public void SendNetPackage(sk_buff skb)
+        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-            this.mSocketMgr.SendNetPackage(skb.GetSendBuffer());
+            bool bCanSendPackage = mPackage.orInnerCommandPackage() ||
+                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
+
+            if (bCanSendPackage)
+            {
+                UdpStatistical.AddSendPackageCount();
+                mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+                mUdpCheckPool.SetRequestOrderId(mPackage);
+                if (mPackage.orInnerCommandPackage())
+                {
+                    this.mSocketMgr.SendNetPackage(mPackage);
+                }
+                else
+                {
+                    UdpStatistical.AddSendCheckPackageCount();
+                    this.mSocketMgr.SendNetPackage(mPackage);
+                }
+            }
         }
 
         public void SendInnerNetData(byte id)
@@ -135,6 +148,16 @@ namespace AKNet.Udp4LinuxTcp.Server
             mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
 
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
+        }
+
         public void ResetSendHeartBeatCdTime()
         {
             this.mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
@@ -145,9 +168,9 @@ namespace AKNet.Udp4LinuxTcp.Server
             this.mUDPLikeTCPMgr.ReceiveHeartBeat();
         }
 
-        public void ReceiveConnect(sk_buff skb)
+        public void ReceiveConnect()
         {
-            this.mUDPLikeTCPMgr.ReceiveConnect(skb);
+            this.mUDPLikeTCPMgr.ReceiveConnect();
         }
 
         public void ReceiveDisConnect()
@@ -157,7 +180,7 @@ namespace AKNet.Udp4LinuxTcp.Server
 
         public ObjectPoolManager GetObjectPoolManager()
         {
-            return mObjectPoolManager;
+            return mNetServer.GetObjectPoolManager();
         }
 
         public Config GetConfig()
@@ -165,9 +188,19 @@ namespace AKNet.Udp4LinuxTcp.Server
             return mNetServer.GetConfig();
         }
 
+        public int GetCurrentFrameRemainPackageCount()
+        {
+            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
+        }
+
         public void NetPackageExecute(NetPackage mPackage)
         {
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
+        }
+
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        {
+            mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }
     }
 }

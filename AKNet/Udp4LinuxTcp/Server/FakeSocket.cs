@@ -17,7 +17,7 @@ namespace AKNet.Udp4LinuxTcp.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly UdpServer mNetServer;
-        private ClientPeer_Private mClientPeer;
+        private ClientPeerPrivate mClientPeer;
         private readonly AkCircularSpanBuffer mAkCircularSpanBuffer = new AkCircularSpanBuffer();
         public IPEndPoint RemoteEndPoint;
         public FakeSocket(UdpServer mNetServer)
@@ -25,7 +25,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             this.mNetServer = mNetServer;
         }
 
-        public void SetClientPeer(ClientPeer_Private mClientPeer)
+        public void SetClientPeer(ClientPeerPrivate mClientPeer)
         {
             this.mClientPeer = mClientPeer;
         }

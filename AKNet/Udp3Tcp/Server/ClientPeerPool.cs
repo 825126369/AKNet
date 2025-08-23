@@ -13,12 +13,12 @@ namespace AKNet.Udp3Tcp.Server
 {
     internal class ClientPeerPool
     {
-        readonly Stack<ClientPeer_Private> mObjectPool = new Stack<ClientPeer_Private>();
+        readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
         UdpServer mServer = null;
         private int nMaxCapacity = 0;
-        private ClientPeer_Private GenerateObject()
+        private ClientPeerPrivate GenerateObject()
         {
-            ClientPeer_Private clientPeer = new ClientPeer_Private(this.mServer);
+            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mServer);
             return clientPeer;
         }
 
@@ -42,11 +42,11 @@ namespace AKNet.Udp3Tcp.Server
             return mObjectPool.Count;
         }
 
-        public ClientPeer_Private Pop()
+        public ClientPeerPrivate Pop()
         {
             MainThreadCheck.Check();
 
-            ClientPeer_Private t = null;
+            ClientPeerPrivate t = null;
             if (!mObjectPool.TryPop(out t))
             {
                 t = GenerateObject();
@@ -54,7 +54,7 @@ namespace AKNet.Udp3Tcp.Server
             return t;
         }
 
-        public void recycle(ClientPeer_Private t)
+        public void recycle(ClientPeerPrivate t)
         {
             MainThreadCheck.Check();
 #if DEBUG

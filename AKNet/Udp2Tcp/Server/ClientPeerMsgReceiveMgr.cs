@@ -14,10 +14,10 @@ namespace AKNet.Udp2Tcp.Server
     internal class MsgReceiveMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeer_Private mClientPeer = null;
+        private ClientPeerPrivate mClientPeer = null;
         private readonly AkCircularManyBuffer mReceiveStreamList = null;
 
-        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer_Private mClientPeer)
+        public MsgReceiveMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

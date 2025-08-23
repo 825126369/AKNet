@@ -9,13 +9,14 @@
 using AKNet.Common;
 using System;
 using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
     internal class ClientPeer : ClientPeerBase
 	{
         private string Name = null;
-        private ClientPeer_Private mInstance = null;
+        private ClientPeerPrivate mInstance = null;
         private UdpServer mNetServer;
         public ClientPeer(UdpServer mNetServer)
 		{
@@ -45,37 +46,59 @@ namespace AKNet.Udp2Tcp.Server
 
 		public void Update(double elapsed)
 		{
-            mInstance.Update(elapsed);
+            if (mInstance != null)
+            {
+                mInstance.Update(elapsed);
+            }
         }
 
 		public void SendNetData(ushort nPackageId)
 		{
-            mInstance.SendNetData(nPackageId);
+            if (mInstance != null)
+            {
+                mInstance.SendNetData(nPackageId);
+            }
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            mInstance.SendNetData(nPackageId, data);
+            if (mInstance != null)
+            {
+                mInstance.SendNetData(nPackageId, data);
+            }
         }
 
         public void SendNetData(NetPackage data)
         {
-            mInstance.SendNetData(data);
+            if (mInstance != null)
+            {
+                mInstance.SendNetData(data);
+            }
         }
 
 		public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> data)
 		{
-            mInstance.SendNetData(nPackageId, data);
+            if (mInstance != null)
+            {
+                mInstance.SendNetData(nPackageId, data);
+            }
         }
 
 		public void HandleConnectedSocket(FakeSocket mSocket)
 		{
-            mInstance.HandleConnectedSocket(mSocket);
+            if (mInstance != null)
+            {
+                mInstance.HandleConnectedSocket(mSocket);
+            }
 		}
 
         public IPEndPoint GetIPEndPoint()
         {
-            return mInstance.GetIPEndPoint();
+            if (mInstance != null)
+            {
+                return mInstance.GetIPEndPoint();
+            }
+            return null;
         }
 
         public void SetName(string Name)

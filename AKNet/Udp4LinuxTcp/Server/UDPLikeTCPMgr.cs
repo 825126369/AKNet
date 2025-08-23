@@ -17,9 +17,9 @@ namespace AKNet.Udp4LinuxTcp.Server
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
         private UdpServer mNetServer = null;
-        private ClientPeer_Private mClientPeer = null;
+        private ClientPeerPrivate mClientPeer = null;
 		
-		public UDPLikeTCPMgr(UdpServer mNetServer, ClientPeer_Private mClientPeer)
+		public UDPLikeTCPMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
