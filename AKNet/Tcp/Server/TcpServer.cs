@@ -22,7 +22,6 @@ namespace AKNet.Tcp.Server
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
-        internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
         internal readonly Config mConfig = new Config();
         public TcpServer()
@@ -35,7 +34,6 @@ namespace AKNet.Tcp.Server
             mNetPackage = new TcpNetPackage();
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
-            mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
