@@ -39,7 +39,7 @@ namespace AKNet.Udp3Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, mConfig.MaxPlayerCount / 10, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
         }
 
         public void Update(double elapsed)

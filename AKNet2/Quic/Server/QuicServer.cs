@@ -38,7 +38,7 @@ namespace AKNet.Quic.Server
 
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
-            mClientPeerPool = new ClientPeerPrivatePool(this, Config.MaxPlayerCount / 10, Config.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPrivatePool(this, 0, Config.MaxPlayerCount);
         }
 
         public Config GetConfig()

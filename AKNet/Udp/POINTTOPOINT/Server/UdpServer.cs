@@ -41,7 +41,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, mConfig.MaxPlayerCount / 10, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
 
             if (Config.nUseFakeSocketMgrType == 1)
             {
