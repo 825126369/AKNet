@@ -10,12 +10,6 @@ using System;
 
 namespace AKNet.Common
 {
-    public enum ECryptoType
-    {
-        None = 0,
-        Xor = 1,
-    }
-
     internal interface NetStreamEncryptionInterface
     {
         ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);

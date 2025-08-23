@@ -28,8 +28,5 @@ namespace AKNet.Udp2Tcp.Common
 		public readonly double fMySendHeartBeatMaxTime = 2.0;
         public readonly double fReConnectMaxCdTime = 3.0;
         public readonly int MaxPlayerCount = 10000;
-
-        //加解密
-        public ECryptoType nECryptoType = ECryptoType.None;
 	}
 }

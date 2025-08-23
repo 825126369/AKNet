@@ -24,10 +24,5 @@ namespace AKNet.Udp1MSQuic.Common
         public readonly int MaxPlayerCount = 10000;
         public readonly string CryptoPasswrod1 = string.Empty;
         public readonly string CryptoPasswrod2 = string.Empty;
-        public ECryptoType nECryptoType;
-        public Config()
-        {
-
-        }
     }
 }

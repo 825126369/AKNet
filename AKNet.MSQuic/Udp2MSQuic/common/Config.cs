@@ -22,12 +22,5 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly double fReConnectMaxCdTime = 3.0;
 
         public readonly int MaxPlayerCount = 10000;
-        public readonly string CryptoPasswrod1 = string.Empty;
-        public readonly string CryptoPasswrod2 = string.Empty;
-        public ECryptoType nECryptoType;
-        public Config()
-        {
-
-        }
     }
 }

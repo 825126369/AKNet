@@ -33,8 +33,5 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 		public double fMySendHeartBeatMaxTime = 2.0;
         public double fReConnectMaxCdTime = 3.0;
         public int MaxPlayerCount = 10000;
-
-        //加解密
-        public ECryptoType nECryptoType = ECryptoType.None;
 	}
 }

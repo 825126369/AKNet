@@ -22,8 +22,5 @@ namespace AKNet.WebSocket.Common
         public readonly double fReConnectMaxCdTime = 3.0;
 
         public readonly int MaxPlayerCount = 10000;
-        public ECryptoType nECryptoType = ECryptoType.None;
-        public readonly string CryptoPasswrod1 = string.Empty;
-        public readonly string CryptoPasswrod2 = string.Empty;
     }
 }

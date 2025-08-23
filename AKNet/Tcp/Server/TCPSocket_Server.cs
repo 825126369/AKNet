@@ -81,7 +81,8 @@ namespace AKNet.Tcp.Server
 
 				this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-				this.mListenSocket.Bind(localEndPoint);
+                this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+                this.mListenSocket.Bind(localEndPoint);
 				this.mListenSocket.Listen(Config.MaxPlayerCount);
 
 				NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
