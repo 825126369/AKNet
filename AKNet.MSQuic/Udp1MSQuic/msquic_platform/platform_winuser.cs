@@ -111,6 +111,8 @@ namespace AKNet.Udp1MSQuic.Common
 
         static void SetThreadAffinity(ushort nProcessorId)
         {
+            Thread.BeginThreadAffinity();
+
             var curProcess = Process.GetCurrentProcess();
             int threadId = Interop.Kernel32.GetCurrentThreadId();
             ProcessThread currentThread = null;
@@ -129,6 +131,8 @@ namespace AKNet.Udp1MSQuic.Common
                 currentThread.IdealProcessor = nProcessorId;
                 //currentThread.ProcessorAffinity = new IntPtr(1 << nProcessorId); // 二进制 0001 -> CPU 0
             }
+
+            Thread.EndThreadAffinity();
         }
     }
 }

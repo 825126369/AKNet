@@ -81,10 +81,10 @@ namespace AKNet.Udp1MSQuic.Common
         public CXPLAT_WORKER_POOL(int WorkerCount)
         {
             this.WorkerCount = WorkerCount;
-            Workers = new CXPLAT_WORKER[WorkerCount];
+            this.Workers = new CXPLAT_WORKER[WorkerCount];
             for (int i = 0; i < WorkerCount; i++)
             {
-                Workers[i] = new CXPLAT_WORKER();
+                this.Workers[i] = new CXPLAT_WORKER();
             }
         }
     }

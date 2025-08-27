@@ -145,20 +145,9 @@ namespace TestNetClient
             {
                 string msg = $"全部 接收完成!!!!!!";
                 Console.WriteLine(msg);
-                LogToFile(logFileName, msg);
-            }
-
-            IMessagePool<TESTChatMessage>.recycle(mdata);
-        }
-
-        void LogToFile(string logFilePath, string Message)
-        {
-            using (StreamWriter writer = new StreamWriter(logFilePath, true))
-            {
-                writer.WriteLine(DateTime.Now + " " + Message);
+                AKNet.Udp1MSQuic.Common.udp_statistic.PrintInfo();
             }
         }
-
     }
 }
 

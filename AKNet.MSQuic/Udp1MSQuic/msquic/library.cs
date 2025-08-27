@@ -117,7 +117,7 @@ namespace AKNet.Udp1MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
-        static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
+        public static readonly QUIC_LIBRARY MsQuicLib = new QUIC_LIBRARY();
 
         static QUIC_PARTITION QuicLibraryGetPartitionFromProcessorIndex(int ProcessorIndex)
         {

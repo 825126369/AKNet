@@ -16,8 +16,7 @@ namespace AKNet.Udp1MSQuic.Common
         {
             CheckAndInit();
         }
-
-
+        
         private bool CheckAndInit()
         {
             if(bInit)
@@ -45,7 +44,10 @@ namespace AKNet.Udp1MSQuic.Common
                 NetLog.LogError("MsQuicRegistrationOpen Fail");
                 return false;
             }
+
+
             return true;
         }
+
     }
 }
