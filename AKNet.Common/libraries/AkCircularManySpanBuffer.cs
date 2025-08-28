@@ -270,6 +270,10 @@ namespace AKNet.Common
             {
                 mItemList.AddLast(mItem.mEntry);
             }
+            else
+            {
+                mItem.Dispose();
+            }
         }
 
     }
