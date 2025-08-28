@@ -143,12 +143,11 @@ namespace AKNet.Common
 			return CurrentSegmentLength > 0;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BufferItem BeginSpan()
         {
             return nCurrentWriteBlock.Value;
         }
-
+        
         public void FinishSpan()
 		{
 			nCurrentWriteBlock = nCurrentWriteBlock.Next;
