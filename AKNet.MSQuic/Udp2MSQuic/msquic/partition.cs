@@ -203,6 +203,16 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        public static void QuicPartitionPrintPerfCounters()
+        {
+            for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
+            {
+                QUIC_PERFORMANCE_COUNTERS nType = (QUIC_PERFORMANCE_COUNTERS)i;
+                long nCount = MsQuicLib.PerfCounterSamples[i];
+                NetLog.Log($"{nType} {QUIC_PERFORMANCE_COUNTERS_DESC[i]} : {nCount}");
+            }
+        }
+
     }
 
 }

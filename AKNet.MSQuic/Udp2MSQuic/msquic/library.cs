@@ -431,10 +431,26 @@ namespace AKNet.Udp2MSQuic.Common
             //}
         }
 
-        static void QuicPerfCounterSnapShot(long TimeDiff)
+        public static void QuicPerfCounterSnapShot(long TimeDiffUs)
         {
             Span<long> PerfCounterSamples = stackalloc long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
             QuicLibrarySumPerfCounters(PerfCounterSamples);
+
+            static void QUIC_COUNTER_LIMIT_HZ(QUIC_PERFORMANCE_COUNTERS TYPE, long LIMIT_PER_SECOND)
+            {
+                NetLog.Assert(((1000 * 1000 * (PerfCounterSamples[(int)TYPE] - MsQuicLib.PerfCounterSamples[(int)TYPE])) / TimeDiffUs) < LIMIT_PER_SECOND);
+            }
+
+            static void QUIC_COUNTER_CAP(QUIC_PERFORMANCE_COUNTERS TYPE, long MAX_LIMIT)
+            {
+                NetLog.Assert(PerfCounterSamples[(int)TYPE] < MAX_LIMIT && MsQuicLib.PerfCounterSamples[(int)TYPE] < MAX_LIMIT);
+            }
+
+#if !DEBUG
+            QUIC_COUNTER_LIMIT_HZ(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL, 1000000); // Don't have 1 million failed handshakes per second
+            QUIC_COUNTER_CAP(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH, 100000); // Don't maintain huge queue depths
+#endif
+
             PerfCounterSamples.CopyTo(MsQuicLib.PerfCounterSamples);
         }
 
