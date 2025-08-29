@@ -405,9 +405,37 @@ namespace AKNet.Udp2MSQuic.Common
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_CID_MAX_LENGTH);
         }
 
-        static void QuicPerfCounterSnapShot(long TimeDiffUs)
+        static void QuicLibrarySumPerfCounters(Span<long> Counters)
         {
-           
+            if (MsQuicLib.Partitions == null)
+            {
+                Counters.Clear();
+                return;
+            }
+
+            for (int ProcIndex = 1; ProcIndex < MsQuicLib.PartitionCount; ++ProcIndex)
+            {
+                for (int CounterIndex = 0; CounterIndex < Counters.Length; ++CounterIndex)
+                {
+                    //先前的统计都是 分区单独统计的，这里把加起来，算个总的
+                    Counters[CounterIndex] += MsQuicLib.Partitions[ProcIndex].PerfCounters[CounterIndex];
+                }
+            }
+            
+            //for (int CounterIndex = 0; CounterIndex < Counters.Length; ++CounterIndex)
+            //{
+            //    if (Counters[CounterIndex] < 0)
+            //    {
+            //        Counters[CounterIndex] = 0;
+            //    }
+            //}
+        }
+
+        static void QuicPerfCounterSnapShot(long TimeDiff)
+        {
+            Span<long> PerfCounterSamples = stackalloc long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+            QuicLibrarySumPerfCounters(PerfCounterSamples);
+            PerfCounterSamples.CopyTo(MsQuicLib.PerfCounterSamples);
         }
 
         static void QuicPerfCounterTrySnapShot(long TimeNow)
@@ -740,34 +768,6 @@ namespace AKNet.Udp2MSQuic.Common
 
 
             CxPlatLockRelease(MsQuicLib.Lock);
-        }
-
-        static void QuicLibrarySumPerfCounters(long[] PerfCounterSamples)
-        {
-            //NetLog.Assert(Buffer.Length == (Buffer.Length / sizeof(ulong) * sizeof(ulong)));
-            //NetLog.Assert(Buffer.Length <= sizeof(MsQuicLib.PerProc[0].PerfCounters));
-            //const uint32_t CountersPerBuffer = BufferLength / sizeof(int64_t);
-            //int64_t * const Counters = (int64_t*)Buffer;
-            //memcpy(Buffer, MsQuicLib.PerProc[0].PerfCounters, BufferLength);
-
-            //for (uint32_t ProcIndex = 1; ProcIndex < MsQuicLib.ProcessorCount; ++ProcIndex)
-            //{
-            //    for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
-            //    {
-            //        Counters[CounterIndex] += MsQuicLib.PerProc[ProcIndex].PerfCounters[CounterIndex];
-            //    }
-            //}
-
-            ////
-            //// Zero any counters that are still negative after summation.
-            ////
-            //for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
-            //{
-            //    if (Counters[CounterIndex] < 0)
-            //    {
-            //        Counters[CounterIndex] = 0;
-            //    }
-            //}
         }
 
         static int QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
