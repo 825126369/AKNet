@@ -154,6 +154,55 @@ namespace AKNet.Udp2MSQuic.Common
 
             return QuicPartitioGetStatelessRetryKey(Partition, KeyIndex);
         }
+
+        //性能计数器描述
+        static readonly string[] QUIC_PERFORMANCE_COUNTERS_DESC = new string[]
+        {
+            "创建的总连接数",
+            "失败的连接总数",
+            "被应用程序层主动拒绝的连接尝试总数",
+            "成功恢复的连接总数",
+            "当前处于活动状态（已分配）的连接数。",
+            "当前处于“已连接”状态（即握手完成，数据可以传输）的连接数",
+            "因协议错误（如无效帧、违反状态机规则）而关闭的连接总数。",
+            "因客户端和服务器无法就应用层协议（如 h3(自定义的协议))，达成一致而被拒绝的连接尝试总数。",
+            "当前处于活动状态的流（stream）总数。",
+            "根据 ACK 信息推断出的疑似丢失的数据包总数。这是网络质量（特别是丢包率）的关键指标。",
+            "因任何原因（格式错误、缓冲区溢出）被 QUIC 实现直接丢弃的数据包总数。",
+            "解密失败的数据包总数。这可能由密钥错误、数据损坏或重放攻击引起。",
+            "接收到的 UDP 数据报总数。",
+            "发送的 UDP 数据报总数。",
+            "接收到的 UDP 负载（payload）总字节数（不包括 UDP/IP 头）。",
+            "发送的 UDP 负载（payload）总字节数（不包括 UDP/IP 头）。",
+            "从底层网络接收到 UDP 数据报的事件总数（可能一次事件接收多个数据报）。",
+            "调用底层 UDP 发送 API 的总次数（一次调用可能发送多个数据报）。",
+            "应用程序通过 QUIC 连接发送的总字节数（在 QUIC 层之上测量）。",
+            "应用程序通过 QUIC 连接接收到的总字节数",
+            "当前排队等待处理的连接数（例如，新连接请求）",
+            "当前排队等待处理的连接级操作数。",
+            "历史累计的连接级操作入队总数。",
+            "历史累计的已完成连接级操作总数。",
+            "当前排队等待处理的工作线程操作数。",
+            "历史累计的工作线程操作入队总数。",
+            "历史累计的已完成工作线程操作总数 ",
+            "成功验证的网络路径（IP地址/端口对）挑战总数", //QUIC_PERF_COUNTER_PATH_VALIDATED,
+            "验证失败的网络路径挑战总数。", //QUIC_PERF_COUNTER_PATH_FAILURE
+            "发送的无状态重置（stateless reset）数据包总数", //QUIC_PERF_COUNTER_SEND_STATELESS_RESET,
+            "发送的无状态重试（stateless retry）数据包总数。", //QUIC_PERF_COUNTER_SEND_STATELESS_RETRY。
+            "因QUIC实例内部工作负载过高（例如，CPU、内存或队列满）而被拒绝的连接总数。这是系统过载的信号。", //QUIC_PERF_COUNTER_CONN_LOAD_REJECT,
+            " ", //QUIC_PERF_COUNTER_MAX,
+        };
+
+        public static void QuicPartitionPrintPerfCounters(QUIC_PARTITION Partition)
+        {
+            for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
+            {
+                QUIC_PERFORMANCE_COUNTERS nType = (QUIC_PERFORMANCE_COUNTERS)i;
+                long nCount = Partition.PerfCounters[i];
+                NetLog.Log($"{nType} {QUIC_PERFORMANCE_COUNTERS_DESC[i]} : {nCount}");
+            }
+        }
+
     }
 
 }

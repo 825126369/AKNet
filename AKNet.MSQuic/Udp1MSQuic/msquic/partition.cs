@@ -12,6 +12,7 @@ namespace AKNet.Udp1MSQuic.Common
 
     internal class QUIC_PARTITION
     {
+        public int nThreadId;
         public int Index;
         public int Processor;
         public ulong SendBatchId;

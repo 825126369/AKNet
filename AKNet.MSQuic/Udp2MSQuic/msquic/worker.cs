@@ -216,6 +216,8 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     QuicWorkerThreadWake(Worker);
                 }
+
+                //表示的是 Worker.Connections 这个链表的数量
                 QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
         }

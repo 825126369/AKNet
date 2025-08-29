@@ -92,6 +92,7 @@ namespace AKNet.Udp1MSQuic.Common
             if (this.ListDepth >= this.MaxDepth)
             {
                 //直接GC掉
+                Free(t);
             }
             else
             {

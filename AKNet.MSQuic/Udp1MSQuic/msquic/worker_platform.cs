@@ -35,6 +35,7 @@ namespace AKNet.Udp1MSQuic.Common
 #endif
 
         public int IdealProcessor;
+        public int ActualIdealProcessor;
         public bool InitializedEventQ;
         public bool InitializedShutdownSqe;
         public bool InitializedWakeSqe;
@@ -324,6 +325,7 @@ namespace AKNet.Udp1MSQuic.Common
 
             int id = Thread.GetCurrentProcessorId();
             int id2 = Thread.GetCurrentProcessorId();
+            Worker.ActualIdealProcessor = id2;
 
             while (!Worker.StoppedThread)
             {
@@ -458,7 +460,7 @@ namespace AKNet.Udp1MSQuic.Common
                     break;
                 }
 
-                if (CqeCount >= 16)
+                if (CqeCount >= 4096)
                 {
                     break;
                 }

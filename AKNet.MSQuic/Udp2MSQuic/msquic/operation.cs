@@ -374,6 +374,7 @@ namespace AKNet.Udp2MSQuic.Common
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
+
             CxPlatDispatchLockAcquire(OperQ.Lock);
 #if DEBUG
             NetLog.Assert(Oper.Link.Next == null);
@@ -381,10 +382,10 @@ namespace AKNet.Udp2MSQuic.Common
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertMiddle(OperQ.List, OperQ.PriorityTail, Oper.Link);
             OperQ.PriorityTail = Oper.Link;
-
             CxPlatDispatchLockRelease(OperQ.Lock);
-            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
-            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
             return StartProcessing;
         }
 
@@ -396,11 +397,11 @@ namespace AKNet.Udp2MSQuic.Common
             CxPlatListInsertTail(OperQ.List, Oper.Link);
             CxPlatDispatchLockRelease(OperQ.Lock);
 
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
             return StartProcessing;
         }
-        
+
         static bool QuicOperationEnqueueFront(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
@@ -414,8 +415,8 @@ namespace AKNet.Udp2MSQuic.Common
             }
             CxPlatDispatchLockRelease(OperQ.Lock);
 
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
             return StartProcessing;
         }
 

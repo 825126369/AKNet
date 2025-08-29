@@ -74,7 +74,7 @@ namespace AKNet.Udp1MSQuic.Common
             {
                 mThread.Name = Config.Name;
             }
-            
+
             mThread.IsBackground = true;
             mThread.Start(Config.Context);
             return 0;
