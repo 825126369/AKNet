@@ -102,6 +102,15 @@ namespace AKNet.Udp2MSQuic.Common
         QUIC_PERF_COUNTER_SEND_STATELESS_RESET, // Total stateless reset packets sent ever.
         QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // Total stateless retry packets sent ever.
         QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // Total connections rejected due to worker load.
+
+        //计时器
+        QUIC_PERF_COUNTER_TIMER_PACING,
+        QUIC_PERF_COUNTER_TIMER_ACK_DELAY,
+        QUIC_PERF_COUNTER_TIMER_LOSS_DETECTION,
+        QUIC_PERF_COUNTER_TIMER_KEEP_ALIVE,
+        QUIC_PERF_COUNTER_TIMER_IDLE,
+        QUIC_PERF_COUNTER_TIMER_SHUTDOWN,
+
         QUIC_PERF_COUNTER_MAX,
     }
 

@@ -91,6 +91,10 @@ namespace AKNet.Udp2MSQuic.Common
         {
             NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
             Interlocked.Add(ref Partition.PerfCounters[(int)Type], Value);
+            if (Type == QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH)
+            {
+                NetLog.LogError($"QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH: {Partition.Processor}, {Partition.PerfCounters[(int)Type]}");
+            }
         }
 
         static void QuicPerfCounterIncrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
@@ -190,6 +194,14 @@ namespace AKNet.Udp2MSQuic.Common
             "发送的无状态重置（stateless reset）数据包总数", //QUIC_PERF_COUNTER_SEND_STATELESS_RESET,
             "发送的无状态重试（stateless retry）数据包总数。", //QUIC_PERF_COUNTER_SEND_STATELESS_RETRY。
             "因QUIC实例内部工作负载过高（例如，CPU、内存或队列满）而被拒绝的连接总数。这是系统过载的信号。", //QUIC_PERF_COUNTER_CONN_LOAD_REJECT,
+
+            "QUIC_CONN_TIMER_PACING",
+            "QUIC_CONN_TIMER_ACK_DELAY",
+            "QUIC_CONN_TIMER_LOSS_DETECTION",
+            "QUIC_CONN_TIMER_KEEP_ALIVE",
+            "QUIC_CONN_TIMER_IDLE",
+            "QUIC_CONN_TIMER_SHUTDOWN",
+
             " ", //QUIC_PERF_COUNTER_MAX,
         };
 
