@@ -446,7 +446,7 @@ namespace AKNet.Udp2MSQuic.Common
                 NetLog.Assert(PerfCounterSamples[(int)TYPE] < MAX_LIMIT && MsQuicLib.PerfCounterSamples[(int)TYPE] < MAX_LIMIT);
             }
 
-#if !DEBUG
+#if DEBUG
             QUIC_COUNTER_LIMIT_HZ(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL, 1000000); // Don't have 1 million failed handshakes per second
             QUIC_COUNTER_CAP(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH, 100000); // Don't maintain huge queue depths
 #endif
