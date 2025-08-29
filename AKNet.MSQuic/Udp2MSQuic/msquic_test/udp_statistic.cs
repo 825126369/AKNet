@@ -15,9 +15,9 @@ namespace AKNet.Udp2MSQuic.Common
                 MSQuicFunc.QuicPartitionPrintPerfCounters(v.Partition);
             }
 
-            MSQuicFunc.QuicPerfCounterSnapShot();
+            MSQuicFunc.QuicPerfCounterSnapShot(0);
             NetLog.Log("Quic UDP 所有分区总共统计信息: ");
-            MSQuicFunc.QuicPartitionPrintPerfCounters();
+            MSQuicFunc.QuicPrintPerfCounters();
         }
     }
 }

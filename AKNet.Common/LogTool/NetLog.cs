@@ -59,6 +59,14 @@ namespace AKNet.Common
         
         static NetLog()
         {
+            Init();
+        }
+
+        private static bool bInit = false;
+        public static void Init()
+        {
+            if (bInit) return; bInit = true;
+
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
             LogErrorFunc += LogErrorToFile;
 #if DEBUG
@@ -69,11 +77,6 @@ namespace AKNet.Common
             }
             catch { }
 #endif
-        }
-
-        public static void Init()
-        {
-            
         }
 
         static void LogErrorToFile(string Message)

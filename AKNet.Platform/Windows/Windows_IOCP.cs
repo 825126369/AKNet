@@ -1,6 +1,7 @@
 ﻿#if TARGET_WINDOWS
 namespace AKNet.Platform
 {
+    using AKNet.Common;
     using System.Buffers;
     using System.Runtime.InteropServices;
     using CXPLAT_CQE = OVERLAPPED_ENTRY;

@@ -21,4 +21,8 @@
 		<DefineConstants>$(DefineConstants);TARGET_OSX</DefineConstants>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
+	</ItemGroup>
+
 </Project>

@@ -452,6 +452,7 @@ namespace AKNet.Udp2MSQuic.Common
 #endif
 
             Array.Copy(PerfCounterSamples, MsQuicLib.PerfCounterSamples, PerfCounterSamples.Length);
+            QuicPrintPerfCounters();
         }
 
         static void QuicPerfCounterTrySnapShot(long TimeNow)

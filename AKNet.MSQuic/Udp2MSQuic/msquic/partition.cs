@@ -203,7 +203,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        public static void QuicPartitionPrintPerfCounters()
+        public static void QuicPrintPerfCounters()
         {
             for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
             {
