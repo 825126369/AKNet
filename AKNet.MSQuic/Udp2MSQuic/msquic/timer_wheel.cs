@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -15,6 +16,7 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int TIME_TO_SLOT_INDEX(QUIC_TIMER_WHEEL TimerWheel, long TimeUs)
         {
             return (int)(US_TO_MS(TimeUs) / 1000) % TimerWheel.SlotCount;
@@ -27,12 +29,18 @@ namespace AKNet.Udp2MSQuic.Common
             TimerWheel.NextConnection = null;
             TimerWheel.SlotCount = QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT;
             TimerWheel.Slots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT];
-            for (int i = 0; i < QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT; ++i)
+            if (TimerWheel.Slots == null)
             {
-                CXPLAT_LIST_ENTRY<QUIC_CONNECTION> mEntry = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+                return QUIC_STATUS_OUT_OF_MEMORY;
+            }
+
+            for (int i = 0; i < TimerWheel.SlotCount; ++i)
+            {
+                var mEntry = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
                 CxPlatListInitializeHead(mEntry);
                 TimerWheel.Slots[i]= mEntry;
             }
+
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -63,7 +71,6 @@ namespace AKNet.Udp2MSQuic.Common
         {
             TimerWheel.NextExpirationTime = long.MaxValue;
             TimerWheel.NextConnection = null;
-
             for (int i = 0; i < TimerWheel.SlotCount; ++i)
             {
                 if (!CxPlatListIsEmpty(TimerWheel.Slots[i]))
@@ -77,6 +84,16 @@ namespace AKNet.Udp2MSQuic.Common
                     }
                 }
             }
+
+            if (TimerWheel.NextConnection == null)
+            {
+                NetLog.Log($"TimerWheel.NextConnection = NULL.");
+            }
+            else
+            {
+                NetLog.Log($"Next Expiration = {TimerWheel.NextExpirationTime}.");
+            }
+
         }
 
         static void QuicTimerWheelResize(QUIC_TIMER_WHEEL TimerWheel)
@@ -239,7 +256,6 @@ namespace AKNet.Udp2MSQuic.Common
             if (Connection.TimerLink.Next != null)
             {
                 CxPlatListEntryRemove(Connection.TimerLink);
-                Connection.TimerLink.Next = null;
                 TimerWheel.ConnectionCount--;
 
                 if (Connection == TimerWheel.NextConnection)

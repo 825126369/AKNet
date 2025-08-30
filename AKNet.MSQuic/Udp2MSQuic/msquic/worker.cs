@@ -374,6 +374,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
             }
+
         }
 
         static void QuicWorkerMoveConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection, bool IsPriority)
@@ -444,7 +445,7 @@ namespace AKNet.Udp2MSQuic.Common
             QUIC_CONNECTION Connection = QuicWorkerGetNextConnection(Worker);
             if (Connection != null)
             {
-                //在这里 处理命令
+                //在这里 处理 操作命令
                 QuicWorkerProcessConnection(Worker, Connection, State.ThreadID, State.TimeNow);
                 Worker.ExecutionContext.Ready = 1;
                 State.NoWorkCount = 0;
