@@ -145,6 +145,8 @@ namespace AKNet.Udp2MSQuic.Common
                     CxPlatListInsertHead(Entry, Connection.TimerLink);
                 }
             }
+            OldSlots = null;
+
         }
 
         static void QuicTimerWheelUpdateConnection(QUIC_TIMER_WHEEL TimerWheel, QUIC_CONNECTION Connection)
@@ -231,6 +233,7 @@ namespace AKNet.Udp2MSQuic.Common
                     {
                         break;
                     }
+
                     Entry = Entry.Next;
                     CxPlatListEntryRemove(ConnectionEntry.TimerLink);
                     CxPlatListInsertTail(OutputListHead, ConnectionEntry.TimerLink);
