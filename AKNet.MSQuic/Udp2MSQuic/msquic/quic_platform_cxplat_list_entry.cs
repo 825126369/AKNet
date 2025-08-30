@@ -143,5 +143,17 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        static int CxPlatListCount(CXPLAT_LIST_ENTRY ListHead)
+        {
+            int nCount = 0;
+            CXPLAT_LIST_ENTRY mNode = ListHead.Next;
+            while (mNode != ListHead)
+            {
+                nCount++;
+                mNode = mNode.Next;
+            }
+            return nCount;
+        }
+
     }
 }

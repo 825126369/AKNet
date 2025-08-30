@@ -81,52 +81,23 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             //CXList 测试
-            CXPLAT_LIST_ENTRY<int> mList = new CXPLAT_LIST_ENTRY<int>(-1);
-            CXPLAT_LIST_ENTRY<int> mList2 = new CXPLAT_LIST_ENTRY<int>(-1);
-            CXPLAT_LIST_ENTRY<int> Entry1 = new CXPLAT_LIST_ENTRY<int>(9);
-            CXPLAT_LIST_ENTRY<int> Entry2 = new CXPLAT_LIST_ENTRY<int>(8);
-
+            CXPLAT_LIST_ENTRY<int> mList = new CXPLAT_LIST_ENTRY<int>(0);
             CxPlatListInitializeHead(mList);
-            CxPlatListInitializeHead(mList2);
 
-            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(1));
-            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(2));
-            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(3));
-            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(4));
-            //CxPlatListInsertHead(mList, new CXPLAT_LIST_ENTRY<int>(5));
-            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(1));
-            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(2));
-            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(3));
-            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(4));
-            //CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(5));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(1));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(2));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(3));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(4));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(5));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(6));
+            CxPlatListInsertTail(mList, new CXPLAT_LIST_ENTRY<int>(7));
 
-            CxPlatListInsertMiddle(mList, mList.Prev, Entry1);
-            CxPlatListInsertMiddle(mList, mList.Prev, new CXPLAT_LIST_ENTRY<int>(1));
-            CxPlatListInsertMiddle(mList, mList.Prev, new CXPLAT_LIST_ENTRY<int>(2));
-            CxPlatListInsertMiddle(mList, mList.Prev, new CXPLAT_LIST_ENTRY<int>(3));
-            CxPlatListInsertMiddle(mList, mList.Prev, new CXPLAT_LIST_ENTRY<int>(4));
-            CxPlatListInsertMiddle(mList, mList.Prev, new CXPLAT_LIST_ENTRY<int>(5));
-            CxPlatListInsertMiddle(mList, mList.Prev, Entry2);
-
-            CxPlatListInsertMiddle(mList2, mList2.Prev, new CXPLAT_LIST_ENTRY<int>(10));
-            CxPlatListInsertMiddle(mList2, mList2.Prev, new CXPLAT_LIST_ENTRY<int>(11));
-            CxPlatListInsertMiddle(mList2, mList2.Prev, new CXPLAT_LIST_ENTRY<int>(12));
-
-            CxPlatListMoveItems(mList, mList2);
-            mList = mList2;
-
+            NetLog.Log($"Count: {CxPlatListCount(mList)}");
             while (!CxPlatListIsEmpty(mList))
             {
                 CxPlatListRemoveHead(mList);
+                NetLog.Log($"Count: {CxPlatListCount(mList)}");
             }
-
-            CXPLAT_LIST_ENTRY<int> iter = mList.Next as CXPLAT_LIST_ENTRY<int>;
-            while (mList != iter)
-            {
-                NetLog.Log(iter.value);
-                iter = iter.Next as CXPLAT_LIST_ENTRY<int>;
-            }
-
         }
     }
 }

@@ -433,6 +433,8 @@ namespace AKNet.Udp2MSQuic.Common
 
         public static void QuicPerfCounterSnapShot(long TimeDiffUs)
         {
+            TimeDiffUs = Math.Max(1, TimeDiffUs);
+
             long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
             QuicLibrarySumPerfCounters(PerfCounterSamples);
 

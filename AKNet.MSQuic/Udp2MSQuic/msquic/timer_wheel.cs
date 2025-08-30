@@ -1,5 +1,4 @@
 ﻿using AKNet.Common;
-using System;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -76,10 +75,9 @@ namespace AKNet.Udp2MSQuic.Common
                 if (!CxPlatListIsEmpty(TimerWheel.Slots[i]))
                 {
                     QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(TimerWheel.Slots[i].Next);
-                    long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
-                    if (EntryExpirationTime < TimerWheel.NextExpirationTime)
+                    if (ConnectionEntry.EarliestExpirationTime < TimerWheel.NextExpirationTime)
                     {
-                        TimerWheel.NextExpirationTime = EntryExpirationTime;
+                        TimerWheel.NextExpirationTime = ConnectionEntry.EarliestExpirationTime;
                         TimerWheel.NextConnection = ConnectionEntry;
                     }
                 }
@@ -87,13 +85,12 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (TimerWheel.NextConnection == null)
             {
-                NetLog.Log($"TimerWheel.NextConnection = NULL.");
+                //NetLog.Log($"TimerWheel.NextConnection = NULL.");
             }
             else
             {
-                NetLog.Log($"Next Expiration = {TimerWheel.NextExpirationTime}.");
+                //NetLog.Log($"Next Expiration = {TimerWheel.NextExpirationTime}.");
             }
-
         }
 
         static void QuicTimerWheelResize(QUIC_TIMER_WHEEL TimerWheel)
@@ -129,9 +126,9 @@ namespace AKNet.Udp2MSQuic.Common
                     long ExpirationTime = Connection.EarliestExpirationTime;
                     NetLog.Assert(TimerWheel.SlotCount != 0);
                     int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
+
                     CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
                     CXPLAT_LIST_ENTRY Entry = ListHead.Prev;
-
                     while (Entry != ListHead)
                     {
                         QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
@@ -199,7 +196,8 @@ namespace AKNet.Udp2MSQuic.Common
 
                 Entry = Entry.Prev;
             }
-                
+
+            //在这里把Work上的连接插入入口上
             CxPlatListInsertHead(Entry, Connection.TimerLink);
             
             if (ExpirationTime < TimerWheel.NextExpirationTime)

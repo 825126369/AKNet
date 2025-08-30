@@ -205,9 +205,8 @@ namespace AKNet.Udp2MSQuic.Common
                 QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                 CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                 ConnectionQueued = true;
+                Connection.HasQueuedWork = true;
             }
-
-            Connection.HasQueuedWork = true;
             CxPlatDispatchLockRelease(Worker.Lock);
 
             if (ConnectionQueued)
@@ -216,7 +215,6 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     QuicWorkerThreadWake(Worker);
                 }
-
                 //表示的是 Worker.Connections 这个链表的数量
                 QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
@@ -344,6 +342,8 @@ namespace AKNet.Udp2MSQuic.Common
             bool DoneWithConnection = true;
             if (!Connection.State.UpdateWorker)
             {
+                //这里就是判断这个连接是否还有工作要做，如果还有工作要做，就把这个重新加到 Worker.Connections连接队列里
+                //这个队列的目的，就是处理有操作的连接。
                 if (Connection.HasQueuedWork)
                 {
                     Connection.Stats.Schedule.LastQueueTime = CxPlatTimeUs();
@@ -358,11 +358,13 @@ namespace AKNet.Udp2MSQuic.Common
                         CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                     }
                     DoneWithConnection = false;
+                    //这里不加这个计数的话，结果是负的。（我这里把这个加上去）
+                    QuicPerfCounterIncrement(Worker.Partition,  QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
                 }
             }
 
             CxPlatDispatchLockRelease(Worker.Lock);
-            if (DoneWithConnection)
+            if (DoneWithConnection) //如果这个连接所有的 操纵命令都处理完了
             {
                 if (Connection.State.UpdateWorker)
                 {
@@ -435,7 +437,9 @@ namespace AKNet.Udp2MSQuic.Common
                 Worker.IsActive = true;
             }
 
-            QuicPerfCounterTrySnapShot(State.TimeNow);
+            //这里是UDP 统计，不让他统计
+            //QuicPerfCounterTrySnapShot(State.TimeNow);
+
             if (Worker.TimerWheel.NextExpirationTime != long.MaxValue && Worker.TimerWheel.NextExpirationTime <= State.TimeNow)
             {
                 QuicWorkerProcessTimers(Worker, State.ThreadID, State.TimeNow);
@@ -564,6 +568,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
             }
+
         }
 
         static void QuicWorkerQueueOperation(QUIC_WORKER Worker, QUIC_OPERATION Operation)

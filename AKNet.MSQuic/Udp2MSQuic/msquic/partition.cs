@@ -95,7 +95,7 @@ namespace AKNet.Udp2MSQuic.Common
             Interlocked.Add(ref Partition.PerfCounters[(int)Type], Value);
             if (Type == QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH)
             {
-                NetLog.LogError($"QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH: {Partition.Processor}, {Partition.PerfCounters[(int)Type]}");
+                //NetLog.LogError($"QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH: {Partition.Processor}, {Partition.PerfCounters[(int)Type]}");
             }
         }
 

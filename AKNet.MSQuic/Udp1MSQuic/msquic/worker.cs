@@ -356,6 +356,8 @@ namespace AKNet.Udp1MSQuic.Common
                         CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                     }
                     DoneWithConnection = false;
+                    //这里不加这个计数的话，结果是负的。（我这里把这个加上去）
+                    QuicPerfCounterIncrement(Worker.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH);
                 }
             }
 
