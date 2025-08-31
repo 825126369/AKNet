@@ -15,7 +15,6 @@ namespace AKNet.Tcp.Server
 {
     internal class ClientPeer : ClientPeerBase
 	{
-        private string Name = null;
         private ClientPeerPrivate mInstance = null;
         private TcpServer mNetServer;
         public ClientPeer(TcpServer mNetServer)
@@ -29,7 +28,6 @@ namespace AKNet.Tcp.Server
             mNetServer.mClientPeerPool.recycle(mInstance);
             mNetServer = null;
             mInstance = null;
-            Name = null;
         }
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -101,14 +99,14 @@ namespace AKNet.Tcp.Server
             return null;
         }
 
-        public void SetName(string Name)
+        public void SetName(string name)
         {
-            this.Name = Name;
+            mInstance.SetName(name);
         }
 
         public string GetName()
         {
-            return this.Name;
+            return mInstance.GetName();
         }
     }
 

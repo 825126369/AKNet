@@ -25,8 +25,8 @@ namespace AKNet.Tcp.Server
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		private TcpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
-		private string Name;
-
+		private string Name = string.Empty;
+		
         public ClientPeerPrivate(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;

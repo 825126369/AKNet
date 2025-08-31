@@ -28,7 +28,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
-        private string Name;
+        private string Name = string.Empty;
 
         public ClientPeer()
         {

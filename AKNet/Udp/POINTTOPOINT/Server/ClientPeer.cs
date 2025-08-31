@@ -16,7 +16,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
 {
     internal class ClientPeer : ClientPeerBase
 	{
-        private string Name = null;
         private ClientPeerPrivate mInstance = null;
         private UdpServer mNetServer;
         public ClientPeer(UdpServer mNetServer)
@@ -30,7 +29,6 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mNetServer.mClientPeerPool.recycle(mInstance);
             mNetServer = null;
             mInstance = null;
-            Name = null;
         }
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -108,14 +106,14 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             return null;
         }
 
-        public void SetName(string Name)
+        public void SetName(string name)
         {
-            this.Name = Name;
+            mInstance.SetName(name);
         }
 
         public string GetName()
         {
-            return this.Name;
+            return mInstance.GetName();
         }
     }
 
