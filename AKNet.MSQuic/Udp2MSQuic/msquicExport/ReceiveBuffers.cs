@@ -32,6 +32,7 @@ namespace AKNet.Udp2MSQuic.Common
                         totalCopied += v.Length;
                         if (_buffer.Length > MaxBufferedBytes)
                         {
+                            NetLog.LogError("_buffer.Length > MaxBufferedBytes");
                             break;
                         }
                     }

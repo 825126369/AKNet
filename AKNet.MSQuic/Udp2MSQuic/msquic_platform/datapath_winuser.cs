@@ -980,8 +980,8 @@ namespace AKNet.Udp2MSQuic.Common
 
                 if (SocketProc.Parent.UseRio)
                 {
-                    RIO_CMSG_BUFFER* RioRcvMsg = (RIO_CMSG_BUFFER*)IoBlock.ControlBuf.Pin().Pointer;
-                    IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBuf.Pin().Pointer + OSPlatformFunc.RIO_CMSG_BASE_SIZE();
+                    RIO_CMSG_BUFFER* RioRcvMsg = (RIO_CMSG_BUFFER*)IoBlock.ControlBufHandle.Pointer;
+                    IoBlock.WsaMsgHdr->Control.buf = (byte*)IoBlock.ControlBufHandle.Pointer + OSPlatformFunc.RIO_CMSG_BASE_SIZE();
                     IoBlock.WsaMsgHdr->Control.len = (int)RioRcvMsg->TotalLength - (int)OSPlatformFunc.RIO_CMSG_BASE_SIZE();
                 }
 
