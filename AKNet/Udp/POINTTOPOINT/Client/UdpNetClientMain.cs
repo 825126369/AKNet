@@ -10,6 +10,7 @@ using AKNet.Common;
 using AKNet.Udp.POINTTOPOINT.Common;
 using System;
 using System.Net;
+using System.Xml.Linq;
 
 namespace AKNet.Udp.POINTTOPOINT.Client
 {
@@ -120,6 +121,16 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public Config GetConfig()
         {
             return mNetClientPeer.GetConfig();
+        }
+
+        public void SetName(string name)
+        {
+            mNetClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mNetClientPeer.GetName();
         }
     }
 }

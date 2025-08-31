@@ -10,6 +10,7 @@ using AKNet.Common;
 using AKNet.Udp2Tcp.Common;
 using System;
 using System.Net;
+using System.Xml.Linq;
 
 namespace AKNet.Udp2Tcp.Client
 {
@@ -30,6 +31,7 @@ namespace AKNet.Udp2Tcp.Client
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
+        private string Name;
 
         public ClientPeer()
         {
@@ -275,6 +277,16 @@ namespace AKNet.Udp2Tcp.Client
         public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
         {
             mMsgReceiveMgr.ReceiveTcpStream(mPackage);
+        }
+
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
         }
     }
 }

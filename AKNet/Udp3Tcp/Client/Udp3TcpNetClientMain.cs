@@ -115,6 +115,16 @@ namespace AKNet.Udp3Tcp.Client
         {
             mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
+
+        public void SetName(string name)
+        {
+            mNetClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mNetClientPeer.GetName();
+        }
     }
 }
 

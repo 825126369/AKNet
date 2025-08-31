@@ -121,6 +121,18 @@ namespace AKNet.Udp4LinuxTcp.Client
         {
             return mNetClientPeer.GetConfig();
         }
+
+
+        public void SetName(string name)
+        {
+            mNetClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mNetClientPeer.GetName();
+        }
+
     }
 }
 

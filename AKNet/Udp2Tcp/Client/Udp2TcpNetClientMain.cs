@@ -121,6 +121,16 @@ namespace AKNet.Udp2Tcp.Client
         {
             return mNetClientPeer.GetConfig();
         }
+
+        public void SetName(string name)
+        {
+            mNetClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mNetClientPeer.GetName();
+        }
     }
 }
 

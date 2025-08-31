@@ -116,6 +116,16 @@ namespace AKNet.Tcp.Client
         {
             mClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
+
+        public void SetName(string name)
+        {
+            mClientPeer.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mClientPeer.GetName();
+        }
     }
 
 }

@@ -30,6 +30,7 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
+        private string Name;
 
         public ClientPeer()
         {
@@ -279,6 +280,16 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
         }
     }
 }

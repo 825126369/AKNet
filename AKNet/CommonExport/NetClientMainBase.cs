@@ -140,5 +140,15 @@ namespace AKNet.Common
         {
             return mInterface.GetIPEndPoint();
         }
+
+        public void SetName(string name)
+        {
+            mInterface.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mInterface.GetName();
+        }
     }
 }
