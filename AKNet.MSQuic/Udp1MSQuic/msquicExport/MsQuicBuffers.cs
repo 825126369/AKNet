@@ -1,66 +1,39 @@
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp1MSQuic.Common
 {
-    internal struct MsQuicBuffers : IDisposable
+    internal class MsQuicBuffers
     {
-        private QUIC_BUFFER[] _buffers;
-        private int _count;
+        private readonly QUIC_BUFFER[] _buffers = new QUIC_BUFFER[1];
         public QUIC_BUFFER[] Buffers => _buffers;
-
-        public int Count => _count;
-
-        private void FreeNativeMemory()
-        {
-            _buffers = null;
-        }
+        public int Count => _buffers.Length;
 
         private void SetBuffer(int index, ReadOnlyMemory<byte> buffer)
         {
             NetLog.Assert(index < Count);
-            _buffers[index] = new QUIC_BUFFER(buffer.Length);
+            if (_buffers[index] == null)
+            {
+                _buffers[index] = new QUIC_BUFFER(Config.nIOContexBufferLength);
+            }
+
+            _buffers[index].Offset = 0;
             _buffers[index].Length = buffer.Length;
             buffer.Span.CopyTo(_buffers[index].GetSpan());
         }
 
-        public void Initialize(List<QUIC_BUFFER> mBufferList)
-        {
-            Reserve(mBufferList.Count);
-            _buffers = mBufferList.ToArray();
-            _count = mBufferList.Count;
-        }
-
         public void Initialize(ReadOnlyMemory<byte> buffer)
         {
-            Reserve(1);
             SetBuffer(0, buffer);
         }
 
         public void Reset()
         {
-            for (int i = 0; i < Count; ++i)
+            foreach (var buffer in Buffers)
             {
-                _buffers[i].Buffer = null;
-                _buffers[i].Length = 0;
+                buffer.Offset = 0;
+                buffer.Length = 0;
             }
-        }
-
-        private void Reserve(int count)
-        {
-            if (count > _count)
-            {
-                FreeNativeMemory();
-                _buffers = new QUIC_BUFFER[count];
-                _count = count;
-            }
-        }
-
-        public void Dispose()
-        {
-            Reset();
-            FreeNativeMemory();
         }
     }
 }
