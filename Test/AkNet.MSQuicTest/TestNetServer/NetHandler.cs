@@ -31,10 +31,11 @@ namespace TestNetServer
         private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
-            NetLog.Log("ReceiveMessage: " + mdata.TalkMsg);
+            NetLog.Log($"ReceiveMessage: {mdata.NClientId}  {mdata.ToString()}");
             peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
             IMessagePool<TESTChatMessage>.recycle(mdata);
         }
+
     }
 }
 

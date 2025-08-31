@@ -200,9 +200,10 @@ namespace AKNet.Tcp.Client
             fReConnectServerCdTime = 0.0f;
             fSendHeartBeatTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
-
+            
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
+            this.Name = string.Empty;
         }
 
 		public void Release()

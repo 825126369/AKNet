@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Server
 		private TcpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 		private string Name = string.Empty;
-		
+
         public ClientPeerPrivate(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
@@ -147,13 +147,14 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-        public void Reset()
+		public void Reset()
 		{
 			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
 			mSocketMgr.Reset();
 			mMsgReceiveMgr.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			this.Name = string.Empty;
 		}
 
 		public void Release()

@@ -80,6 +80,7 @@ namespace AKNet.Udp4LinuxTcp.Server
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
             mSocketMgr.Reset();
+            this.Name = string.Empty;
         }
 
         public void Release()

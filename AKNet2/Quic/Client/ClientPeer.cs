@@ -204,6 +204,7 @@ namespace AKNet.Quic.Client
 
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
+            this.Name = string.Empty;
         }
 
 		public void Release()

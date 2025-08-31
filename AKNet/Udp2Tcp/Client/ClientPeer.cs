@@ -86,12 +86,13 @@ namespace AKNet.Udp2Tcp.Client
         {
             return mSocketPeerState;
         }
-
+        
         public void Reset()
         {
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
+            this.Name = string.Empty;
         }
 
         public void Release()

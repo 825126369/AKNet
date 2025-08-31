@@ -146,13 +146,14 @@ namespace AKNet.Tcp.Server
 			}
 		}
 
-        public void Reset()
+		public void Reset()
 		{
 			fSendHeartBeatTime = 0.0;
 			fReceiveHeartBeatTime = 0.0;
 			mSocketMgr.Reset();
 			mMsgReceiveMgr.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			this.Name = string.Empty;
 		}
 
 		public void Release()

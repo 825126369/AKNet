@@ -78,6 +78,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
             mSocketMgr.Reset();
+            this.Name = string.Empty;
         }
 
         public void Release()

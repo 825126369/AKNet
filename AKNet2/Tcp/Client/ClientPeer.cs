@@ -203,6 +203,7 @@ namespace AKNet.Tcp.Client
 
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
+            this.Name = string.Empty;
         }
 
 		public void Release()
