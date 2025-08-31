@@ -94,12 +94,12 @@ namespace AKNet.Udp2MSQuic.Client
 
         private async void StartProcessReceive()
         {
-            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional).ConfigureAwait(false);
             try
             {
                 while (mQuicConnection != null)
                 {
-                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync().ConfigureAwait(false);
                     StartProcessStreamReceive(mQuicStream);
                 }
             }
@@ -118,7 +118,7 @@ namespace AKNet.Udp2MSQuic.Client
                 {
                     while (true)
                     {
-                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer).ConfigureAwait(false);
                         if (nLength > 0)
                         {
                             mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
@@ -163,7 +163,7 @@ namespace AKNet.Udp2MSQuic.Client
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
+                    await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength)).ConfigureAwait(false);
                 }
                 bSendIOContextUsed = false;
             }

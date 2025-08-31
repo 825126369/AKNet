@@ -142,15 +142,13 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            int totalCopied = _receiveBuffers.CopyFrom(data.Buffers, data.BufferCount, (int)data.TotalBufferLength);
-            if (totalCopied < data.TotalBufferLength)
-            {
-                Volatile.Write(ref _receivedNeedsEnable, 1);
-            }
+            int totalCopied = _receiveBuffers.WriteFrom(data.Buffers, data.BufferCount, (int)data.TotalBufferLength);
+            bool bContinue = _receiveBuffers.HasCapacity() && totalCopied == data.TotalBufferLength && totalCopied > 0;
+            data.TotalBufferLength = totalCopied;
 
             _receiveTcs.TrySetResult();
-            data.TotalBufferLength = totalCopied;
-            if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+
+            if (bContinue)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;
             }
@@ -297,12 +295,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (!_canRead)
             {
-                throw new InvalidOperationException();
-            }
-
-            if (_receiveTcs.IsCompleted)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+                throw new InvalidOperationException(this.ToString());
             }
 
             int totalCopied = 0;
@@ -313,16 +306,15 @@ namespace AKNet.Udp2MSQuic.Common
                     throw new InvalidOperationException();
                 }
 
-                int copied = _receiveBuffers.CopyTo(buffer);
+                int copied = _receiveBuffers.WriteTo(buffer);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
-                if (totalCopied > 0)
+                if (totalCopied == 0)
                 {
-                    _receiveTcs.TrySetResult();
+                    await valueTask.ConfigureAwait(false);
                 }
 
-                await valueTask.ConfigureAwait(false);
-            } while (!buffer.IsEmpty && totalCopied == 0);
+            } while (totalCopied == 0);
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
@@ -341,6 +333,16 @@ namespace AKNet.Udp2MSQuic.Common
 
         public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, bool completeWrites, CancellationToken cancellationToken = default)
         {
+            if (_disposed > 0)
+            {
+                throw new ObjectDisposedException(this.ToString());
+            }
+
+            if (!_canWrite)
+            {
+                throw new InvalidOperationException();
+            }
+
             _sendBuffers.Initialize(buffer);
             int status = MSQuicFunc.MsQuicStreamSend(
                 _handle,

@@ -7,7 +7,7 @@ namespace AKNet.Udp2MSQuic.Common
 {
     internal class ReceiveBuffers
     {
-        private const int MaxBufferedBytes = int.MaxValue;
+        private const int MaxBufferedBytes = 64 * 1024;
         private readonly object _syncRoot = new object();
         private readonly AkCircularManyBuffer _buffer = new AkCircularManyBuffer();
 
@@ -19,7 +19,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        public int CopyFrom(QUIC_BUFFER[] quicBuffers, int BufferCount, int totalLength)
+        public int WriteFrom(QUIC_BUFFER[] quicBuffers, int BufferCount, int totalLength)
         {
             lock (_syncRoot)
             {
@@ -28,11 +28,13 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     foreach (var v in quicBuffers)
                     {
-                        _buffer.WriteFrom(v.GetSpan());
-                        totalCopied += v.Length;
-                        if (_buffer.Length > MaxBufferedBytes)
+                        if (_buffer.Length + v.Length <= MaxBufferedBytes)
                         {
-                            NetLog.LogError("_buffer.Length > MaxBufferedBytes");
+                            _buffer.WriteFrom(v.GetSpan());
+                            totalCopied += v.Length;
+                        }
+                        else
+                        {
                             break;
                         }
                     }
@@ -41,7 +43,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-        public int CopyTo(Memory<byte> buffer)
+        public int WriteTo(Memory<byte> buffer)
         {
             lock (_syncRoot)
             {

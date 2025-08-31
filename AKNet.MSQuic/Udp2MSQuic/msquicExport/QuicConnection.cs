@@ -359,7 +359,6 @@ namespace AKNet.Udp2MSQuic.Common
             
             await _shutdownTcs.GetFinalTask(this).ConfigureAwait(false);
             Debug.Assert(_connectedTcs.IsCompleted);
-            
             _acceptQueue.Writer.TryComplete(new Exception());
             while (_acceptQueue.Reader.TryRead(out QuicStream? stream))
             {
