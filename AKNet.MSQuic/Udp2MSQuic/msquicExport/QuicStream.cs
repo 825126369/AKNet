@@ -309,10 +309,12 @@ namespace AKNet.Udp2MSQuic.Common
                 int copied = _receiveBuffers.WriteTo(buffer);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
-                if (totalCopied == 0)
+                if (totalCopied > 0)
                 {
-                    await valueTask.ConfigureAwait(false);
+                    _receiveTcs.TrySetResult();
                 }
+
+                await valueTask.ConfigureAwait(false);
 
             } while (totalCopied == 0);
 
