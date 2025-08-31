@@ -265,6 +265,16 @@ namespace AKNet.Udp2MSQuic.Client
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
+
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
+        }
     }
 }
 

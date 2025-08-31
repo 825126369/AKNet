@@ -125,7 +125,7 @@ namespace AKNet.Udp2MSQuic.Client
                         }
                         else
                         {
-                            NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
+                            NetLog.LogError($"mQuicStream.ReadAsync Length: {nLength}");
                             break;
                         }
                     }

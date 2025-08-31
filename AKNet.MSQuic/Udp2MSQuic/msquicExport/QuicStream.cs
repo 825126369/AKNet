@@ -315,15 +315,15 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 await valueTask.ConfigureAwait(false);
 
-            } while (totalCopied == 0);
+            }while (totalCopied == 0);
 
-            //if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
-            //{
-            //    if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
-            //    {
-            //        NetLog.LogError("StreamReceivedSetEnabled failed");
-            //    }
-            //}
+            if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            {
+                if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
+                {
+                    NetLog.LogError("StreamReceivedSetEnabled failed");
+                }
+            }
 
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
             {

@@ -90,7 +90,7 @@ namespace TestNetClient
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                 mdata.NSortId = ++mClientSendIdArray[i];
                                 mdata.NClientId = (uint)i;
-                                if (RandomTool.Random(1, 2) == 1)
+                                if (RandomTool.Random(1, 1) == 1)
                                 {
                                     mdata.TalkMsg = TalkMsg1;
                                 }
@@ -127,7 +127,6 @@ namespace TestNetClient
                     }
                 }
             }
-
         }
 
         void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
@@ -135,9 +134,9 @@ namespace TestNetClient
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
 
             nReceivePackageCount++;
-            if (nReceivePackageCount % 1000 == 0)
+            if (nReceivePackageCount % 1 == 0)
             {
-                string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
+                string msg = $"接受包数量: {nReceivePackageCount}, ClientId:{mdata.NClientId} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
                 NetLog.Log(msg);
             }
 

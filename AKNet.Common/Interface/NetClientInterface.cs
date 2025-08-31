@@ -33,5 +33,7 @@ namespace AKNet.Common
         void SendNetData(ushort nPackageId, byte[] data);
         void SendNetData(NetPackage mNetPackage);
         void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer);
+        void SetName(string name);
+        string GetName();
     }
 }
