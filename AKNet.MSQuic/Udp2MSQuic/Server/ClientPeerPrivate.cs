@@ -81,9 +81,9 @@ namespace AKNet.Udp2MSQuic.Server
 						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
 #if DEBUG
-						NetLog.Log("心跳超时");
+                        NetLog.Log($"{this.Name}: 心跳超时");
 #endif
-					}
+                    }
 
 					break;
 				default:

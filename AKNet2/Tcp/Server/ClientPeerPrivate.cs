@@ -172,5 +172,15 @@ namespace AKNet.Tcp.Server
         {
             return mSocketMgr.GetIPEndPoint();
         }
+
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
+        }
     }
 }

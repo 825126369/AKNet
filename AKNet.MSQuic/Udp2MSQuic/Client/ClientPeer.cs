@@ -72,7 +72,7 @@ namespace AKNet.Udp2MSQuic.Client
                         fReConnectServerCdTime = 0.0;
                         mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
 #if DEBUG
-                        NetLog.Log("心跳超时");
+                        NetLog.Log($"{this.Name}: 心跳超时");
 #endif
                     }
                     

@@ -25,6 +25,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private UdpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
+        private string Name = string.Empty;
 
         public ClientPeerPrivate(UdpServer mNetServer)
         {
@@ -168,6 +169,16 @@ namespace AKNet.Udp4LinuxTcp.Server
         public void NetPackageExecute(NetPackage mPackage)
         {
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
+        }
+
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
         }
     }
 }

@@ -19,5 +19,7 @@ namespace AKNet.Common
         void SendNetData(ushort nPackageId, byte[] data);
         void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer);
         void SendNetData(NetPackage mNetPackage);
+        void SetName(string name);
+        string GetName();
     }
 }

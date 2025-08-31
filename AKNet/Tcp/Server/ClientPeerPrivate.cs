@@ -25,6 +25,7 @@ namespace AKNet.Tcp.Server
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		private TcpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
+		private string Name;
 
         public ClientPeerPrivate(TcpServer mNetServer)
 		{
@@ -170,6 +171,16 @@ namespace AKNet.Tcp.Server
         public IPEndPoint GetIPEndPoint()
         {
             return mSocketMgr.GetIPEndPoint();
+        }
+
+        public void SetName(string name)
+        {
+			this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
         }
     }
 }

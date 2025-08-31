@@ -172,5 +172,15 @@ namespace AKNet.Quic.Server
             mSocketMgr.Release();
         }
 
+        public void SetName(string name)
+        {
+            this.Name = name;
+        }
+
+        public string GetName()
+        {
+            return this.Name;
+        }
+
     }
 }
