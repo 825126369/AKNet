@@ -24,19 +24,16 @@ namespace AKNet.Udp2MSQuic.Common
             lock (_syncRoot)
             {
                 int totalCopied = 0;
-                if (_buffer.Length < MaxBufferedBytes)
+                foreach (var v in quicBuffers)
                 {
-                    foreach (var v in quicBuffers)
+                    if (_buffer.Length + v.Length <= MaxBufferedBytes)
                     {
-                        if (_buffer.Length + v.Length <= MaxBufferedBytes)
-                        {
-                            _buffer.WriteFrom(v.GetSpan());
-                            totalCopied += v.Length;
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        _buffer.WriteFrom(v.GetSpan());
+                        totalCopied += v.Length;
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
                 return totalCopied;
@@ -45,12 +42,13 @@ namespace AKNet.Udp2MSQuic.Common
 
         public int WriteTo(Memory<byte> buffer)
         {
+            int nWriteLength = 0;
             lock (_syncRoot)
             {
-                int nWriteLength = 0;
                 nWriteLength = _buffer.WriteTo(buffer.Span);
-                return nWriteLength;
             }
+            return nWriteLength;
         }
+
     }
 }

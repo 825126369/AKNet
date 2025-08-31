@@ -106,14 +106,14 @@ namespace TestNetClient
                                 if (mClientSendPackageCount[i] >= nSingleCleintSendMaxPackageCount)
                                 {
                                     string msg = $"客户端{i} 全部发送完成";
-                                    Console.WriteLine(msg);
+                                    NetLog.Log(msg);
                                 }
 
                                 nSendPackageCount++;
                                 if (nSendPackageCount >= nSumSendPackageCount)
                                 {
                                     string msg = $"所有客户端 全部发送完成";
-                                    Console.WriteLine(msg);
+                                    NetLog.Log(msg);
                                 }
 
                                 if (mClientSendPackageCount[i] >= nSingleCleintSendMaxPackageCount ||
@@ -138,13 +138,13 @@ namespace TestNetClient
             if (nReceivePackageCount % 1000 == 0)
             {
                 string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
-                Console.WriteLine(msg);
+                NetLog.Log(msg);
             }
 
             if (nReceivePackageCount == nSumSendPackageCount)
             {
                 string msg = $"全部 接收完成!!!!!!";
-                Console.WriteLine(msg);
+                NetLog.Log(msg);
                 AKNet.Udp2MSQuic.Common.udp_statistic.PrintInfo();
             }
         }
