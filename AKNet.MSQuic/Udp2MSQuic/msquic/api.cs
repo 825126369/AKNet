@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;

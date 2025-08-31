@@ -21,7 +21,6 @@ namespace AKNet.Udp2MSQuic.Server
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
-        internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
         internal readonly Config mConfig = null;
@@ -36,8 +35,6 @@ namespace AKNet.Udp2MSQuic.Server
 
             mSocketMgr = new QuicListenerMgr(this);
             mClientPeerManager = new ClientPeerManager(this);
-
-            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
             mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
         }
