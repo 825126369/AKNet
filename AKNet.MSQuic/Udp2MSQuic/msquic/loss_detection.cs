@@ -648,6 +648,7 @@ namespace AKNet.Udp2MSQuic.Common
         //这个是 定时器 触发的 方法
         static void QuicLossDetectionProcessTimerOperation(QUIC_LOSS_DETECTION LossDetection)
         {
+            NetLog.Log("QuicLossDetectionProcessTimerOperation: ");
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
             if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
