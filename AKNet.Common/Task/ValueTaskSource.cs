@@ -1,12 +1,14 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
-namespace AKNet.Udp2MSQuic.Common
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+namespace AKNet.Common
 {
     internal sealed class ValueTaskSource : IValueTaskSource
     {
@@ -151,8 +153,5 @@ namespace AKNet.Udp2MSQuic.Common
         {
             _valueTaskSource.Reset();
         }
-
-
-
     }
 }
