@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -11,6 +12,7 @@ namespace AKNet.Udp2MSQuic.Common
         public const uint VER_PATCH = 0;
         public const uint VER_BUILD_ID = 0;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long QUIC_TIME_REORDER_THRESHOLD(long rtt)
         {
             return rtt + (rtt / 8);

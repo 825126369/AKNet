@@ -596,7 +596,6 @@ namespace AKNet.Udp2MSQuic.Common
                 TimeoutType =  QUIC_LOSS_TIMER_TYPE.LOSS_TIMER_RACK;
                 long RttUs = Math.Max(Path.SmoothedRtt, Path.LatestRttSample);
                 TimeFires = OldestPacket.SentTime + QUIC_TIME_REORDER_THRESHOLD(RttUs);
-
             }
             else if (!Path.GotFirstRttSample)
             {
@@ -663,6 +662,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
             else
             {
+                //这里的话就是 处理丢包
                 if (!QuicLossDetectionDetectAndHandleLostPackets(LossDetection, TimeNow))
                 {
                     QuicLossDetectionScheduleProbe(LossDetection);
@@ -819,11 +819,13 @@ namespace AKNet.Udp2MSQuic.Common
             return LostRetransmittableBytes > 0;
         }
 
+        //这个结构体包含了丢包检测机制所需的所有状态信息，其中 SentPackets 是一个链表，按发送时间顺序（从旧到新）链接了所有尚未被确认的数据包元数据。
         static QUIC_SENT_PACKET_METADATA QuicLossDetectionOldestOutstandingPacket(QUIC_LOSS_DETECTION LossDetection)
         {
             QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
             while (Packet != null && !Packet.Flags.IsAckEliciting)
             {
+                //循环条件：如果当前数据包存在 (Packet != NULL) 并且 它不需要ACK确认 (!IsAckEliciting)，则继续循环。
                 Packet = Packet.Next;
             }
             return Packet;
