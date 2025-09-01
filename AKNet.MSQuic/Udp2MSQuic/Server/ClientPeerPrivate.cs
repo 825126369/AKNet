@@ -93,7 +93,8 @@ namespace AKNet.Udp2MSQuic.Server
 
 		private void SendHeartBeat()
 		{
-			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+            //NetLog.Log($"{this.Name}: 发送心跳");
+            SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
         private void ResetSendHeartBeatTime()
@@ -103,7 +104,8 @@ namespace AKNet.Udp2MSQuic.Server
 
         public void ReceiveHeartBeat()
 		{
-			fReceiveHeartBeatTime = 0.0;
+            //NetLog.Log($"{this.Name}: 接收心跳");
+            fReceiveHeartBeatTime = 0.0;
 		}
 
 		public void SendNetData(ushort nPackageId)
@@ -162,12 +164,11 @@ namespace AKNet.Udp2MSQuic.Server
             mMsgReceiveMgr.Release();
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
-
-
+		
         public void HandleConnectedSocket(QuicConnection mQuicConnection)
 		{
-			mSocketMgr.HandleConnectedSocket(mQuicConnection);
-		}
+            mSocketMgr.HandleConnectedSocket(mQuicConnection);
+        }
 
         public IPEndPoint GetIPEndPoint()
         {

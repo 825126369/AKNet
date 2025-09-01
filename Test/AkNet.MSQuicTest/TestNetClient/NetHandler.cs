@@ -8,7 +8,7 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 2;
+        public const int nClientCount = 1;
         public const int nSingleSendPackageCount = 10000;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
@@ -86,7 +86,6 @@ namespace TestNetClient
                         {
                             if (mClientSendPackageCount[i] < nSingleCleintSendMaxPackageCount)
                             {
-
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                 mdata.NSortId = ++mClientSendIdArray[i];
                                 mdata.NClientId = (uint)i;
@@ -98,7 +97,7 @@ namespace TestNetClient
                                 {
                                     mdata.TalkMsg = TalkMsg2;
                                 }
-
+                                
                                 mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
                                 IMessagePool<TESTChatMessage>.recycle(mdata);
 
@@ -134,7 +133,7 @@ namespace TestNetClient
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
 
             nReceivePackageCount++;
-            if (nReceivePackageCount % 1 == 0)
+            if (nReceivePackageCount % 1000 == 0)
             {
                 string msg = $"接受包数量: {nReceivePackageCount}, ClientId:{peer.GetName()} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
                 NetLog.Log(msg);

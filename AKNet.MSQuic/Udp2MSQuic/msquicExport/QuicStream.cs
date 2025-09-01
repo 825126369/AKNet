@@ -1,6 +1,7 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -142,13 +143,20 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventReceive(ref QUIC_STREAM_EVENT.RECEIVE_DATA data)
         {
-            int totalCopied = _receiveBuffers.WriteFrom(data.Buffers, data.BufferCount, (int)data.TotalBufferLength);
+            int totalCopied = _receiveBuffers.WriteFrom(
+                data.Buffers.AsSpan().Slice(0, data.BufferCount),
+                (int)data.TotalBufferLength,
+                data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
+
             bool bContinue = _receiveBuffers.HasCapacity() && totalCopied == data.TotalBufferLength && totalCopied > 0;
-            data.TotalBufferLength = totalCopied;
+            if (totalCopied < data.TotalBufferLength)
+            {
+                Volatile.Write(ref _receivedNeedsEnable, 1);
+            }
 
             _receiveTcs.TrySetResult();
-
-            if (bContinue)
+            data.TotalBufferLength = totalCopied;
+            if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;
             }
@@ -157,7 +165,7 @@ namespace AKNet.Udp2MSQuic.Common
                 return MSQuicFunc.QUIC_STATUS_SUCCESS;
             }
         }
-        
+
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
@@ -180,6 +188,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         private int HandleEventPeerSendShutdown()
         {
+            _receiveBuffers.SetFinal();
             _receiveTcs.TrySetResult();
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
@@ -299,6 +308,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             int totalCopied = 0;
+            int nLoopCount = 0;
             do
             {
                 if (!_receiveTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
@@ -306,16 +316,29 @@ namespace AKNet.Udp2MSQuic.Common
                     throw new InvalidOperationException();
                 }
 
-                int copied = _receiveBuffers.WriteTo(buffer);
+                int copied = _receiveBuffers.WriteTo(buffer, out bool complete, out bool empty);
                 buffer = buffer.Slice(copied);
                 totalCopied += copied;
-                if (totalCopied > 0)
+
+                if (complete)
+                {
+                    _receiveTcs.TrySetResult(final: true);
+                }
+
+                if (totalCopied > 0 || !empty)
                 {
                     _receiveTcs.TrySetResult();
                 }
                 await valueTask.ConfigureAwait(false);
+                if (complete)
+                {
+                    break;
+                }
+                nLoopCount++;
+            } while (!buffer.IsEmpty && totalCopied == 0);
 
-            }while (totalCopied == 0);
+            //NetLog.Log("nLoopCount: " + nLoopCount);
+            //NetLog.Log("Thread.CurrentThread.ManagedThreadId: " + Thread.CurrentThread.ManagedThreadId);
 
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
@@ -325,10 +348,6 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
 
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
-            {
-                NetLog.LogError("StreamReceivedSetEnabled failed");
-            }
             return totalCopied;
         }
 

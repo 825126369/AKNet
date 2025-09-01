@@ -1,6 +1,7 @@
 using AKNet.Common;
 using AKNet.Common.Channel;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -16,8 +17,10 @@ namespace AKNet.Udp2MSQuic.Common
         public IPEndPoint LocalEndPoint;
         private bool _disposed = false;
 
-        private readonly AKNetChannel<QuicConnection> _acceptQueue = new AKNetChannel<QuicConnection>(true);
+        private readonly ConcurrentQueue<QuicConnection> _acceptQueue = new ConcurrentQueue<QuicConnection>();
         private int currentConnectionsCount;
+
+        private readonly ResettableValueTaskSource newConnectionTcs = new ResettableValueTaskSource();
 
         private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)
         {
@@ -82,7 +85,20 @@ namespace AKNet.Udp2MSQuic.Common
                 throw new ObjectDisposedException("QuicListener");
             }
 
-            QuicConnection connection = await _acceptQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+            QuicConnection connection = null;
+            do
+            {
+                if (!newConnectionTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
+                {
+                    throw new InvalidOperationException();
+                }
+                if(_acceptQueue.TryDequeue(out connection))
+                {
+                    newConnectionTcs.TrySetResult();
+                }
+                await valueTask.ConfigureAwait(false);
+            }while (connection == null);
+
             Interlocked.Increment(ref currentConnectionsCount);
             return connection;
         }
@@ -97,10 +113,8 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             await connection.FinishHandshakeAsync().ConfigureAwait(false);
-            if (!_acceptQueue.Writer.TryWrite(connection))
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-            }
+            _acceptQueue.Enqueue(connection);
+            newConnectionTcs.TrySetResult();
         }
 
         private int HandleEventNewConnection(ref QUIC_LISTENER_EVENT.NEW_CONNECTION_DATA data)

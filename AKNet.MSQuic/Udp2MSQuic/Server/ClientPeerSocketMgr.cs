@@ -60,7 +60,7 @@ namespace AKNet.Udp2MSQuic.Server
             {
                 while (mQuicConnection != null)
                 {
-                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync().ConfigureAwait(false);
                     StartProcessStreamReceive(mQuicStream);
                 }
             }

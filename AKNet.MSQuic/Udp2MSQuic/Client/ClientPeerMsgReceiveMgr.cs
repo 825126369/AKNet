@@ -81,8 +81,7 @@ namespace AKNet.Udp2MSQuic.Client
 					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
-
-			return bSuccess;
+            return bSuccess;
 		}
 
 		public void Reset()

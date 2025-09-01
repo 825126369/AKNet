@@ -9,15 +9,13 @@ namespace AKNet.Udp2MSQuic.Common
         public QUIC_REGISTRATION Registration;
         private static readonly Version s_minMsQuicVersion = new Version(2, 0, 0);
         private static bool bInit = false;
-
         public static MsQuicApi Api => _lazyInstance.Value;
 
         public MsQuicApi()
         {
             CheckAndInit();
         }
-
-
+        
         private bool CheckAndInit()
         {
             if (bInit)

@@ -93,11 +93,13 @@ namespace AKNet.Udp2MSQuic.Client
 
         private void SendHeartBeat()
         {
+            //NetLog.Log($"{this.Name}: 发送心跳");
             SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
         }
 
         private void ResetSendHeartBeatTime()
         {
+            //NetLog.Log($"{this.Name}: 接收心跳");
             fSendHeartBeatTime = 0f;
         }
 
