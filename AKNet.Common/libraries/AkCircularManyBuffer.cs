@@ -36,7 +36,7 @@ namespace AKNet.Common
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanWriteSpan()
             {
-                return mBufferMemory.Memory.Span.Slice(nLength + nOffset);
+                return mBufferMemory.Memory.Span.Slice(nOffset + nLength);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,6 +91,8 @@ namespace AKNet.Common
                 return nSumByteCount;
             }
         }
+
+        public bool IsEmpty => nSumByteCount == 0;
 
         public bool isCanWriteTo(int countT)
         {

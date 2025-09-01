@@ -89,7 +89,7 @@ namespace AKNet.Common
 				mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
 			}
 
-			EndianBitConverter.SetBytes(mCacheSendBuffer, 5, nPackageId);
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 5, (ushort)nPackageId);
 			EndianBitConverter.SetBytes(mCacheSendBuffer, 7, (ushort)mBufferSegment.Length);
 
 			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
