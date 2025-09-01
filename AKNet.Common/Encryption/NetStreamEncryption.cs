@@ -35,7 +35,8 @@ namespace AKNet.Common
 		{
 			if (mReceiveStreamList.Length < nPackageFixedHeadSize)
 			{
-				return false;
+                //NetLog.Log("解码失败 1111111111111111111: " + mReceiveStreamList.Length);
+                return false;
 			}
 
             int nHeadLength = mReceiveStreamList.CopyTo(mCacheHead);
@@ -44,7 +45,8 @@ namespace AKNet.Common
 			{
 				if (mCacheHead[i] != mCheck[i])
 				{
-					return false;
+                    //NetLog.Log("解码失败 2222222222222");
+                    return false;
 				}
 			}
 
@@ -55,7 +57,8 @@ namespace AKNet.Common
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
 			if (!mReceiveStreamList.isCanWriteTo(nSumLength))
 			{
-				return false;
+                //NetLog.Log("解码失败 3333333333333: " + mReceiveStreamList.Length + " | " + nSumLength);
+                return false;
 			}
 
 			mReceiveStreamList.ClearBuffer(nPackageFixedHeadSize);

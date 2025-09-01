@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -869,8 +870,10 @@ namespace AKNet.Udp2MSQuic.Common
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection)
         {
+#if DEBUG
             int nLostCount = 0;
             int nWaitSendCount = 0;
             int ackNeedCount = 0;
@@ -898,6 +901,7 @@ namespace AKNet.Udp2MSQuic.Common
             //NetLog.Log($"PacketsInFlight: {LossDetection.PacketsInFlight}");
             //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}    {string.Join("-", mNumberList)}");
             //NetLog.Log($"LostPackets: {nLostCount}");
+#endif
         }
 
         static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
