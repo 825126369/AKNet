@@ -82,10 +82,6 @@ namespace AKNet.Udp2MSQuic.Server
 					mTcpServer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
 				}
 			}
-			else
-			{
-				NetLog.Log("解码失败");
-			}
 
 			return bSuccess;
 		}

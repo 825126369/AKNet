@@ -560,7 +560,7 @@ namespace AKNet.Udp2MSQuic.Common
             return NewDataQueued;
         }
 
-        //丢包更新 计时器（这里的话，应该是重传包 逻辑）
+        //更新计时器
         static void QuicLossDetectionUpdateTimer(QUIC_LOSS_DETECTION LossDetection, bool ExecuteImmediatelyIfNecessary)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -572,7 +572,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
-            if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
+            if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
             {
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
                 return;
@@ -609,7 +609,7 @@ namespace AKNet.Udp2MSQuic.Common
                 TimeFires = LossDetection.TimeOfLastPacketSent + QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 1 << LossDetection.ProbeCount);
             }
 
-            long Delay;
+            long Delay; //微妙 us
             if (CxPlatTimeAtOrBefore64(TimeFires, TimeNow))
             {
                 Delay = 0;
@@ -646,6 +646,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        //这个是 定时器 触发的 方法
         static void QuicLossDetectionProcessTimerOperation(QUIC_LOSS_DETECTION LossDetection)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
