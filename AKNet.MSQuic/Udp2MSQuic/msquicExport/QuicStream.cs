@@ -165,7 +165,7 @@ namespace AKNet.Udp2MSQuic.Common
                 return MSQuicFunc.QUIC_STATUS_SUCCESS;
             }
         }
-
+        
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();

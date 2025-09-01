@@ -97,15 +97,13 @@ namespace AKNet.Udp2MSQuic.Common
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(KeyType);
-            QUIC_SENT_PACKET_METADATA PrevPacket;
-            QUIC_SENT_PACKET_METADATA Packet;
             int AckedRetransmittableBytes = 0;
             long TimeNow = CxPlatTimeUs();
 
             NetLog.Assert(KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
 
-            PrevPacket = null;
-            Packet = LossDetection.LostPackets;
+            QUIC_SENT_PACKET_METADATA PrevPacket = null;
+            QUIC_SENT_PACKET_METADATA Packet = LossDetection.LostPackets;
             while (Packet != null)
             {
                 QUIC_SENT_PACKET_METADATA NextPacket = Packet.Next;
@@ -186,8 +184,8 @@ namespace AKNet.Udp2MSQuic.Common
             if (AckedRetransmittableBytes > 0)
             {
                 QUIC_PATH Path = Connection.Paths[0];
-
-                QUIC_ACK_EVENT AckEvent = new QUIC_ACK_EVENT() {
+                QUIC_ACK_EVENT AckEvent = new QUIC_ACK_EVENT() 
+                {
                     IsImplicit = true,
                     TimeNow = TimeNow,
                     LargestAck = LossDetection.LargestAck,
@@ -562,6 +560,7 @@ namespace AKNet.Udp2MSQuic.Common
             return NewDataQueued;
         }
 
+        //丢包更新 计时器（这里的话，应该是重传包 逻辑）
         static void QuicLossDetectionUpdateTimer(QUIC_LOSS_DETECTION LossDetection, bool ExecuteImmediatelyIfNecessary)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);

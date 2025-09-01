@@ -181,7 +181,6 @@ namespace AKNet.Udp2MSQuic.Common
             NetLog.Assert(!Connection.State.ShutdownComplete);
             NetLog.Assert(TimerWheel.SlotCount != 0);
             int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
-            
             CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
             CXPLAT_LIST_ENTRY Entry = ListHead.Prev;
 
