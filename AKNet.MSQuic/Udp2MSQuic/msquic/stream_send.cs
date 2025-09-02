@@ -932,9 +932,9 @@ namespace AKNet.Udp2MSQuic.Common
                     NetLog.Assert(Frame.Length > 0);
                 }
                 
-                QUIC_SSBuffer mTempBuf = Buffer + HeaderLength;
-                QuicStreamCopyFromSendRequests(Stream, Offset, mTempBuf.Slice(0, Frame.Length));
-                Frame.Data.SetData(mTempBuf);
+                Frame.Data.SetData(Buffer + HeaderLength);
+                //这里先编码Data，后面的话编码头部
+                QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data.Slice(0, Frame.Length));
                 Stream.Connection.Stats.Send.TotalStreamBytes += Frame.Length;
             }
 
@@ -945,7 +945,6 @@ namespace AKNet.Udp2MSQuic.Common
             else if (Frame.Length == 0 && !BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
             {
                 FramePayloadBytes = 0;
-                Buffer.Length = 0;
                 return;
             }
 
