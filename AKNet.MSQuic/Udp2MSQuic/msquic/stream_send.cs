@@ -78,6 +78,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 Stream.SendBookmark = SendRequest;
             }
+
             if (Stream.SendBufferBookmark == null)
             {
                 NetLog.Assert(Stream.SendRequests == null || Stream.SendRequests.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
@@ -986,10 +987,15 @@ namespace AKNet.Udp2MSQuic.Common
             QUIC_SEND_REQUEST Req = null;
             if (Stream.SendBookmark != null && Stream.SendBookmark.StreamOffset <= Offset)
             {
+                //重传也可能走这
                 Req = Stream.SendBookmark;
             }
             else
             {
+                //重传的时候，Stream.SendBookmark.StreamOffset <= Offset 这个条件不满足，所以走这里
+                //如果调用者请求的是书签之前的字节（例如用于重传），则必须进行完整搜索。
+                //NetLog.Log("重传");
+                //重传也可能走这
                 Req = Stream.SendRequests;
             }
 
@@ -999,7 +1005,7 @@ namespace AKNet.Udp2MSQuic.Common
                 NetLog.Assert(Req.Next != null);
                 Req = Req.Next;
             }
-            NetLog.Assert(Req != null);
+            NetLog.Assert(Req != null); //上面 选择了一个当前的 Request
 
             int CurIndex = 0;
             int CurOffset = Offset - (int)Req.StreamOffset;
@@ -1055,7 +1061,6 @@ namespace AKNet.Udp2MSQuic.Common
 
             int FollowingOffset = Offset + Length;
             uint RemoveSendFlags = 0;
-
             NetLog.Assert(FollowingOffset <= Stream.QueuedSendOffset);
 
             if (PacketFlags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT && Stream.Sent0Rtt < FollowingOffset)
