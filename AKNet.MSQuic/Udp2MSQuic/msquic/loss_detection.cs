@@ -1,7 +1,6 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -33,9 +32,9 @@ namespace AKNet.Udp2MSQuic.Common
         public long TimeOfLastPacketAcked;//最后一个被确认的数据包的接收时间（即本地收到 ACK 的时间）。
         public long TimeOfLastAckedPacketSent;//被确认的那个数据包最初发送的时间。
         public long AdjustedLastAckedTime; //经过调整后的最后确认时间（通常减去了 ACK 延迟）。
-        public ulong TotalBytesSent; //总共已发送的字节数。
+        public long TotalBytesSent; //总共已发送的字节数。
         public long TotalBytesAcked; //总共已被确认的字节数。
-        public ulong TotalBytesSentAtLastAck; //上次收到确认时已发送的总字节数。
+        public long TotalBytesSentAtLastAck; //上次收到确认时已发送的总字节数。
         public ulong LargestSentPacketNumber; //已发送的最大的 packet number。
         public QUIC_SENT_PACKET_METADATA SentPackets;
         public QUIC_SENT_PACKET_METADATA SentPacketsTail;
@@ -93,6 +92,7 @@ namespace AKNet.Udp2MSQuic.Common
             return PtoUs;
         }
 
+        //丢弃包
         static void QuicLossDetectionDiscardPackets(QUIC_LOSS_DETECTION LossDetection, QUIC_PACKET_KEY_TYPE KeyType)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -414,7 +414,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             SentPacket.Flags.IsAppLimited = QuicCongestionControlIsAppLimited(Connection.CongestionControl);
-            LossDetection.TotalBytesSent += (ulong)TempSentPacket.PacketLength;
+            LossDetection.TotalBytesSent += TempSentPacket.PacketLength;
             SentPacket.TotalBytesSent = LossDetection.TotalBytesSent;
 
             SentPacket.Flags.HasLastAckedPacketInfo = false;
@@ -426,7 +426,7 @@ namespace AKNet.Udp2MSQuic.Common
                 SentPacket.LastAckedPacketInfo.AckTime = LossDetection.TimeOfLastPacketAcked;
                 SentPacket.LastAckedPacketInfo.AdjustedAckTime = LossDetection.AdjustedLastAckedTime;
                 SentPacket.LastAckedPacketInfo.TotalBytesSent = LossDetection.TotalBytesSentAtLastAck;
-                SentPacket.LastAckedPacketInfo.TotalBytesAcked = (ulong)LossDetection.TotalBytesAcked;
+                SentPacket.LastAckedPacketInfo.TotalBytesAcked = LossDetection.TotalBytesAcked;
             }
             
             QuicLossValidate(LossDetection);
