@@ -577,7 +577,7 @@ namespace AKNet.Udp2MSQuic.Common
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
             if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
             {
-                NetLog.Log("QuicLossDetectionUpdateTimer 取消计时器");
+                //NetLog.Log("QuicLossDetectionUpdateTimer 取消计时器");
                 // ACK 已经确认了所有包，那么我们就停止运行计时器
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
                 return;
