@@ -251,6 +251,12 @@ namespace AKNet.Udp2MSQuic.Common
         {
             return this.mPool;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool RECOV_WINDOW_OPEN()
+        {
+            return RecoveryNextOffset < RecoveryEndOffset;
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -738,17 +744,6 @@ namespace AKNet.Udp2MSQuic.Common
                     QuicStreamSetReleaseStream(Stream.Connection.Streams, Stream);
                 }
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool RECOV_WINDOW_OPEN(QUIC_STREAM S)
-        {
-            return S.RecoveryNextOffset < S.RecoveryEndOffset;
-        }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool RECOV_WINDOW_OPEN(QUIC_CRYPTO S)
-        {
-            return S.RecoveryNextOffset < S.RecoveryEndOffset;
         }
 
         static bool QuicStreamAddOutFlowBlockedReason(QUIC_STREAM Stream, uint Reason)

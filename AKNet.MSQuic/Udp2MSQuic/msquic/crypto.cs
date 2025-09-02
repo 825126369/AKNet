@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -29,6 +30,8 @@ namespace AKNet.Udp2MSQuic.Common
         public QUIC_BUFFER ResumptionTicket;//用于存储将要发送给服务器的会话恢复票证及其长度
 
         public QUIC_CONNECTION mConnection;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool RECOV_WINDOW_OPEN()
         {
             return RecoveryNextOffset < RecoveryEndOffset;
@@ -820,7 +823,7 @@ namespace AKNet.Udp2MSQuic.Common
                 int Left;
                 int Right;
                 bool Recovery;
-                if (RECOV_WINDOW_OPEN(Crypto)) //需要恢复
+                if (Crypto.RECOV_WINDOW_OPEN()) //需要恢复
                 {
                     Left = Crypto.RecoveryNextOffset;
                     Recovery = true;

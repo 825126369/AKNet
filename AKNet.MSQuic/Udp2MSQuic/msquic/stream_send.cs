@@ -464,7 +464,7 @@ namespace AKNet.Udp2MSQuic.Common
                 QuicStreamValidateRecoveryState(Stream);
                 return DataQueued;
             }
-
+            
             return false;
         }
 
@@ -486,7 +486,7 @@ namespace AKNet.Udp2MSQuic.Common
                 return true;
             }
 
-            if (RECOV_WINDOW_OPEN(Stream))
+            if (Stream.RECOV_WINDOW_OPEN())
             {
                 return true;
             }
@@ -529,7 +529,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
         {
-            if (RECOV_WINDOW_OPEN(Stream))
+            if (Stream.RECOV_WINDOW_OPEN())
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
@@ -756,7 +756,7 @@ namespace AKNet.Udp2MSQuic.Common
                 long Left;
                 long Right;
                 bool Recovery;
-                if (RECOV_WINDOW_OPEN(Stream))
+                if (Stream.RECOV_WINDOW_OPEN())
                 {
                     Left = (int)Stream.RecoveryNextOffset;
                     Recovery = true;
@@ -1044,7 +1044,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         static bool QuicStreamHasPendingStreamData(QUIC_STREAM Stream)
         {
-            return RECOV_WINDOW_OPEN(Stream) || (Stream.NextSendOffset < Stream.QueuedSendOffset);
+            return Stream.RECOV_WINDOW_OPEN() || (Stream.NextSendOffset < Stream.QueuedSendOffset);
         }
 
         static void QuicStreamOnAck(QUIC_STREAM Stream, QUIC_SEND_PACKET_FLAGS PacketFlags, QUIC_SENT_FRAME_METADATA FrameMetadata)
