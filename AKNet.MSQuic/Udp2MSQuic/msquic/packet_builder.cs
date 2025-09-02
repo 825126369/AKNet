@@ -709,7 +709,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
 
             QuicSentPacketMetadataReleaseFrames(Builder.Metadata, Builder.Connection);
-            Array.Clear(Builder.HpMask, 0, Builder.HpMask.Length);
+            Builder.HpMask.AsSpan().Clear();
         }
 
         static void QuicPacketBuilderValidate(QUIC_PACKET_BUILDER Builder, bool ShouldHaveData)
