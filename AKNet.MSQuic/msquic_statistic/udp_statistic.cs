@@ -1,9 +1,12 @@
-﻿using AKNet.Common;
-using System.Runtime.CompilerServices;
+﻿#if USE_MSQUIC_2 
 using MSQuic2;
+#else
+using MSQuic1;
+#endif
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("TestNetClient")]
-namespace AKNet.Udp2MSQuic.Common
+namespace AKNet.Common
 {
     internal static class udp_statistic
     {
