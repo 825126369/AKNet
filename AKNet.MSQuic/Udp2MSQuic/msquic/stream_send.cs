@@ -371,7 +371,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             uint AddSendFlags = 0;
             long Start = FrameMetadata.StreamOffset;
-            long End = Start +  FrameMetadata.StreamLength;
+            long End = FrameMetadata.StreamOffset +  FrameMetadata.StreamLength;
 
             if (BoolOk(FrameMetadata.Flags & QUIC_SENT_FRAME_FLAG_STREAM_OPEN) && !Stream.Flags.SendOpenAcked)
             {
@@ -385,7 +385,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (End <= Stream.UnAckedOffset)
             {
-                goto Done;
+                goto Done; //这个Frame已经被确认了，无须再次确认
             }
             else if (Start < Stream.UnAckedOffset)
             {
@@ -394,25 +394,29 @@ namespace AKNet.Udp2MSQuic.Common
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)End)
+            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).Count > 0 && Sack.Low < (ulong)End)
             {
-                if (Start < (long)Sack.Low + Sack.Count)
+                //在已经被确认的ACK稀疏列表里，查找到还没被确认的集合
+                if (Start < (long)Sack.End)
                 {
                     if (Start >= (long)Sack.Low)
                     {
-                        if (End <= (long)Sack.Low + Sack.Count)
+                        if (End <= (long)Sack.End)
                         {
-                            goto Done;
+                            goto Done; //已经被确认了
                         }
                         else
                         {
-                            Start = (long)Sack.Low + Sack.Count;
+                            Start = (long)Sack.End;
                         }
-
                     }
-                    else if (End <= (long)Sack.Low + Sack.Count)
+                    else if (End <= (long)Sack.End)
                     {
                         End = (long)Sack.Low;
+                    }
+                    else
+                    {
+
                     }
                 }
             }
@@ -608,7 +612,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
 
-            //用于标识当前流的发送操作已经被中止（aborted）。
+            //用于标识当前流的发送操作已经被中止（aborted）。不可靠
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_SEND_ABORT))
             {
                 QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX() {
@@ -633,7 +637,7 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
 
-            //内部使用的发送标志（send flag），用于表示当前流的发送操作已经被可靠地中止（reliably aborted）
+            //内部使用的发送标志（send flag），用于表示当前流的发送操作【已经被可靠】地中止（reliably aborted）
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT))
             {
                 QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX() {
@@ -693,7 +697,7 @@ namespace AKNet.Udp2MSQuic.Common
                     IsInitial,
                     Builder.Metadata,
                     ref mBuf);
-                    
+                
                 if (mBuf.Offset > Builder.DatagramLength)
                 {
                     Builder.SetDatagramOffset(mBuf);
@@ -751,7 +755,6 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 long Left;
                 long Right;
-
                 bool Recovery;
                 if (RECOV_WINDOW_OPEN(Stream))
                 {

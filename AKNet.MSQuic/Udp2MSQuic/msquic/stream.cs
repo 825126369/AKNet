@@ -177,15 +177,23 @@ namespace AKNet.Udp2MSQuic.Common
         public int SendWindow;
         public int LastIdealSendBuffer;
         public int MaxSentLength;
-        public long UnAckedOffset;
-        public long NextSendOffset;
+        public long UnAckedOffset; //已发送但尚未被确认的最小数据偏移量
+        public long NextSendOffset; //下一个要发送的数据的偏移量。
+
+        //含义：在恢复/重新发送（Recovery）阶段，下一个要重传的偏移量。
+        //等价于 “retransmission queue” 的读指针。
+        //用途：用于 丢包重传（PTO 或丢失检测触发）。
+        //指向第一个尚未重传的已丢失数据
         public long RecoveryNextOffset;
-        public long RecoveryEndOffset;
-        public int ReliableOffsetSend;
+        public long RecoveryEndOffset; //恢复阶段需要重传的数据的结束偏移量。
+        public int ReliableOffsetSend; //默认是0
 
         public int SendShutdownErrorCode;
         public int RecvShutdownErrorCode;
 
+        //用于存储和管理所有被 ACK 的数据包范围
+        //支持 稀疏、非连续的确认，符合 QUIC 协议设计。
+        //是 RTT 计算、丢包检测、拥塞控制 的基础数据源。
         public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
         public ushort SendPriority;
         public long MaxAllowedRecvOffset;

@@ -8,9 +8,15 @@ namespace AKNet.Udp2MSQuic.Common
         public ulong Low;
         public int Count;
 
+        public QUIC_SUBRANGE()
+        {
+            Low = 0;
+            Count = 0;
+        }
+
         public bool IsEmpty
         {
-            get { return Low == 0 && Count == -1; }
+            get { return Count == 0; }
         }
 
         public ulong High
@@ -18,21 +24,12 @@ namespace AKNet.Udp2MSQuic.Common
             get { return Low + (ulong)(Count - 1); }
         }
 
-        public static QUIC_SUBRANGE Empty
+        public ulong End
         {
-            get
-            {
-                return new QUIC_SUBRANGE() { Low = 0, Count = -1 };
-            }
+            get { return Low + (ulong)Count; }
         }
 
-        public static QUIC_SUBRANGE Null
-        {
-            get
-            {
-                return new QUIC_SUBRANGE() { Low = 0, Count = -1 };
-            }
-        }
+        public static QUIC_SUBRANGE Empty => default;
 
         public override string ToString()
         {
@@ -195,7 +192,7 @@ namespace AKNet.Udp2MSQuic.Common
             return true;
         }
 
-        static QUIC_SUBRANGE QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index)
+        static bool QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index, ref QUIC_SUBRANGE result)
         {
             NetLog.Assert(Index <= Range.UsedLength);
             if (Range.UsedLength == Range.AllocLength)
@@ -204,7 +201,7 @@ namespace AKNet.Udp2MSQuic.Common
                 {
                     if (Range.MaxAllocSize == QUIC_MAX_RANGE_ALLOC_SIZE || Index == 0)
                     {
-                        return QUIC_SUBRANGE.Empty;
+                        return false;
                     }
 
                     if (Index > 1)
@@ -242,7 +239,8 @@ namespace AKNet.Udp2MSQuic.Common
                 Range.UsedLength++;
             }
 
-            return Range.SubRanges[Index];
+            result = Range.SubRanges[Index];
+            return true;
         }
 
         static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
@@ -285,16 +283,15 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count) //没有合并的可能了
             {
-                Sub = QuicRangeMakeSpace(Range, ref i);
-                if (Sub.IsEmpty)
+                if (!QuicRangeMakeSpace(Range, ref i, ref Sub))
                 {
+                    //增长空间失败
                     return QUIC_SUBRANGE.Empty;
                 }
 
                 Sub.Low = Low;
                 Sub.Count = Count;
                 RangeUpdated = true;
-
             }
             else //找到可以合并的Sub了
             {
