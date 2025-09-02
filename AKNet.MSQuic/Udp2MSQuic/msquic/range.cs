@@ -481,7 +481,7 @@ namespace AKNet.Udp2MSQuic.Common
                     break;
                 }
 
-                if (QuicRangeGetHigh(Sub) >= Low)
+                if (Sub.High >= Low)
                 {
                     Sub.Count -= (int)(Low - Sub.Low);
                     Sub.Low = Low;

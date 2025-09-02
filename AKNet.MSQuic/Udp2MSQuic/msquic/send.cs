@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -138,6 +139,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (IsCloseFrame)
             {
+                Connection.LastCloseResponseTimeUs = CxPlatTimeUs();
                 QuicSendClear(Send);
             }
 
@@ -567,9 +569,10 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicSendValidate(QUIC_SEND Send)
         {
+#if DEBUG
             if (Send.Uninitialized)
             {
                 return;
@@ -602,6 +605,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 NetLog.Assert(!HasAckElicitingPacketsToAcknowledge);
             }
+#endif
         }
 
         static void QuicSendUpdateAckState(QUIC_SEND Send)

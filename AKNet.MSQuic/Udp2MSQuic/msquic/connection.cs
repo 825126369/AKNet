@@ -233,6 +233,8 @@ namespace AKNet.Udp2MSQuic.Common
         public uint OriginalQuicVersion;
         public ushort KeepAlivePadding;
         public BlockedTimings_DATA BlockedTimings;
+        
+        public long LastCloseResponseTimeUs; //“记录最后一次将连接关闭（或应用关闭）响应加入发送队列的时间戳（微秒）。”
 
         public struct BlockedTimings_DATA
         {
@@ -3595,6 +3597,15 @@ namespace AKNet.Udp2MSQuic.Common
             bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
             QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength, Packet.PayloadLength);
             long RecvTime = CxPlatTimeUs();
+
+            if (Closed && !Connection.State.ShutdownComplete)
+            {
+                if (RecvTime - Connection.LastCloseResponseTimeUs >= QUIC_CLOSING_RESPONSE_MIN_INTERVAL)
+                {
+                    QuicSendSetSendFlag(Connection.Send, Connection.State.AppClosed ? 
+                        QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE : QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE);
+                }
+            }
 
             if (QuicConnIsClient(Connection) && !Connection.State.GotFirstServerResponse)
             {

@@ -433,6 +433,10 @@ namespace AKNet.Udp2MSQuic.Common
             //NetLog.Log($"等待确认 PacketNumber: {LossDetection.LargestSentPacketNumber}, {LossDetection.PacketsInFlight}");
         }
 
+        //这里 重传 包
+        //这个函数的主要任务是：
+        //遍历一个已丢失的数据包中携带的所有可重传帧，将它们重新提交给发送引擎（Send Buffer），并可选地释放原包内存。
+        //它不直接构造新数据包，而是“触发重传动作”，由上层（如 QuicSendGeneratePacket）负责实际打包。
         static bool QuicLossDetectionRetransmitFrames(QUIC_LOSS_DETECTION LossDetection, QUIC_SENT_PACKET_METADATA Packet, bool ReleasePacket)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -698,6 +702,7 @@ namespace AKNet.Udp2MSQuic.Common
 
             if (LossDetection.LostPackets != null)
             {
+                //当一个数据包发送后超过 2*PTO 时间仍未确认，且已被标记为“丢失”，就可以认为它非常“陈旧”，可以被安全地清理。
                 long TwoPto = QuicLossDetectionComputeProbeTimeout(LossDetection, Connection.Paths[0], 2);
                 while ((Packet = LossDetection.LostPackets) != null && Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeDiff(Packet.SentTime, TimeNow) > TwoPto)
                 {
@@ -838,7 +843,7 @@ namespace AKNet.Udp2MSQuic.Common
             LossDetection.ProbeCount++;
 
             int NumPackets = 2;
-            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets);
+            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets);//设置紧急包豁免数量
             QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_PROBE);
             Connection.Send.TailLossProbeNeeded = true;
 
@@ -907,8 +912,10 @@ namespace AKNet.Udp2MSQuic.Common
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
         {
+#if DEBUG
             uint AckElicitingPackets = 0;
             QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
             while (Tail != null)
@@ -945,6 +952,7 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 NetLog.Assert(LossDetection.LostPackets == null);
             }
+#endif
         }
 
         static void QuicLossDetectionOnZeroRttRejected(QUIC_LOSS_DETECTION LossDetection)

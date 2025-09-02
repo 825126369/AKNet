@@ -1025,7 +1025,6 @@ namespace AKNet.Udp2MSQuic.Common
                 }
 
                 CurOffset = 0;
-
                 //找到下一个非零长度的数据块进行发送。
                 do
                 {
@@ -1077,7 +1076,6 @@ namespace AKNet.Udp2MSQuic.Common
             {
                 if (Stream.UnAckedOffset < FollowingOffset)
                 {
-
                     Stream.UnAckedOffset = FollowingOffset;
                     QuicRangeSetMin(Stream.SparseAckRanges, (ulong)Stream.UnAckedOffset);
 

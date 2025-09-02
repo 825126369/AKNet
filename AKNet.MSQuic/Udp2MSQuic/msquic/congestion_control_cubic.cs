@@ -165,6 +165,14 @@ namespace AKNet.Udp2MSQuic.Common
             return Cubic.BytesInFlight < Cubic.CongestionWindow || Cubic.Exemptions > 0;
         }
 
+        //该函数的主要目的是临时豁免某些关键数据包，允许它们在拥塞窗口（Congestion Window）已满的情况下仍然被发送。
+        //在正常的拥塞控制中，应用程序能发送的数据量受到“拥塞窗口”大小的限制。
+        //当窗口“满”了（即已发送但未确认的数据量达到了窗口大小），新的数据包必须等待，直到收到 ACK 确认，窗口“前进”后才能发送。
+        //但有些数据包非常关键，不能等待，例如：
+        //重传包(Retransmissions) : 如果一个重要的控制包（如 ACK 帧本身、连接关闭帧）丢失了，如果不立即重传，整个连接可能会停滞或超时。
+        //因此，这类重传包通常被“豁免”，可以立即发送。
+        //探路包(Probing Packets) : 当连接长时间空闲后恢复发送，或者需要探测网络是否还有可用带宽时，会发送少量“探路包”。
+        //这些包也需要豁免，以触发网络响应。
         static void CubicCongestionControlSetExemption(QUIC_CONGESTION_CONTROL Cc, byte NumPackets)
         {
             Cc.Cubic.Exemptions = NumPackets;
