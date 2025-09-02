@@ -30,23 +30,30 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal class QUIC_SEND
     {
+        // 标志位与状态
         public bool FlushOperationPending;
         public bool DelayedAckTimerActive;
         public bool LastFlushTimeValid;
         public bool TailLossProbeNeeded;
         public bool Uninitialized;
-        public ulong NextPacketNumber;
-        public long LastFlushTime;
-        public int NumPacketsSentWithEct;
-        public long MaxData;
-        public int PeerMaxData;
-        public int OrderedStreamBytesReceived;
-        public int OrderedStreamBytesSent;
-        public long OrderedStreamBytesDeliveredAccumulator;
+
+        public ulong NextPacketNumber;//包编号
+        public long LastFlushTime; //时间戳
+        public int NumPacketsSentWithEct; //显式拥塞通知（ECN）
+
+        // 流量控制
+        public long MaxData; //本端通告的 连接级最大接收数据量（即 MAX_DATA 帧中的值)
+        public int PeerMaxData; //对端通告的连接级窗口（即我们能发送的总数据上限）
+        public int OrderedStreamBytesReceived; //已按序交付给应用层的字节数/接收的字节数量
+        public int OrderedStreamBytesSent; //已发送的有序字节数
+        public long OrderedStreamBytesDeliveredAccumulator; //累计交付字节数（用于 BBR 等拥塞控制算法）
+
+        // 发送控制
         public uint SendFlags;
+        // 发送队列
         public readonly CXPLAT_LIST_ENTRY SendStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
-        public QUIC_BUFFER InitialToken;
-        public QUIC_CONNECTION mConnection;
+        public QUIC_BUFFER InitialToken;// 初始令牌（用于 Retry 和验证）
+        public QUIC_CONNECTION mConnection; // 关联连接
     }
 
     internal enum QUIC_SEND_RESULT

@@ -535,7 +535,7 @@ namespace AKNet.Udp2MSQuic.Common
                 int i = 0;
                 while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Stream.RecoveryNextOffset)
                 {
-                    NetLog.Assert((long)Sack.Low + Sack.Count <= Stream.RecoveryNextOffset);
+                    NetLog.Assert((long)Sack.End <= Stream.RecoveryNextOffset);
                 }
             }
         }
@@ -766,24 +766,21 @@ namespace AKNet.Udp2MSQuic.Common
                     Left = (int)Stream.NextSendOffset;
                     Recovery = false;
                 }
-                Right = Left + Buffer.Length;
+                Right = Left + Buffer.Length; //刚开始设置 Right 为理想的最大值
 
                 if (Recovery && Right > Stream.RecoveryEndOffset && Stream.RecoveryEndOffset != Stream.NextSendOffset)
                 {
                     Right = Stream.RecoveryEndOffset;
                 }
 
-                QUIC_SUBRANGE Sack;
-                if (Left == Stream.MaxSentLength)
+                QUIC_SUBRANGE Sack = QUIC_SUBRANGE.Empty;
+                if (Left != Stream.MaxSentLength)
                 {
-                    Sack = QUIC_SUBRANGE.Empty;
-                }
-                else
-                {
+                    //在发送数据时，跳过已经被对端确认（SACKed）的数据范围，避免重复发送。
                     int i = 0;
                     while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Left)
                     {
-                        NetLog.Assert((long)Sack.Low + Sack.Count <= Left);
+                        NetLog.Assert((long)Sack.End <= Left);
                     }
                 }
 
@@ -796,17 +793,20 @@ namespace AKNet.Udp2MSQuic.Common
                 }
                 else
                 {
-                    if (Right > Stream.QueuedSendOffset)
+                    if (Right > Stream.QueuedSendOffset) //这个偏移是最大值
                     {
                         Right = Stream.QueuedSendOffset;
                     }
                 }
 
+                //流级的流量控制，为啥不是 Right - Left
+                //流控是基于偏移量的，不是基于长度的
                 if (Right > Stream.MaxAllowedSendOffset)
                 {
                     Right = Stream.MaxAllowedSendOffset;
                 }
 
+                //连接级的流量控制
                 long MaxConnFlowControlOffset = Stream.MaxSentLength + (Send.PeerMaxData - Send.OrderedStreamBytesSent);
                 if (Right > MaxConnFlowControlOffset)
                 {
@@ -815,7 +815,9 @@ namespace AKNet.Udp2MSQuic.Common
 
                 NetLog.Assert(Right >= Left);
                 int FramePayloadBytes = (int)(Right - Left);
-                QuicStreamWriteOneFrame(Stream, ExplicitDataLength,
+                QuicStreamWriteOneFrame(
+                    Stream, 
+                    ExplicitDataLength,
                     (int)Left,
                     ref FramePayloadBytes,
                     ref Buffer,
