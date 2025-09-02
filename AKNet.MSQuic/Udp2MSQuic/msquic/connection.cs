@@ -987,27 +987,27 @@ namespace AKNet.Udp2MSQuic.Common
                     //这里计时器 触发了事件
                     if(Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING)
                     {
-                        QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_TIMER_PACING);
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_PACING);
                     }
                     else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY)
                     {
-                        QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_TIMER_ACK_DELAY);
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_ACK_DELAY);
                     }
                     else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION)
                     {
-                        QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_TIMER_LOSS_DETECTION);
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_LOSS_DETECTION);
                     }
                     else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE)
                     {
-                        QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_TIMER_KEEP_ALIVE);
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_KEEP_ALIVE);
                     }
                     else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE)
                     {
-                        QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_TIMER_IDLE);
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_IDLE);
                     }
                     else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN)
                     {
-                        QuicPerfCounterAdd(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_TIMER_SHUTDOWN);
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_SHUTDOWN);
                     }
 
                     Connection.ExpirationTimes[Type] = long.MaxValue;

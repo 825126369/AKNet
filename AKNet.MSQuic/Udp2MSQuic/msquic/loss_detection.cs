@@ -642,6 +642,8 @@ namespace AKNet.Udp2MSQuic.Common
                 }
             }
 
+            NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, Delay);
+
             if (Delay == 0 && ExecuteImmediatelyIfNecessary)
             {
                 QuicLossDetectionProcessTimerOperation(LossDetection);

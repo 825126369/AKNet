@@ -992,7 +992,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
             else
             {
-                //重传的时候，Stream.SendBookmark.StreamOffset <= Offset 这个条件不满足，所以走这里
+                //重传的时候，Stream.SendBookmark.StreamOffset <= Offset 这个条件如果不满足，所以走这里
                 //如果调用者请求的是书签之前的字节（例如用于重传），则必须进行完整搜索。
                 //NetLog.Log("重传");
                 //重传也可能走这

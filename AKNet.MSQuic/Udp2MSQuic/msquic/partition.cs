@@ -37,6 +37,7 @@ namespace AKNet.Udp2MSQuic.Common
         public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_RECV_CHUNK
 
         public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+        public readonly quic_partition_udp_statistic udp_statistic = new quic_partition_udp_statistic();
     }
 
     internal static partial class MSQuicFunc
@@ -147,8 +148,7 @@ namespace AKNet.Udp2MSQuic.Common
             long KeyIndex = Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
             return QuicPartitioGetStatelessRetryKey(Partition, KeyIndex);
         }
-
-
+        
         static CXPLAT_KEY QuicPartitionGetStatelessRetryKeyForTimestamp(QUIC_PARTITION Partition,long Timestamp)
         {
             long Now = CxPlatTimeEpochMs64();
@@ -198,14 +198,6 @@ namespace AKNet.Udp2MSQuic.Common
             "发送的无状态重置（stateless reset）数据包总数", //QUIC_PERF_COUNTER_SEND_STATELESS_RESET,
             "发送的无状态重试（stateless retry）数据包总数。", //QUIC_PERF_COUNTER_SEND_STATELESS_RETRY。
             "因QUIC实例内部工作负载过高（例如，CPU、内存或队列满）而被拒绝的连接总数。这是系统过载的信号。", //QUIC_PERF_COUNTER_CONN_LOAD_REJECT,
-
-            "QUIC_CONN_TIMER_PACING",
-            "QUIC_CONN_TIMER_ACK_DELAY",
-            "QUIC_CONN_TIMER_LOSS_DETECTION",
-            "QUIC_CONN_TIMER_KEEP_ALIVE",
-            "QUIC_CONN_TIMER_IDLE",
-            "QUIC_CONN_TIMER_SHUTDOWN",
-
             " ", //QUIC_PERF_COUNTER_MAX,
         };
 

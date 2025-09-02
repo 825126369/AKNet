@@ -460,7 +460,7 @@ namespace AKNet.Udp1MSQuic.Common
                     break;
                 }
 
-                if (CqeCount >= 4096)
+                if (CqeCount >= 32)
                 {
                     break;
                 }

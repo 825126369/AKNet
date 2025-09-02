@@ -400,8 +400,8 @@ namespace AKNet.Udp1MSQuic.Common
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService, 46);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService, 46);
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService, 46);
+                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService, 46);
                 //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HopLimit, true);
                 //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.HopLimit, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
