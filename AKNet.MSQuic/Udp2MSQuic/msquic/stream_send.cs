@@ -935,7 +935,7 @@ namespace AKNet.Udp2MSQuic.Common
                 QUIC_SSBuffer mTempBuf = Buffer + HeaderLength;
                 QuicStreamCopyFromSendRequests(Stream, Offset, mTempBuf.Slice(0, Frame.Length));
                 Frame.Data.SetData(mTempBuf);
-                Stream.Connection.Stats.Send.TotalStreamBytes += (ulong)Frame.Length;
+                Stream.Connection.Stats.Send.TotalStreamBytes += Frame.Length;
             }
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN) && Frame.Offset + Frame.Length == Stream.QueuedSendOffset)

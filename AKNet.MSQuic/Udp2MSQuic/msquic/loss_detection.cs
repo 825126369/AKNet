@@ -381,7 +381,7 @@ namespace AKNet.Udp2MSQuic.Common
             NetLog.Assert(SentPacket.Flags.KeyType !=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT || SentPacket.Flags.IsAckEliciting);
 
             Connection.Stats.Send.TotalPackets++;
-            Connection.Stats.Send.TotalBytes += (ulong)TempSentPacket.PacketLength;
+            Connection.Stats.Send.TotalBytes += TempSentPacket.PacketLength;
             if (SentPacket.Flags.IsAckEliciting)
             {
                 if (LossDetection.PacketsInFlight == 0)

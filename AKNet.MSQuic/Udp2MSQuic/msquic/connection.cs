@@ -114,15 +114,15 @@ namespace AKNet.Udp2MSQuic.Common
 
         public class Send_DATA
         {
-            public ulong TotalPackets;          //总共发送的 QUIC 数据包数量（注意：多个 QUIC 包可能被合并进一个 UDP 报文）
-            public ulong RetransmittablePackets; //可以重传的数据包数（即包含需要可靠传输的数据，如 STREAM、ACK 等帧）
-            public ulong SuspectedLostPackets; //被怀疑丢失的数据包数量（基于 RTT 和 ACK 判断）
-            public ulong SpuriousLostPackets;   //被误判为丢失但后来确认成功接收的数据包数（即“虚假丢包”）
-            public ulong TotalBytes;            // Sum of UDP payloads
-            public ulong TotalStreamBytes;      // Sum of stream payloads
-            public uint CongestionCount; //遇到拥塞事件的次数（比如因丢包而触发拥塞控制）
-            public uint EcnCongestionCount; //使用 ECN（显式拥塞通知）检测到的拥塞次数
-            public uint PersistentCongestionCount; //持续性拥塞发生的次数（当多个路径/RTT周期内持续发生丢包时判定为“持久拥塞”
+            public long TotalPackets;          //总共发送的 QUIC 数据包数量（注意：多个 QUIC 包可能被合并进一个 UDP 报文）
+            public long RetransmittablePackets; //可以重传的数据包数（即包含需要可靠传输的数据，如 STREAM、ACK 等帧）
+            public long SuspectedLostPackets; //被怀疑丢失的数据包数量（基于 RTT 和 ACK 判断）
+            public long SpuriousLostPackets;   //被误判为丢失但后来确认成功接收的数据包数（即“虚假丢包”）
+            public long TotalBytes;            // Sum of UDP payloads
+            public long TotalStreamBytes;      // Sum of stream payloads
+            public int CongestionCount; //遇到拥塞事件的次数（比如因丢包而触发拥塞控制）
+            public int EcnCongestionCount; //使用 ECN（显式拥塞通知）检测到的拥塞次数
+            public int PersistentCongestionCount; //持续性拥塞发生的次数（当多个路径/RTT周期内持续发生丢包时判定为“持久拥塞”
         }
 
         public class Recv_DATA
