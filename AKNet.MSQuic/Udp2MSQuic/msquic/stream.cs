@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace AKNet.Udp2MSQuic.Common
@@ -246,21 +247,26 @@ namespace AKNet.Udp2MSQuic.Common
 
     internal static partial class MSQuicFunc
     {
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_CLIENT(ulong ID)
         {
             return (ID & 1) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_SERVER(ulong ID)
         {
             return (ID & 1) == 1;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_BI_DIR(ulong ID)
         {
             return (ID & 2) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_UNI_DIR(ulong ID)
         {
             return (ID & 2) == 2;
@@ -726,14 +732,15 @@ namespace AKNet.Udp2MSQuic.Common
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool RECOV_WINDOW_OPEN(QUIC_STREAM S)
         {
-            return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
+            return S.RecoveryNextOffset < S.RecoveryEndOffset;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool RECOV_WINDOW_OPEN(QUIC_CRYPTO S)
         {
-            return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
+            return S.RecoveryNextOffset < S.RecoveryEndOffset;
         }
 
         static bool QuicStreamAddOutFlowBlockedReason(QUIC_STREAM Stream, uint Reason)

@@ -456,7 +456,6 @@ namespace AKNet.Udp2MSQuic.Common
                 }
 
                 bool DataQueued = QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, AddSendFlags, false);
-
                 QuicStreamSendDumpState(Stream);
                 QuicStreamValidateRecoveryState(Stream);
                 return DataQueued;

@@ -568,7 +568,6 @@ namespace AKNet.Udp2MSQuic.Common
         static void QuicLossDetectionUpdateTimer(QUIC_LOSS_DETECTION LossDetection, bool ExecuteImmediatelyIfNecessary)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
-
             if (Connection.State.ClosedLocally || Connection.State.ClosedRemotely)
             {
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
@@ -578,6 +577,8 @@ namespace AKNet.Udp2MSQuic.Common
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
             if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
             {
+                NetLog.Log("QuicLossDetectionUpdateTimer 取消计时器");
+                // ACK 已经确认了所有包，那么我们就停止运行计时器
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
                 return;
             }
@@ -585,6 +586,8 @@ namespace AKNet.Udp2MSQuic.Common
             QUIC_PATH Path = Connection.Paths[0];
             if (!Path.IsPeerValidated && Path.Allowance < QUIC_MIN_SEND_ALLOWANCE)
             {
+                //当连接处于“反放大限制”（anti-amplification limit）状态，
+                //且没有足够的 Allowance 来发送任何数据时，主动禁用发送相关的定时器（如 PTO、Probe Timer）。
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
                 return;
             }

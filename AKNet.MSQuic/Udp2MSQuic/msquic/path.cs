@@ -27,7 +27,7 @@ namespace AKNet.Udp2MSQuic.Common
         public bool InitiatedCidUpdate;
         public bool GotFirstRttSample;
         public bool GotValidPacket;
-        public bool IsPeerValidated;
+        public bool IsPeerValidated; //将当前路径（Path）标记为“对端已验证”状态，表示该路径是可达且安全的，可以用于传输数据。
         public bool IsMinMtuValidated;
         public bool SpinBit;
         public bool SendChallenge;
