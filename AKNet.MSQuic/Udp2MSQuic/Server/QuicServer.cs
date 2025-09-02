@@ -12,7 +12,7 @@ using System;
 
 namespace AKNet.Udp2MSQuic.Server
 {
-    internal class QuicServer : NetServerInterface,PrivateConfigInterface
+    internal class QuicServer : NetServerInterface
     {
         private readonly QuicListenerMgr mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;

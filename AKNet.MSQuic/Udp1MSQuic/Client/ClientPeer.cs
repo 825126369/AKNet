@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Udp1MSQuic.Client
 {
-    internal class ClientPeer : QuicClientPeerBase, TcpClientPeerCommonBase, ClientPeerBase
+    internal class ClientPeer : QuicClientPeerBase, ClientPeerBase
     {
         internal readonly QuicConnectionMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;

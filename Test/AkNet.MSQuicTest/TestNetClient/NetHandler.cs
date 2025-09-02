@@ -143,7 +143,7 @@ namespace TestNetClient
             {
                 string msg = $"全部 接收完成!!!!!!";
                 NetLog.Log(msg);
-                AKNet.Udp2MSQuic.Common.udp_statistic.PrintInfo();
+                udp_statistic.PrintInfo();
             }
         }
     }

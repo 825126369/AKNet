@@ -1,7 +1,6 @@
-
-
 using AKNet.Common;
 using System;
+
 #if USE_MSQUIC_2 
 using MSQuic2;
 #else

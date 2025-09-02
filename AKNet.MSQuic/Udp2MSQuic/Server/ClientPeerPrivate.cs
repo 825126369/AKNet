@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Udp2MSQuic.Server
 {
-    internal class ClientPeerPrivate : TcpClientPeerCommonBase, TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal class ClientPeerPrivate :TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 

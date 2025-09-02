@@ -1,8 +1,8 @@
 ﻿using AKNet.Common;
-using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+
 #if USE_MSQUIC_2 
 using MSQuic2;
 #else

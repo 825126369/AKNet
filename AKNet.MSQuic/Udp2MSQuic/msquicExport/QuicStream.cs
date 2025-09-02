@@ -1,9 +1,9 @@
 using AKNet.Common;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
+
 #if USE_MSQUIC_2 
 using MSQuic2;
 #else

@@ -12,7 +12,7 @@ using System;
 
 namespace AKNet.Udp1MSQuic.Server
 {
-    public class QuicNetServerMain : NetServerInterface,PrivateConfigInterface
+    public class QuicNetServerMain : NetServerInterface
     {
         QuicServer mServer = null;
 

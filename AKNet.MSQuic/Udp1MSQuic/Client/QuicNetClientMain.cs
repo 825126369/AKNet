@@ -13,7 +13,7 @@ using System.Net;
 
 namespace AKNet.Udp1MSQuic.Client
 {
-    public class QuicNetClientMain : NetClientInterface, ClientPeerBase,PrivateConfigInterface
+    public class QuicNetClientMain : NetClientInterface, ClientPeerBase
     {
         private ClientPeer mClientPeer;
 

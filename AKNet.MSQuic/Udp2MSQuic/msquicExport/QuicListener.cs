@@ -1,5 +1,4 @@
 using AKNet.Common;
-using AKNet.Common.Channel;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 #if USE_MSQUIC_2 
 using MSQuic2;
 #else
