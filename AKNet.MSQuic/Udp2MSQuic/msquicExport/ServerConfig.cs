@@ -3,6 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+#if USE_MSQUIC_2 
+using MSQuic2;
+#else
+using MSQuic1;
+#endif
 
 namespace AKNet.Udp2MSQuic.Common
 {

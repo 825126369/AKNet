@@ -1,6 +1,11 @@
 using AKNet.Common;
 using System.Net;
 using System.Net.Sockets;
+#if USE_MSQUIC_2 
+using MSQuic2;
+#else
+using MSQuic1;
+#endif
 
 namespace AKNet.Udp1MSQuic.Common
 {
@@ -32,7 +37,7 @@ namespace AKNet.Udp1MSQuic.Common
         public static QUIC_SSBuffer GetMsQuicParameter(QUIC_HANDLE handle, uint parameter)
         {
             QUIC_SSBuffer value = default;
-            int status = MSQuicFunc.MsQuicGetParam(handle, parameter, out value);
+            int status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
             if (MSQuicFunc.QUIC_FAILED(status))
             {
                 NetLog.LogError($"GetParam({handle}, {parameter}) failed");

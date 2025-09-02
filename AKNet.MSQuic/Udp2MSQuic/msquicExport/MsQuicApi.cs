@@ -1,11 +1,16 @@
 using AKNet.Common;
 using System;
+#if USE_MSQUIC_2 
+using MSQuic2;
+#else
+using MSQuic1;
+#endif
 
 namespace AKNet.Udp2MSQuic.Common
 {
     internal sealed class MsQuicApi
     {
-        private static readonly Lazy<MsQuicApi> _lazyInstance = new Lazy<MsQuicApi>(() => new MsQuicApi()); //Ïß³Ì°²È«
+        private static readonly Lazy<MsQuicApi> _lazyInstance = new Lazy<MsQuicApi>(() => new MsQuicApi()); //ï¿½ß³Ì°ï¿½È«
         public QUIC_REGISTRATION Registration;
         private static readonly Version s_minMsQuicVersion = new Version(2, 0, 0);
         private static bool bInit = false;
@@ -20,7 +25,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             if (bInit)
             {
-                NetLog.LogError("µ¥Àý ÓÐÎÊÌâ");
+                NetLog.LogError("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½");
                 return false;
             }
             bInit = true;

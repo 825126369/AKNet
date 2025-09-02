@@ -32,6 +32,7 @@ namespace AKNet.Common
         private Action<object?>? _cancellationAction;
         private FinalTaskSource _finalTaskSource;
         private GCHandle _keepAlive;
+        private readonly object lock_obj = new object();
 
         public ResettableValueTaskSource()
         {
@@ -44,19 +45,19 @@ namespace AKNet.Common
             _keepAlive = default;
         }
         
-        public Action<object?> CancellationAction {  set{ _cancellationAction = value; } }
+        public Action<object?> CancellationAction { set{ _cancellationAction = value; } }
         public bool IsCompleted
         {
             get 
             {
-                return (State)Volatile.Read(ref MemoryMarshal.GetReference(MemoryMarshal.Cast<State, byte>(MemoryMarshal.CreateSpan(ref _state, 1)))) ==
-                    State.Completed; 
+                return (State)Volatile.Read(
+                    ref MemoryMarshal.GetReference(MemoryMarshal.Cast<State, byte>(MemoryMarshal.CreateSpan(ref _state, 1)))) == State.Completed; 
             }
         }
 
         public bool TryGetValueTask(out ValueTask valueTask, object? keepAlive = null, CancellationToken cancellationToken = default)
         {
-            lock (this)
+            lock (lock_obj)
             {
                 if (_state == State.None)
                 {
@@ -64,7 +65,7 @@ namespace AKNet.Common
                     {
                         _cancellationRegistration = cancellationToken.Register((obj) =>
                         {
-                            (ResettableValueTaskSource thisRef, object? target) = ((ResettableValueTaskSource, object?))obj!;
+                            (ResettableValueTaskSource thisRef, object target) = ((ResettableValueTaskSource, object))obj;
                             lock (thisRef)
                             {
                                 thisRef._cancelledToken = cancellationToken;
@@ -75,7 +76,7 @@ namespace AKNet.Common
                 }
 
                 State state = _state;
-                if (state == State.None)
+                if (_state == State.None)
                 {
                     if (keepAlive != null)
                     {
@@ -99,23 +100,23 @@ namespace AKNet.Common
         
         public Task GetFinalTask(object? keepAlive)
         {
-            lock (this)
+            lock (lock_obj)
             {
                 return _finalTaskSource.GetTask(keepAlive);
             }
         }
 
-        private bool TryComplete(Exception? exception, bool final)
+        private bool TryComplete(Exception exception, bool final)
         {
             CancellationTokenRegistration cancellationRegistration = default;
-            lock (this)
+            lock (lock_obj)
             {
                 cancellationRegistration = _cancellationRegistration;
                 _cancellationRegistration = default;
             }
             cancellationRegistration.Dispose();
 
-            lock (this)
+            lock (lock_obj)
             {
                 try
                 {
@@ -186,11 +187,16 @@ namespace AKNet.Common
         }
 
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token)
-            => _valueTaskSource.GetStatus(token);
+        {
+            return _valueTaskSource.GetStatus(token);
+        }
 
         void IValueTaskSource.OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
-            => _valueTaskSource.OnCompleted(continuation, state, token, flags);
+        { 
+            _valueTaskSource.OnCompleted(continuation, state, token, flags);
+        }
 
+        //无返回值的 await 结果提取器 实现
         void IValueTaskSource.GetResult(short token)
         {
             try
@@ -200,7 +206,7 @@ namespace AKNet.Common
             }
             finally
             {
-                lock (this)
+                lock (lock_obj)
                 {
                     State state = _state;
 
@@ -209,12 +215,11 @@ namespace AKNet.Common
 
                     if (state == State.Ready)
                     {
-                        _valueTaskSource.Reset();
+                        _valueTaskSource.Reset(); //Reset()：关键！ 重置 IValueTaskSource，使其可被池化复用。
                         _state = State.None;
-                        if (_finalTaskSource.TrySignal(out Exception? exception))
+                        if (_finalTaskSource.TrySignal(out Exception exception))
                         {
                             _state = State.Completed;
-
                             if (exception != null)
                             {
                                 _valueTaskSource.SetException(exception);
@@ -238,9 +243,9 @@ namespace AKNet.Common
             private TaskCompletionSource<bool> _finalTaskSource;
             private bool _isCompleted;
             private bool _isSignaled;
-            private Exception? _exception;
+            private Exception _exception;
 
-            public Task GetTask(object? keepAlive)
+            public Task GetTask(object keepAlive)
             {
                 if (_finalTaskSource == null)
                 {
@@ -262,7 +267,7 @@ namespace AKNet.Common
                 return _finalTaskSource.Task;
             }
 
-            public bool TryComplete(Exception? exception = null)
+            public bool TryComplete(Exception exception = null)
             {
                 if (_isCompleted)
                 {
@@ -274,7 +279,7 @@ namespace AKNet.Common
                 return true;
             }
 
-            public bool TrySignal(out Exception? exception)
+            public bool TrySignal(out Exception exception)
             {
                 if (!_isCompleted)
                 {
@@ -284,11 +289,11 @@ namespace AKNet.Common
 
                 if (_exception != null)
                 {
-                    _finalTaskSource?.SetException(_exception);
+                    _finalTaskSource.SetException(_exception);
                 }
                 else
                 {
-                    _finalTaskSource?.SetResult(true);
+                    _finalTaskSource.SetResult(true);
                 }
 
                 exception = _exception;

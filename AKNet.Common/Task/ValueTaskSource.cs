@@ -23,6 +23,7 @@ namespace AKNet.Common
         private ManualResetValueTaskSourceCore<bool> _valueTaskSource;
         private CancellationTokenRegistration _cancellationRegistration;
         private GCHandle _keepAlive;
+        private readonly object lock_obj = new object();
 
         public ValueTaskSource()
         {
@@ -45,7 +46,7 @@ namespace AKNet.Common
 
         public bool TryInitialize(out ValueTask valueTask, object? keepAlive = null, CancellationToken cancellationToken = default)
         {
-            lock (this)
+            lock (lock_obj)
             {
                 valueTask = new ValueTask(this, _valueTaskSource.Version);
                 if (_state == State.None)
@@ -83,7 +84,7 @@ namespace AKNet.Common
             CancellationTokenRegistration cancellationRegistration = default;
             try
             {
-                lock (this)
+                lock (lock_obj)
                 {
                     try
                     {

@@ -7,6 +7,11 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+#if USE_MSQUIC_2 
+using MSQuic2;
+#else
+using MSQuic1;
+#endif
 
 namespace AKNet.Udp2MSQuic.Common
 {
@@ -107,7 +112,7 @@ namespace AKNet.Udp2MSQuic.Common
         {
             QuicConnectionOptions options = mOption.GetConnectionOptionFunc();
             QUIC_CONFIGURATION _configuration = ServerConfig.Create(options);
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration))) //ÕâÀï»á¿ªÊ¼Ö´ÐÐÁ¬½Ó²Ù×÷
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionSetConfiguration(connection._handle, _configuration))) //ï¿½ï¿½ï¿½ï¿½á¿ªÊ¼Ö´ï¿½ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½
             {
                 NetLog.LogError("ConnectionSetConfiguration failed");
             }

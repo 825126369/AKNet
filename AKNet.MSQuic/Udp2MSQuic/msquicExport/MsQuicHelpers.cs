@@ -1,5 +1,10 @@
 using AKNet.Common;
 using System.Net;
+#if USE_MSQUIC_2 
+using MSQuic2;
+#else
+using MSQuic1;
+#endif
 
 namespace AKNet.Udp2MSQuic.Common
 {

@@ -1,3 +1,8 @@
+#if USE_MSQUIC_2 
+using MSQuic2;
+#else
+using MSQuic1;
+#endif
 using System;
 
 namespace AKNet.Udp2MSQuic.Common
