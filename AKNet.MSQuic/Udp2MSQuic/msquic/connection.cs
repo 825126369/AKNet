@@ -174,7 +174,7 @@ namespace AKNet.Udp2MSQuic.Common
         public bool HasQueuedWork;
         public bool HasPriorityWork;
         
-        public byte OutFlowBlockedReasons; // Set of QUIC_FLOW_BLOCKED_* flags
+        public byte OutFlowBlockedReasons; //用于精确追踪发送方（outbound flow）被阻塞的原因。
         public byte AckDelayExponent;
         public byte PacketTolerance;
         public int PeerPacketTolerance;
