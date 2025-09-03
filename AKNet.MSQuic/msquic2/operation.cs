@@ -439,6 +439,19 @@ namespace MSQuic2
             NetLog.Assert(OperQ.PriorityTail == OperQ.List);
         }
 
+        static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
+        {
+            bool StartProcessing;
+            CxPlatDispatchLockAcquire(OperQ.Lock);
+            StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
+            CxPlatListInsertTail(OperQ.List, Oper.Link);
+            CxPlatDispatchLockRelease(OperQ.Lock);
+
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
+            return StartProcessing;
+        }
+
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
@@ -450,19 +463,6 @@ namespace MSQuic2
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
             CxPlatListInsertMiddle(OperQ.List, OperQ.PriorityTail, Oper.Link);
             OperQ.PriorityTail = Oper.Link;
-            CxPlatDispatchLockRelease(OperQ.Lock);
-
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
-            return StartProcessing;
-        }
-
-        static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
-        {
-            bool StartProcessing;
-            CxPlatDispatchLockAcquire(OperQ.Lock);
-            StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
-            CxPlatListInsertTail(OperQ.List, Oper.Link);
             CxPlatDispatchLockRelease(OperQ.Lock);
 
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);

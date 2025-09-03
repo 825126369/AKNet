@@ -372,7 +372,7 @@ namespace MSQuic2
 
             uint AddSendFlags = 0;
             long Start = FrameMetadata.StreamOffset;
-            long End = FrameMetadata.StreamOffset +  FrameMetadata.StreamLength;
+            long End = Start +  FrameMetadata.StreamLength;
 
             if (BoolOk(FrameMetadata.Flags & QUIC_SENT_FRAME_FLAG_STREAM_OPEN) && !Stream.Flags.SendOpenAcked)
             {

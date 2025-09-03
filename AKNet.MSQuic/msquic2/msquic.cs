@@ -70,39 +70,39 @@ namespace MSQuic2
 
     internal enum QUIC_PERFORMANCE_COUNTERS
     {
-        QUIC_PERF_COUNTER_CONN_CREATED,         // Total connections ever allocated.
-        QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL,  // Total connections that failed during handshake.
-        QUIC_PERF_COUNTER_CONN_APP_REJECT,      // Total connections rejected by the application.
-        QUIC_PERF_COUNTER_CONN_RESUMED,         // Total connections resumed.
-        QUIC_PERF_COUNTER_CONN_ACTIVE,          // Connections currently allocated.
-        QUIC_PERF_COUNTER_CONN_CONNECTED,       // Connections currently in the connected state.
-        QUIC_PERF_COUNTER_CONN_PROTOCOL_ERRORS, // Total connections shutdown with a protocol error.
-        QUIC_PERF_COUNTER_CONN_NO_ALPN,         // Total connection attempts with no matching ALPN.
-        QUIC_PERF_COUNTER_STRM_ACTIVE,          // Current streams allocated.
-        QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST,  // Total suspected packets lost
-        QUIC_PERF_COUNTER_PKTS_DROPPED,         // Total packets dropped for any reason.
-        QUIC_PERF_COUNTER_PKTS_DECRYPTION_FAIL, // Total packets with decryption failures.
-        QUIC_PERF_COUNTER_UDP_RECV,             // Total UDP datagrams received.
-        QUIC_PERF_COUNTER_UDP_SEND,             // Total UDP datagrams sent.
-        QUIC_PERF_COUNTER_UDP_RECV_BYTES,       // Total UDP payload bytes received.
-        QUIC_PERF_COUNTER_UDP_SEND_BYTES,       // Total UDP payload bytes sent.
-        QUIC_PERF_COUNTER_UDP_RECV_EVENTS,      // Total UDP receive events.
-        QUIC_PERF_COUNTER_UDP_SEND_CALLS,       // Total UDP send API calls.
-        QUIC_PERF_COUNTER_APP_SEND_BYTES,       // Total bytes sent by applications.
-        QUIC_PERF_COUNTER_APP_RECV_BYTES,       // Total bytes received by applications.
-        QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH,     // Current connections queued for processing.
-        QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH,// Current connection operations queued.
-        QUIC_PERF_COUNTER_CONN_OPER_QUEUED,     // Total connection operations queued ever.
-        QUIC_PERF_COUNTER_CONN_OPER_COMPLETED,  // Total connection operations processed ever.
-        QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH,// Current worker operations queued.
-        QUIC_PERF_COUNTER_WORK_OPER_QUEUED,     // Total worker operations queued ever.
-        QUIC_PERF_COUNTER_WORK_OPER_COMPLETED,  // Total worker operations processed ever.
-        QUIC_PERF_COUNTER_PATH_VALIDATED,       // Total path challenges that succeed ever.
-        QUIC_PERF_COUNTER_PATH_FAILURE,         // Total path challenges that fail ever.
-        QUIC_PERF_COUNTER_SEND_STATELESS_RESET, // Total stateless reset packets sent ever.
-        QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // Total stateless retry packets sent ever.
-        QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // Total connections rejected due to worker load.
-        QUIC_PERF_COUNTER_MAX,
+        QUIC_PERF_COUNTER_CONN_CREATED,         // 自 QUIC 实例启动以来，创建的总连接数。
+        QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL,  // 在TLS握手阶段失败的连接总数。
+        QUIC_PERF_COUNTER_CONN_APP_REJECT,      // 被应用程序层主动拒绝的连接尝试总数
+        QUIC_PERF_COUNTER_CONN_RESUMED,         // 成功恢复的连接总数
+        QUIC_PERF_COUNTER_CONN_ACTIVE,          // 当前处于活动状态（已分配）的连接数。
+        QUIC_PERF_COUNTER_CONN_CONNECTED,       // 当前处于“已连接”状态（即握手完成，数据可以传输）的连接数。
+        QUIC_PERF_COUNTER_CONN_PROTOCOL_ERRORS, // 因协议错误（如无效帧、违反状态机规则）而关闭的连接总数。
+        QUIC_PERF_COUNTER_CONN_NO_ALPN,         // 因客户端和服务器无法就应用层协议（如 h3(自定义的协议))，达成一致而被拒绝的连接尝试总数。
+        QUIC_PERF_COUNTER_STRM_ACTIVE,          // 当前处于活动状态的流（stream）总数。
+        QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST,  // 根据 ACK 信息推断出的疑似丢失的数据包总数。这是网络质量（特别是丢包率）的关键指标。
+        QUIC_PERF_COUNTER_PKTS_DROPPED,         // 因任何原因（格式错误、缓冲区溢出）被 QUIC 实现直接丢弃的数据包总数。
+        QUIC_PERF_COUNTER_PKTS_DECRYPTION_FAIL, // 解密失败的数据包总数。这可能由密钥错误、数据损坏或重放攻击引起。
+        QUIC_PERF_COUNTER_UDP_RECV,             // 接收到的 UDP 数据报总数。
+        QUIC_PERF_COUNTER_UDP_SEND,             // 发送的 UDP 数据报总数。
+        QUIC_PERF_COUNTER_UDP_RECV_BYTES,       // 接收到的 UDP 负载（payload）总字节数（不包括 UDP/IP 头）。
+        QUIC_PERF_COUNTER_UDP_SEND_BYTES,       // 发送的 UDP 负载（payload）总字节数（不包括 UDP/IP 头）。
+        QUIC_PERF_COUNTER_UDP_RECV_EVENTS,      // 从底层网络接收到 UDP 数据报的事件总数（可能一次事件接收多个数据报）。
+        QUIC_PERF_COUNTER_UDP_SEND_CALLS,       // 调用底层 UDP 发送 API 的总次数（一次调用可能发送多个数据报）。
+        QUIC_PERF_COUNTER_APP_SEND_BYTES,       // 应用程序通过 QUIC 连接发送的总字节数（在 QUIC 层之上测量）。
+        QUIC_PERF_COUNTER_APP_RECV_BYTES,       //  应用程序通过 QUIC 连接接收到的总字节数
+        QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH,     // 当前排队等待处理的连接数（例如，新连接请求）
+        QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH,// 当前排队等待处理的连接级操作数。
+        QUIC_PERF_COUNTER_CONN_OPER_QUEUED,     // 历史累计的连接级操作入队总数。
+        QUIC_PERF_COUNTER_CONN_OPER_COMPLETED,  // 历史累计的已完成连接级操作总数。
+        QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH,// 当前排队等待处理的工作线程操作数。
+        QUIC_PERF_COUNTER_WORK_OPER_QUEUED,     // 历史累计的工作线程操作入队总数。
+        QUIC_PERF_COUNTER_WORK_OPER_COMPLETED,  // 历史累计的已完成工作线程操作总数。
+        QUIC_PERF_COUNTER_PATH_VALIDATED,       // 成功验证的网络路径（IP地址/端口对）挑战总数。
+        QUIC_PERF_COUNTER_PATH_FAILURE,         // 验证失败的网络路径挑战总数。
+        QUIC_PERF_COUNTER_SEND_STATELESS_RESET, // 发送的无状态重置（stateless reset）数据包总数。
+        QUIC_PERF_COUNTER_SEND_STATELESS_RETRY, // 发送的无状态重试（stateless retry）数据包总数。
+        QUIC_PERF_COUNTER_CONN_LOAD_REJECT,     // 因QUIC实例内部工作负载过高（例如，CPU、内存或队列满）而被拒绝的连接总数。这是系统过载的信号。
+        QUIC_PERF_COUNTER_MAX,                  // 这是一个占位符，表示枚举中有效计数器的最大数量
     }
 
     internal enum QUIC_CREDENTIAL_FLAGS
@@ -122,10 +122,24 @@ namespace MSQuic2
 
     internal enum QUIC_EXECUTION_PROFILE
     {
+        //目的: 这是默认配置文件，旨在最小化操作延迟和响应时间。
+        //适用场景: 交互式应用，如网页浏览、在线游戏、实时通信（VoIP、视频会议）、远程桌面等，这些应用对延迟非常敏感。
         QUIC_EXECUTION_PROFILE_LOW_LATENCY,         // Default
+
+        //目的: 旨在最大化数据传输速率和整体带宽利用率。
+        //适用场景: 大文件下载、视频流（非实时）、备份、数据同步等，这些应用更关心在单位时间内传输尽可能多的数据，可以容忍稍高的延迟。
         QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT,
+
+        //目的: 以最低的优先级运行，仅在系统资源（如 CPU 和网络带宽）空闲时才使用它们。其目标是“捡拾”其他高优先级任务留下的空闲资源。
+        //适用场景: 后台更新、非紧急的数据同步、日志上传、预取等，这些任务不紧急，不应影响前台用户体验。
         QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER,
+
+        //目的: 为需要严格、可预测延迟保证的任务提供最高级别的服务质量（QoS）。这通常需要操作系统级别的支持（如实时调度类）。
+        //适用场景: 极其关键的实时应用，如工业控制、高精度金融交易、某些类型的实时音视频处理，这些应用要求操作在确定的时间内完成。
         QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME,
+
+        // 目的: 这个配置文件很可能是为 QUIC 库内部使用而保留的。它可能用于特定的测试、调试场景，或者表示一种未明确分类的默认/基础状态。
+        // 适用场景: 开发、测试或当没有明确的性能目标时。在生产环境中，通常建议使用前四种更明确的配置文件之一。
         QUIC_EXECUTION_PROFILE_TYPE_INTERNAL,
     }
 
@@ -278,7 +292,7 @@ namespace MSQuic2
         QUIC_CONNECTION_SHUTDOWN_FLAG_STATUS = 0x8000
     } 
 
-    internal enum QUIC_CONNECTION_EVENT_TYPE
+    internal enum QUIC_CONNECTION_EVENT_TYPE:byte
     {
         QUIC_CONNECTION_EVENT_CONNECTED = 0,
         QUIC_CONNECTION_EVENT_SHUTDOWN_INITIATED_BY_TRANSPORT = 1,    // The transport started the shutdown process.
@@ -303,12 +317,34 @@ namespace MSQuic2
     
     internal enum QUIC_DATAGRAM_SEND_STATE
     {
+        // QUIC_DATAGRAM_SEND_UNKNOWN (未知)
+        // 含义: 这是数据报的初始状态。表示该数据报尚未被 QUIC 实现处理或发送。
+        // 触发时机: 数据报对象刚被创建时。
+        // 后续状态: 通常会过渡到 QUIC_DATAGRAM_SEND_SENT（如果开始发送）或 QUIC_DATAGRAM_SEND_CANCELED（如果在发送前被取消）
         QUIC_DATAGRAM_SEND_UNKNOWN,                         // Not yet sent.
+
+        //含义: 数据报已经被 QUIC 实现封装成一个或多个 QUIC 数据包 (packet)，并已提交给底层 UDP 套接字进行发送。
+        //此时，QUIC 正在等待来自对端的确认（ACK）来证明数据报已被成功接收。
         QUIC_DATAGRAM_SEND_SENT,                            // Sent and awaiting acknowledgment
-        QUIC_DATAGRAM_SEND_LOST_SUSPECT,                    // Suspected as lost, but still tracked
-        QUIC_DATAGRAM_SEND_LOST_DISCARDED,                  // Lost and not longer being tracked
-        QUIC_DATAGRAM_SEND_ACKNOWLEDGED,                    // Acknowledged
+        
+        //含义: 根据 QUIC 的丢包检测机制（主要是基于 ACK 的缺失和重传超时 RTO），该数据报被认为可能已经丢失。
+        //QUIC 实现会基于此状态决定是否需要重传（对于可重传的数据报）或采取其他措施。
+        QUIC_DATAGRAM_SEND_LOST_SUSPECT,                    // 怀疑丢包
+
+        //在经过多次重传尝试或基于其他启发式方法后，QUIC 实现最终确定该数据报已经丢失，并且不再尝试重传。
+        //该数据报的发送任务被彻底放弃
+        QUIC_DATAGRAM_SEND_LOST_DISCARDED,                  // 丢包了
+
+        //QUIC 实现收到了来自对端的确认（ACK），明确表明包含该数据报的 QUIC 数据包已经被对方成功接收并处理。
+        //这是数据报发送成功的最终状态。
+        QUIC_DATAGRAM_SEND_ACKNOWLEDGED,                    // 确认
+
+        //这是一个特殊情况。QUIC 实现收到了该数据报的确认（ACK），
+        //但在收到此 ACK 之前，已经因为超时而重传了该数据报（或其部分）。
+        //这意味着原始的数据包虽然被确认收到了，但这个确认来得太晚，导致了不必要的重传。这个 ACK 被称为“虚假”（spurious）确认。
         QUIC_DATAGRAM_SEND_ACKNOWLEDGED_SPURIOUS,           // Acknowledged after being suspected lost
+
+        //在数据报被实际发送到网络之前，应用程序或 QUIC 实现本身主动取消了发送请求。
         QUIC_DATAGRAM_SEND_CANCELED,                        // Canceled before send
     }
 

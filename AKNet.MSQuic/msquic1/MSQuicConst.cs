@@ -1,4 +1,6 @@
-﻿namespace MSQuic1
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+namespace MSQuic1
 {
     internal static partial class MSQuicFunc
     {
@@ -9,6 +11,7 @@
         public const uint VER_PATCH = 0;
         public const uint VER_BUILD_ID = 0;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long QUIC_TIME_REORDER_THRESHOLD(long rtt)
         {
             return rtt + (rtt / 8);
@@ -191,10 +194,11 @@
         public const int QUIC_MAX_CALLBACK_TIME_WARNING = 10;
         public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
 
-        public static readonly long QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
-        public static readonly long QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
-        public static readonly long QUIC_DEFAULT_IDLE_TIMEOUT = 30000; //30秒
-        public static readonly long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = 10000; //10秒
+        public const long QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
+        public const long QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
+        public const long QUIC_DEFAULT_IDLE_TIMEOUT = 30000; //30秒
+        public const long QUIC_DEFAULT_HANDSHAKE_IDLE_TIMEOUT = 10000; //10秒
+        public const long QUIC_CLOSING_RESPONSE_MIN_INTERVAL = 5000; //微妙, 5毫秒
 
         public const bool QUIC_DEFAULT_KEEP_ALIVE_ENABLE = false;
         public const long QUIC_DEFAULT_KEEP_ALIVE_INTERVAL = 0;
@@ -231,7 +235,7 @@
         public const int QUIC_ACTIVE_CONNECTION_ID_LIMIT = 4;
         public const bool QUIC_DEFAULT_SEND_PACING = true;
         public const int QUIC_MIN_PACING_RTT = 1000;
-        public const int QUIC_SEND_PACING_INTERVAL = 1000;
+        public const int QUIC_SEND_PACING_INTERVAL = 1000; //1毫秒
 
         public const long QUIC_DEFAULT_MAX_BYTES_PER_KEY = 0x4000000000;
 
