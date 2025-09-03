@@ -132,6 +132,15 @@ namespace AKNet.Udp1MSQuic.Client
         {
             return mClientPeer.GetName();
         }
+
+        public void SetID(uint id)
+        {
+            mClientPeer.SetID(id);
+        }
+        public uint GetID()
+        {
+            return mClientPeer.GetID();
+        }
     }
 
 }

@@ -108,6 +108,16 @@ namespace AKNet.Udp1MSQuic.Server
         {
             return mInstance.GetName();
         }
+
+        public void SetID(uint id)
+        {
+            mInstance.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mInstance.GetID();
+        }
     }
 
 }

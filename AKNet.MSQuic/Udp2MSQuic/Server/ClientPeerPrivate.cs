@@ -24,6 +24,7 @@ namespace AKNet.Udp2MSQuic.Server
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		private QuicServer mNetServer;
 		private string Name = string.Empty;
+        private uint ID = 0;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
         public ClientPeerPrivate(QuicServer mNetServer)
@@ -183,6 +184,16 @@ namespace AKNet.Udp2MSQuic.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return ID;
         }
 
         public Config GetConfig()

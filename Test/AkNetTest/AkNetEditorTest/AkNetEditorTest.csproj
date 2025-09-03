@@ -14,30 +14,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Protobuf\GameProtocol.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="Protobuf\GameProtocol_Chat.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="Protobuf\GameProtocol_Data.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="Protobuf\GameProtocol_SelectRole.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="Protobuf\GateProtocol.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="Protobuf\LoginProtocol.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="Protobuf\SelectGateProtocol.proto">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
     <None Update="protoc-28.2-win64\bin\protoc.exe">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Protobuf\Out\" />
   </ItemGroup>
 
 </Project>

@@ -35,5 +35,7 @@ namespace AKNet.Common
         void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer);
         void SetName(string name);
         string GetName();
+        void SetID(uint id);
+        uint GetID();
     }
 }

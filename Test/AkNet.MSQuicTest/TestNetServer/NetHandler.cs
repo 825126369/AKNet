@@ -28,15 +28,9 @@ namespace TestNetServer
             }
         }
         
-        int nReceivePackageCount = 0;
         private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
-            nReceivePackageCount++;
-            if (nReceivePackageCount % 10000 == 0)
-            {
-                //NetLog.Log($"ReceiveMessage: {mdata.NClientId}  {mdata.ToString()}");
-            }
             peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
             IMessagePool<TESTChatMessage>.recycle(mdata);
         }

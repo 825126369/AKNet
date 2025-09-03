@@ -21,5 +21,7 @@ namespace AKNet.Common
         void SendNetData(NetPackage mNetPackage);
         void SetName(string name);
         string GetName();
+        void SetID(uint id);
+        uint GetID();
     }
 }

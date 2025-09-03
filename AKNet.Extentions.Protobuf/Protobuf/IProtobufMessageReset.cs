@@ -17,6 +17,7 @@ namespace TestProtocol
             NClientId = 0;
             NSortId = 0;
             TalkMsg = string.Empty;
+            PeerName = string.Empty;
         }
     }
 }

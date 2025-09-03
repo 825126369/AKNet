@@ -10,6 +10,7 @@ using AKNet.Common;
 using AKNet.Udp2MSQuic.Common;
 using System;
 using System.Net;
+using System.Xml.Linq;
 
 namespace AKNet.Udp2MSQuic.Client
 {
@@ -131,6 +132,16 @@ namespace AKNet.Udp2MSQuic.Client
         public string GetName()
         {
             return mClientPeer.GetName();
+        }
+
+        public void SetID(uint id)
+        {
+            mClientPeer.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mClientPeer.GetID();
         }
     }
 
