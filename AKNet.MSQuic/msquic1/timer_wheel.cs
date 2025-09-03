@@ -1,5 +1,5 @@
 ﻿using AKNet.Common;
-using System;
+using System.Runtime.CompilerServices;
 
 namespace MSQuic1
 {
@@ -15,6 +15,7 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int TIME_TO_SLOT_INDEX(QUIC_TIMER_WHEEL TimerWheel, long TimeUs)
         {
             return (int)(US_TO_MS(TimeUs) / 1000) % TimerWheel.SlotCount;
@@ -27,12 +28,18 @@ namespace MSQuic1
             TimerWheel.NextConnection = null;
             TimerWheel.SlotCount = QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT;
             TimerWheel.Slots = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>[QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT];
-            for (int i = 0; i < QUIC_TIMER_WHEEL_INITIAL_SLOT_COUNT; ++i)
+            if (TimerWheel.Slots == null)
             {
-                CXPLAT_LIST_ENTRY<QUIC_CONNECTION> mEntry = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
+                return QUIC_STATUS_OUT_OF_MEMORY;
+            }
+
+            for (int i = 0; i < TimerWheel.SlotCount; ++i)
+            {
+                var mEntry = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
                 CxPlatListInitializeHead(mEntry);
                 TimerWheel.Slots[i]= mEntry;
             }
+
             return QUIC_STATUS_SUCCESS;
         }
 
@@ -63,19 +70,26 @@ namespace MSQuic1
         {
             TimerWheel.NextExpirationTime = long.MaxValue;
             TimerWheel.NextConnection = null;
-
             for (int i = 0; i < TimerWheel.SlotCount; ++i)
             {
                 if (!CxPlatListIsEmpty(TimerWheel.Slots[i]))
                 {
                     QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(TimerWheel.Slots[i].Next);
-                    long EntryExpirationTime = ConnectionEntry.EarliestExpirationTime;
-                    if (EntryExpirationTime < TimerWheel.NextExpirationTime)
+                    if (ConnectionEntry.EarliestExpirationTime < TimerWheel.NextExpirationTime)
                     {
-                        TimerWheel.NextExpirationTime = EntryExpirationTime;
+                        TimerWheel.NextExpirationTime = ConnectionEntry.EarliestExpirationTime;
                         TimerWheel.NextConnection = ConnectionEntry;
                     }
                 }
+            }
+
+            if (TimerWheel.NextConnection == null)
+            {
+                //NetLog.Log($"TimerWheel.NextConnection = NULL.");
+            }
+            else
+            {
+                //NetLog.Log($"Next Expiration = {TimerWheel.NextExpirationTime}.");
             }
         }
 
@@ -112,9 +126,9 @@ namespace MSQuic1
                     long ExpirationTime = Connection.EarliestExpirationTime;
                     NetLog.Assert(TimerWheel.SlotCount != 0);
                     int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
+
                     CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
                     CXPLAT_LIST_ENTRY Entry = ListHead.Prev;
-
                     while (Entry != ListHead)
                     {
                         QUIC_CONNECTION ConnectionEntry = CXPLAT_CONTAINING_RECORD<QUIC_CONNECTION>(Entry);
@@ -128,6 +142,8 @@ namespace MSQuic1
                     CxPlatListInsertHead(Entry, Connection.TimerLink);
                 }
             }
+            OldSlots = null;
+
         }
 
         static void QuicTimerWheelUpdateConnection(QUIC_TIMER_WHEEL TimerWheel, QUIC_CONNECTION Connection)
@@ -165,7 +181,6 @@ namespace MSQuic1
             NetLog.Assert(!Connection.State.ShutdownComplete);
             NetLog.Assert(TimerWheel.SlotCount != 0);
             int SlotIndex = TIME_TO_SLOT_INDEX(TimerWheel, ExpirationTime);
-            
             CXPLAT_LIST_ENTRY ListHead = TimerWheel.Slots[SlotIndex];
             CXPLAT_LIST_ENTRY Entry = ListHead.Prev;
 
@@ -180,7 +195,8 @@ namespace MSQuic1
 
                 Entry = Entry.Prev;
             }
-                
+
+            //在这里把Work上的连接插入入口上
             CxPlatListInsertHead(Entry, Connection.TimerLink);
             
             if (ExpirationTime < TimerWheel.NextExpirationTime)
@@ -214,6 +230,7 @@ namespace MSQuic1
                     {
                         break;
                     }
+
                     Entry = Entry.Next;
                     CxPlatListEntryRemove(ConnectionEntry.TimerLink);
                     CxPlatListInsertTail(OutputListHead, ConnectionEntry.TimerLink);
@@ -239,7 +256,6 @@ namespace MSQuic1
             if (Connection.TimerLink.Next != null)
             {
                 CxPlatListEntryRemove(Connection.TimerLink);
-                Connection.TimerLink.Next = null;
                 TimerWheel.ConnectionCount--;
 
                 if (Connection == TimerWheel.NextConnection)
