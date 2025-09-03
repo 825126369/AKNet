@@ -127,7 +127,7 @@ namespace AKNet.Udp1MSQuic.Client
                     {
                         break;
                     }
-                } while (nLoopCount++ < 8);
+                } while (nLoopCount++ < 256);
             }
         }
 

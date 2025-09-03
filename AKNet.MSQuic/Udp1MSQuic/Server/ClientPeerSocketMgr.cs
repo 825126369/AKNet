@@ -79,7 +79,7 @@ namespace AKNet.Udp1MSQuic.Server
                     {
                         break;
                     }
-                } while (nLoopCount++ < 8);
+                } while (nLoopCount++ < 256);
             }
         }
 
