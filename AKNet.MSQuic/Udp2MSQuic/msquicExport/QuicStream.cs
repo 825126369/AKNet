@@ -154,13 +154,12 @@ namespace AKNet.Udp2MSQuic.Common
                 data.Flags.HasFlag(QUIC_RECEIVE_FLAGS.QUIC_RECEIVE_FLAG_FIN));
 
             NetLog.Assert(totalCopied >= 0);
-            //NetLog.Log("totalCopied: " + totalCopied);
             if (totalCopied < data.TotalBufferLength)
             {
                 Volatile.Write(ref _receivedNeedsEnable, 1);
             }
-
             _receiveTcs.TrySetResult();
+
             data.TotalBufferLength = totalCopied;
             if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
@@ -351,15 +350,7 @@ namespace AKNet.Udp2MSQuic.Common
             //NetLog.Log("nLoopCount: " + nLoopCount);
             //NetLog.Log("Thread.CurrentThread.ManagedThreadId: " + Thread.CurrentThread.ManagedThreadId);
 
-            //if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
-            //{
-            //    if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
-            //    {
-            //        NetLog.LogError("StreamReceivedSetEnabled failed");
-            //    }
-            //}
-
-            if (totalCopied > 0)
+            if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {

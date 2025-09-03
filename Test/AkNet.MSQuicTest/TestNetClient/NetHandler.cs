@@ -8,8 +8,8 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 10;
-        public const int nSingleSendPackageCount = 1;
+        public const int nClientCount = 100;
+        public const int nSingleSendPackageCount = 100;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
