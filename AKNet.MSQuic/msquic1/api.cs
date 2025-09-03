@@ -916,7 +916,7 @@ namespace MSQuic1
             return Status;
         }
 
-        public static int MsQuicGetParam(QUIC_HANDLE Handle, uint Param, out QUIC_SSBuffer Buffer)
+        public static int MsQuicGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)
         {
             Buffer = QUIC_SSBuffer.Empty;
             //    bool IsPriority = BoolOk(Param & QUIC_PARAM_HIGH_PRIORITY);

@@ -390,9 +390,55 @@ namespace MSQuic1
             NetLog.Assert(MsQuicLib.CidTotalLength <= QUIC_CID_MAX_LENGTH);
         }
 
-        static void QuicPerfCounterSnapShot(long TimeDiffUs)
+        static void QuicLibrarySumPerfCounters(Span<long> Counters)
         {
-           
+            if (MsQuicLib.Partitions == null)
+            {
+                Counters.Clear();
+                return;
+            }
+
+            for (int ProcIndex = 1; ProcIndex < MsQuicLib.PartitionCount; ++ProcIndex)
+            {
+                for (int CounterIndex = 0; CounterIndex < Counters.Length; ++CounterIndex)
+                {
+                    //先前的统计都是 分区单独统计的，这里把加起来，算个总的
+                    Counters[CounterIndex] += MsQuicLib.Partitions[ProcIndex].PerfCounters[CounterIndex];
+                }
+            }
+
+            //for (int CounterIndex = 0; CounterIndex < Counters.Length; ++CounterIndex)
+            //{
+            //    if (Counters[CounterIndex] < 0)
+            //    {
+            //        Counters[CounterIndex] = 0;
+            //    }
+            //}
+        }
+
+        public static void QuicPerfCounterSnapShot(long TimeDiffUs)
+        {
+            TimeDiffUs = Math.Max(1, TimeDiffUs);
+
+            long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+            QuicLibrarySumPerfCounters(PerfCounterSamples);
+
+            void QUIC_COUNTER_LIMIT_HZ(QUIC_PERFORMANCE_COUNTERS TYPE, long LIMIT_PER_SECOND)
+            {
+                NetLog.Assert(((1000 * 1000 * (PerfCounterSamples[(int)TYPE] - MsQuicLib.PerfCounterSamples[(int)TYPE])) / TimeDiffUs) < LIMIT_PER_SECOND);
+            }
+
+            void QUIC_COUNTER_CAP(QUIC_PERFORMANCE_COUNTERS TYPE, long MAX_LIMIT)
+            {
+                NetLog.Assert(PerfCounterSamples[(int)TYPE] < MAX_LIMIT && MsQuicLib.PerfCounterSamples[(int)TYPE] < MAX_LIMIT);
+            }
+
+#if DEBUG
+            QUIC_COUNTER_LIMIT_HZ(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_HANDSHAKE_FAIL, 1000000); // Don't have 1 million failed handshakes per second
+            QUIC_COUNTER_CAP(QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH, 100000); // Don't maintain huge queue depths
+#endif
+            Array.Copy(PerfCounterSamples, MsQuicLib.PerfCounterSamples, PerfCounterSamples.Length);
+            QuicPrintPerfCounters();
         }
 
         static void QuicPerfCounterTrySnapShot(long TimeNow)
@@ -726,34 +772,6 @@ namespace MSQuic1
 
 
             CxPlatLockRelease(MsQuicLib.Lock);
-        }
-
-        static void QuicLibrarySumPerfCounters(long[] PerfCounterSamples)
-        {
-            //NetLog.Assert(Buffer.Length == (Buffer.Length / sizeof(ulong) * sizeof(ulong)));
-            //NetLog.Assert(Buffer.Length <= sizeof(MsQuicLib.PerProc[0].PerfCounters));
-            //const uint32_t CountersPerBuffer = BufferLength / sizeof(int64_t);
-            //int64_t * const Counters = (int64_t*)Buffer;
-            //memcpy(Buffer, MsQuicLib.PerProc[0].PerfCounters, BufferLength);
-
-            //for (uint32_t ProcIndex = 1; ProcIndex < MsQuicLib.ProcessorCount; ++ProcIndex)
-            //{
-            //    for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
-            //    {
-            //        Counters[CounterIndex] += MsQuicLib.PerProc[ProcIndex].PerfCounters[CounterIndex];
-            //    }
-            //}
-
-            ////
-            //// Zero any counters that are still negative after summation.
-            ////
-            //for (uint32_t CounterIndex = 0; CounterIndex < CountersPerBuffer; ++CounterIndex)
-            //{
-            //    if (Counters[CounterIndex] < 0)
-            //    {
-            //        Counters[CounterIndex] = 0;
-            //    }
-            //}
         }
 
         static int QuicLibraryGetParam(QUIC_HANDLE Handle, uint Param, QUIC_SSBuffer Buffer)

@@ -40,8 +40,8 @@ namespace MSQuic1
         public readonly CXPLAT_POOL<QUIC_RECV_CHUNK> AppBufferChunkPool = new CXPLAT_POOL<QUIC_RECV_CHUNK>(); // QUIC_RECV_CHUNK
 
         public readonly long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+        public readonly quic_partition_udp_statistic udp_statistic = new quic_partition_udp_statistic();
 
-        
     }
 
     internal static partial class MSQuicFunc
@@ -205,6 +205,16 @@ namespace MSQuic1
             {
                 QUIC_PERFORMANCE_COUNTERS nType = (QUIC_PERFORMANCE_COUNTERS)i;
                 long nCount = Partition.PerfCounters[i];
+                NetLog.Log($"{nType} {QUIC_PERFORMANCE_COUNTERS_DESC[i]} : {nCount}");
+            }
+        }
+
+        public static void QuicPrintPerfCounters()
+        {
+            for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
+            {
+                QUIC_PERFORMANCE_COUNTERS nType = (QUIC_PERFORMANCE_COUNTERS)i;
+                long nCount = MsQuicLib.PerfCounterSamples[i];
                 NetLog.Log($"{nType} {QUIC_PERFORMANCE_COUNTERS_DESC[i]} : {nCount}");
             }
         }

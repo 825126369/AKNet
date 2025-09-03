@@ -434,7 +434,8 @@ namespace MSQuic1
                 Worker.IsActive = true;
             }
 
-            QuicPerfCounterTrySnapShot(State.TimeNow);
+            //QuicPerfCounterTrySnapShot(State.TimeNow); 计数器快照
+
             if (Worker.TimerWheel.NextExpirationTime != long.MaxValue && Worker.TimerWheel.NextExpirationTime <= State.TimeNow)
             {
                 QuicWorkerProcessTimers(Worker, State.ThreadID, State.TimeNow);
