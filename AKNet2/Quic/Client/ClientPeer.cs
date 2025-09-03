@@ -280,12 +280,12 @@ namespace AKNet.Quic.Client
 
         public void SetID(uint id)
         {
-            throw new NotImplementedException();
+            this.ID = id;
         }
 
         public uint GetID()
         {
-            throw new NotImplementedException();
+            return this.ID;
         }
     }
 }
