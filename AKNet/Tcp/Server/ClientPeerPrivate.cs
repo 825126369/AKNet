@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Server
 		private TcpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 		private string Name = string.Empty;
-
+        private uint ID = 0;
         public ClientPeerPrivate(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
@@ -182,6 +182,16 @@ namespace AKNet.Tcp.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return this.ID;
         }
     }
 }

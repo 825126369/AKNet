@@ -28,6 +28,7 @@ namespace AKNet.Tcp.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
+        private uint ID = 0;
         internal readonly Config mConfig = new Config();
         public ClientPeer()
         {
@@ -276,6 +277,15 @@ namespace AKNet.Tcp.Client
             return this.Name;
         }
 
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return this.ID;
+        }
     }
 }
 

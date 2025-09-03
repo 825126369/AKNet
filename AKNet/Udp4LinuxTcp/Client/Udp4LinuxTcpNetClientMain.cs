@@ -133,6 +133,16 @@ namespace AKNet.Udp4LinuxTcp.Client
             return mNetClientPeer.GetName();
         }
 
+        public void SetID(uint id)
+        {
+            mNetClientPeer.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mNetClientPeer.GetID();
+        }
+
     }
 }
 

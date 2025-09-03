@@ -29,6 +29,7 @@ namespace AKNet.Quic.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
+        private uint ID = 0;
 
         public ClientPeer()
         {
@@ -275,6 +276,16 @@ namespace AKNet.Quic.Client
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public uint GetID()
+        {
+            throw new NotImplementedException();
         }
     }
 }

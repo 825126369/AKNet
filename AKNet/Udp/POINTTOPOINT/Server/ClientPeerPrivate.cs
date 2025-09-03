@@ -24,6 +24,7 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private UdpServer mNetServer;
         private string Name = string.Empty;
+        private uint ID = 0;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
 
@@ -170,6 +171,16 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return this.ID;
         }
 
         public void ResetSendHeartBeatCdTime()

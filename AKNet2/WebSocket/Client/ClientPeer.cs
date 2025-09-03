@@ -29,6 +29,8 @@ namespace AKNet.WebSocket.Client
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
+        private uint ID = 0;
+
         public ClientPeer()
         {
             NetLog.Init();
@@ -274,6 +276,16 @@ namespace AKNet.WebSocket.Client
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return this.ID;
         }
     }
 }

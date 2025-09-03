@@ -115,6 +115,16 @@ namespace AKNet.Udp.POINTTOPOINT.Server
         {
             return mInstance.GetName();
         }
+
+        public void SetID(uint id)
+        {
+            mInstance.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mInstance.GetID();
+        }
     }
 
 }

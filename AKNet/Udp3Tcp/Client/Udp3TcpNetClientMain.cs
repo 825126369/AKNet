@@ -9,6 +9,7 @@
 using AKNet.Common;
 using System;
 using System.Net;
+using System.Xml.Linq;
 
 namespace AKNet.Udp3Tcp.Client
 {
@@ -124,6 +125,16 @@ namespace AKNet.Udp3Tcp.Client
         public string GetName()
         {
             return mNetClientPeer.GetName();
+        }
+
+        public void SetID(uint id)
+        {
+            mNetClientPeer.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mNetClientPeer.GetID();
         }
     }
 }

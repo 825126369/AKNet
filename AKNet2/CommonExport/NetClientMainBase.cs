@@ -138,5 +138,15 @@ namespace AKNet.Common
         {
             return mInterface.GetName();
         }
+
+        public void SetID(uint id)
+        {
+            mInterface.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mInterface.GetID();
+        }
     }
 }

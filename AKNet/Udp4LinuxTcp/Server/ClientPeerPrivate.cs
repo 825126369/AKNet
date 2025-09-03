@@ -26,6 +26,7 @@ namespace AKNet.Udp4LinuxTcp.Server
         private UdpServer mNetServer;
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
+        private uint ID = 0;
 
         public ClientPeerPrivate(UdpServer mNetServer)
         {
@@ -180,6 +181,16 @@ namespace AKNet.Udp4LinuxTcp.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return this.ID;
         }
     }
 }

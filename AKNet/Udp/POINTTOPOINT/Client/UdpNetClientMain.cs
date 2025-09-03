@@ -132,6 +132,16 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         {
             return mNetClientPeer.GetName();
         }
+
+        public void SetID(uint id)
+        {
+            mNetClientPeer.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mNetClientPeer.GetID();
+        }
     }
 }
 

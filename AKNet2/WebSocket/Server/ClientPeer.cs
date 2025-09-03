@@ -25,6 +25,7 @@ namespace AKNet.WebSocket.Server
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		private TcpServer mNetServer;
 		private string Name = string.Empty;
+        private uint ID = 0;
         private bool b_SOCKET_PEER_STATE_Changed = false;
 
         public ClientPeer(TcpServer mNetServer)
@@ -175,6 +176,16 @@ namespace AKNet.WebSocket.Server
         public string GetName()
         {
             return this.Name;
+        }
+
+        public void SetID(uint id)
+        {
+            this.ID = id;
+        }
+
+        public uint GetID()
+        {
+            return this.ID;
         }
 
         public Config GetConfig()
