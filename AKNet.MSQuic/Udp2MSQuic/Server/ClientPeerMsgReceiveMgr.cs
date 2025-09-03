@@ -41,10 +41,10 @@ namespace AKNet.Udp2MSQuic.Server
 						mClientPeer.ReceiveHeartBeat();
 					}
 
-					if (nPackageCount > 100)
-					{
-						NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
-					}
+					//if (nPackageCount > 100)
+					//{
+					//	//NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
+					//}
 
 					break;
 				default:
