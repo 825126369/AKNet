@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace MSQuic1
 {
@@ -561,6 +562,7 @@ namespace MSQuic1
             return NewDataQueued;
         }
 
+        //更新计时器
         static void QuicLossDetectionUpdateTimer(QUIC_LOSS_DETECTION LossDetection, bool ExecuteImmediatelyIfNecessary)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -574,6 +576,8 @@ namespace MSQuic1
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
             if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
             {
+                //NetLog.Log("QuicLossDetectionUpdateTimer 取消计时器");
+                // ACK 已经确认了所有包，那么我们就停止运行计时器
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
                 return;
             }
@@ -581,6 +585,8 @@ namespace MSQuic1
             QUIC_PATH Path = Connection.Paths[0];
             if (!Path.IsPeerValidated && Path.Allowance < QUIC_MIN_SEND_ALLOWANCE)
             {
+                //当连接处于“反放大限制”（anti-amplification limit）状态，
+                //且没有足够的 Allowance 来发送任何数据时，主动禁用发送相关的定时器（如 PTO、Probe Timer）。
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
                 return;
             }
@@ -609,7 +615,7 @@ namespace MSQuic1
                 TimeFires = LossDetection.TimeOfLastPacketSent + QuicLossDetectionComputeProbeTimeout(LossDetection, Path, 1 << LossDetection.ProbeCount);
             }
 
-            long Delay;
+            long Delay; //微妙 us
             if (CxPlatTimeAtOrBefore64(TimeFires, TimeNow))
             {
                 Delay = 0;
@@ -636,6 +642,7 @@ namespace MSQuic1
                 }
             }
 
+            NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, Delay);
             if (Delay == 0 && ExecuteImmediatelyIfNecessary)
             {
                 QuicLossDetectionProcessTimerOperation(LossDetection);
@@ -646,8 +653,10 @@ namespace MSQuic1
             }
         }
 
+        //这个是 定时器 触发的 方法
         static void QuicLossDetectionProcessTimerOperation(QUIC_LOSS_DETECTION LossDetection)
         {
+            NetLog.Log("QuicLossDetectionProcessTimerOperation: ");
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
             if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
@@ -662,6 +671,7 @@ namespace MSQuic1
             }
             else
             {
+                //这里的话就是 处理丢包
                 if (!QuicLossDetectionDetectAndHandleLostPackets(LossDetection, TimeNow))
                 {
                     QuicLossDetectionScheduleProbe(LossDetection);
@@ -696,6 +706,7 @@ namespace MSQuic1
 
             if (LossDetection.LostPackets != null)
             {
+                //当一个数据包发送后超过 2*PTO 时间仍未确认，且已被标记为“丢失”，就可以认为它非常“陈旧”，可以被安全地清理。
                 long TwoPto = QuicLossDetectionComputeProbeTimeout(LossDetection, Connection.Paths[0], 2);
                 while ((Packet = LossDetection.LostPackets) != null && Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeDiff(Packet.SentTime, TimeNow) > TwoPto)
                 {
@@ -818,11 +829,13 @@ namespace MSQuic1
             return LostRetransmittableBytes > 0;
         }
 
+        //这个结构体包含了丢包检测机制所需的所有状态信息，其中 SentPackets 是一个链表，按发送时间顺序（从旧到新）链接了所有尚未被确认的数据包元数据。
         static QUIC_SENT_PACKET_METADATA QuicLossDetectionOldestOutstandingPacket(QUIC_LOSS_DETECTION LossDetection)
         {
             QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
             while (Packet != null && !Packet.Flags.IsAckEliciting)
             {
+                //循环条件：如果当前数据包存在 (Packet != NULL) 并且 它不需要ACK确认 (!IsAckEliciting)，则继续循环。
                 Packet = Packet.Next;
             }
             return Packet;
@@ -834,7 +847,7 @@ namespace MSQuic1
             LossDetection.ProbeCount++;
 
             int NumPackets = 2;
-            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets);
+            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets);//设置紧急包豁免数量
             QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_PROBE);
             Connection.Send.TailLossProbeNeeded = true;
 
@@ -869,8 +882,10 @@ namespace MSQuic1
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection)
         {
+#if DEBUG
             int nLostCount = 0;
             int nWaitSendCount = 0;
             int ackNeedCount = 0;
@@ -898,10 +913,13 @@ namespace MSQuic1
             //NetLog.Log($"PacketsInFlight: {LossDetection.PacketsInFlight}");
             //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}    {string.Join("-", mNumberList)}");
             //NetLog.Log($"LostPackets: {nLostCount}");
+#endif
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
         {
+#if DEBUG
             uint AckElicitingPackets = 0;
             QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
             while (Tail != null)
@@ -938,6 +956,7 @@ namespace MSQuic1
             {
                 NetLog.Assert(LossDetection.LostPackets == null);
             }
+#endif
         }
 
         static void QuicLossDetectionOnZeroRttRejected(QUIC_LOSS_DETECTION LossDetection)

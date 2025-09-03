@@ -647,6 +647,7 @@ namespace MSQuic1
             return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS;
         }
 
+        //因为内存或其他原因导致连接失败时，会重试连接
         static int QuicPacketEncodeRetryV1(uint Version, QUIC_SSBuffer DestCid, QUIC_SSBuffer SourceCid, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Token, QUIC_SSBuffer Buffer)
         {
             int RequiredBufferLength = MIN_RETRY_HEADER_LENGTH_V1() + DestCid.Length + SourceCid.Length + Token.Length + QUIC_RETRY_INTEGRITY_TAG_LENGTH_V1;

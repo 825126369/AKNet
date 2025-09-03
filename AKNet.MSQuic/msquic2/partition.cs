@@ -22,7 +22,10 @@ namespace MSQuic2
         public CXPLAT_HASH ResetTokenHash;
         public readonly object ResetTokenLock = new object();
         public readonly object StatelessRetryKeysLock = new object();
-        public readonly QUIC_RETRY_KEY[] StatelessRetryKeys = new QUIC_RETRY_KEY[2];
+        public readonly QUIC_RETRY_KEY[] StatelessRetryKeys = new QUIC_RETRY_KEY[2]
+        {
+            new QUIC_RETRY_KEY(), new QUIC_RETRY_KEY()
+        };
 
         public readonly CXPLAT_POOL<QUIC_CONNECTION> ConnectionPool = new CXPLAT_POOL<QUIC_CONNECTION>();
         public readonly CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> TransportParamPool = new CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS>();
@@ -94,10 +97,6 @@ namespace MSQuic2
         {
             NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
             Interlocked.Add(ref Partition.PerfCounters[(int)Type], Value);
-            if (Type == QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH)
-            {
-                //NetLog.LogError($"QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH: {Partition.Processor}, {Partition.PerfCounters[(int)Type]}");
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

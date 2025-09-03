@@ -164,10 +164,12 @@ namespace MSQuic2
         }
     }
 
+    //防止DOS的重试包
     internal class QUIC_RETRY_PACKET_V1
     {
-        public byte UNUSED; //4位
+        public const int sizeof_Length = 6;
 
+        public byte UNUSED; //4位
         //表示这个长头部的类型。
         //对于 Retry 包，该字段应为：
         //Type == 0b11 （二进制）
@@ -483,7 +485,7 @@ namespace MSQuic2
             uint Key = 0;
             int Offset = 0;
             CxPlatToeplitzHashComputeAddr(MsQuicLib.ToeplitzHash, RemoteAddress, out Key, out Offset);
-            if (RemoteCid.Length != 0)
+            if (!RemoteCid.IsEmpty)
             {
                 Key ^= CxPlatToeplitzHashCompute(MsQuicLib.ToeplitzHash, Offset, RemoteCid.GetSpan());
             }
@@ -637,7 +639,7 @@ namespace MSQuic2
 
         static int MIN_RETRY_HEADER_LENGTH_V1()
         {
-            return sizeof_QUIC_RETRY_PACKET_V1 + sizeof(byte);
+            return QUIC_RETRY_PACKET_V1.sizeof_Length + sizeof(byte);
         }
 
         static int QuicPacketMaxBufferSizeForRetryV1()
@@ -655,8 +657,6 @@ namespace MSQuic2
             }
 
             QUIC_RETRY_PACKET_V1 Header = new QUIC_RETRY_PACKET_V1();
-            Header.WriteFrom(Buffer);
-                
             byte RandomBits = CxPlatRandom.RandomByte();
             Header.IsLongHeader = 1;
             Header.FixedBit = 1;
@@ -664,7 +664,7 @@ namespace MSQuic2
             Header.UNUSED = RandomBits;
             Header.Version = Version;
             Header.DestCidLength = (byte)DestCid.Length;
-            
+
             Buffer[0] = Header.GetFirstByte();
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Version);
             Buffer[5] = (byte)DestCid.Length;
@@ -673,21 +673,21 @@ namespace MSQuic2
             if (!DestCid.IsEmpty)
             {
                 DestCid.GetSpan().CopyTo(HeaderBuffer.GetSpan());
-                HeaderBuffer = HeaderBuffer.Slice(DestCid.Length);
+                HeaderBuffer += DestCid.Length;
             }
 
             HeaderBuffer[0] = (byte)SourceCid.Length;
-            HeaderBuffer +=1;
+            HeaderBuffer += 1;
             if (!SourceCid.IsEmpty)
             {
                 SourceCid.GetSpan().CopyTo(HeaderBuffer.GetSpan());
-                HeaderBuffer = HeaderBuffer.Slice(SourceCid.Length);
+                HeaderBuffer += SourceCid.Length;
             }
 
             if (!Token.IsEmpty)
             {
                 Token.GetSpan().CopyTo(HeaderBuffer.GetSpan());
-                HeaderBuffer = HeaderBuffer.Slice(Token.Length);
+                HeaderBuffer += Token.Length;
             }
 
             QUIC_VERSION_INFO VersionInfo = null;
@@ -710,6 +710,10 @@ namespace MSQuic2
             return RequiredBufferLength;
         }
 
+        //在 QUIC 协议中，为了防止 DoS 攻击（拒绝服务攻击），服务器在收到客户端的初始连接请求（Initial packet）时，可能不会立即分配资源来建立连接。
+        //为了验证客户端的真实性，服务器可以发送一个 Stateless Retry 包，其中包含一个 token（称为 Retry Token），
+        //客户端收到后必须在下一次 Initial packet 中带上这个 token，以证明它确实收到了 Retry 包。
+        //为此，服务器需要生成一个 带签名的 token，并在客户端再次连接时验证该 token 的来源和完整性。
         static int QuicPacketGenerateRetryIntegrity(QUIC_VERSION_INFO Version, QUIC_SSBuffer OrigDestCid, QUIC_SSBuffer Buffer, ref QUIC_SSBuffer IntegrityField)
         {
             CXPLAT_SECRET Secret = new CXPLAT_SECRET();
@@ -726,8 +730,8 @@ namespace MSQuic2
             }
 
             int RetryPseudoPacketLength = sizeof(byte) + OrigDestCid.Length + Buffer.Length;
-            QUIC_SSBuffer RetryPseudoPacket = new byte[RetryPseudoPacketLength];
-            if (RetryPseudoPacket.IsEmpty)
+            byte[] RetryPseudoPacket = new byte[RetryPseudoPacketLength];
+            if (RetryPseudoPacket == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
                 goto Exit;
@@ -735,10 +739,11 @@ namespace MSQuic2
 
             QUIC_SSBuffer RetryPseudoPacketCursor = RetryPseudoPacket;
             RetryPseudoPacketCursor[0] = (byte)OrigDestCid.Length;
-            RetryPseudoPacketCursor += 1;
+            RetryPseudoPacketCursor +=1;
             OrigDestCid.GetSpan().CopyTo(RetryPseudoPacketCursor.GetSpan());
             RetryPseudoPacketCursor += OrigDestCid.Length;
             Buffer.GetSpan().CopyTo(RetryPseudoPacketCursor.GetSpan());
+
             Status = CxPlatEncrypt(
                     RetryIntegrityKey.PacketKey,
                     RetryIntegrityKey.Iv,
@@ -902,9 +907,8 @@ namespace MSQuic2
             Buffer[0] = Header.GetFirstByte();
             EndianBitConverter.SetBytes(Buffer.GetSpan(), 1, Header.Version);
             Buffer[5] = Header.DestCidLength;
-
-            int nOffset = 6;
-            QUIC_SSBuffer HeaderBuffer = Buffer.Slice(nOffset);
+                
+            QUIC_SSBuffer HeaderBuffer = Buffer.Slice(6);
             if (DestCid.Data.Length != 0)
             {
                 DestCid.Data.GetSpan().CopyTo(HeaderBuffer.GetSpan());

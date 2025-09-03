@@ -727,7 +727,7 @@ namespace MSQuic2
             }
             else
             {
-                NewConnection.SourceCids.Next = null;
+                CxPlatListInitializeHead(NewConnection.SourceCids);
                 QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
                 QuicConnRelease(NewConnection,  QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             }

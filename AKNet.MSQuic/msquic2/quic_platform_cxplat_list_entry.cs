@@ -8,7 +8,7 @@ namespace MSQuic2
         public CXPLAT_LIST_ENTRY Prev; //指向链表中当前节点的 [上一个] 节点。
     }
 
-    internal class CXPLAT_LIST_ENTRY<T> : CXPLAT_LIST_ENTRY
+    internal class CXPLAT_LIST_ENTRY<T>: CXPLAT_LIST_ENTRY
     {
         public readonly T value; //当前节点的值
         public CXPLAT_LIST_ENTRY(T value)
@@ -85,7 +85,7 @@ namespace MSQuic2
         static void CxPlatListEntryRemove(CXPLAT_LIST_ENTRY Entry)
         {
             EntryInQueueStateOk(Entry);
-
+            
             CXPLAT_LIST_ENTRY Next = Entry.Next;
             CXPLAT_LIST_ENTRY Prev = Entry.Prev;
             Prev.Next = Next;
