@@ -76,7 +76,7 @@ namespace MSQuic1
         public int StreamRecvWindowBidiLocalDefault;
         public int StreamRecvWindowBidiRemoteDefault;
         public int StreamRecvWindowUnidiDefault;
-        public uint StreamRecvBufferDefault;
+        public int StreamRecvBufferDefault;
         public uint ConnFlowControlWindow;
         public long MaxWorkerQueueDelayUs;
         public uint MaxStatelessOperations;

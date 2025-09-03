@@ -1,5 +1,6 @@
 ﻿using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace MSQuic1
@@ -155,7 +156,9 @@ namespace MSQuic1
         public readonly CXPLAT_LIST_ENTRY WaitingLink;
         public readonly CXPLAT_LIST_ENTRY ClosedLink;
         public readonly CXPLAT_LIST_ENTRY SendLink;
+#if DEBUG
         public readonly CXPLAT_LIST_ENTRY AllStreamsLink;
+#endif
         public QUIC_CONNECTION Connection;
         public ulong ID;
         public readonly QUIC_STREAM_FLAGS Flags = new QUIC_STREAM_FLAGS();
@@ -167,22 +170,36 @@ namespace MSQuic1
         public QUIC_SEND_REQUEST SendRequestsTail;
         public QUIC_SEND_REQUEST SendBookmark; //发送标签，指向下一个要发送的字节所在的请求
         public QUIC_SEND_REQUEST SendBufferBookmark; //发送Buffer标签， 指向第一个非缓冲（如 0-RTT）的发送请求
-        public int QueuedSendOffset;
+        public int QueuedSendOffset;//应用层已调用 Send() 提交，但尚未被发送引擎处理的数据的结束偏移量。
         public long Queued0Rtt;
         public long Sent0Rtt;
+
+        //流控是基于偏移量的，不是基于长度的
+        //发送端的一个核心流控（Flow Control）字段，表示当前允许发送的最大数据偏移量。
+        //默认 64KB
         public long MaxAllowedSendOffset;
         public int SendWindow;
         public int LastIdealSendBuffer;
+        //该流上已发送过的最大数据偏移量（exclusive）。
+        //它记录了“我已经发送了从偏移 0 到 MaxSentLength 的数据”，是流控、重传和发送调度的核心依据。
         public int MaxSentLength;
-        public long UnAckedOffset;
-        public long NextSendOffset;
+        public long UnAckedOffset; //已发送但尚未被确认的最小数据偏移量
+        public long NextSendOffset; //下一个要发送的数据的偏移量。
+
+        //含义：在恢复/重新发送（Recovery）阶段，下一个要重传的偏移量。
+        //等价于 “retransmission queue” 的读指针。
+        //用途：用于 丢包重传（PTO 或丢失检测触发）。
+        //指向第一个尚未重传的已丢失数据
         public long RecoveryNextOffset;
-        public long RecoveryEndOffset;
-        public int ReliableOffsetSend;
+        public long RecoveryEndOffset; //恢复阶段需要重传的数据的结束偏移量。
+        public int ReliableOffsetSend; //默认是0
 
         public int SendShutdownErrorCode;
         public int RecvShutdownErrorCode;
 
+        //用于存储和管理所有被 ACK 的数据包范围
+        //支持 稀疏、非连续的确认，符合 QUIC 协议设计。
+        //是 RTT 计算、丢包检测、拥塞控制 的基础数据源。
         public readonly QUIC_RANGE SparseAckRanges = new QUIC_RANGE();
         public ushort SendPriority;
         public long MaxAllowedRecvOffset;
@@ -217,7 +234,9 @@ namespace MSQuic1
             WaitingLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
             ClosedLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
             SendLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+#if DEBUG
             AllStreamsLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
+#endif
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_STREAM> GetEntry()
@@ -238,25 +257,36 @@ namespace MSQuic1
         {
             return this.mPool;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool RECOV_WINDOW_OPEN()
+        {
+            return RecoveryNextOffset < RecoveryEndOffset;
+        }
     }
 
     internal static partial class MSQuicFunc
     {
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_CLIENT(ulong ID)
         {
             return (ID & 1) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_SERVER(ulong ID)
         {
             return (ID & 1) == 1;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_BI_DIR(ulong ID)
         {
             return (ID & 2) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool STREAM_ID_IS_UNI_DIR(ulong ID)
         {
             return (ID & 2) == 2;
@@ -294,7 +324,7 @@ namespace MSQuic1
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
             Stream.Connection = Connection;
-            Stream.ID = uint.MaxValue;
+            Stream.ID = ulong.MaxValue;
             Stream.Flags.Unidirectional = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             Stream.Flags.Opened0Rtt = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_0_RTT);
             Stream.Flags.DelayIdFcUpdate = Flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_DELAY_ID_FC_UPDATES);
@@ -302,10 +332,11 @@ namespace MSQuic1
             Stream.Flags.SendEnabled = true;
             Stream.Flags.ReceiveEnabled = true;
             Stream.Flags.ReceiveMultiple = Connection.Settings.StreamMultiReceiveEnabled && !Stream.Flags.UseAppOwnedRecvBuffers;
-            Stream.RecvMaxLength = int.MaxValue;
+            Stream.RecvMaxLength = long.MaxValue;
             Stream.RefCount = 1;
             Stream.SendRequestsTail = Stream.SendRequests = null;
             Stream.SendPriority = (ushort)QUIC_STREAM_PRIORITY_DEFAULT;
+
             CxPlatRefInitialize(ref Stream.RefCount);
             QuicRangeInitialize(QUIC_MAX_RANGE_ALLOC_SIZE, Stream.SparseAckRanges);
 
@@ -315,7 +346,9 @@ namespace MSQuic1
             Stream.ReceiveCompleteOperation.FreeAfterProcess = false;
             Stream.ReceiveCompleteOperation.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_STRM_RECV_COMPLETE;
             Stream.ReceiveCompleteOperation.API_CALL.Context.STRM_RECV_COMPLETE.Stream = Stream;
-
+#if DEBUG
+            Stream.RefTypeCount[(int)QUIC_STREAM_REF.QUIC_STREAM_REF_APP] = 1;
+#endif
             if (Stream.Flags.Unidirectional)
             {
                 if (!OpenedRemotely)
@@ -333,7 +366,7 @@ namespace MSQuic1
                 }
             }
 
-            int InitialRecvBufferLength = (int)Connection.Settings.StreamRecvBufferDefault;
+            int InitialRecvBufferLength = Connection.Settings.StreamRecvBufferDefault;
             QUIC_RECV_BUF_MODE RecvBufferMode = QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_CIRCULAR;
             if (Stream.Flags.UseAppOwnedRecvBuffers)
             {
@@ -365,7 +398,7 @@ namespace MSQuic1
             Status = QuicRecvBufferInitialize(
                     Stream.RecvBuffer,
                     InitialRecvBufferLength,
-                    (int)FlowControlWindowSize,
+                    FlowControlWindowSize,
                     RecvBufferMode,
                     PreallocatedRecvChunk);
 
@@ -383,6 +416,21 @@ namespace MSQuic1
             Stream = null;
             PreallocatedRecvChunk = null;
         Exit:
+            if (Stream != null)
+            {
+#if DEBUG
+                CxPlatDispatchLockAcquire(Connection.Streams.AllStreamsLock);
+                CxPlatListEntryRemove(Stream.AllStreamsLink);
+                CxPlatDispatchLockRelease(Connection.Streams.AllStreamsLock);
+#endif
+                QuicPerfCounterDecrement(Connection.Partition,  QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
+                Stream.Flags.Freed = true;
+                Stream.GetPool().CxPlatPoolFree(Stream);
+            }
+            if (PreallocatedRecvChunk != null)
+            {
+                PreallocatedRecvChunk.GetPool().CxPlatPoolFree(PreallocatedRecvChunk);
+            }
             return Status;
         }
 
@@ -702,16 +750,6 @@ namespace MSQuic1
                     QuicStreamSetReleaseStream(Stream.Connection.Streams, Stream);
                 }
             }
-        }
-
-        static bool RECOV_WINDOW_OPEN(QUIC_STREAM S)
-        {
-            return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
-        }
-
-        static bool RECOV_WINDOW_OPEN(QUIC_CRYPTO S)
-        {
-            return ((S).RecoveryNextOffset < (S).RecoveryEndOffset);
         }
 
         static bool QuicStreamAddOutFlowBlockedReason(QUIC_STREAM Stream, uint Reason)

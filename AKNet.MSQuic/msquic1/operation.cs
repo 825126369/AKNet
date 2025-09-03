@@ -39,11 +39,17 @@ namespace MSQuic1
 
     internal enum QUIC_CONN_TIMER_TYPE
     {
+        //用于控制数据包的发送速率，避免突发发送导致网络拥塞。Pacing 定时器确保数据包以更平滑、更均匀的间隔发送，有助于提高网络效率和公平性。
         QUIC_CONN_TIMER_PACING,
+        //控制接收方发送 ACK（确认）的延迟时间。QUIC 允许接收方延迟发送 ACK 以减少小数据包的数量，提高网络效率。该定时器用于在延迟超时后强制发送 ACK。
         QUIC_CONN_TIMER_ACK_DELAY,
+        //用于检测数据包是否丢失。QUIC 使用基于时间的机制来判断哪些数据包可能已经丢失，从而触发重传。这个定时器是 QUIC 拥塞控制和可靠性机制的核心部分。
         QUIC_CONN_TIMER_LOSS_DETECTION,
+        //在长时间空闲但连接仍需保持时，定期发送保持连接的探测包（keep-alive packets），以防止中间 NAT 或防火墙关闭连接。
         QUIC_CONN_TIMER_KEEP_ALIVE,
+        //用于管理连接的空闲超时。如果在指定时间内没有任何活动（包括数据和 keep-alive），连接将被关闭。该定时器用于检测和处理长时间无活动的连接。
         QUIC_CONN_TIMER_IDLE,
+        //在连接关闭过程中使用，确保关闭过程（如发送关闭帧、等待对端确认等）在合理时间内完成，避免资源长时间占用。
         QUIC_CONN_TIMER_SHUTDOWN,
         QUIC_CONN_TIMER_COUNT
     }
@@ -106,7 +112,7 @@ namespace MSQuic1
         }
     }
 
-    internal class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>
+    internal unsafe class QUIC_OPERATION:CXPLAT_POOL_Interface<QUIC_OPERATION>
     {
         public CXPLAT_POOL<QUIC_OPERATION> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_OPERATION> POOL_ENTRY = null;
@@ -141,7 +147,17 @@ namespace MSQuic1
 
         public void Reset()
         {
+            FreeAfterProcess = false;
 
+            INITIALIZE.Reset();
+            API_CALL.Reset();
+            FLUSH_RECEIVE.Reset();
+            UNREACHABLE.Reset();
+            FLUSH_STREAM_RECEIVE.Reset();
+            FLUSH_SEND.Reset();
+            TIMER_EXPIRED.Reset();
+            STATELESS.Reset();
+            ROUTE.Reset();
         }
 
         public void SetPool(CXPLAT_POOL<QUIC_OPERATION> mPool)
@@ -151,41 +167,92 @@ namespace MSQuic1
 
         public struct INITIALIZE_DATA
         {
-            
+            public void Reset()
+            {
+
+            }
         }
         public struct API_CALL_DATA
         {
             public QUIC_API_CONTEXT Context;
+
+            public void Reset()
+            {
+                Context = null;
+            }
         }
         public struct FLUSH_RECEIVE_DATA
         {
-            
+            public void Reset()
+            {
+                
+            }
         }
         public struct UNREACHABLE_DATA
         {
             public QUIC_ADDR RemoteAddress;
+
+            public void Reset()
+            {
+                RemoteAddress = null;
+            }
         }
         public struct FLUSH_STREAM_RECEIVE_DATA
         {
             public QUIC_STREAM Stream;
+            public void Reset()
+            {
+                Stream = null;
+            }
         }
+
         public struct FLUSH_SEND_DATA
         {
-            
+            public void Reset()
+            {
+                
+            }
         }
         public struct TIMER_EXPIRED_DATA
         {
             public QUIC_CONN_TIMER_TYPE Type;
+            public void Reset()
+            {
+                
+            }
         }
         public struct STATELESS_DATA
         {
             public QUIC_STATELESS_CONTEXT Context;
+
+            public void Reset()
+            {
+                Context = null;
+            }
         }
         public struct ROUTE_DATA
         {
-            public byte[] PhysicalAddress;
+            private byte[] m_PhysicalAddress;
             public byte PathId;
             public bool Succeeded;
+
+            public byte[] PhysicalAddress 
+            {
+                get
+                {
+                    if(m_PhysicalAddress == null)
+                    {
+                        m_PhysicalAddress = new byte[6];
+                    }
+                    return m_PhysicalAddress;
+                }
+            }
+
+            public void Reset()
+            {
+                PathId = 0;
+                Succeeded = false;
+            }
         }
     };
 
@@ -391,6 +458,9 @@ namespace MSQuic1
         {
             bool StartProcessing;
             CxPlatDispatchLockAcquire(OperQ.Lock);
+#if DEBUG
+            NetLog.Assert(Oper.Link.Next == null);
+#endif
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
 
             CxPlatListInsertMiddle(OperQ.List, OperQ.PriorityTail, Oper.Link);
@@ -512,6 +582,11 @@ namespace MSQuic1
             bool HasPriorityWork = OperQ.List != OperQ.PriorityTail;
             CxPlatDispatchLockRelease(OperQ.Lock);
             return HasPriorityWork;
+        }
+
+        static QUIC_OPERATION QuicConnAllocOperation(QUIC_CONNECTION Connection, QUIC_OPERATION_TYPE Type)
+        {
+            return QuicOperationAlloc(Connection.Partition, Type);
         }
 
         static QUIC_OPERATION QuicOperationAlloc(QUIC_PARTITION Partition, QUIC_OPERATION_TYPE Type)

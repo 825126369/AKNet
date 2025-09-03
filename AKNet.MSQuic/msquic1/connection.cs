@@ -51,10 +51,7 @@ namespace MSQuic1
         public bool LocalAddressSet;
         public bool RemoteAddressSet;
         public bool PeerTransportParameterValid;
-
-        //UpdateWorker 表示当前连接是否需要被调度到一个新的工作线程（worker thread）上执行。 
-        //这通常用于多线程环境中，当连接的状态或事件发生变化时，需要确保某些操作在正确的线程上下文中执行。
-        public bool UpdateWorker; 
+        public bool UpdateWorker;
         public bool ShutdownCompleteTimedOut;
         public bool ProcessShutdownComplete;
         public bool ShareBinding;
@@ -117,15 +114,15 @@ namespace MSQuic1
 
         public class Send_DATA
         {
-            public ulong TotalPackets;          //总共发送的 QUIC 数据包数量（注意：多个 QUIC 包可能被合并进一个 UDP 报文）
-            public ulong RetransmittablePackets; //可以重传的数据包数（即包含需要可靠传输的数据，如 STREAM、ACK 等帧）
-            public ulong SuspectedLostPackets; //被怀疑丢失的数据包数量（基于 RTT 和 ACK 判断）
-            public ulong SpuriousLostPackets;   //被误判为丢失但后来确认成功接收的数据包数（即“虚假丢包”）
-            public ulong TotalBytes;            // Sum of UDP payloads
-            public ulong TotalStreamBytes;      // Sum of stream payloads
-            public uint CongestionCount; //遇到拥塞事件的次数（比如因丢包而触发拥塞控制）
-            public uint EcnCongestionCount; //使用 ECN（显式拥塞通知）检测到的拥塞次数
-            public uint PersistentCongestionCount; //持续性拥塞发生的次数（当多个路径/RTT周期内持续发生丢包时判定为“持久拥塞”
+            public long TotalPackets;          //总共发送的 QUIC 数据包数量（注意：多个 QUIC 包可能被合并进一个 UDP 报文）
+            public long RetransmittablePackets; //可以重传的数据包数（即包含需要可靠传输的数据，如 STREAM、ACK 等帧）
+            public long SuspectedLostPackets; //被怀疑丢失的数据包数量（基于 RTT 和 ACK 判断）
+            public long SpuriousLostPackets;   //被误判为丢失但后来确认成功接收的数据包数（即“虚假丢包”）
+            public long TotalBytes;            // Sum of UDP payloads
+            public long TotalStreamBytes;      // Sum of stream payloads
+            public int CongestionCount; //遇到拥塞事件的次数（比如因丢包而触发拥塞控制）
+            public int EcnCongestionCount; //使用 ECN（显式拥塞通知）检测到的拥塞次数
+            public int PersistentCongestionCount; //持续性拥塞发生的次数（当多个路径/RTT周期内持续发生丢包时判定为“持久拥塞”
         }
 
         public class Recv_DATA
@@ -173,11 +170,11 @@ namespace MSQuic1
         public byte SourceCidLimit;
         public int PathsCount;
         public int NextPathId;
-        public bool WorkerProcessing; //处理连接的Workr, 比如是否切换工作线程
+        public bool WorkerProcessing;
         public bool HasQueuedWork;
         public bool HasPriorityWork;
         
-        public byte OutFlowBlockedReasons; // Set of QUIC_FLOW_BLOCKED_* flags
+        public byte OutFlowBlockedReasons; //用于精确追踪发送方（outbound flow）被阻塞的原因。
         public byte AckDelayExponent;
         public byte PacketTolerance;
         public int PeerPacketTolerance;
@@ -236,6 +233,8 @@ namespace MSQuic1
         public uint OriginalQuicVersion;
         public ushort KeepAlivePadding;
         public BlockedTimings_DATA BlockedTimings;
+        
+        public long LastCloseResponseTimeUs; //“记录最后一次将连接关闭（或应用关闭）响应加入发送队列的时间戳（微秒）。”
 
         public struct BlockedTimings_DATA
         {
@@ -307,6 +306,7 @@ namespace MSQuic1
 #if DEBUG
             NetLog.Assert(Connection.RefTypeCount[(int)Ref] > 0);
             ushort result = (ushort)Interlocked.Decrement(ref Connection.RefTypeCount[(int)Ref]);
+            NetLog.Assert(result != 0xFFFF);
 #endif
             NetLog.Assert(Connection.RefCount > 0);
             if (Interlocked.Decrement(ref Connection.RefCount) == 0)
@@ -984,6 +984,32 @@ namespace MSQuic1
             {
                 if (Connection.ExpirationTimes[Type] <= TimeNow)
                 {
+                    //这里计时器 触发了事件
+                    if(Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_PACING)
+                    {
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_PACING);
+                    }
+                    else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY)
+                    {
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_ACK_DELAY);
+                    }
+                    else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION)
+                    {
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_LOSS_DETECTION);
+                    }
+                    else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_KEEP_ALIVE)
+                    {
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_KEEP_ALIVE);
+                    }
+                    else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_IDLE)
+                    {
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_IDLE);
+                    }
+                    else if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_SHUTDOWN)
+                    {
+                        NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.QUIC_PERF_COUNTER_TIMER_SHUTDOWN);
+                    }
+
                     Connection.ExpirationTimes[Type] = long.MaxValue;
                     if (Type == (int)QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_ACK_DELAY)
                     {
@@ -1469,6 +1495,8 @@ namespace MSQuic1
             }
 
             NetLog.Assert(Path.Binding == null);
+            QuicConnApplyNewSettings(Connection, false, Configuration.Settings);
+
             if (!Connection.State.RemoteAddressSet)
             {
                 NetLog.Assert(ServerName != null);
@@ -3563,6 +3591,15 @@ namespace MSQuic1
             bool Closed = Connection.State.ClosedLocally || Connection.State.ClosedRemotely;
             QUIC_SSBuffer Payload = Packet.AvailBuffer.Slice(Packet.HeaderLength, Packet.PayloadLength);
             long RecvTime = CxPlatTimeUs();
+
+            if (Closed && !Connection.State.ShutdownComplete)
+            {
+                if (RecvTime - Connection.LastCloseResponseTimeUs >= QUIC_CLOSING_RESPONSE_MIN_INTERVAL)
+                {
+                    QuicSendSetSendFlag(Connection.Send, Connection.State.AppClosed ? 
+                        QUIC_CONN_SEND_FLAG_APPLICATION_CLOSE : QUIC_CONN_SEND_FLAG_CONNECTION_CLOSE);
+                }
+            }
 
             if (QuicConnIsClient(Connection) && !Connection.State.GotFirstServerResponse)
             {

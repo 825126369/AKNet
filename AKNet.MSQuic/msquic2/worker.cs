@@ -205,10 +205,11 @@ namespace MSQuic2
                 QuicConnAddRef(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_WORKER);
                 CxPlatListInsertTail(Worker.Connections, Connection.WorkerLink);
                 ConnectionQueued = true;
-                Connection.HasQueuedWork = true;
+                //Connection.HasQueuedWork = true; //1位置
             }
-            CxPlatDispatchLockRelease(Worker.Lock);
 
+            Connection.HasQueuedWork = true; //这个如果放到 1位置，就会导致心跳超时，原因吗? 待查
+            CxPlatDispatchLockRelease(Worker.Lock);
             if (ConnectionQueued)
             {
                 if (WakeWorkerThread)

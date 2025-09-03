@@ -385,7 +385,7 @@ namespace MSQuic1
 
             if (End <= Stream.UnAckedOffset)
             {
-                goto Done;
+                goto Done; //这个Frame已经被确认了，无须再次确认
             }
             else if (Start < Stream.UnAckedOffset)
             {
@@ -394,25 +394,29 @@ namespace MSQuic1
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)End)
+            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).Count > 0 && Sack.Low < (ulong)End)
             {
-                if (Start < (long)Sack.Low + Sack.Count)
+                //在已经被确认的ACK稀疏列表里，查找到还没被确认的集合
+                if (Start < (long)Sack.End)
                 {
                     if (Start >= (long)Sack.Low)
                     {
-                        if (End <= (long)Sack.Low + Sack.Count)
+                        if (End <= (long)Sack.End)
                         {
-                            goto Done;
+                            goto Done; //已经被确认了
                         }
                         else
                         {
-                            Start = (long)Sack.Low + Sack.Count;
+                            Start = (long)Sack.End;
                         }
-
                     }
-                    else if (End <= (long)Sack.Low + Sack.Count)
+                    else if (End <= (long)Sack.End)
                     {
                         End = (long)Sack.Low;
+                    }
+                    else
+                    {
+
                     }
                 }
             }
@@ -456,12 +460,11 @@ namespace MSQuic1
                 }
 
                 bool DataQueued = QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, AddSendFlags, false);
-
                 QuicStreamSendDumpState(Stream);
                 QuicStreamValidateRecoveryState(Stream);
                 return DataQueued;
             }
-
+            
             return false;
         }
 
@@ -483,7 +486,7 @@ namespace MSQuic1
                 return true;
             }
 
-            if (RECOV_WINDOW_OPEN(Stream))
+            if (Stream.RECOV_WINDOW_OPEN())
             {
                 return true;
             }
@@ -526,13 +529,13 @@ namespace MSQuic1
 
         static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
         {
-            if (RECOV_WINDOW_OPEN(Stream))
+            if (Stream.RECOV_WINDOW_OPEN())
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
                 while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Stream.RecoveryNextOffset)
                 {
-                    NetLog.Assert((long)Sack.Low + Sack.Count <= Stream.RecoveryNextOffset);
+                    NetLog.Assert((long)Sack.End <= Stream.RecoveryNextOffset);
                 }
             }
         }
@@ -609,7 +612,7 @@ namespace MSQuic1
                 }
             }
 
-            //用于标识当前流的发送操作已经被中止（aborted）。
+            //用于标识当前流的发送操作已经被中止（aborted）。不可靠
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_SEND_ABORT))
             {
                 QUIC_RESET_STREAM_EX Frame = new QUIC_RESET_STREAM_EX() {
@@ -634,7 +637,7 @@ namespace MSQuic1
                 }
             }
 
-            //内部使用的发送标志（send flag），用于表示当前流的发送操作已经被可靠地中止（reliably aborted）
+            //内部使用的发送标志（send flag），用于表示当前流的发送操作【已经被可靠】地中止（reliably aborted）
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT))
             {
                 QUIC_RELIABLE_RESET_STREAM_EX Frame = new QUIC_RELIABLE_RESET_STREAM_EX() {
@@ -694,7 +697,7 @@ namespace MSQuic1
                     IsInitial,
                     Builder.Metadata,
                     ref mBuf);
-                    
+                
                 if (mBuf.Offset > Builder.DatagramLength)
                 {
                     Builder.SetDatagramOffset(mBuf);
@@ -752,9 +755,8 @@ namespace MSQuic1
             {
                 long Left;
                 long Right;
-
                 bool Recovery;
-                if (RECOV_WINDOW_OPEN(Stream))
+                if (Stream.RECOV_WINDOW_OPEN())
                 {
                     Left = (int)Stream.RecoveryNextOffset;
                     Recovery = true;
@@ -764,24 +766,21 @@ namespace MSQuic1
                     Left = (int)Stream.NextSendOffset;
                     Recovery = false;
                 }
-                Right = Left + Buffer.Length;
+                Right = Left + Buffer.Length; //刚开始设置 Right 为理想的最大值
 
                 if (Recovery && Right > Stream.RecoveryEndOffset && Stream.RecoveryEndOffset != Stream.NextSendOffset)
                 {
                     Right = Stream.RecoveryEndOffset;
                 }
 
-                QUIC_SUBRANGE Sack;
-                if (Left == Stream.MaxSentLength)
+                QUIC_SUBRANGE Sack = QUIC_SUBRANGE.Empty;
+                if (Left != Stream.MaxSentLength)
                 {
-                    Sack = QUIC_SUBRANGE.Empty;
-                }
-                else
-                {
+                    //在发送数据时，跳过已经被对端确认（SACKed）的数据范围，避免重复发送。
                     int i = 0;
                     while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Left)
                     {
-                        NetLog.Assert((long)Sack.Low + Sack.Count <= Left);
+                        NetLog.Assert((long)Sack.End <= Left);
                     }
                 }
 
@@ -794,17 +793,20 @@ namespace MSQuic1
                 }
                 else
                 {
-                    if (Right > Stream.QueuedSendOffset)
+                    if (Right > Stream.QueuedSendOffset) //这个偏移是最大值
                     {
                         Right = Stream.QueuedSendOffset;
                     }
                 }
 
+                //流级的流量控制，为啥不是 Right - Left
+                //流控是基于偏移量的，不是基于长度的
                 if (Right > Stream.MaxAllowedSendOffset)
                 {
                     Right = Stream.MaxAllowedSendOffset;
                 }
 
+                //连接级的流量控制
                 long MaxConnFlowControlOffset = Stream.MaxSentLength + (Send.PeerMaxData - Send.OrderedStreamBytesSent);
                 if (Right > MaxConnFlowControlOffset)
                 {
@@ -813,7 +815,9 @@ namespace MSQuic1
 
                 NetLog.Assert(Right >= Left);
                 int FramePayloadBytes = (int)(Right - Left);
-                QuicStreamWriteOneFrame(Stream, ExplicitDataLength,
+                QuicStreamWriteOneFrame(
+                    Stream, 
+                    ExplicitDataLength,
                     (int)Left,
                     ref FramePayloadBytes,
                     ref Buffer,
@@ -928,10 +932,10 @@ namespace MSQuic1
                     NetLog.Assert(Frame.Length > 0);
                 }
                 
-                QUIC_SSBuffer mTempBuf = Buffer + HeaderLength;
-                QuicStreamCopyFromSendRequests(Stream, Offset, mTempBuf.Slice(0, Frame.Length));
-                Frame.Data.SetData(mTempBuf);
-                Stream.Connection.Stats.Send.TotalStreamBytes += (ulong)Frame.Length;
+                Frame.Data.SetData(Buffer + HeaderLength);
+                //这里先编码Data，后面的话编码头部
+                QuicStreamCopyFromSendRequests(Stream, Offset, Frame.Data.Slice(0, Frame.Length));
+                Stream.Connection.Stats.Send.TotalStreamBytes += Frame.Length;
             }
 
             if (BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN) && Frame.Offset + Frame.Length == Stream.QueuedSendOffset)
@@ -941,7 +945,6 @@ namespace MSQuic1
             else if (Frame.Length == 0 && !BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_OPEN))
             {
                 FramePayloadBytes = 0;
-                Buffer.Length = 0;
                 return;
             }
 
@@ -983,10 +986,15 @@ namespace MSQuic1
             QUIC_SEND_REQUEST Req = null;
             if (Stream.SendBookmark != null && Stream.SendBookmark.StreamOffset <= Offset)
             {
+                //重传也可能走这
                 Req = Stream.SendBookmark;
             }
             else
             {
+                //重传的时候，Stream.SendBookmark.StreamOffset <= Offset 这个条件如果不满足，所以走这里
+                //如果调用者请求的是书签之前的字节（例如用于重传），则必须进行完整搜索。
+                //NetLog.Log("重传");
+                //重传也可能走这
                 Req = Stream.SendRequests;
             }
 
@@ -996,7 +1004,7 @@ namespace MSQuic1
                 NetLog.Assert(Req.Next != null);
                 Req = Req.Next;
             }
-            NetLog.Assert(Req != null);
+            NetLog.Assert(Req != null); //上面 选择了一个当前的 Request
 
             int CurIndex = 0;
             int CurOffset = Offset - (int)Req.StreamOffset;
@@ -1025,7 +1033,6 @@ namespace MSQuic1
                 }
 
                 CurOffset = 0;
-
                 //找到下一个非零长度的数据块进行发送。
                 do
                 {
@@ -1043,7 +1050,7 @@ namespace MSQuic1
 
         static bool QuicStreamHasPendingStreamData(QUIC_STREAM Stream)
         {
-            return RECOV_WINDOW_OPEN(Stream) || (Stream.NextSendOffset < Stream.QueuedSendOffset);
+            return Stream.RECOV_WINDOW_OPEN() || (Stream.NextSendOffset < Stream.QueuedSendOffset);
         }
 
         static void QuicStreamOnAck(QUIC_STREAM Stream, QUIC_SEND_PACKET_FLAGS PacketFlags, QUIC_SENT_FRAME_METADATA FrameMetadata)
@@ -1053,7 +1060,6 @@ namespace MSQuic1
 
             int FollowingOffset = Offset + Length;
             uint RemoveSendFlags = 0;
-
             NetLog.Assert(FollowingOffset <= Stream.QueuedSendOffset);
 
             if (PacketFlags.KeyType ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT && Stream.Sent0Rtt < FollowingOffset)

@@ -1,7 +1,6 @@
 ﻿using AKNet.Common;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace MSQuic1
@@ -33,9 +32,9 @@ namespace MSQuic1
         public long TimeOfLastPacketAcked;//最后一个被确认的数据包的接收时间（即本地收到 ACK 的时间）。
         public long TimeOfLastAckedPacketSent;//被确认的那个数据包最初发送的时间。
         public long AdjustedLastAckedTime; //经过调整后的最后确认时间（通常减去了 ACK 延迟）。
-        public ulong TotalBytesSent; //总共已发送的字节数。
+        public long TotalBytesSent; //总共已发送的字节数。
         public long TotalBytesAcked; //总共已被确认的字节数。
-        public ulong TotalBytesSentAtLastAck; //上次收到确认时已发送的总字节数。
+        public long TotalBytesSentAtLastAck; //上次收到确认时已发送的总字节数。
         public ulong LargestSentPacketNumber; //已发送的最大的 packet number。
         public QUIC_SENT_PACKET_METADATA SentPackets;
         public QUIC_SENT_PACKET_METADATA SentPacketsTail;
@@ -93,19 +92,18 @@ namespace MSQuic1
             return PtoUs;
         }
 
+        //丢弃包
         static void QuicLossDetectionDiscardPackets(QUIC_LOSS_DETECTION LossDetection, QUIC_PACKET_KEY_TYPE KeyType)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(KeyType);
-            QUIC_SENT_PACKET_METADATA PrevPacket;
-            QUIC_SENT_PACKET_METADATA Packet;
             int AckedRetransmittableBytes = 0;
             long TimeNow = CxPlatTimeUs();
 
             NetLog.Assert(KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
 
-            PrevPacket = null;
-            Packet = LossDetection.LostPackets;
+            QUIC_SENT_PACKET_METADATA PrevPacket = null;
+            QUIC_SENT_PACKET_METADATA Packet = LossDetection.LostPackets;
             while (Packet != null)
             {
                 QUIC_SENT_PACKET_METADATA NextPacket = Packet.Next;
@@ -186,8 +184,8 @@ namespace MSQuic1
             if (AckedRetransmittableBytes > 0)
             {
                 QUIC_PATH Path = Connection.Paths[0];
-
-                QUIC_ACK_EVENT AckEvent = new QUIC_ACK_EVENT() {
+                QUIC_ACK_EVENT AckEvent = new QUIC_ACK_EVENT() 
+                {
                     IsImplicit = true,
                     TimeNow = TimeNow,
                     LargestAck = LossDetection.LargestAck,
@@ -383,7 +381,7 @@ namespace MSQuic1
             NetLog.Assert(SentPacket.Flags.KeyType !=  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_0_RTT || SentPacket.Flags.IsAckEliciting);
 
             Connection.Stats.Send.TotalPackets++;
-            Connection.Stats.Send.TotalBytes += (ulong)TempSentPacket.PacketLength;
+            Connection.Stats.Send.TotalBytes += TempSentPacket.PacketLength;
             if (SentPacket.Flags.IsAckEliciting)
             {
                 if (LossDetection.PacketsInFlight == 0)
@@ -416,7 +414,7 @@ namespace MSQuic1
             }
 
             SentPacket.Flags.IsAppLimited = QuicCongestionControlIsAppLimited(Connection.CongestionControl);
-            LossDetection.TotalBytesSent += (ulong)TempSentPacket.PacketLength;
+            LossDetection.TotalBytesSent += TempSentPacket.PacketLength;
             SentPacket.TotalBytesSent = LossDetection.TotalBytesSent;
 
             SentPacket.Flags.HasLastAckedPacketInfo = false;
@@ -428,13 +426,17 @@ namespace MSQuic1
                 SentPacket.LastAckedPacketInfo.AckTime = LossDetection.TimeOfLastPacketAcked;
                 SentPacket.LastAckedPacketInfo.AdjustedAckTime = LossDetection.AdjustedLastAckedTime;
                 SentPacket.LastAckedPacketInfo.TotalBytesSent = LossDetection.TotalBytesSentAtLastAck;
-                SentPacket.LastAckedPacketInfo.TotalBytesAcked = (ulong)LossDetection.TotalBytesAcked;
+                SentPacket.LastAckedPacketInfo.TotalBytesAcked = LossDetection.TotalBytesAcked;
             }
             
             QuicLossValidate(LossDetection);
             //NetLog.Log($"等待确认 PacketNumber: {LossDetection.LargestSentPacketNumber}, {LossDetection.PacketsInFlight}");
         }
 
+        //这里 重传 包
+        //这个函数的主要任务是：
+        //遍历一个已丢失的数据包中携带的所有可重传帧，将它们重新提交给发送引擎（Send Buffer），并可选地释放原包内存。
+        //它不直接构造新数据包，而是“触发重传动作”，由上层（如 QuicSendGeneratePacket）负责实际打包。
         static bool QuicLossDetectionRetransmitFrames(QUIC_LOSS_DETECTION LossDetection, QUIC_SENT_PACKET_METADATA Packet, bool ReleasePacket)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -566,7 +568,6 @@ namespace MSQuic1
         static void QuicLossDetectionUpdateTimer(QUIC_LOSS_DETECTION LossDetection, bool ExecuteImmediatelyIfNecessary)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
-
             if (Connection.State.ClosedLocally || Connection.State.ClosedRemotely)
             {
                 QuicConnTimerCancel(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION);
@@ -574,7 +575,7 @@ namespace MSQuic1
             }
 
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
-            if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
+            if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
             {
                 //NetLog.Log("QuicLossDetectionUpdateTimer 取消计时器");
                 // ACK 已经确认了所有包，那么我们就停止运行计时器
@@ -602,7 +603,6 @@ namespace MSQuic1
                 TimeoutType =  QUIC_LOSS_TIMER_TYPE.LOSS_TIMER_RACK;
                 long RttUs = Math.Max(Path.SmoothedRtt, Path.LatestRttSample);
                 TimeFires = OldestPacket.SentTime + QUIC_TIME_REORDER_THRESHOLD(RttUs);
-
             }
             else if (!Path.GotFirstRttSample)
             {
@@ -643,6 +643,7 @@ namespace MSQuic1
             }
 
             NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, Delay);
+
             if (Delay == 0 && ExecuteImmediatelyIfNecessary)
             {
                 QuicLossDetectionProcessTimerOperation(LossDetection);

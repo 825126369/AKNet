@@ -23,8 +23,8 @@ namespace MSQuic1
 
     internal struct LAST_ACKED_PACKET_INFO
     {
-        public ulong TotalBytesSent;
-        public ulong TotalBytesAcked;
+        public long TotalBytesSent;
+        public long TotalBytesAcked;
         public long SentTime;
         public long AckTime;
         public long AdjustedAckTime;
@@ -39,7 +39,7 @@ namespace MSQuic1
         public QUIC_SENT_PACKET_METADATA Next;
         public ulong PacketId;
         public ulong PacketNumber;
-        public ulong TotalBytesSent;
+        public long TotalBytesSent;
         public long SentTime;
         public int PacketLength;
         public byte PathId;
