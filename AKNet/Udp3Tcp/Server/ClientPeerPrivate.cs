@@ -79,6 +79,7 @@ namespace AKNet.Udp3Tcp.Server
             mUdpCheckPool.Reset();
             mSocketMgr.Reset();
             this.Name = string.Empty;
+            this.ID = 0;
         }
 
         public void Release()

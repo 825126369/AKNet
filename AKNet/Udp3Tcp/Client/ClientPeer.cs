@@ -92,6 +92,7 @@ namespace AKNet.Udp3Tcp.Client
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
             this.Name = string.Empty;
+            this.ID = 0;
         }
 
         public void Release()

@@ -206,6 +206,7 @@ namespace AKNet.Udp1MSQuic.Client
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             this.Name = string.Empty;
+            this.ID = 0;
         }
 
 		public void Release()

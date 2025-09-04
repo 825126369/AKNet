@@ -147,7 +147,7 @@ namespace AKNet.WebSocket.Server
 				mSocketMgr.SendNetStream(mBufferSegment);
 			}
 		}
-		
+
 		public void Reset()
 		{
 			fSendHeartBeatTime = 0.0;
@@ -156,6 +156,7 @@ namespace AKNet.WebSocket.Server
 			mMsgReceiveMgr.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			this.Name = string.Empty;
+			this.ID = 0;
 		}
 
 		public void HandleConnectedSocket(Socket mSocket)

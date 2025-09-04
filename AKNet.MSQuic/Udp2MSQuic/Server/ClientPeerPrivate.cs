@@ -157,6 +157,7 @@ namespace AKNet.Udp2MSQuic.Server
 			mMsgReceiveMgr.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			this.Name = string.Empty;
+			this.ID = 0;
 		}
 
 		public void Release()

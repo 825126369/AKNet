@@ -80,6 +80,7 @@ namespace AKNet.Udp2Tcp.Server
             mUdpCheckPool.Reset();
             mSocketMgr.Reset();
             this.Name = string.Empty;
+            this.ID = 0;
         }
 
         public void Release()

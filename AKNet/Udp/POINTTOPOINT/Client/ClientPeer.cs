@@ -86,13 +86,14 @@ namespace AKNet.Udp.POINTTOPOINT.Client
         {
             return mSocketPeerState;
         }
-        
+
         public void Reset()
         {
             mSocketMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
             this.Name = string.Empty;
+            this.ID = 0;
         }
 
         public void Release()
