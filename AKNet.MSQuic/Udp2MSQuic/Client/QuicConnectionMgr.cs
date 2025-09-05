@@ -60,7 +60,6 @@ namespace AKNet.Udp2MSQuic.Client
                 //mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
                 StartProcessReceive();
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
             }
             catch (Exception e)
             {
@@ -95,6 +94,8 @@ namespace AKNet.Udp2MSQuic.Client
         private async void StartProcessReceive()
         {
             mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional).ConfigureAwait(false);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+
             try
             {
                 while (mQuicConnection != null)

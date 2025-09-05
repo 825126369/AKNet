@@ -289,11 +289,11 @@ namespace AKNet.Common
 
                 if (_exception != null)
                 {
-                    _finalTaskSource.SetException(_exception);
+                    _finalTaskSource?.SetException(_exception);
                 }
                 else
                 {
-                    _finalTaskSource.SetResult(true);
+                    _finalTaskSource?.SetResult(true);
                 }
 
                 exception = _exception;

@@ -8,9 +8,9 @@ namespace TestNetClient
 {
     public class NetHandler
     {
-        public const int nClientCount = 100;
-        public const int nSingleSendPackageCount = 100;
-        public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
+        public const int nClientCount = 30;
+        public const int nSingleSendPackageCount = 1;
+        public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 10000;
         public const double fFrameInternalTime = 0;
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
         int nReceivePackageCount = 0;
@@ -139,7 +139,7 @@ namespace TestNetClient
             nReceivePackageCount++;
 
             //这里是验证发的包都是自己发出去的包
-            NetLog.Assert(peer.GetName() == mdata.PeerName, $"{peer.GetName()} == {mdata.PeerName}");
+            NetLog.Assert(peer.GetName() == mdata.PeerName, $"{peer.GetName()}  {mdata.PeerName}");
 
             if (nReceivePackageCount % 1000 == 0)
             {
