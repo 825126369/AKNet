@@ -186,7 +186,7 @@ namespace MSQuic2
             this.mCqeBuffer = new byte[nRecvDatagramLength];
             this.mCqeMemory = mCqeBuffer;
             this.mCqeMemoryHandle = mCqeMemory.Pin();
-            _disposed = false;
+            this._disposed = false;
         }
 
         ~DATAPATH_RX_IO_BLOCK()
