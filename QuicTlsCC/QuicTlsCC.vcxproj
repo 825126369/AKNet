@@ -73,13 +73,15 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
-    <OutDir>x64\</OutDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
     <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
+    <IntDir>$(Platform)\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
-    <OutDir>x64</OutDir>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\obj\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
