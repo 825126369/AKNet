@@ -236,7 +236,7 @@ namespace MSQuic2
         }
     }
 
-    internal ref struct QUIC_SSBuffer
+    internal struct QUIC_SSBuffer
     {
         public int Offset;
         public int Length;
