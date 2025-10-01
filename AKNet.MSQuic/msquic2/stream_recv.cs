@@ -215,10 +215,7 @@ namespace MSQuic2
             QUIC_BUFFER[] RecvBuffers = Stream.RecvBuffers;
             for (int i = 0; i < RecvBuffers.Length; i++)
             {
-                if (RecvBuffers[i] == null)
-                {
-                    RecvBuffers[i] = new QUIC_BUFFER();
-                }
+                RecvBuffers[i].Reset();
             }
 
             bool FlushRecv = true;

@@ -116,7 +116,12 @@ namespace MSQuic2
 
         public Span<byte> GetSpan()
         {
-            return Buffer.AsSpan().Slice(Offset, Length);
+            if (Buffer != null)
+            {
+                return Buffer.AsSpan().Slice(Offset, Length);
+            }
+
+            return Span<byte>.Empty;
         }
 
         public void Reset()
