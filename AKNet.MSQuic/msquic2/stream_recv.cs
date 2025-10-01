@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using AKNet.Udp2MSQuic.Common;
 using System;
 using System.Threading;
 
@@ -211,9 +212,14 @@ namespace MSQuic2
                 return;
             }
 
-            QUIC_BUFFER[] StackRecvBuffers = new QUIC_BUFFER[3];
-            QUIC_BUFFER[] RecvBuffers = StackRecvBuffers;
-            int RecvBufferCount = StackRecvBuffers.Length;
+            QUIC_BUFFER[] RecvBuffers = Stream.RecvBuffers;
+            for (int i = 0; i < RecvBuffers.Length; i++)
+            {
+                if (RecvBuffers[i] == null)
+                {
+                    RecvBuffers[i] = new QUIC_BUFFER();
+                }
+            }
 
             bool FlushRecv = true;
             while (FlushRecv)
@@ -225,30 +231,28 @@ namespace MSQuic2
 
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
-                Event.RECEIVE.BufferCount = StackRecvBuffers.Length;
-                Event.RECEIVE.Buffers = StackRecvBuffers;
+                Event.RECEIVE.BufferCount = RecvBuffers.Length;
+                Event.RECEIVE.Buffers = RecvBuffers;
 
                 bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
                 if (DataAvailable)
                 {
                     int NumBuffersNeeded = QuicRecvBufferReadBufferNeededCount(Stream.RecvBuffer);
-                    if (NumBuffersNeeded > RecvBufferCount)
+                    if (NumBuffersNeeded > RecvBuffers.Length)
                     {
                         QUIC_BUFFER[] NewRecvBuffers = new QUIC_BUFFER[NumBuffersNeeded];
                         if (NewRecvBuffers != null)
                         {
                             RecvBuffers = NewRecvBuffers;
-                            RecvBufferCount = NumBuffersNeeded;
+                            for (int i = 0; i < RecvBuffers.Length; i++)
+                            {
+                                RecvBuffers[i] = new QUIC_BUFFER();
+                            }
                         }
                     }
 
                     Event.RECEIVE.Buffers = RecvBuffers;
-                    Event.RECEIVE.BufferCount = RecvBufferCount;
-
-                    for (int i = 0; i < RecvBufferCount; i++)
-                    {
-                        RecvBuffers[i] = new QUIC_BUFFER();
-                    }
+                    Event.RECEIVE.BufferCount = RecvBuffers.Length;
 
                     QuicRecvBufferRead(
                         Stream.RecvBuffer,
@@ -308,11 +312,6 @@ namespace MSQuic2
                 {
                     FlushRecv = QuicStreamReceiveComplete(Stream, (int)RecvCompletionLength);
                 }
-            }
-
-            if (RecvBuffers != StackRecvBuffers)
-            {
-                
             }
         }
 

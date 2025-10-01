@@ -216,6 +216,9 @@ namespace MSQuic2
         public readonly QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage = new QUIC_API_CONTEXT();
         public BlockedTimings_DATA BlockedTimings;
 
+        //xuke 自定义
+        public QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3];
+
         public struct BlockedTimings_DATA
         {
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER StreamIdFlowControl;
@@ -243,9 +246,10 @@ namespace MSQuic2
         {
             return POOL_ENTRY;
         }
+
         public void Reset()
         {
-            throw new System.NotImplementedException();
+            RecvBuffers = new QUIC_BUFFER[3];
         }
 
         public void SetPool(CXPLAT_POOL<QUIC_STREAM> mPool)
