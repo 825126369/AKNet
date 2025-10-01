@@ -217,7 +217,10 @@ namespace MSQuic2
         public BlockedTimings_DATA BlockedTimings;
 
         //xuke 自定义
-        public QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3];
+        public readonly QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3]
+        {
+            new QUIC_BUFFER(),new QUIC_BUFFER(),new QUIC_BUFFER(),
+        };
 
         public struct BlockedTimings_DATA
         {
@@ -249,7 +252,7 @@ namespace MSQuic2
 
         public void Reset()
         {
-            RecvBuffers = new QUIC_BUFFER[3];
+            
         }
 
         public void SetPool(CXPLAT_POOL<QUIC_STREAM> mPool)
