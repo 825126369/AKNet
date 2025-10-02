@@ -213,7 +213,12 @@ namespace MSQuic2
         static void CxPlatThreadFunc(object parm)
         {
             CXPLAT_THREAD mThread = parm as CXPLAT_THREAD;
-            CxPlatThreadSet(mThread);
+            Thread.BeginThreadAffinity();
+            if(CxPlatThreadSet(mThread) != 0)
+            {
+                NetLog.LogError("设置线程亲和性 失败");
+            }
+            Thread.EndThreadAffinity();
             mThread.mConfig.Callback(mThread.mConfig.Context);
         }
 
@@ -231,6 +236,7 @@ namespace MSQuic2
 
             NetLog.Assert(Config.IdealProcessor < CxPlatProcCount());
             CXPLAT_PROCESSOR_INFO ProcInfo = CxPlatProcessorInfo[Config.IdealProcessor];
+            
             GROUP_AFFINITY Group;
             if (HasFlag(Config.Flags, (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE))
             {
@@ -248,19 +254,25 @@ namespace MSQuic2
                 NetLog.LogError(Error);
                 return QUIC_STATUS_INTERNAL_ERROR;
             }
-            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC) &&
-                !Interop.Kernel32.SetThreadIdealProcessorEx(mThreadPtr, (PROCESSOR_NUMBER*)&ProcInfo, null))
+
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC))
             {
-                int Error = Marshal.GetLastWin32Error();
-                NetLog.LogError(Error);
-                return QUIC_STATUS_INTERNAL_ERROR;
+                if (!Interop.Kernel32.SetThreadIdealProcessorEx(mThreadPtr, (PROCESSOR_NUMBER*)&ProcInfo, null))
+                {
+                    int Error = Marshal.GetLastWin32Error();
+                    NetLog.LogError(Error);
+                    return QUIC_STATUS_INTERNAL_ERROR;
+                }
             }
-            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY) &&
-                !Interop.Kernel32.SetThreadPriority(mThreadPtr, OSPlatformFunc.THREAD_PRIORITY_HIGHEST))
+
+            if (HasFlag(Config.Flags, (ulong)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY))
             {
-                int Error = Marshal.GetLastWin32Error();
-                NetLog.LogError(Error);
-                return QUIC_STATUS_INTERNAL_ERROR;
+                if (!Interop.Kernel32.SetThreadPriority(mThreadPtr, OSPlatformFunc.THREAD_PRIORITY_HIGHEST))
+                {
+                    int Error = Marshal.GetLastWin32Error();
+                    NetLog.LogError(Error);
+                    return QUIC_STATUS_INTERNAL_ERROR;
+                }
             }
 
             //if (Config.Name != null)
