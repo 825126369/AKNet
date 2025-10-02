@@ -252,7 +252,7 @@ namespace MSQuic2
 
         public void Reset()
         {
-            
+            throw new System.NotImplementedException();
         }
 
         public void SetPool(CXPLAT_POOL<QUIC_STREAM> mPool)

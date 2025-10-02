@@ -216,6 +216,12 @@ namespace MSQuic1
         public readonly QUIC_API_CONTEXT ReceiveCompleteApiCtxStorage = new QUIC_API_CONTEXT();
         public BlockedTimings_DATA BlockedTimings;
 
+        //xuke 自定义
+        public readonly QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3]
+        {
+            new QUIC_BUFFER(),new QUIC_BUFFER(),new QUIC_BUFFER(),
+        };
+
         public struct BlockedTimings_DATA
         {
             public QUIC_FLOW_BLOCKED_TIMING_TRACKER StreamIdFlowControl;
