@@ -158,6 +158,7 @@ namespace TestNetClient
                 NetLog.Log(msg);
             }
         }
+
     }
 }
 
