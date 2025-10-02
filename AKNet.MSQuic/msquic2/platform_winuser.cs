@@ -213,16 +213,21 @@ namespace MSQuic2
         static void CxPlatThreadFunc(object parm)
         {
             CXPLAT_THREAD mThread = parm as CXPLAT_THREAD;
+            CxPlatThreadSet(mThread);
+            mThread.mConfig.Callback(mThread.mConfig.Context);
+        }
+
+        static void CxPlatThreadSet(CXPLAT_THREAD mThread)
+        {
             Thread.BeginThreadAffinity();
-            if(CxPlatThreadSet(mThread) != 0)
+            if (CxPlatThreadSet2(mThread) != 0)
             {
                 NetLog.LogError("设置线程亲和性 失败");
             }
             Thread.EndThreadAffinity();
-            mThread.mConfig.Callback(mThread.mConfig.Context);
         }
 
-        static int CxPlatThreadSet(CXPLAT_THREAD mThread)
+        static int CxPlatThreadSet2(CXPLAT_THREAD mThread)
         {
             CXPLAT_THREAD_CONFIG Config = mThread.mConfig;
             IntPtr mThreadPtr = Interop.Kernel32.GetCurrentThread();
