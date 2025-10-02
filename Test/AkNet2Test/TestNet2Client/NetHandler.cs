@@ -8,15 +8,18 @@ namespace TestNetClient
 {
     public class NetHandler
     {
+        public const int nSumSendPackageCount = 100 * 10000;
         public const int nClientCount = 100;
-        public const int nPackageCount = 100;
+        public const int nSingleSendPackageCount = 100;
+        public const int nSingleCleintSendMaxPackageCount = nSumSendPackageCount / 100;
         public const double fFrameInternalTime = 0;
-        public const int nSumPackageCount = nClientCount * nPackageCount * 100;
         int nReceivePackageCount = 0;
+        int nSendPackageCount = 0;
         List<NetClientMain> mClientList = new List<NetClientMain>();
         Stopwatch mStopWatch = new Stopwatch();
-        readonly List<uint> mFinishClientId = new List<uint>();
-
+        readonly uint[] mClientSendIdArray = new uint[nClientCount];
+        readonly int[] mClientSendPackageCount = new int[nClientCount];
+        readonly int[] mClientReceivePackageCount = new int[nClientCount];
         const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
         const string logFileName = $"TestLog.txt";
 
@@ -47,19 +50,23 @@ namespace TestNetClient
             File.Delete(logFileName);
             for (int i = 0; i < nClientCount; i++)
             {
-                NetClientMain mNetClient = new NetClientMain(NetType.TCP);
+                NetClientMain mNetClient = new NetClientMain(NetType.Quic);
                 mClientList.Add(mNetClient);
                 mNetClient.addNetListenFunc(UdpNetCommand_COMMAND_TESTCHAT, ReceiveMessage);
                 mNetClient.ConnectServer("127.0.0.1", 6000);
+                mNetClient.SetName("C" + i);
+                mNetClient.SetID((uint)i);
+                mClientSendIdArray[i] = 0;
+                mClientSendPackageCount[i] = 0;
+                mClientReceivePackageCount[i] = 0;
             }
 
-            mFinishClientId.Clear();
             mStopWatch.Start();
             nReceivePackageCount = 0;
+            nSendPackageCount = 0;
         }
 
         double fSumTime = 0;
-        uint Id = 0;
         public void Update(double fElapsedTime)
         {
             for (int i = 0; i < nClientCount; i++)
@@ -73,21 +80,20 @@ namespace TestNetClient
             if (fSumTime > fFrameInternalTime)
             {
                 fSumTime = 0;
-
-                for (int i = 0; i < nClientCount; i++)
+                for (int j = 0; j < nSingleSendPackageCount; j++)
                 {
-                    var mNetClient = mClientList[i];
-                    if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                    for (int i = 0; i < nClientCount; i++)
                     {
-                        for (int j = 0; j < nPackageCount; j++)
+                        var mNetClient = mClientList[i];
+                        if (mNetClient.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                         {
-                            Id++;
-                            if (Id <= nSumPackageCount)
+                            if (mClientSendPackageCount[i] < nSingleCleintSendMaxPackageCount)
                             {
                                 TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
-                                mdata.NSortId = (uint)Id;
-                                mdata.NClientId = (uint)i;
-                                if (RandomTool.Random(1, 2) == 1)
+                                mdata.NSortId = ++mClientSendIdArray[i];
+                                mdata.NClientId = mNetClient.GetID();
+                                mdata.PeerName = mNetClient.GetName();
+                                if (RandomTool.Random(1, 1) == 1)
                                 {
                                     mdata.TalkMsg = TalkMsg1;
                                 }
@@ -95,51 +101,63 @@ namespace TestNetClient
                                 {
                                     mdata.TalkMsg = TalkMsg2;
                                 }
+
                                 mNetClient.SendNetData(UdpNetCommand_COMMAND_TESTCHAT, mdata);
                                 IMessagePool<TESTChatMessage>.recycle(mdata);
 
-                                if (Id == nSumPackageCount)
+                                mClientSendPackageCount[i]++;
+                                if (mClientSendPackageCount[i] >= nSingleCleintSendMaxPackageCount)
                                 {
-                                    string msg = DateTime.Now + " Send Chat Message: " + Id + "";
-                                    Console.WriteLine(msg);
+                                    NetLog.Log($"客户端{mNetClient.GetName()} 全部 发送 完成");
                                 }
+
+                                nSendPackageCount++;
+                                if (nSendPackageCount >= nSumSendPackageCount)
+                                {
+                                    string msg = $"所有客户端 全部发送完成";
+                                    NetLog.Log(msg);
+                                }
+
+                                if (mClientSendPackageCount[i] >= nSingleCleintSendMaxPackageCount ||
+                                   nSendPackageCount >= nSumSendPackageCount)
+                                {
+                                    break;
+                                }
+
                             }
                         }
                     }
                 }
             }
-
         }
 
         void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
 
+            mClientReceivePackageCount[peer.GetID()]++;
             nReceivePackageCount++;
-            if (nReceivePackageCount % 10000 == 0)
+
+            //这里是验证发的包都是自己发出去的包
+            NetLog.Assert(peer.GetName() == mdata.PeerName, $"{peer.GetName()}  {mdata.PeerName}");
+
+            if (nReceivePackageCount % 1000 == 0)
             {
-                string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
-                Console.WriteLine(msg);
+                string msg = $"接受包数量: {nReceivePackageCount}, ClientId:{peer.GetName()} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
+                NetLog.Log(msg);
             }
 
-            if (nReceivePackageCount == nSumPackageCount)
+            if (mClientReceivePackageCount[peer.GetID()] == nSingleCleintSendMaxPackageCount)
             {
-                string msg = "全部完成！！！！！！";
-                Console.WriteLine(msg);
-                LogToFile(logFileName, msg);
+                NetLog.Log($"客户端{peer.GetName()} 全部 接收 完成");
             }
 
-            IMessagePool<TESTChatMessage>.recycle(mdata);
-        }
-
-        void LogToFile(string logFilePath, string Message)
-        {
-            using (StreamWriter writer = new StreamWriter(logFilePath, true))
+            if (nReceivePackageCount == nSumSendPackageCount)
             {
-                writer.WriteLine(DateTime.Now + " " + Message);
+                string msg = $"全部 接收完成!!!!!!";
+                NetLog.Log(msg);
             }
         }
-
     }
 }
 
