@@ -26,8 +26,8 @@ namespace MSQuic2
     internal static unsafe partial class MSQuicFunc
     {
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
-        static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo;
-        static CXPLAT_PROCESSOR_GROUP_INFO* CxPlatProcessorGroupInfo;
+        static CXPLAT_PROCESSOR_INFO* CxPlatProcessorInfo = null;
+        static CXPLAT_PROCESSOR_GROUP_INFO* CxPlatProcessorGroupInfo = null;
         static int CxPlatProcessorCount;
         static long CxPlatTotalMemory;
 
