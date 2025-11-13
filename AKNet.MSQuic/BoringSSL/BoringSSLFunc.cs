@@ -1,3 +1,4 @@
+using AKNet.Common;
 using System;
 using System.Runtime.InteropServices;
 
@@ -107,11 +108,19 @@ namespace AKNet.BoringSSL
         {
             return 1UL << n;
         }
-
-
+        
         public static IntPtr SSL_CTX_new()
         {
-            return BoringSSLNativeFunc.AKNet_SSL_CTX_new();
+            try
+            {
+                return BoringSSLNativeFunc.AKNet_SSL_CTX_new();
+            }
+            catch (DllNotFoundException e)
+            {
+                throw new DllNotFoundException(
+                    "请Build QuicTlsCC C++工程，把生成的dll 拷贝到当前exe 生成目录下。\n" +
+                    "Please build the QuicTlsC C++ project and copy the generated DLL to the current exe generation directory");
+            }
         }
 
         public static void SSL_CTX_free(IntPtr x)

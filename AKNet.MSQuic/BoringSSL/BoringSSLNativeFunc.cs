@@ -64,8 +64,11 @@ namespace AKNet.BoringSSL
         public readonly func_flush_flight flush_flight;
         public readonly func_send_alert send_alert;
 
-        public SSL_QUIC_METHOD(func_set_encryption_secrets func1,
-            func_add_handshake_data func3, func_flush_flight func4, func_send_alert func5)
+        public SSL_QUIC_METHOD(
+            func_set_encryption_secrets func1,
+            func_add_handshake_data func3, 
+            func_flush_flight func4, 
+            func_send_alert func5)
         {
             set_encryption_secrets = func1;
             add_handshake_data = func3;
@@ -81,7 +84,8 @@ namespace AKNet.BoringSSL
 
     internal static unsafe class BoringSSLNativeFunc
     {
-        public const string DLLNAME = "QuicTlsCC.dll";
+        //public const string DLLNAME = "QuicTlsCC.dll";
+        public const string DLLNAME = "\\QuicTlsCC\\x64\\Release\\QuicTlsCC.dll";
 
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_SSL_CTX_new();
