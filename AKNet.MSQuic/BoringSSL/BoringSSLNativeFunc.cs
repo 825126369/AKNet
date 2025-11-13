@@ -84,8 +84,7 @@ namespace AKNet.BoringSSL
 
     internal static unsafe class BoringSSLNativeFunc
     {
-        //public const string DLLNAME = "QuicTlsCC.dll";
-        public const string DLLNAME = "\\QuicTlsCC\\x64\\Release\\QuicTlsCC.dll";
+        public const string DLLNAME = "QuicTlsCC.dll";
 
         [DllImport(DLLNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr AKNet_SSL_CTX_new();
