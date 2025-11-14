@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal class MsgReceiveMgr
 	{
-		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+		private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
 		protected readonly TcpNetPackage mNetPackage = null;
 		private ClientPeer mClientPeer;
 		public MsgReceiveMgr(ClientPeer mClientPeer)

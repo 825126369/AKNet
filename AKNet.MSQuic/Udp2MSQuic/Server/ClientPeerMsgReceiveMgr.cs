@@ -14,7 +14,7 @@ namespace AKNet.Udp2MSQuic.Server
 {
     internal class MsgReceiveMgr
 	{
-		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+		private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeerPrivate mClientPeer;
 		private QuicServer mTcpServer;
