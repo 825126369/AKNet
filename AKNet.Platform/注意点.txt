@@ -1,19 +1,2 @@
-﻿在 64 位 Windows 系统中，C++ 的 long 类型是 4 个字节（32 位）。
-
-Windows (LLP64 模型):
-Windows 64 位平台（使用 MSVC 编译器）遵循 LLP64 数据模型。
-在这个模型下：
-int: 4 字节 (32 位)
-long: 4 字节 (32 位) ✅
-long long: 8 字节 (64 位)
-指针 (*): 8 字节 (64 位)
-long 的大小没有随着从 32 位升级到 64 位而改变。
-
-
-对比其他 64 位系统 (如 Linux/macOS - LP64 模型):
-在 Linux、macOS 等遵循 LP64 模型的 64 位系统上：
-int: 4 字节
-long: 8 字节 (64 位)
-long long: 8 字节
-指针 (*): 8 字节
-注意：这里的 long 是 8 字节，与 Windows 不同。
+﻿1: 在64位 Windows 系统中，C++ 的 long 类型是4个字节
+2: 现在只实现了部分Windows平台的API, 其他平台处于TODO状态
