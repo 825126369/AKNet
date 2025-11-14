@@ -16,7 +16,7 @@ namespace AKNet.Udp4LinuxTcp.Client
 {
     internal class MsgReceiveMgr
     {
-        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
         protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
         private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         internal ClientPeer mClientPeer = null;
@@ -25,7 +25,7 @@ namespace AKNet.Udp4LinuxTcp.Client
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularManyBuffer();
+            mReceiveStreamList = new NetStreamCircularBuffer();
             mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 

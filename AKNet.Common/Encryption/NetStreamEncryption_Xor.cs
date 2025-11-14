@@ -37,7 +37,7 @@ namespace AKNet.Common
             BufferTool.EnSureBufferOk(ref mCacheReceiveBuffer, nSumLength);
         }
 
-		public bool Decode(AkCircularManyBuffer mReceiveStreamList, TcpNetPackage mPackage)
+		public bool Decode(NetStreamCircularBuffer mReceiveStreamList, TcpNetPackage mPackage)
 		{
 			if (mReceiveStreamList.Length < nPackageFixedHeadSize)
 			{

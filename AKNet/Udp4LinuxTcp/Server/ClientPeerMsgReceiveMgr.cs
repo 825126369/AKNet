@@ -15,14 +15,14 @@ namespace AKNet.Udp4LinuxTcp.Server
 	{
         private UdpServer mNetServer = null;
         private ClientPeerPrivate mClientPeer = null;
-        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
         private readonly msghdr mTcpMsg = null; 
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
-            this.mReceiveStreamList = new AkCircularManyBuffer();
+            this.mReceiveStreamList = new NetStreamCircularBuffer();
             this.mTcpMsg = new msghdr(mReceiveStreamList, 1500);
         }
 

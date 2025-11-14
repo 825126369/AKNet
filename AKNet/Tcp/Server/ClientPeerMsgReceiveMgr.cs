@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Server
 {
     internal class MsgReceiveMgr
 	{
-		private readonly AkCircularManyBuffer mReceiveStreamList = new AkCircularManyBuffer();
+		private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
 		private readonly object lock_mReceiveStreamList_object = new object();
 		private ClientPeerPrivate mClientPeer;
 		private TcpServer mTcpServer;
@@ -58,7 +58,7 @@ namespace AKNet.Tcp.Server
 			lock (lock_mReceiveStreamList_object)
 			{
                 mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
-			}
+            }
 		}
 
 		private bool NetPackageExecute()

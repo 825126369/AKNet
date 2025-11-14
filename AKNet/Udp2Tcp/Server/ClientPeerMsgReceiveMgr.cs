@@ -15,13 +15,13 @@ namespace AKNet.Udp2Tcp.Server
 	{
         private UdpServer mNetServer = null;
         private ClientPeerPrivate mClientPeer = null;
-        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
 
         public MsgReceiveMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularManyBuffer();
+            mReceiveStreamList = new NetStreamCircularBuffer();
         }
 
         public int GetCurrentFrameRemainPackageCount()

@@ -12,9 +12,9 @@ using System.Security.Cryptography;
 namespace AKNet.Common
 {
     //先前的循环Buffer 存在内存抖动的问题，这里就是为了缓解这个抖动问题
-    internal class AkCircularManyBuffer:IDisposable
+    internal class AkCircularManyBuffer : IDisposable
     {
-        public class BufferItem:IDisposable
+        public class BufferItem : IDisposable
         {
             public readonly LinkedListNode<BufferItem> mEntry = null;
             private readonly IMemoryOwner<byte> mBufferMemory;

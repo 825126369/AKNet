@@ -84,12 +84,17 @@ namespace AKNet.Common
 
 		public byte this [int index] {
 			get {
-				if (index >= this.Length) {
+				if (index >= this.Length) 
+				{
 					throw new Exception ("环形缓冲区异常，索引溢出");
 				}
-				if (nBeginReadIndex + index < this.Capacity) {
+
+				if (nBeginReadIndex + index < this.Capacity)
+				{
 					return this.mBuffer [nBeginReadIndex + index];
-				} else {
+				}
+				else 
+				{
 					return this.mBuffer [nBeginReadIndex + index - this.Capacity];
 				}
 			}
@@ -300,6 +305,11 @@ namespace AKNet.Common
             }
             return CopyTo(index, readBuffer, offset, count);
         }
+
+        public int CopyTo(Span<byte> readBuffer)
+		{
+			return CopyTo(0, readBuffer);
+		}
 
         public int CopyTo(int index, Span<byte> readBuffer, int copyLength = 0)
 		{

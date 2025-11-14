@@ -16,7 +16,7 @@ namespace AKNet.Udp2Tcp.Client
 {
     internal class MsgReceiveMgr
     {
-        private readonly AkCircularManyBuffer mReceiveStreamList = null;
+        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
         protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
@@ -25,7 +25,7 @@ namespace AKNet.Udp2Tcp.Client
         public MsgReceiveMgr(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new AkCircularManyBuffer();
+            mReceiveStreamList = new NetStreamCircularBuffer();
         }
 
         public int GetCurrentFrameRemainPackageCount()
