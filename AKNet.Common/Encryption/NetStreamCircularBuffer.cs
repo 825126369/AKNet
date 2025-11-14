@@ -1,4 +1,10 @@
-﻿namespace AKNet.Common
+﻿using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
+namespace AKNet.Common
 {
     internal class NetStreamCircularBuffer:AkCircularManyBuffer
     {

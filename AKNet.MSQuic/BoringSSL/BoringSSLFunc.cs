@@ -1,10 +1,18 @@
+ï»¿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#æ¸¸æˆç½‘ç»œåº“
+*        Author:è®¸ç‚
+*        ModifyTime:2025/11/14 8:44:29
+*        Copyright:MITè½¯ä»¶è®¸å¯è¯
+************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
 using System.Runtime.InteropServices;
 
 namespace AKNet.BoringSSL
 {
-    //Õâ¸öÀà Ö÷ÒªÊÇ ·½±ã C# Ö±½Óµ÷ÓÃ
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Òªï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ C# Ö±ï¿½Óµï¿½ï¿½ï¿½
     internal static unsafe partial class BoringSSLFunc
     {
         public const ushort TLS1_VERSION = 0x0301;
@@ -118,7 +126,7 @@ namespace AKNet.BoringSSL
             catch (DllNotFoundException e)
             {
                 throw new DllNotFoundException(
-                    "ÇëBuild QuicTlsCC C++¹¤³Ì£¬°ÑÉú³ÉµÄdll ¿½±´µ½µ±Ç°exe Éú³ÉÄ¿Â¼ÏÂ¡£\n" +
+                    "ï¿½ï¿½Build QuicTlsCC C++ï¿½ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éµï¿½dll ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°exe ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½Â¡ï¿½\n" +
                     "Please build the QuicTlsC C++ project and copy the generated DLL to the current exe generation directory");
             }
         }
@@ -146,7 +154,7 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_CTX_set_max_proto_version(ctx, version);
         }
 
-        //ÉèÖÃ TLS 1.3 ¼ÓÃÜÌ×¼ş	SSL_CTX_set_ciphersuites(ctx, "TLS_AES_256_GCM_SHA384")
+        //ï¿½ï¿½ï¿½ï¿½ TLS 1.3 ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½	SSL_CTX_set_ciphersuites(ctx, "TLS_AES_256_GCM_SHA384")
         public static int SSL_CTX_set_ciphersuites(IntPtr ctx, string str)
         {
             return BoringSSLNativeFunc.AKNet_SSL_CTX_set_ciphersuites(ctx, str);
@@ -172,7 +180,7 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_set_app_data(ssl, (void*)GCHandle.ToIntPtr(hObject));
         }
 
-        //ËüÍ¨³£ÓÃÓÚÔÚ SSL/TLS Á¬½ÓÖĞ°ó¶¨Ò»Ğ©ÉÏÏÂÎÄĞÅÏ¢£¬ÀıÈçÓÃ»§»á»°¡¢Á¬½Ó×´Ì¬¡¢ÓÃ»§Êı¾İ½á¹¹µÈ¡£
+        //ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SSL/TLS ï¿½ï¿½ï¿½ï¿½ï¿½Ğ°ï¿½Ò»Ğ©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½á»°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½İ½á¹¹ï¿½È¡ï¿½
         public static T SSL_get_app_data<T>(IntPtr ssl)
         {
             IntPtr data = BoringSSLNativeFunc.AKNet_SSL_get_app_data(ssl);
@@ -397,7 +405,7 @@ namespace AKNet.BoringSSL
             return BoringSSLNativeFunc.AKNet_SSL_CTX_use_certificate(ctx, x);
         }
 
-        //ÓÃÓÚÉèÖÃµ±´ÓÒ»¸ö ÄÚ´æ BIO£¨BIO_TYPE_MEM£© ¶ÁÈ¡Êı¾İÊ±£¬ÔÚÃ»ÓĞ¸ü¶àÊı¾İ¿É¶ÁµÄÇé¿öÏÂ£¨¼´´ïµ½ EOF£©£¬·µ»ØµÄÄ¬ÈÏÖµ¡£
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½Ò»ï¿½ï¿½ ï¿½Ú´ï¿½ BIOï¿½ï¿½BIO_TYPE_MEMï¿½ï¿½ ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ğ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ¿É¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½ï¿½ïµ½ EOFï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½Ä¬ï¿½ï¿½Öµï¿½ï¿½
         public static long BIO_set_mem_eof_return(IntPtr bp, long larg)
         {
             return BoringSSLNativeFunc.AKNet_BIO_set_mem_eof_return(bp, larg);
@@ -463,7 +471,7 @@ namespace AKNet.BoringSSL
             BoringSSLNativeFunc.AKNet_SSL_CTX_set_verify(ctx, mode, callback);
         }
 
-        //SSL_CTX_set_verify_depth ÊÇ OpenSSL Ìá¹©µÄÒ»¸öº¯Êı£¬ÓÃÓÚÉèÖÃÔÚÑéÖ¤ SSL/TLS Ö¤ÊéÁ´Ê±£¬ÔÊĞíµÄ×î´óÖ¤ÊéÑéÖ¤Éî¶È£¨depth£©¡£
+        //SSL_CTX_set_verify_depth ï¿½ï¿½ OpenSSL ï¿½á¹©ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ SSL/TLS Ö¤ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½È£ï¿½depthï¿½ï¿½ï¿½ï¿½
         public static void SSL_CTX_set_verify_depth(IntPtr ctx, int depth)
         {
             BoringSSLNativeFunc.AKNet_SSL_CTX_set_verify_depth(ctx, depth);

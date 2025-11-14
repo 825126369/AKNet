@@ -3,7 +3,7 @@
 *        Web:https://github.com/825126369/AKNet
 *        Description:C#游戏网络库
 *        Author:许珂
-*        ModifyTime:2025/11/14 8:26:51
+*        ModifyTime:2025/11/14 8:44:26
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
@@ -35,10 +35,6 @@ namespace AKNet.Common
             else if (nNetType == NetType.Udp3Tcp)
             {
                 mInterface = new AKNet.Udp3Tcp.Client.Udp3TcpNetClientMain();
-            }
-            else if (nNetType == NetType.Udp4LinuxTcp)
-            {
-                mInterface = new AKNet.Udp4LinuxTcp.Client.Udp4LinuxTcpNetClientMain();
             }
             else
             {

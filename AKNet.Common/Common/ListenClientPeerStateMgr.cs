@@ -9,6 +9,7 @@
 using System;
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
 [assembly: InternalsVisibleTo("AKNet.Other")]
