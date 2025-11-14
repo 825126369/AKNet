@@ -13,9 +13,12 @@ namespace CopyrightProtectionTool
             foreach(string dirName in dirList)
             {
                 string codeDir = Path.Combine(FileTool.GetSlnDir(), dirName);
-                foreach (var v in Directory.GetFiles(codeDir, "*.cs", SearchOption.AllDirectories))
+                if (Directory.Exists(codeDir))
                 {
-                    Do(v);
+                    foreach (var v in Directory.GetFiles(codeDir, "*.cs", SearchOption.AllDirectories))
+                    {
+                        Do(v);
+                    }
                 }
             }
 
