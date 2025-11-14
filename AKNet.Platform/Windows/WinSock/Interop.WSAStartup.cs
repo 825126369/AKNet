@@ -1,4 +1,3 @@
-using AKNet.Platform.Socket;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -48,7 +47,7 @@ namespace AKNet.Platform
                     int errorCode = WSAStartup(0x0202, &d);
                     if (errorCode != 0)
                     {
-                        throw new SocketException((int)errorCode);
+                        throw new Exception("WSAStartup Error: " + errorCode);
                     }
 
                     if (Interlocked.CompareExchange(ref s_initialized, 1, 0) != 0)
