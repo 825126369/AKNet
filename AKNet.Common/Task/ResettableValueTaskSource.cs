@@ -1,3 +1,12 @@
+ï»¿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#æ¸¸æˆç½‘ç»œåº“
+*        Author:è®¸ç‚
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/14 8:56:44
+*        Copyright:MITè½¯ä»¶è®¸å¯è¯
+************************************Copyright*****************************************/
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -196,7 +205,7 @@ namespace AKNet.Common
             _valueTaskSource.OnCompleted(continuation, state, token, flags);
         }
 
-        //ÎŞ·µ»ØÖµµÄ await ½á¹ûÌáÈ¡Æ÷ ÊµÏÖ
+        //ï¿½Ş·ï¿½ï¿½ï¿½Öµï¿½ï¿½ await ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ Êµï¿½ï¿½
         void IValueTaskSource.GetResult(short token)
         {
             try
@@ -215,7 +224,7 @@ namespace AKNet.Common
 
                     if (state == State.Ready)
                     {
-                        _valueTaskSource.Reset(); //Reset()£º¹Ø¼ü£¡ ÖØÖÃ IValueTaskSource£¬Ê¹Æä¿É±»³Ø»¯¸´ÓÃ¡£
+                        _valueTaskSource.Reset(); //Reset()ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ IValueTaskSourceï¿½ï¿½Ê¹ï¿½ï¿½É±ï¿½ï¿½Ø»ï¿½ï¿½ï¿½ï¿½Ã¡ï¿½
                         _state = State.None;
                         if (_finalTaskSource.TrySignal(out Exception exception))
                         {

@@ -9,7 +9,7 @@ namespace CopyrightProtectionTool
 
         static void Main(string[] args)
         {
-            string[] dirList = { "AKNet", "AKNet.MSQuic", "AKNet.LinuxTcp" };
+            string[] dirList = { "AKNet.Common", "AKNet", "AKNet.MSQuic", "AKNet.LinuxTcp" };
             foreach(string dirName in dirList)
             {
                 string codeDir = Path.Combine(FileTool.GetSlnDir(), dirName);
@@ -33,7 +33,8 @@ namespace CopyrightProtectionTool
             mTemplateDic["$ProjectName$"] = "AKNet";
             mTemplateDic["$Web$"] = "https://github.com/825126369/AKNet";
             mTemplateDic["$Author$"] = "许珂";
-            mTemplateDic["$CreateTime$"] = DateTime.Now.ToString();
+            mTemplateDic["$StartTime$"] = "2024/11/01 00:00:00";
+            mTemplateDic["$ModifyTime$"] = DateTime.Now.ToString();
             mTemplateDic["$Description$"] = "C#游戏网络库";
             mTemplateDic["$Copyright$"] = "MIT软件许可证";
             mTemplateDic["$HEAD$"] = Head;

@@ -1,3 +1,12 @@
+ï»¿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#æ¸¸æˆç½‘ç»œåº“
+*        Author:è®¸ç‚
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/14 8:56:43
+*        Copyright:MITè½¯ä»¶è®¸å¯è¯
+************************************Copyright*****************************************/
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -11,7 +20,7 @@ using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet.Test")]
 namespace AKNet.Common
 {
-    //ÏÈÇ°µÄÑ­»·Buffer ´æÔÚÄÚ´æ¶¶¶¯µÄÎÊÌâ£¬ÕâÀï¾ÍÊÇÎªÁË»º½âÕâ¸ö¶¶¶¯ÎÊÌâ
+    //ï¿½ï¿½Ç°ï¿½ï¿½Ñ­ï¿½ï¿½Buffer ï¿½ï¿½ï¿½ï¿½ï¿½Ú´æ¶¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     internal class AkCircularManyBuffer : IDisposable
     {
         public class BufferItem : IDisposable
@@ -290,7 +299,7 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void RemoveFirstNodeToLast()
         {
-            // »ØÊÕ/Ïú»ÙÕâ¸öItem
+            // ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Item
             var mItem = nCurrentReadBlock.Value;
             mItem.Reset();
             mItemList.Remove(mItem.mEntry);
@@ -351,7 +360,7 @@ namespace AKNet.Common
                 NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray2));
                 //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
             }
-            NetLog.Log($"»¨·ÑÊ±¼ä: {mTimer.ElapsedMilliseconds}");
+            NetLog.Log($"ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½: {mTimer.ElapsedMilliseconds}");
         }
     }
 }
