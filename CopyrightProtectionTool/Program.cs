@@ -9,10 +9,14 @@ namespace CopyrightProtectionTool
 
         static void Main(string[] args)
         {
-            string codeDir = Path.Combine(FileTool.GetSlnDir(), "AKNet");
-            foreach (var v in Directory.GetFiles(codeDir, "*.cs", SearchOption.AllDirectories))
+            string[] dirList = { "AKNet", "AKNet.MSQuic", "AKNet.LinuxTcp" };
+            foreach(string dirName in dirList)
             {
-                Do(v);
+                string codeDir = Path.Combine(FileTool.GetSlnDir(), dirName);
+                foreach (var v in Directory.GetFiles(codeDir, "*.cs", SearchOption.AllDirectories))
+                {
+                    Do(v);
+                }
             }
 
             Console.WriteLine("Finish !!!");
@@ -25,7 +29,7 @@ namespace CopyrightProtectionTool
             Dictionary<string, string> mTemplateDic = new Dictionary<string, string>();
             mTemplateDic["$ProjectName$"] = "AKNet";
             mTemplateDic["$Web$"] = "https://github.com/825126369/AKNet";
-            mTemplateDic["$Author$"] = "AKe";
+            mTemplateDic["$Author$"] = "许珂";
             mTemplateDic["$CreateTime$"] = DateTime.Now.ToString();
             mTemplateDic["$Description$"] = "C#游戏网络库";
             mTemplateDic["$Copyright$"] = "MIT软件许可证";
