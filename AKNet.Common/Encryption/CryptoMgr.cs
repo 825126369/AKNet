@@ -14,7 +14,7 @@ namespace AKNet.Common
     internal interface NetStreamEncryptionInterface
     {
         ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
-        bool Decode(NetStreamCircularBuffer mReceiveStreamList, TcpNetPackage mPackage);
+        bool Decode(NetStreamCircularBuffer mReceiveStreamList, NetStreamPackage mPackage);
     }
 
     internal class CryptoMgr : NetStreamEncryptionInterface
@@ -36,7 +36,7 @@ namespace AKNet.Common
             return mNetPackageEncryption.Encode(nPackageId, mBufferSegment);
         }
 
-        public bool Decode(NetStreamCircularBuffer mReceiveStreamList, TcpNetPackage mPackage)
+        public bool Decode(NetStreamCircularBuffer mReceiveStreamList, NetStreamPackage mPackage)
         {
             return mNetPackageEncryption.Decode(mReceiveStreamList, mPackage);
         }

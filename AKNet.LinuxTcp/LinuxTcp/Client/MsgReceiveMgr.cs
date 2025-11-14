@@ -18,7 +18,7 @@ namespace AKNet.LinuxTcp.Client
     internal class MsgReceiveMgr
     {
         private readonly NetStreamCircularBuffer mReceiveStreamList = null;
-        protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
+        protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
         private readonly Queue<sk_buff> mWaitCheckPackageQueue = new Queue<sk_buff>();
         internal ClientPeer mClientPeer = null;
         private readonly msghdr mTcpMsg = null;

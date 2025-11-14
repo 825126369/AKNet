@@ -61,7 +61,7 @@ namespace AKNet.Quic.Server
 
 		private bool NetPackageExecute()
 		{
-			TcpNetPackage mNetPackage = mTcpServer.mNetPackage;
+			NetStreamPackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
 			lock (lock_mReceiveStreamList_object)
 			{

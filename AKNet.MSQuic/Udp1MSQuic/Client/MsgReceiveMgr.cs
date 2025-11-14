@@ -17,13 +17,13 @@ namespace AKNet.Udp1MSQuic.Client
 	internal class MsgReceiveMgr
 	{
 		private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-		protected readonly TcpNetPackage mNetPackage = null;
+		protected readonly NetStreamPackage mNetPackage = null;
 		private ClientPeer mClientPeer;
 
 		public MsgReceiveMgr(ClientPeer mClientPeer)
 		{
 			this.mClientPeer = mClientPeer;
-			mNetPackage = new TcpNetPackage();
+			mNetPackage = new NetStreamPackage();
 		}
 
 		public void Update(double elapsed)

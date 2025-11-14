@@ -18,7 +18,7 @@ namespace AKNet.Udp2Tcp.Client
     internal class MsgReceiveMgr
     {
         private readonly NetStreamCircularBuffer mReceiveStreamList = null;
-        protected readonly TcpNetPackage mNetPackage = new TcpNetPackage();
+        protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         internal ClientPeer mClientPeer = null;

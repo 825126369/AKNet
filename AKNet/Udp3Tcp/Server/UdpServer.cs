@@ -15,7 +15,7 @@ namespace AKNet.Udp3Tcp.Server
 {
     internal class UdpServer:NetServerInterface
 	{
-        private readonly TcpNetPackage mLikeTcpNetPackage = new TcpNetPackage();
+        private readonly NetStreamPackage mLikeTcpNetPackage = new NetStreamPackage();
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
@@ -57,7 +57,7 @@ namespace AKNet.Udp3Tcp.Server
             return mConfig;
         }
 
-        public TcpNetPackage GetLikeTcpNetPackage()
+        public NetStreamPackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
         }

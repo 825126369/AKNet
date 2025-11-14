@@ -18,7 +18,7 @@ namespace AKNet.Udp1MSQuic.Server
         private readonly QuicListenerMgr mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
-        internal readonly TcpNetPackage mNetPackage = null;
+        internal readonly NetStreamPackage mNetPackage = null;
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
@@ -33,7 +33,7 @@ namespace AKNet.Udp1MSQuic.Server
             mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
-            mNetPackage = new TcpNetPackage();
+            mNetPackage = new NetStreamPackage();
 
             mSocketMgr = new QuicListenerMgr(this);
             mClientPeerManager = new ClientPeerManager(this);

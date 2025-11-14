@@ -11,7 +11,7 @@ using System;
 
 namespace AKNet.Common
 {
-    internal class TcpNetPackage : NetPackage
+    internal class NetStreamPackage : NetPackage
     {
         public ushort nPackageId = 0;
         private ReadOnlyMemory<byte> mReadOnlyMemory;
