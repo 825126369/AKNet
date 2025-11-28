@@ -9,7 +9,7 @@ namespace CopyrightProtectionTool
 
         static void Main(string[] args)
         {
-            string[] dirList = { "AKNet.Common", "AKNet", "AKNet.MSQuic", "AKNet.LinuxTcp" };
+            string[] dirList = { "AKNet.Common", "AKNet", "AKNet2", "AKNet.MSQuic", "AKNet.LinuxTcp" };
             foreach(string dirName in dirList)
             {
                 string codeDir = Path.Combine(FileTool.GetSlnDir(), dirName);
