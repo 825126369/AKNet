@@ -4,42 +4,30 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/14 8:56:44
+*        ModifyTime:2025/11/14 8:56:46
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Net;
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.Other")]
 namespace AKNet.Common
 {
-    public class NetServerMainBase : NetServerInterface
+    public class NetClientMainBase : NetClientInterface, ClientPeerBase
     {
-        protected NetServerInterface mInterface = null;
-        public NetServerInterface GetInstance()
+        protected NetClientInterface mInterface = null;
+        public NetClientInterface GetInstance()
         {
             return mInterface;
         }
 
-        public NetServerMainBase(NetType nNetType = NetType.UDP)
+        public void SetInstance(NetClientInterface mInterface)
         {
-            if (nNetType == NetType.TCP)
-            {
-                mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
-            }
-            else if (nNetType == NetType.UDP)
-            {
-                mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
-            }
-            else if (nNetType == NetType.Udp2Tcp)
-            {
-                mInterface = new AKNet.Udp2Tcp.Server.Udp2TcpNetServerMain();
-            }
-            else if (nNetType == NetType.Udp3Tcp)
-            {
-                mInterface = new AKNet.Udp3Tcp.Server.Udp3TcpNetServerMain();
-            }
-            else
-            {
-                NetLog.LogError("Unsupported network type: " + nNetType);
-            }
+            this.mInterface = mInterface;
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
@@ -62,29 +50,29 @@ namespace AKNet.Common
             mInterface.addNetListenFunc(mFunc);
         }
 
-        public int GetPort()
+        public void ConnectServer(string Ip, int nPort)
         {
-            return mInterface.GetPort();
+            mInterface.ConnectServer(Ip, nPort);
         }
 
-        public SOCKET_SERVER_STATE GetServerState()
+        public bool DisConnectServer()
         {
-            return mInterface.GetServerState();
+            return mInterface.DisConnectServer();
         }
 
-        public void InitNet()
+        public IPEndPoint GetIPEndPoint()
         {
-            mInterface.InitNet();
+            return mInterface.GetIPEndPoint();
         }
 
-        public void InitNet(int nPort)
+        public SOCKET_PEER_STATE GetSocketState()
         {
-            mInterface.InitNet(nPort);
+            return mInterface.GetSocketState();
         }
 
-        public void InitNet(string Ip, int nPort)
+        public void ReConnectServer()
         {
-            mInterface.InitNet(Ip, nPort);
+            mInterface.ReConnectServer();
         }
 
         public void Release()
@@ -112,9 +100,49 @@ namespace AKNet.Common
             mInterface.removeNetListenFunc(mFunc);
         }
 
+        public void SendNetData(ushort nPackageId)
+        {
+            mInterface.SendNetData(nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, byte[] data)
+        {
+            mInterface.SendNetData(nPackageId, data);
+        }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            mInterface.SendNetData(mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            mInterface.SendNetData(nPackageId, buffer);
+        }
+
         public void Update(double elapsed)
         {
             mInterface.Update(elapsed);
+        }
+
+        public void SetName(string name)
+        {
+            mInterface.SetName(name);
+        }
+
+        public string GetName()
+        {
+            return mInterface.GetName();
+        }
+
+        public void SetID(uint id)
+        {
+            mInterface.SetID(id);
+        }
+
+        public uint GetID()
+        {
+            return mInterface.GetID();
         }
     }
 }

@@ -11,9 +11,28 @@ namespace AKNet.Common
 {
     public class NetServerMain : NetServerMainBase
     {
-        public NetServerMain(NetType nNetType) : base(nNetType)
+        public NetServerMain(NetType nNetType)
         {
-
+            if (nNetType == NetType.TCP)
+            {
+                mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
+            }
+            else if (nNetType == NetType.UDP)
+            {
+                mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
+            }
+            else if (nNetType == NetType.Udp2Tcp)
+            {
+                mInterface = new AKNet.Udp2Tcp.Server.Udp2TcpNetServerMain();
+            }
+            else if (nNetType == NetType.Udp3Tcp)
+            {
+                mInterface = new AKNet.Udp3Tcp.Server.Udp3TcpNetServerMain();
+            }
+            else
+            {
+                NetLog.LogError("Unsupported network type: " + nNetType);
+            }
         }
     }
 }

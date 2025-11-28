@@ -5,9 +5,47 @@
         static void Main(string[] args)
         {
             Console.WriteLine("Hello, World!");
-            List<int> mList = new List<int>() { 2, 1, 5, 3, 2, 0,8, 10,0,1 };
-            QuicSort(mList);
-            Console.WriteLine(string.Join(',', mList));
+            Draw(5);
+        }
+
+        private static void Draw(int N)
+        {
+            for (int i = 1; i <= N; i++)
+            {
+                List<int> mList = GetRowList(i);
+                Console.WriteLine(string.Join(" ", mList));
+            }
+            
+        }
+
+        //private static string GetWhiteSpace(int N)
+        //{
+        //    string e
+        //    for (int i = 1; i <= N; i++)
+        //    {
+                
+        //    }
+
+        //}
+
+        private static List<int> GetRowList(int N)
+        {
+            if (N == 1)
+            {
+                return new List<int>() { 1 }; 
+            }
+            else
+            {
+                var mLastList = GetRowList(N - 1);
+                var mNowList = new List<int>();
+                mNowList.Add(1);
+                for (int i = 0; i < mLastList.Count - 1; i++)
+                {
+                    mNowList.Add(mLastList[i] + mLastList[i + 1]);
+                }
+                mNowList.Add(1);
+                return mNowList;
+            }
         }
 
         private static void QuicSort(List<int> AList)

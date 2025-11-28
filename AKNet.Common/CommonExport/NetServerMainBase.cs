@@ -1,12 +1,19 @@
 ﻿/************************************Copyright*****************************************
 *        ProjectName:AKNet
 *        Web:https://github.com/825126369/AKNet
-*        Description:这是一个面向 .Net Standard 2.1 的游戏网络库
-*        Author:阿珂
-*        ModifyTime:2025/2/27 22:28:11
+*        Description:C#游戏网络库
+*        Author:许珂
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/14 8:56:46
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.Other")]
 namespace AKNet.Common
 {
     public class NetServerMainBase : NetServerInterface
@@ -17,20 +24,9 @@ namespace AKNet.Common
             return mInterface;
         }
 
-        public NetServerMainBase(NetType nNetType = NetType.Quic)
+        public void SetInstance(NetServerInterface mInterface)
         {
-            if (nNetType == NetType.TCP)
-            {
-                mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
-            }
-            else if (nNetType == NetType.Quic)
-            {
-                mInterface = new AKNet.Quic.Server.QuicNetServerMain();
-            }
-            else
-            {
-                NetLog.LogError("Unsupported network type: " + nNetType);
-            }
+            this.mInterface = mInterface;
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)

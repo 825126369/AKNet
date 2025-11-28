@@ -11,9 +11,20 @@ namespace AKNet.Common
 {
     public class NetServerMain : NetServerMainBase
     {
-        public NetServerMain(NetType nNetType) : base(nNetType)
+        public NetServerMain(NetType nNetType)
         {
-
+            if (nNetType == NetType.Udp1MSQuic)
+            {
+                mInterface = new AKNet.Udp1MSQuic.Server.QuicNetServerMain();
+            }
+            else if (nNetType == NetType.Udp2MSQuic)
+            {
+                mInterface = new AKNet.Udp2MSQuic.Server.QuicNetServerMain();
+            }
+            else
+            {
+                NetLog.LogError("Unsupported network type: " + nNetType);
+            }
         }
     }
 }

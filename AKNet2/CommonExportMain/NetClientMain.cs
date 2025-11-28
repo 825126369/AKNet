@@ -10,9 +10,20 @@ namespace AKNet.Common
 {
     public class NetClientMain : NetClientMainBase
     {
-        public NetClientMain(NetType nNetType) :base(nNetType)
+        public NetClientMain(NetType nNetType)
         {
-            
+            if (nNetType == NetType.TCP)
+            {
+                mInterface = new AKNet.Tcp.Client.TcpNetClientMain();
+            }
+            else if (nNetType == NetType.Quic)
+            {
+                mInterface = new AKNet.Quic.Client.QuicNetClientMain();
+            }
+            else
+            {
+                NetLog.LogError("Unsupported network type: " + nNetType);
+            }
         }
     }
 }

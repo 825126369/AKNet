@@ -9,17 +9,13 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Common
 {
-    public class NetClientMain : NetClientMainBase
+    public class NetServerMain : NetServerMainBase
     {
-        public NetClientMain(NetType nNetType)
+        public NetServerMain(NetType nNetType)
         {
-            if (nNetType == NetType.Udp1MSQuic)
+            if (nNetType == NetType.LinuxTCP)
             {
-                mInterface = new AKNet.Udp1MSQuic.Client.QuicNetClientMain();
-            }
-            else if (nNetType == NetType.Udp2MSQuic)
-            {
-                mInterface = new AKNet.Udp2MSQuic.Client.QuicNetClientMain();
+                mInterface = new AKNet.LinuxTcp.Server.Udp4LinuxTcpNetServerMain();
             }
             else
             {
