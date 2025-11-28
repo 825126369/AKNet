@@ -4,13 +4,21 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/14 8:56:49
+*        ModifyTime:2025/11/14 8:56:46
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
-
+using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("AKNet")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.Other")]
 namespace AKNet.Common
 {
     internal static class IPAddressHelper
@@ -96,5 +104,28 @@ namespace AKNet.Common
 
             return mtu_cache;
         }
+
+        public static int GetMtu(IPPacketInformation pktInfo)
+        {
+            // 用 LINQ 一句话找到对应网卡
+            NetworkInterface nic = NetworkInterface.GetAllNetworkInterfaces()
+                        .FirstOrDefault(n => n.GetIPProperties()
+                                              .GetIPv4Properties()?.Index == pktInfo.Interface
+                                           || n.GetIPProperties()
+                                              .GetIPv6Properties()?.Index == pktInfo.Interface);
+
+            if (nic == null)
+                throw new InvalidOperationException("找不到索引为 " + pktInfo.Interface + " 的接口");
+
+            // 根据协议版本把 MTU 读出来
+            if (pktInfo.Address.AddressFamily == AddressFamily.InterNetwork && nic.Supports(NetworkInterfaceComponent.IPv4))
+                return nic.GetIPProperties().GetIPv4Properties().Mtu;
+
+            if (pktInfo.Address.AddressFamily == AddressFamily.InterNetworkV6 && nic.Supports(NetworkInterfaceComponent.IPv6))
+                return nic.GetIPProperties().GetIPv6Properties().Mtu;
+
+            throw new NotSupportedException("该接口不支持 " + pktInfo.Address.AddressFamily);
+        }
+       
     }
 }

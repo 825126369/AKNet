@@ -8,11 +8,11 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Runtime.CompilerServices;
-
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.Other")]
 namespace AKNet.Common
 {
     internal class NetStreamCircularBuffer:AkCircularManyBuffer
