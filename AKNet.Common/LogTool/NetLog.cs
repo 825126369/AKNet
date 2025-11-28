@@ -91,6 +91,7 @@ namespace AKNet.Common
             LogUncaughtException(exception);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetMsgStr(string logTag, object msgObj, string StackTraceObj)
         {
             string message = msgObj != null ? msgObj.ToString() : string.Empty;
@@ -98,36 +99,43 @@ namespace AKNet.Common
             return $"{DateTime.Now.ToString()}  {logTag}: {message} {StackTraceInfo}";
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetAssertMsg(object msgObj, string StackTraceInfo)
         {
             return GetMsgStr("Assert Error", msgObj, StackTraceInfo);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string Get_OnUncaughtExceptionMsg(object msgObj, string StackTraceInfo)
         {
             return GetMsgStr("___OnUncaught Exception", msgObj, StackTraceInfo);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetExceptionMsg(object msgObj, string StackTraceInfo)
         {
             return GetMsgStr("Exception", msgObj, StackTraceInfo);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetErrorMsg(object msgObj, string StackTraceInfo)
         {
             return GetMsgStr("Error", msgObj, StackTraceInfo);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetLogMsg(object msgObj, string StackTraceInfo = null)
         {
             return GetMsgStr("Log", msgObj, StackTraceInfo);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetWarningMsg(object msgObj, string StackTraceInfo = null)
         {
             return GetMsgStr("Warning", msgObj, StackTraceInfo);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetStackTraceInfo()
         {
             StackTrace st = new StackTrace(1, true);
