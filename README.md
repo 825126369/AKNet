@@ -24,6 +24,7 @@ namespace githubExample
         static NetClientHandler mClient;
         static void Main(string[] args)
         {
+            NetLog.AddConsoleLog();
             mServer = new NetServerHandler();
             mServer.Init();
             mClient = new NetClientHandler();

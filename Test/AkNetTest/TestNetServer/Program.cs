@@ -1,4 +1,5 @@
-﻿using TestCommon;
+﻿using AKNet.Common;
+using TestCommon;
 
 namespace TestNetServer
 {
@@ -7,6 +8,7 @@ namespace TestNetServer
         static NetHandler mTest = null;
         static void Main(string[] args)
         {
+            NetLog.AddConsoleLog();
             mTest = new NetHandler();
             mTest.Init();
             UpdateMgr.Do(Update);

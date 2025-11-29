@@ -1,4 +1,5 @@
-﻿using TestCommon;
+﻿using AKNet.Common;
+using TestCommon;
 
 namespace TestNetServer
 {
@@ -6,7 +7,7 @@ namespace TestNetServer
     {
         static void Main(string[] args)
         {
-           
+            NetLog.AddConsoleLog();
         }
     }
 }

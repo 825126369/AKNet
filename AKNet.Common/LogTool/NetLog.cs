@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
@@ -31,7 +32,7 @@ namespace AKNet.Common
         {
             Action<string> LogFunc = (string message)=>
             {
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
+                Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine(message);
             };
 
@@ -87,8 +88,21 @@ namespace AKNet.Common
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
+            bool IsFromMyAssembly(Exception ex)
+            {
+                // 取最顶层栈帧
+                var frame = new StackTrace(ex, fNeedFileInfo: false).GetFrame(0);
+                if (frame == null) return false;
+                var method = frame.GetMethod();
+                var asm = method?.DeclaringType?.Assembly;
+                return asm == Assembly.GetExecutingAssembly();
+            }
+
             Exception exception = args.ExceptionObject as Exception;
-            LogUncaughtException(exception);
+            if (IsFromMyAssembly(exception))
+            {
+                LogUncaughtException(exception);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -174,10 +188,6 @@ namespace AKNet.Common
         {
             if (!bPrintLog) return;
             string msg = Get_OnUncaughtExceptionMsg(e, GetStackTraceInfo());
-#if DEBUG
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(msg);
-#endif
             if (LogErrorFunc != null)
             {
                 LogErrorFunc(msg);
@@ -188,10 +198,6 @@ namespace AKNet.Common
         {
             if (!bPrintLog) return;
             string msg = GetExceptionMsg(e, GetStackTraceInfo());
-#if DEBUG
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(msg);
-#endif
             if (LogErrorFunc != null)
             {
                 LogErrorFunc(msg);
@@ -202,10 +208,6 @@ namespace AKNet.Common
         {
             if (!bPrintLog) return;
             string msg = GetErrorMsg(message, GetStackTraceInfo());
-#if DEBUG
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine(msg);
-#endif
             if (LogErrorFunc != null)
             {
                 LogErrorFunc(msg);
@@ -218,10 +220,6 @@ namespace AKNet.Common
             if (!bTrue)
             {
                 string msg = GetAssertMsg(message, GetStackTraceInfo());
-#if DEBUG
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.WriteLine(msg);
-#endif
                 if (LogErrorFunc != null)
                 {
                     LogErrorFunc(msg);
