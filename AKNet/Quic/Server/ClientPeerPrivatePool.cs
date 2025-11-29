@@ -1,0 +1,81 @@
+﻿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#游戏网络库
+*        Author:许珂
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/29 4:33:44
+*        Copyright:MIT软件许可证
+************************************Copyright*****************************************/
+
+#if NET9_0_OR_GREATER
+using AKNet.Common;
+using System.Collections.Generic;
+
+namespace AKNet.Quic.Server
+{
+    internal class ClientPeerPrivatePool
+    {
+        readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
+        QuicServer mTcpServer = null;
+        private int nMaxCapacity = 0;
+        private ClientPeerPrivate GenerateObject()
+        {
+            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mTcpServer);
+            return clientPeer;
+        }
+
+        public ClientPeerPrivatePool(QuicServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        {
+            this.mTcpServer = mTcpServer;
+            SetMaxCapacity(nMaxCapacity);
+            for (int i = 0; i < initCapacity; i++)
+            {
+                mObjectPool.Push(GenerateObject());
+            }
+        }
+
+        public void SetMaxCapacity(int nCapacity)
+        {
+            this.nMaxCapacity = nCapacity;
+        }
+
+        public int Count()
+        {
+            return mObjectPool.Count;
+        }
+
+        public ClientPeerPrivate Pop()
+        {
+            MainThreadCheck.Check();
+
+            ClientPeerPrivate t = null;
+            if (!mObjectPool.TryPop(out t))
+            {
+                t = GenerateObject();
+            }
+            return t;
+        }
+
+        public void recycle(ClientPeerPrivate t)
+        {
+            MainThreadCheck.Check();
+#if DEBUG
+            NetLog.Assert(!mObjectPool.Contains(t));
+#endif
+            t.Reset();
+            //防止 内存一直增加，合理的GC
+            bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
+            if (bRecycle)
+            {
+                mObjectPool.Push(t);
+            }
+            else
+            {
+                t.Release();
+            }
+        }
+    }
+}
+
+#endif

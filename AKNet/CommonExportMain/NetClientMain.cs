@@ -17,6 +17,12 @@ namespace AKNet.Common
             {
                 mInterface = new AKNet.Tcp.Client.TcpNetClientMain();
             }
+#if NET9_0_OR_GREATER
+            else if (nNetType == NetType.MSQuic)
+            {
+                mInterface = new AKNet.Quic.Client.QuicNetClientMain();
+            }
+#endif
             else if (nNetType == NetType.UDP)
             {
                 mInterface = new AKNet.Udp.POINTTOPOINT.Client.UdpNetClientMain();
