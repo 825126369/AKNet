@@ -160,10 +160,6 @@ namespace AKNet.Common
         {
             if (!bPrintLog) return;
             string msg = GetLogMsg(message);
-#if DEBUG
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine(msg);
-#endif
             if (LogFunc != null)
             {
                 LogFunc(msg);
@@ -174,10 +170,6 @@ namespace AKNet.Common
         {
             if (!bPrintLog) return;
             string msg = GetWarningMsg(message);
-#if DEBUG
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
-            Console.WriteLine(msg);
-#endif
             if (LogWarningFunc != null)
             {
                 LogWarningFunc(msg);
