@@ -1,3 +1,12 @@
+ï»¿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#æ¸¸æˆç½‘ç»œåº“
+*        Author:è®¸ç‚
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/30 19:43:21
+*        Copyright:MITè½¯ä»¶è®¸å¯è¯
+************************************Copyright*****************************************/
 using System.Runtime.InteropServices;
 namespace AKNet.Platform
 {
@@ -26,7 +35,7 @@ namespace AKNet.Platform
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static extern int connect(SafeHandle s, byte* name, int namelen);
             //[DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
-            //public static extern int WSAGetLastError(); //Õâ¸öºÍ Marshal.GetLastWin32Error() ³åÍ»ÁË
+            //public static extern int WSAGetLastError(); //ï¿½ï¿½ï¿½ï¿½ï¿½ Marshal.GetLastWin32Error() ï¿½ï¿½Í»ï¿½ï¿½
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true)]
             public static extern void FreeAddrInfoW(ADDRINFOW* pAddrInfo);
             [DllImport(Interop.Libraries.Ws2_32, SetLastError = true, CharSet = CharSet.Unicode)]
