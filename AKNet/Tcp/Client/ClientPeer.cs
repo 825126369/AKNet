@@ -30,7 +30,6 @@ namespace AKNet.Tcp.Client
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
         private uint ID = 0;
-        internal readonly Config mConfig = new Config();
         public ClientPeer()
         {
             NetLog.Init();
@@ -264,11 +263,6 @@ namespace AKNet.Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
 
         public void SetName(string name)

@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Tcp.Common
 {
-    public class Config
+    public static class Config
     {
         //Common
         public const bool bUseSocketLock = false;

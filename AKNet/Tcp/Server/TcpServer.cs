@@ -24,7 +24,6 @@ namespace AKNet.Tcp.Server
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        internal readonly Config mConfig = new Config();
         public TcpServer()
         {
             NetLog.Init();
@@ -36,11 +35,6 @@ namespace AKNet.Tcp.Server
             mSocketMgr = new TCPSocket_Server(this);
             mClientPeerManager = new ClientPeerManager(this);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
 
         public SOCKET_SERVER_STATE GetServerState()
