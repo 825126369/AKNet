@@ -85,45 +85,48 @@ namespace AKNet.Tcp.Client
             switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
-                    int nPackageCount = 0;
-                    while (NetPackageExecute())
                     {
-                        nPackageCount++;
-                    }
-                    if (nPackageCount > 0)
-                    {
-                        ReceiveHeartBeat();
-                    }
+                        int nPackageCount = 0;
+                        while (NetPackageExecute())
+                        {
+                            nPackageCount++;
+                        }
+                        if (nPackageCount > 0)
+                        {
+                            ReceiveHeartBeat();
+                        }
 
 
-                    fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
-					{
-                        fSendHeartBeatTime = 0.0;
-                        SendHeartBeat();
-					}
+                        fSendHeartBeatTime += elapsed;
+                        if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+                        {
+                            fSendHeartBeatTime = 0.0;
+                            SendHeartBeat();
+                        }
 
-                    double fHeatTime = Math.Min(0.3, elapsed);
-                    fReceiveHeartBeatTime += fHeatTime;
-                    if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
-                    {
-                        fReceiveHeartBeatTime = 0.0;
-                        fReConnectServerCdTime = 0.0;
-                        mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                        double fHeatTime = Math.Min(0.3, elapsed);
+                        fReceiveHeartBeatTime += fHeatTime;
+                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        {
+                            fReceiveHeartBeatTime = 0.0;
+                            fReConnectServerCdTime = 0.0;
+                            mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
 #if DEBUG
-                        NetLog.Log("心跳超时");
+                            NetLog.Log("心跳超时");
 #endif
+                        }
                     }
-
                     break;
 				case SOCKET_PEER_STATE.RECONNECTING:
-					fReConnectServerCdTime += elapsed;
-					if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
-					{
-                        fReConnectServerCdTime = 0.0;
-                        mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;
-						ReConnectServer();
-					}
+                    {
+                        fReConnectServerCdTime += elapsed;
+                        if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
+                        {
+                            fReConnectServerCdTime = 0.0;
+                            mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;
+                            ReConnectServer();
+                        }
+                    }
 					break;
 				default:
 					break;
