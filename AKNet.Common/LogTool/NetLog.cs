@@ -101,7 +101,7 @@ namespace AKNet.Common
             }
 
             Exception exception = args.ExceptionObject as Exception;
-            if (IsFromMyAssembly(exception))
+           // if (IsFromMyAssembly(exception))
             {
                 LogUncaughtException(exception);
             }

@@ -13,6 +13,7 @@ using System;
 using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Client
 {
@@ -46,13 +47,12 @@ namespace AKNet.Tcp.Client
         private bool bReceiveIOContextUsed = false;
         private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly object lock_mSocket_object = new object();
-        private readonly SocketAsyncEventArgs mConnectIOContex = null;
-        private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
-        private readonly SocketAsyncEventArgs mSendIOContex = null;
-        private readonly SocketAsyncEventArgs mReceiveIOContex = null;
-        private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-        private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-
+        private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
+        private readonly byte[] mIMemoryOwner_Send = new byte[Config.nIOContexBufferLength];
+        private readonly byte[] mIMemoryOwner_Receive = new byte[Config.nIOContexBufferLength];
 
         public ClientPeer()
         {
@@ -61,14 +61,10 @@ namespace AKNet.Tcp.Client
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
 
-            mConnectIOContex = new SocketAsyncEventArgs();
-            mDisConnectIOContex = new SocketAsyncEventArgs();
-            mSendIOContex = new SocketAsyncEventArgs();
-            mReceiveIOContex = new SocketAsyncEventArgs();
-
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
-            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive.Memory);
+            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive);
+            mSendIOContex.SetBuffer(mIMemoryOwner_Send);
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
@@ -154,7 +150,8 @@ namespace AKNet.Tcp.Client
 			fReceiveHeartBeatTime = 0f;
 		}
 
-        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
         {
             this.mSocketPeerState = mSocketPeerState;
         }
@@ -162,62 +159,6 @@ namespace AKNet.Tcp.Client
         public SOCKET_PEER_STATE GetSocketState()
         {
 			return this.mSocketPeerState;
-        }
-
-        public void SendNetData(ushort nPackageId)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
-                SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
-        }
-
-        public void SendNetData(ushort nPackageId, byte[] data)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, data);
-                SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
-        }
-
-        public void SendNetData(NetPackage mNetPackage)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
-                SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
-        }
-
-        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
-                SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
         }
 
         public void Reset()
@@ -249,9 +190,6 @@ namespace AKNet.Tcp.Client
 		{
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             CloseSocket();
-            mIMemoryOwner_Send.Dispose();
-            mIMemoryOwner_Receive.Dispose();
-
             lock (mSendStreamList)
             {
                 mSendStreamList.Dispose();

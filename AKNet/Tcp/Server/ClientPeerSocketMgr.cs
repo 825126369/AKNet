@@ -18,8 +18,8 @@ namespace AKNet.Tcp.Server
 {
     internal class ClientPeerSocketMgr
 	{
-        private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-        private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+        private readonly byte[] mIMemoryOwner_Send = new byte[Config.nIOContexBufferLength];
+        private readonly byte[] mIMemoryOwner_Receive = new byte[Config.nIOContexBufferLength];
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
 		private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
 		private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
@@ -34,9 +34,10 @@ namespace AKNet.Tcp.Server
 		{
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
-
+			
+            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive);
+            mSendIOContex.SetBuffer(mIMemoryOwner_Send);
             mSendIOContex.Completed += OnIOCompleted;
-            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive.Memory);
             mReceiveIOContex.Completed += OnIOCompleted;
 			bSendIOContextUsed = false;
 
@@ -244,16 +245,12 @@ namespace AKNet.Tcp.Server
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-                var mMemory = mIMemoryOwner_Send.Memory;
-                nLength = Math.Min(mMemory.Length, nLength);
-                nLength = Math.Min(Config.nIOContexBufferLength * 8, nLength);
-
-                mMemory = mIMemoryOwner_Send.Memory.Slice(0, nLength);
+                nLength = Math.Min(mSendIOContex.Buffer.Length, nLength);
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.CopyTo(mMemory.Span);
+                    mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan().Slice(0, nLength));
                 }
-                mSendIOContex.SetBuffer(mMemory);
+                mSendIOContex.SetBuffer(0, nLength);
                 StartSendEventArg();
             }
 			else
@@ -336,8 +333,6 @@ namespace AKNet.Tcp.Server
             {
                 mSendStreamList.Dispose();
             }
-			mIMemoryOwner_Send.Dispose();
-			mIMemoryOwner_Receive.Dispose();
         }
     }
 

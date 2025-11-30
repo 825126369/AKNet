@@ -8,12 +8,9 @@ namespace TestNetServer
     {
         NetServerMain mNetServer = null;
         const int NetCommand_COMMAND_TESTCHAT = 1000;
-
-        public const bool InTest = true;
-        private double fDuringTime;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.Udp2Tcp);
+            mNetServer = new NetServerMain(NetType.TCP);
             mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetServer.InitNet(6000);
         }
@@ -21,13 +18,6 @@ namespace TestNetServer
         public void Update(double fElapsedTime)
         {
             mNetServer.Update(fElapsedTime);
-
-            fDuringTime += fElapsedTime;
-            if (fDuringTime > 5.0)
-            {
-                fDuringTime = 0.0;
-            }
-
         }
 
         private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
