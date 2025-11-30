@@ -32,8 +32,8 @@ namespace AKNet.Common
         SOCKET_PEER_STATE GetSocketState();
         void SendNetData(ushort nPackageId);
         void SendNetData(ushort nPackageId, byte[] data);
+        void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer);
         void SendNetData(NetPackage mNetPackage);
-        void SendNetData(UInt16 nPackageId, ReadOnlySpan<byte> buffer);
         void SetName(string name);
         string GetName();
         void SetID(uint id);

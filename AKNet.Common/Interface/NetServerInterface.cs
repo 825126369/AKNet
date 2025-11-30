@@ -22,8 +22,8 @@ namespace AKNet.Common
 
 
 
-        void addNetListenFunc(UInt16 id, Action<ClientPeerBase, NetPackage> mFunc);
-        void removeNetListenFunc(UInt16 id, Action<ClientPeerBase, NetPackage> mFunc);
+        void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc);
         void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
         void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
 
