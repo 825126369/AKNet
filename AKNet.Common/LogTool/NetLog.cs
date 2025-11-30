@@ -30,6 +30,8 @@ namespace AKNet.Common
 
         public static void AddConsoleLog()
         {
+            Init();
+
             Action<string> LogFunc = (string message)=>
             {
                 Console.ForegroundColor = ConsoleColor.Green;

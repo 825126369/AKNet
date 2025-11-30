@@ -14,44 +14,10 @@ using System.Net.Sockets;
 namespace AKNet.Tcp.Client
 {
 	//和线程打交道
-	internal class MsgReceiveMgr
-	{
+	internal partial class ClientPeer
+    {
 		private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
 		protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
-		private readonly ClientPeer mClientPeer;
-		public MsgReceiveMgr(ClientPeer mClientPeer)
-		{
-			this.mClientPeer = mClientPeer;
-		}
-
-		public void Update(double elapsed)
-		{
-			var mSocketPeerState = mClientPeer.GetSocketState();
-			switch (mSocketPeerState)
-			{
-				case SOCKET_PEER_STATE.CONNECTED:
-					int nPackageCount = 0;
-
-					while (NetPackageExecute())
-					{
-						nPackageCount++;
-					}
-
-					if (nPackageCount > 0)
-					{
-						mClientPeer.ReceiveHeartBeat();
-					}
-
-					//if (nPackageCount > 100)
-					//{
-					//	NetLog.LogWarning("Client 处理逻辑包的数量： " + nPackageCount);
-					//}
-
-					break;
-				default:
-					break;
-			}
-		}
 
         public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
@@ -67,7 +33,7 @@ namespace AKNet.Tcp.Client
 
 			lock (mReceiveStreamList)
 			{
-				bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -78,24 +44,11 @@ namespace AKNet.Tcp.Client
 				}
 				else
 				{
-					mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+					mPackageManager.NetPackageExecute(this, mNetPackage);
 				}
 			}
 
 			return bSuccess;
 		}
-
-		public void Reset()
-		{
-			lock (mReceiveStreamList)
-			{
-				mReceiveStreamList.Reset();
-			}
-		}
-
-		public void Release()
-		{
-            mReceiveStreamList.Dispose();
-        }
 	}
 }
