@@ -10,7 +10,7 @@ namespace TestNetServer
         const int NetCommand_COMMAND_TESTCHAT = 1000;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.TCP);
+            mNetServer = new NetServerMain(NetType.Udp3Tcp);
             mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
             mNetServer.InitNet(6000);
         }
