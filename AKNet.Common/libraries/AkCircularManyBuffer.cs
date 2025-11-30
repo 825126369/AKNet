@@ -13,20 +13,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
-[assembly: InternalsVisibleTo("AKNet.Other")]
-[assembly: InternalsVisibleTo("AKNet.Test")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
-    //��ǰ��ѭ��Buffer �����ڴ涶�������⣬�������Ϊ�˻��������������
     internal class AkCircularManyBuffer : IDisposable
     {
         public class BufferItem : IDisposable
         {
             public readonly LinkedListNode<BufferItem> mEntry = null;
-            private readonly IMemoryOwner<byte> mBufferMemory;
+            private readonly byte[] mBufferMemory;
             public int nOffset;
             public int nLength;
             private bool bDispose = false;
@@ -39,19 +38,19 @@ namespace AKNet.Common
             {
                 this.bDispose = false;
                 mEntry = new LinkedListNode<BufferItem>(this);
-                mBufferMemory = MemoryPool<byte>.Shared.Rent(nBufferLength);
+                mBufferMemory = new byte[nBufferLength];
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanWriteSpan()
             {
-                return mBufferMemory.Memory.Span.Slice(nOffset + nLength);
+                return mBufferMemory.AsSpan().Slice(nOffset + nLength);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanReadSpan()
             {
-                return mBufferMemory.Memory.Span.Slice(nOffset, nLength);
+                return mBufferMemory.AsSpan().Slice(nOffset, nLength);
             }
 
             public void Reset()
@@ -66,7 +65,6 @@ namespace AKNet.Common
                 this.nOffset = 0;
                 this.nLength = 0;
                 this.bDispose = true;
-                mBufferMemory.Dispose();
             }
         }
 
@@ -75,6 +73,7 @@ namespace AKNet.Common
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
         private readonly int BlockSize = 1024;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
+        private LinkedListNode<BufferItem> nCurrentReadBlock => mItemList.First;
         private int nSumByteCount;
 
         public AkCircularManyBuffer(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = 1024)
@@ -90,8 +89,6 @@ namespace AKNet.Common
             nCurrentWriteBlock = mItemList.First;
             nSumByteCount = 0;
         }
-
-        private LinkedListNode<BufferItem> nCurrentReadBlock => mItemList.First;
 
         public int Length
         {
