@@ -248,11 +248,19 @@ namespace AKNet.Tcp.Client
 		public void Release()
 		{
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            CloseSocket();
             mIMemoryOwner_Send.Dispose();
             mIMemoryOwner_Receive.Dispose();
-            mSendStreamList.Dispose();
-            mReceiveStreamList.Dispose();
-            CloseSocket();
+
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Dispose();
+            }
+
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
+            }
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
