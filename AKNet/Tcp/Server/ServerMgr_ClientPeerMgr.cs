@@ -16,9 +16,6 @@ namespace AKNet.Tcp.Server
 {
     internal partial class ServerMgr
     {
-		private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
-		private readonly Queue<Socket> mConnectSocketQueue = new Queue<Socket>();
-
 		public void Update(double elapsed)
 		{
             if (elapsed >= 0.3)

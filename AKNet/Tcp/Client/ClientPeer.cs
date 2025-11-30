@@ -56,7 +56,6 @@ namespace AKNet.Tcp.Client
 
         public ClientPeer()
         {
-            NetLog.Init();
             mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();

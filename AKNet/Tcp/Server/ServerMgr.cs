@@ -10,18 +10,21 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
     internal partial class ServerMgr : NetServerInterface
     {
-        internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
-        internal readonly ListenNetPackageMgr mPackageManager = null;
-        internal readonly NetStreamPackage mNetPackage = null;
-        internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
+        internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
+        internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
+        internal readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        internal readonly CryptoMgr mCryptoMgr = new CryptoMgr();
+        
         internal readonly ClientPeerPool mClientPeerPool = null;
-        internal readonly CryptoMgr mCryptoMgr = null;
+        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
+        private readonly Queue<Socket> mConnectSocketQueue = new Queue<Socket>();
 
         private int nPort;
         private Socket mListenSocket = null;
@@ -31,14 +34,7 @@ namespace AKNet.Tcp.Server
 
         public ServerMgr()
         {
-            NetLog.Init();
-
-            mCryptoMgr = new CryptoMgr();
-            mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mPackageManager = new ListenNetPackageMgr();
-            mNetPackage = new NetStreamPackage();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
-
             mAcceptIOContex.Completed += OnIOCompleted;
             mAcceptIOContex.AcceptSocket = null;
         }
