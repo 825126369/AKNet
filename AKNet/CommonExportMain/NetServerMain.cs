@@ -15,7 +15,7 @@ namespace AKNet.Common
         {
             if (nNetType == NetType.TCP)
             {
-                mInterface = new AKNet.Tcp.Server.TcpNetServerMain();
+                mInterface = new AKNet.Tcp.Server.NetServerMain();
             }
 #if NET9_0_OR_GREATER
             else if (nNetType == NetType.MSQuic)

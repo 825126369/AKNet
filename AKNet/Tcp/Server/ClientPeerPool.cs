@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Server
     internal class ClientPeerPool
     {
         readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
-        TcpServer mTcpServer = null;
+        ServerMgr mTcpServer = null;
         private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
@@ -23,7 +23,7 @@ namespace AKNet.Tcp.Server
             return clientPeer;
         }
 
-        public ClientPeerPool(TcpServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPool(ServerMgr mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mTcpServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);

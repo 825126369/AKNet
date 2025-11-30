@@ -7,16 +7,14 @@
 *        ModifyTime:2025/11/29 4:33:38
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using AKNet.Common;
 using AKNet.Tcp.Common;
-using System;
-using System.Net;
 
-namespace AKNet.Tcp.Client
+namespace AKNet.Tcp.Server
 {
-    internal class TcpNetClientMain : ClientPeer, NetClientInterface
+    internal class NetServerMain : ServerMgr, NetServerInterface
     {
-        
+       
     }
-
 }

@@ -7,24 +7,29 @@
 *        ModifyTime:2025/11/29 4:33:38
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using AKNet.Common;
 using AKNet.Tcp.Common;
+using System;
+using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class TcpServer : NetServerInterface
+    internal partial class ServerMgr : NetServerInterface
     {
-        private readonly TCPSocket_Server mSocketMgr = null;
-
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly NetStreamPackage mNetPackage = null;
-        internal readonly ClientPeerWrapManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        public TcpServer()
+
+        private int nPort;
+        private Socket mListenSocket = null;
+        private readonly object lock_mSocket_object = new object();
+        private readonly SocketAsyncEventArgs mAcceptIOContex = new SocketAsyncEventArgs();
+        private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
+
+        public ServerMgr()
         {
             NetLog.Init();
 
@@ -32,43 +37,10 @@ namespace AKNet.Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new NetStreamPackage();
-            mSocketMgr = new TCPSocket_Server(this);
-            mClientPeerManager = new ClientPeerWrapManager(this);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
-        }
 
-        public SOCKET_SERVER_STATE GetServerState()
-        {
-            return mSocketMgr.GetServerState();
-        }
-
-        public int GetPort()
-        {
-            return mSocketMgr.GetPort();
-        }
-
-        public void InitNet()
-        {
-            mSocketMgr.InitNet();
-        }
-
-        public void InitNet(int nPort)
-        {
-            mSocketMgr.InitNet(nPort);
-        }
-
-        public void InitNet(string Ip, int nPort)
-        {
-            mSocketMgr.InitNet(Ip, nPort);
-        }
-
-        public void Update(double elapsed)
-        {
-            if (elapsed >= 0.3)
-            {
-                NetLog.LogWarning("帧 时间 太长: " + elapsed);
-            }
-            mClientPeerManager.Update(elapsed);
+            mAcceptIOContex.Completed += OnIOCompleted;
+            mAcceptIOContex.AcceptSocket = null;
         }
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)
@@ -98,7 +70,7 @@ namespace AKNet.Tcp.Server
 
         public void Release()
         {
-            mSocketMgr.CloseNet();
+            CloseNet();
         }
 
         public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)

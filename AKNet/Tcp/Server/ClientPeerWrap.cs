@@ -19,8 +19,8 @@ namespace AKNet.Tcp.Server
     internal class ClientPeerWrap : ClientPeerBase
 	{
         private ClientPeer mInstance = null;
-        private TcpServer mNetServer;
-        public ClientPeerWrap(TcpServer mNetServer)
+        private ServerMgr mNetServer;
+        public ClientPeerWrap(ServerMgr mNetServer)
 		{
             this.mNetServer = mNetServer;
             this.mInstance = mNetServer.mClientPeerPool.Pop();

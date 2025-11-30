@@ -14,20 +14,19 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeerWrapManager
-	{
+    internal partial class ServerMgr
+    {
 		private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
 		private readonly Queue<Socket> mConnectSocketQueue = new Queue<Socket>();
-		private TcpServer mNetServer;
-
-		public ClientPeerWrapManager(TcpServer mNetServer)
-		{
-			this.mNetServer = mNetServer;
-		}
 
 		public void Update(double elapsed)
 		{
-			while (CreateClientPeer())
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("帧 时间 太长: " + elapsed);
+            }
+
+            while (CreateClientPeer())
 			{
 
 			}
@@ -77,7 +76,7 @@ namespace AKNet.Tcp.Server
 			}
 			if (mSocket != null)
 			{
-                ClientPeerWrap clientPeer = new ClientPeerWrap(mNetServer);
+                ClientPeerWrap clientPeer = new ClientPeerWrap(this);
 				clientPeer.HandleConnectedSocket(mSocket);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

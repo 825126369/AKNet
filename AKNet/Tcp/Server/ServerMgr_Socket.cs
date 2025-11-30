@@ -16,23 +16,8 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-	internal class TCPSocket_Server
-	{
-		private int nPort;
-		private Socket mListenSocket = null;
-		private readonly object lock_mSocket_object = new object();
-		private readonly SocketAsyncEventArgs mAcceptIOContex = new SocketAsyncEventArgs();
-
-		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-		private TcpServer mTcpServer;
-
-		public TCPSocket_Server(TcpServer mTcpServer)
-		{
-			this.mTcpServer = mTcpServer;
-			mAcceptIOContex.Completed += OnIOCompleted;
-			mAcceptIOContex.AcceptSocket = null;
-		}
-
+    internal partial class ServerMgr
+    {
 		public void InitNet()
 		{
 			List<int> mPortList = IPAddressHelper.GetAvailableTcpPortList();
@@ -168,7 +153,7 @@ namespace AKNet.Tcp.Server
 #if DEBUG
 				NetLog.Assert(mClientSocket != null);
 #endif
-				if (!mTcpServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(mClientSocket))
+				if (!MultiThreadingHandleConnectedSocket(mClientSocket))
 				{
 					HandleConnectFull(mClientSocket);
 				}
