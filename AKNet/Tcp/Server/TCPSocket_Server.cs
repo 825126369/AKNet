@@ -21,8 +21,6 @@ namespace AKNet.Tcp.Server
 		private int nPort;
 		private Socket mListenSocket = null;
 		private readonly object lock_mSocket_object = new object();
-
-		private bool bAccetpEventArgCanUse = false;
 		private readonly SocketAsyncEventArgs mAcceptIOContex = new SocketAsyncEventArgs();
 
 		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
@@ -31,10 +29,8 @@ namespace AKNet.Tcp.Server
 		public TCPSocket_Server(TcpServer mTcpServer)
 		{
 			this.mTcpServer = mTcpServer;
-			mAcceptIOContex.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
+			mAcceptIOContex.Completed += OnIOCompleted;
 			mAcceptIOContex.AcceptSocket = null;
-			bAccetpEventArgCanUse = true;
-
 		}
 
 		public void InitNet()
