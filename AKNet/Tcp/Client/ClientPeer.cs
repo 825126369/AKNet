@@ -27,7 +27,7 @@ namespace AKNet.Tcp.Client
         private double fReceiveHeartBeatTime = 0.0;
 
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private bool b_SOCKET_PEER_STATE_Changed = false;
+        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
         private uint ID = 0;
 
@@ -82,13 +82,7 @@ namespace AKNet.Tcp.Client
                 NetLog.LogWarning("帧 时间 太长: " + elapsed);
             }
 
-            if(b_SOCKET_PEER_STATE_Changed)
-            {
-                mListenClientPeerStateMgr.OnSocketStateChanged(this);
-                b_SOCKET_PEER_STATE_Changed = false;
-            }
-            
-			switch (mSocketPeerState)
+            switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
                     int nPackageCount = 0;
@@ -134,6 +128,12 @@ namespace AKNet.Tcp.Client
 				default:
 					break;
 			}
+
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mListenClientPeerStateMgr.OnSocketStateChanged(this);
+            }
         }
 
         private void SendHeartBeat()
@@ -153,19 +153,7 @@ namespace AKNet.Tcp.Client
 
         public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
         {
-            if (this.mSocketPeerState != mSocketPeerState)
-            {
-                this.mSocketPeerState = mSocketPeerState;
-
-                if (MainThreadCheck.orInMainThread())
-                {
-                    mListenClientPeerStateMgr.OnSocketStateChanged(this);
-                }
-                else
-                {
-                    b_SOCKET_PEER_STATE_Changed = true;
-                }
-            }
+            this.mSocketPeerState = mSocketPeerState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()
