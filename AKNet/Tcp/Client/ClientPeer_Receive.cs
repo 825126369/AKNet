@@ -16,9 +16,6 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal partial class ClientPeer
     {
-		private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-		protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
-
         public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
 			lock (mReceiveStreamList)

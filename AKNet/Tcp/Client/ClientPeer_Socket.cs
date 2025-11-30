@@ -18,25 +18,6 @@ namespace AKNet.Tcp.Client
 {
     internal partial class ClientPeer
     {
-		private Socket mSocket = null;
-		private string ServerIp = "";
-		private int nServerPort = 0;
-		private IPEndPoint mIPEndPoint = null;
-        private bool bConnectIOContexUsed = false;
-        private bool bDisConnectIOContexUsed = false;
-        private bool bSendIOContextUsed = false;
-        private bool bReceiveIOContextUsed = false;
-		
-        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
-		private readonly object lock_mSocket_object = new object();
-        private readonly SocketAsyncEventArgs mConnectIOContex = null;
-        private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
-		private readonly SocketAsyncEventArgs mSendIOContex = null;
-        private readonly SocketAsyncEventArgs mReceiveIOContex = null;
-
-		private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-        private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
-
 		public void ReConnectServer()
 		{
             bool Connected = false;

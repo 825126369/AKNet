@@ -10,6 +10,7 @@
 using AKNet.Common;
 using AKNet.Tcp.Common;
 using System;
+using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 
@@ -17,9 +18,9 @@ namespace AKNet.Tcp.Client
 {
     internal partial class ClientPeer : NetClientInterface, ClientPeerBase
     {
-        internal readonly CryptoMgr mCryptoMgr;
-        internal readonly ListenNetPackageMgr mPackageManager = null;
-        internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
+        private readonly CryptoMgr mCryptoMgr;
+        private readonly ListenNetPackageMgr mPackageManager = null;
+        private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
 
         private double fReConnectServerCdTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
@@ -29,6 +30,28 @@ namespace AKNet.Tcp.Client
         private bool b_SOCKET_PEER_STATE_Changed = false;
         private string Name = string.Empty;
         private uint ID = 0;
+
+        //Receive
+        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
+        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+
+        //Socket
+        private Socket mSocket = null;
+        private string ServerIp = "";
+        private int nServerPort = 0;
+        private IPEndPoint mIPEndPoint = null;
+        private bool bConnectIOContexUsed = false;
+        private bool bDisConnectIOContexUsed = false;
+        private bool bSendIOContextUsed = false;
+        private bool bReceiveIOContextUsed = false;
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+        private readonly object lock_mSocket_object = new object();
+        private readonly SocketAsyncEventArgs mConnectIOContex = null;
+        private readonly SocketAsyncEventArgs mDisConnectIOContex = null;
+        private readonly SocketAsyncEventArgs mSendIOContex = null;
+        private readonly SocketAsyncEventArgs mReceiveIOContex = null;
+        private readonly IMemoryOwner<byte> mIMemoryOwner_Send = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
+        private readonly IMemoryOwner<byte> mIMemoryOwner_Receive = MemoryPool<byte>.Shared.Rent(Config.nIOContexBufferLength);
 
 
         public ClientPeer()
