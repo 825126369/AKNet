@@ -18,6 +18,7 @@ namespace AKNet.Tcp.Server
     internal class ClientPeer : ClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
 
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
@@ -25,7 +26,6 @@ namespace AKNet.Tcp.Server
         internal ClientPeerSocketMgr mSocketMgr;
 		internal MsgReceiveMgr mMsgReceiveMgr;
 		private TcpServer mNetServer;
-        private bool b_SOCKET_PEER_STATE_Changed = false;
 		private string Name = string.Empty;
         private uint ID = 0;
         public ClientPeer(TcpServer mNetServer)
@@ -37,20 +37,8 @@ namespace AKNet.Tcp.Server
 
 		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
 		{
-			if (this.mSocketPeerState != mSocketPeerState)
-			{
-				this.mSocketPeerState = mSocketPeerState;
-
-				if (MainThreadCheck.orInMainThread())
-				{
-					this.mNetServer.OnSocketStateChanged(this);
-				}
-				else
-				{
-					b_SOCKET_PEER_STATE_Changed = true;
-				}
-			}
-		}
+            this.mSocketPeerState = mSocketPeerState;
+        }
 
         public SOCKET_PEER_STATE GetSocketState()
 		{
@@ -59,12 +47,6 @@ namespace AKNet.Tcp.Server
 
 		public void Update(double elapsed)
 		{
-			if (b_SOCKET_PEER_STATE_Changed)
-			{
-				mNetServer.OnSocketStateChanged(this);
-				b_SOCKET_PEER_STATE_Changed = false;
-			}
-
 			mMsgReceiveMgr.Update(elapsed);
 			switch (mSocketPeerState)
 			{
@@ -91,7 +73,13 @@ namespace AKNet.Tcp.Server
 				default:
 					break;
 			}
-		}
+
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mNetServer.OnSocketStateChanged(this);
+            }
+        }
 
 		private void SendHeartBeat()
 		{
