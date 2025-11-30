@@ -8,117 +8,192 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Tcp.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeer : ClientPeerBase
+    internal class ClientPeer : ClientPeerBase, IPoolItemInterface
 	{
-        private ClientPeerPrivate mInstance = null;
-        private TcpServer mNetServer;
+		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+
+        private double fSendHeartBeatTime = 0.0;
+		private double fReceiveHeartBeatTime = 0.0;
+
+        internal ClientPeerSocketMgr mSocketMgr;
+		internal MsgReceiveMgr mMsgReceiveMgr;
+		private TcpServer mNetServer;
+        private bool b_SOCKET_PEER_STATE_Changed = false;
+		private string Name = string.Empty;
+        private uint ID = 0;
         public ClientPeer(TcpServer mNetServer)
 		{
-            this.mNetServer = mNetServer;
-            this.mInstance = mNetServer.mClientPeerPool.Pop();
-        }
+			this.mNetServer = mNetServer;
+			mSocketMgr = new ClientPeerSocketMgr(this, mNetServer);
+			mMsgReceiveMgr = new MsgReceiveMgr(this, mNetServer);
+		}
 
-        public void Reset()
-        {
-            mNetServer.mClientPeerPool.recycle(mInstance);
-            mNetServer = null;
-            mInstance = null;
-        }
+		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+		{
+			if (this.mSocketPeerState != mSocketPeerState)
+			{
+				this.mSocketPeerState = mSocketPeerState;
+
+				if (MainThreadCheck.orInMainThread())
+				{
+					this.mNetServer.OnSocketStateChanged(this);
+				}
+				else
+				{
+					b_SOCKET_PEER_STATE_Changed = true;
+				}
+			}
+		}
 
         public SOCKET_PEER_STATE GetSocketState()
 		{
-			if (mInstance != null)
-			{
-				return mInstance.GetSocketState();
-			}
-			else
-			{
-				return SOCKET_PEER_STATE.DISCONNECTED;
-			}
+			return mSocketPeerState;
 		}
 
 		public void Update(double elapsed)
 		{
-            if (mInstance != null)
-            {
-                mInstance.Update(elapsed);
-            }
+			if (b_SOCKET_PEER_STATE_Changed)
+			{
+				mNetServer.OnSocketStateChanged(this);
+				b_SOCKET_PEER_STATE_Changed = false;
+			}
+
+			mMsgReceiveMgr.Update(elapsed);
+			switch (mSocketPeerState)
+			{
+				case SOCKET_PEER_STATE.CONNECTED:
+					fSendHeartBeatTime += elapsed;
+					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+					{
+						SendHeartBeat();
+						fSendHeartBeatTime = 0.0;
+					}
+
+                    double fHeatTime = Math.Min(0.3, elapsed);
+                    fReceiveHeartBeatTime += fHeatTime;
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+					{
+						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+						fReceiveHeartBeatTime = 0.0;
+#if DEBUG
+						NetLog.Log("心跳超时");
+#endif
+					}
+
+					break;
+				default:
+					break;
+			}
+		}
+
+		private void SendHeartBeat()
+		{
+			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+		}
+
+        private void ResetSendHeartBeatTime()
+        {
+            fSendHeartBeatTime = 0f;
         }
+
+        public void ReceiveHeartBeat()
+		{
+			fReceiveHeartBeatTime = 0.0;
+		}
 
 		public void SendNetData(ushort nPackageId)
 		{
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId);
-            }
-        }
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+				mSocketMgr.SendNetStream(mBufferSegment);
+			}
+		}
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId, data);
-            }
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, data);
+				mSocketMgr.SendNetStream(mBufferSegment);
+			}
         }
 
-        public void SendNetData(NetPackage data)
+        public void SendNetData(NetPackage mNetPackage)
         {
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(data);
-            }
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+				this.mSocketMgr.SendNetStream(mBufferSegment);
+			}
         }
 
-		public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> data)
+		public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
 		{
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId, data);
-            }
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			{
+				ResetSendHeartBeatTime();
+				ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, buffer);
+				mSocketMgr.SendNetStream(mBufferSegment);
+			}
+		}
+
+		public void Reset()
+		{
+			fSendHeartBeatTime = 0.0;
+			fReceiveHeartBeatTime = 0.0;
+			mSocketMgr.Reset();
+			mMsgReceiveMgr.Reset();
+			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			this.Name = string.Empty;
+			this.ID = 0;
+		}
+
+		public void Release()
+		{
+            mSocketMgr.Release();
+            mMsgReceiveMgr.Release();
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
 		public void HandleConnectedSocket(Socket mSocket)
 		{
-            if (mInstance != null)
-            {
-                mInstance.HandleConnectedSocket(mSocket);
-            }
+			mSocketMgr.HandleConnectedSocket(mSocket);
 		}
 
         public IPEndPoint GetIPEndPoint()
         {
-            if (mInstance != null)
-            {
-                return mInstance.GetIPEndPoint();
-            }
-            return null;
+            return mSocketMgr.GetIPEndPoint();
         }
 
         public void SetName(string name)
         {
-            mInstance.SetName(name);
+			this.Name = name;
         }
 
         public string GetName()
         {
-            return mInstance.GetName();
+            return this.Name;
         }
 
         public void SetID(uint id)
         {
-            mInstance.SetID(id);
+            this.ID = id;
         }
 
         public uint GetID()
         {
-            return mInstance.GetID();
+            return this.ID;
         }
     }
-
 }

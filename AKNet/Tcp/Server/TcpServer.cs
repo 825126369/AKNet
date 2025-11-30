@@ -20,7 +20,7 @@ namespace AKNet.Tcp.Server
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly NetStreamPackage mNetPackage = null;
-        internal readonly ClientPeerManager mClientPeerManager = null;
+        internal readonly ClientPeerWrapManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
@@ -33,7 +33,7 @@ namespace AKNet.Tcp.Server
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new NetStreamPackage();
             mSocketMgr = new TCPSocket_Server(this);
-            mClientPeerManager = new ClientPeerManager(this);
+            mClientPeerManager = new ClientPeerWrapManager(this);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 

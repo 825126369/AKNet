@@ -14,13 +14,13 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
 {
-    internal class ClientPeerManager
+    internal class ClientPeerWrapManager
 	{
-		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(0);
+		private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
 		private readonly Queue<Socket> mConnectSocketQueue = new Queue<Socket>();
 		private TcpServer mNetServer;
 
-		public ClientPeerManager(TcpServer mNetServer)
+		public ClientPeerWrapManager(TcpServer mNetServer)
 		{
 			this.mNetServer = mNetServer;
 		}
@@ -34,7 +34,7 @@ namespace AKNet.Tcp.Server
 
 			for (int i = mClientList.Count - 1; i >= 0; i--)
 			{
-				ClientPeer mClientPeer = mClientList[i];
+				ClientPeerWrap mClientPeer = mClientList[i];
 				if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 				{
 					mClientPeer.Update(elapsed);
@@ -77,7 +77,7 @@ namespace AKNet.Tcp.Server
 			}
 			if (mSocket != null)
 			{
-                ClientPeer clientPeer = new ClientPeer(mNetServer);
+                ClientPeerWrap clientPeer = new ClientPeerWrap(mNetServer);
 				clientPeer.HandleConnectedSocket(mSocket);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
@@ -86,7 +86,7 @@ namespace AKNet.Tcp.Server
 			return false;
 		}
 
-        private void PrintAddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeerWrap clientPeer)
 		{
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -101,7 +101,7 @@ namespace AKNet.Tcp.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeerWrap clientPeer)
 		{
 #if DEBUG
 			var mRemoteEndPoint = clientPeer.GetIPEndPoint();
