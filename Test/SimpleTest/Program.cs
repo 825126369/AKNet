@@ -1,4 +1,6 @@
-﻿namespace AKNet.Test
+﻿using System;
+
+namespace AKNet.Test
 {
     internal class Program
     {
@@ -6,6 +8,18 @@
         {
             Console.WriteLine("Hello, World!");
             Draw(5);
+
+            Span<byte> buffer1 = new byte[5] { 1, 2, 3, 4, 5};
+            Span<byte> buffer2 = new byte[5] { 1, 2, 3, 3, 5 };
+
+            if (buffer1.SequenceEqual(buffer2))
+            {
+                Console.WriteLine("==");
+            }
+            else
+            {
+                Console.WriteLine("!=");
+            }
         }
 
         private static void Draw(int N)

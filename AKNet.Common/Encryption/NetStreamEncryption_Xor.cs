@@ -29,13 +29,13 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureSendBufferOk(int nSumLength)
 		{
-            BufferTool.EnSureBufferOk(ref mCacheSendBuffer, nSumLength);
+            BufferTool.EnSureBufferOk_Power2(ref mCacheSendBuffer, nSumLength);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureReceiveBufferOk(int nSumLength)
         {
-            BufferTool.EnSureBufferOk(ref mCacheReceiveBuffer, nSumLength);
+            BufferTool.EnSureBufferOk_Power2(ref mCacheReceiveBuffer, nSumLength);
         }
 
 		public bool Decode(NetStreamCircularBuffer mReceiveStreamList, NetStreamPackage mPackage)

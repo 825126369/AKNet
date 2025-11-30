@@ -11,14 +11,14 @@ using System;
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
-[assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
     internal static class BufferTool
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void EnSureBufferOk(ref byte[] mCacheBuffer, int nSumLength)
+        public static void EnSureBufferOk_Power2(ref byte[] mCacheBuffer, int nSumLength)
         {
             if (mCacheBuffer.Length < nSumLength)
             {
@@ -33,7 +33,7 @@ namespace AKNet.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void EnSureBufferOk2(ref byte[] mCacheBuffer, int nSumLength)
+        public static void EnSureBufferOk_JustRight(ref byte[] mCacheBuffer, int nSumLength)
         {
             if (mCacheBuffer.Length < nSumLength)
             {
@@ -41,41 +41,44 @@ namespace AKNet.Common
             }
         }
 
-        public static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
-        {
-            if (buffer1.Length != buffer2.Length)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < buffer1.Length; i++)
-            {
-                if (buffer1[i] != buffer2[i])
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(byte[] buffer1, byte[] buffer2, int nLength)
         {
-            return orBufferEqual(buffer1, 0, buffer2, 0, nLength);
+            return orBufferEqual(
+               buffer1.AsSpan().Slice(0, nLength),
+               buffer2.AsSpan().Slice(0, nLength));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(byte[] buffer1, int Offset1, byte[] buffer2, int nOffset2, int nLength)
         {
-            if (buffer1.Length - Offset1 < nLength) return false;
-            if (buffer2.Length - nOffset2 < nLength) return false;
+            return orBufferEqual(
+                buffer1.AsSpan().Slice(Offset1, nLength),
+                buffer2.AsSpan().Slice(nOffset2, nLength));
+        }
 
-            for (int i = 0; i < nLength; i++)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
+        {
+            if (false)
             {
-                if (buffer1[i + Offset1] != buffer2[i + nOffset2])
+                if (buffer1.Length != buffer2.Length)
                 {
                     return false;
                 }
+
+                for (int i = 0; i < buffer1.Length; i++)
+                {
+                    if (buffer1[i] != buffer2[i])
+                    {
+                        return false;
+                    }
+                }
             }
-            return true;
+            else
+            {
+                return buffer1.SequenceEqual(buffer2);
+            }
         }
     }
 }

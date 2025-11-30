@@ -162,7 +162,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			this.Length = Config.nUdpPackageFixedHeadSize;
 
 			int nSumLength = this.nGroupCount * Config.nUdpPackageFixedBodySize + Config.nUdpPackageFixedHeadSize;
-            BufferTool.EnSureBufferOk(ref this.buffer, nSumLength);
+            BufferTool.EnSureBufferOk_Power2(ref this.buffer, nSumLength);
 			nGetCombineCount = 0;
 			Add(mPackage);
 		}
