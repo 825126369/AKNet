@@ -425,10 +425,10 @@ namespace AKNet.Tcp.Client
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-                nLength = Math.Min(mSendIOContex.Buffer.Length, nLength);
+                nLength = Math.Min(mSendIOContex.MemoryBuffer.Length, nLength);
                 lock (mSendStreamList)
 				{
-                    mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan().Slice(0, nLength));
+                    mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
                 }
 
 				mSendIOContex.SetBuffer(0, nLength);

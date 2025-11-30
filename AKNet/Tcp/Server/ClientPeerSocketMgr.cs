@@ -34,9 +34,9 @@ namespace AKNet.Tcp.Server
 		{
 			this.mClientPeer = mClientPeer;
 			this.mTcpServer = mTcpServer;
-			
-            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive);
-            mSendIOContex.SetBuffer(mIMemoryOwner_Send);
+
+            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive, 0, mIMemoryOwner_Receive.Length);
+            mSendIOContex.SetBuffer(mIMemoryOwner_Send, 0, mIMemoryOwner_Send.Length);
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
 			bSendIOContextUsed = false;
@@ -245,10 +245,10 @@ namespace AKNet.Tcp.Server
 			int nLength = mSendStreamList.Length;
 			if (nLength > 0)
 			{
-                nLength = Math.Min(mSendIOContex.Buffer.Length, nLength);
+                nLength = Math.Min(mSendIOContex.MemoryBuffer.Length, nLength);
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.CopyTo(mSendIOContex.Buffer.AsSpan().Slice(0, nLength));
+                    mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
                 }
                 mSendIOContex.SetBuffer(0, nLength);
                 StartSendEventArg();

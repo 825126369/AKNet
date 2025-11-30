@@ -63,8 +63,8 @@ namespace AKNet.Tcp.Client
 
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
-            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive);
-            mSendIOContex.SetBuffer(mIMemoryOwner_Send);
+            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive, 0, mIMemoryOwner_Receive.Length);
+            mSendIOContex.SetBuffer(mIMemoryOwner_Send, 0, mIMemoryOwner_Send.Length);
             mConnectIOContex.Completed += OnIOCompleted;
             mDisConnectIOContex.Completed += OnIOCompleted;
 
