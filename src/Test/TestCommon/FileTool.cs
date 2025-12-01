@@ -24,6 +24,19 @@ namespace TestCommon
             return GetSpecialSuffixDir(AppDomain.CurrentDomain.BaseDirectory, ".sln");
         }
 
+        public static string GetParentDir(string dirName)
+        {
+            var dirInfo = Directory.GetParent(dirName);
+            if (dirInfo != null)
+            {
+                return dirInfo.FullName;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         public static string GetParentSpecialDir(string dirName)
         {
             string dirPath = AppDomain.CurrentDomain.BaseDirectory;

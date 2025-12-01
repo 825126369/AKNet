@@ -30,7 +30,7 @@ namespace CopyDll
 
             foreach (string dirKey in outDllDirList) 
             {
-                string OutDllDir = Path.Combine(FileTool.GetSlnDir(), "DLL_OUT", dirKey);
+                string OutDllDir = Path.Combine(FileTool.GetParentDir(FileTool.GetSlnDir()), "DLL_OUT", dirKey);
                 Console.WriteLine($"OutDllDir : {OutDllDir}");
 
                 if (!Directory.Exists(OutDllDir))
