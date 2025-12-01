@@ -4,21 +4,21 @@ namespace CopyrightProtectionTool
 {
     internal class Program
     {
-        static string Head = "/************************************Copyright*****************************************";
-        static string End = "************************************Copyright*****************************************/";
+        const string Head = "/************************************Copyright*****************************************";
+        const string End = "************************************Copyright*****************************************/";
 
-        static void Main(string[] args)
-        {
-            string[] dirList = { 
-                "AKNet.Common", 
-                "AKNet", 
-                "AKNet.Extentions.Protobuf", 
+        static readonly string[] dirList = {
+                "AKNet.Common",
+                "AKNet",
+                "AKNet.Extentions.Protobuf",
                 "AKNet.MSQuic",
                 "AKNet.WebSocket",
                 "AKNet.Platform",
-                "AKNet.LinuxTcp" 
+                "AKNet.LinuxTcp"
             };
 
+        static void Main(string[] args)
+        {
             foreach(string dirName in dirList)
             {
                 string codeDir = Path.Combine(FileTool.GetSlnDir(), dirName);
