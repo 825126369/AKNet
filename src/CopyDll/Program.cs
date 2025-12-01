@@ -45,12 +45,12 @@ namespace CopyDll
                     {
                         foreach (var v in Directory.GetFiles(codeDir, "*.dll", SearchOption.AllDirectories))
                         {
-                            if (v.Contains(dirKey) && v.Contains("AKNet"))
+                            if (v.Contains(Path.Combine("bin", dirKey)) && v.Contains("AKNet"))
                             {
                                 string fileName = Path.GetFileName(v);
                                 string outFilePath = Path.Combine(OutDllDir, fileName);
                                 File.Copy(v, outFilePath, true);
-                                Console.WriteLine($"Copy DLL: {fileName} => {outFilePath}");
+                                Console.WriteLine($"Copy DLL: {fileName} {v} => {outFilePath}");
                             }
                         }
                     }
