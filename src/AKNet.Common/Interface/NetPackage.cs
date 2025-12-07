@@ -15,7 +15,6 @@ namespace AKNet.Common
     {
         ushort GetPackageId();
         ReadOnlySpan<byte> GetData();
-        internal void SetData(Memory<byte> mData);
     }
 }
 

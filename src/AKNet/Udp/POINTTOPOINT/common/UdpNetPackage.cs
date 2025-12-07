@@ -66,7 +66,7 @@ namespace AKNet.Udp.POINTTOPOINT.Common
 			return nPackageId;
         }
 
-        void NetPackage.SetData(Memory<byte> mData)
+        void SetData(Memory<byte> mData)
         {
             throw new NotImplementedException();
         }
