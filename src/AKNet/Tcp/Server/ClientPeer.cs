@@ -28,12 +28,10 @@ namespace AKNet.Tcp.Server
         private uint ID = 0;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
 
-        private readonly byte[] mIMemoryOwner_Send = new byte[Config.nIOContexBufferLength];
-        private readonly byte[] mIMemoryOwner_Receive = new byte[Config.nIOContexBufferLength];
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
-        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly object lock_mSocket_object = new object();
         private Socket mSocket = null;
         private bool bSendIOContextUsed = false;
@@ -42,8 +40,8 @@ namespace AKNet.Tcp.Server
 		{
 			this.mNetServer = mNetServer;
 
-            mReceiveIOContex.SetBuffer(mIMemoryOwner_Receive, 0, mIMemoryOwner_Receive.Length);
-            mSendIOContex.SetBuffer(mIMemoryOwner_Send, 0, mIMemoryOwner_Send.Length);
+            mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             bSendIOContextUsed = false;
