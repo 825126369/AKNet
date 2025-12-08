@@ -1,3 +1,7 @@
+## License
+
+This repository is licensed with the [MIT](LICENSE) license.
+
 # AKNet
 这是一个包括 TCP，UDP 的C#游戏网络库, 支持Unity游戏引擎以及.Net 10.0更高版本。
 
@@ -173,7 +177,3 @@ namespace githubExample
 }
 
 ```
-
-## License
-
-This repository is licensed with the [MIT](LICENSE) license.
