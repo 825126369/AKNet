@@ -19,7 +19,7 @@ namespace AKNet.Udp1Tcp.Server
     internal class ClientPeerSocketMgr
     {
         private UdpServer mNetServer = null;
-        private ClientPeerPrivate mClientPeer = null;
+        private ClientPeer mClientPeer = null;
 
         FakeSocket mSocket = null;
         readonly object lock_mSocket_object =new object();
@@ -31,7 +31,7 @@ namespace AKNet.Udp1Tcp.Server
 
         IPEndPoint mIPEndPoint;
 
-        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
+        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
             this.mNetServer = mNetServer;
             this.mClientPeer = mClientPeer;

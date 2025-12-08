@@ -15,9 +15,9 @@ namespace AKNet.Udp1Tcp.Server
     internal class MsgReceiveMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeerPrivate mClientPeer = null;
+        private ClientPeer mClientPeer = null;
 		
-		public MsgReceiveMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
+		public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

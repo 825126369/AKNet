@@ -14,14 +14,14 @@ using System.Net;
 
 namespace AKNet.Udp1Tcp.Server
 {
-    internal class ClientPeerMgr1
+    internal class ClientPeerWrapMgr1
     {
-        private readonly Dictionary<string, ClientPeer> mClientDic = new Dictionary<string, ClientPeer>();
+        private readonly Dictionary<string, ClientPeerWrap> mClientDic = new Dictionary<string, ClientPeerWrap>();
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private UdpServer mNetServer = null;
 
-        public ClientPeerMgr1(UdpServer mNetServer)
+        public ClientPeerWrapMgr1(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
         }
@@ -44,7 +44,7 @@ namespace AKNet.Udp1Tcp.Server
 
             foreach (var v in mClientDic)
             {
-                ClientPeer clientPeer = v.Value;
+                ClientPeerWrap clientPeer = v.Value;
                 clientPeer.Update(elapsed);
                 if (clientPeer.GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED)
                 {
@@ -54,7 +54,7 @@ namespace AKNet.Udp1Tcp.Server
 
             foreach (var v in mRemovePeerList)
             {
-                ClientPeer mClientPeer = mClientDic[v];
+                ClientPeerWrap mClientPeer = mClientDic[v];
                 mClientDic.Remove(v);
                 PrintRemoveClientMsg(mClientPeer);
                 mClientPeer.Reset();
@@ -85,7 +85,7 @@ namespace AKNet.Udp1Tcp.Server
             MainThreadCheck.Check();
             IPEndPoint endPoint = (IPEndPoint)mPackage.remoteEndPoint;
 
-            ClientPeer mClientPeer = null;
+            ClientPeerWrap mClientPeer = null;
             string nPeerId = endPoint.ToString();
             if (!mClientDic.TryGetValue(nPeerId, out mClientPeer))
             {
@@ -103,7 +103,7 @@ namespace AKNet.Udp1Tcp.Server
                     }
                     else
                     {
-                        mClientPeer = new ClientPeer(mNetServer);
+                        mClientPeer = new ClientPeerWrap(mNetServer);
                         mClientDic.Add(nPeerId, mClientPeer);
                         FakeSocket mSocket = new FakeSocket(mNetServer);
                         mSocket.RemoteEndPoint = endPoint;
@@ -123,7 +123,7 @@ namespace AKNet.Udp1Tcp.Server
             }
         }
 
-        private void PrintAddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -138,7 +138,7 @@ namespace AKNet.Udp1Tcp.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();

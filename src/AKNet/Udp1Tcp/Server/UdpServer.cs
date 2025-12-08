@@ -24,8 +24,8 @@ namespace AKNet.Udp1Tcp.Server
         internal readonly ClientPeerPool mClientPeerPool = null;
         private readonly FakeSocketMgrInterface mFakeSocketMgr = null;
 
-        private readonly ClientPeerMgr1 mClientPeerMgr1 = null;
-        private readonly ClientPeerMgr2 mClientPeerMgr2 = null;
+        private readonly ClientPeerWrapMgr1 mClientPeerMgr1 = null;
+        private readonly ClientPeerWrapMgr2 mClientPeerMgr2 = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig;
@@ -65,8 +65,8 @@ namespace AKNet.Udp1Tcp.Server
                 NetLog.Assert(false, Config.nUseFakeSocketMgrType);
             }
 
-            mClientPeerMgr1 = new ClientPeerMgr1(this);
-            mClientPeerMgr2 = new ClientPeerMgr2(this);
+            mClientPeerMgr1 = new ClientPeerWrapMgr1(this);
+            mClientPeerMgr2 = new ClientPeerWrapMgr2(this);
         }
 
         public void Update(double elapsed)
@@ -104,12 +104,12 @@ namespace AKNet.Udp1Tcp.Server
             return mFakeSocketMgr;
         }
 
-        public ClientPeerMgr1 GetClientPeerMgr1()
+        public ClientPeerWrapMgr1 GetClientPeerMgr1()
         {
             return mClientPeerMgr1;
         }
 
-        public ClientPeerMgr2 GetClientPeerMgr2()
+        public ClientPeerWrapMgr2 GetClientPeerMgr2()
 		{
 			return mClientPeerMgr2;
 		}
