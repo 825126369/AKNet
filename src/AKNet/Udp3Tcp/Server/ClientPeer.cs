@@ -40,7 +40,7 @@ namespace AKNet.Udp3Tcp.Server
         {
             this.mServerMgr = mNetServer;
             mUdpCheckPool = new UdpCheckMgr(this);
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            SetSocketState(SOCKET_PEER_STATE.NONE);
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
@@ -103,22 +103,20 @@ namespace AKNet.Udp3Tcp.Server
 
         public void Reset()
         {
-            mUdpCheckPool.Reset();
-            this.CloseSocket();
+            this.mUdpCheckPool.Reset();
             lock (mSendStreamList)
             {
-                mSendStreamList.Reset();
+                this.mSendStreamList.Reset();
             }
 
             this.Name = string.Empty;
             this.ID = 0;
-            fReceiveHeartBeatTime = 0;
-            fMySendHeartBeatCdTime = 0;
+            this.fReceiveHeartBeatTime = 0;
+            this.fMySendHeartBeatCdTime = 0;
         }
 
         public void Release()
         {
-            this.CloseSocket();
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Dispose();
@@ -141,12 +139,12 @@ namespace AKNet.Udp3Tcp.Server
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 if (mPackage.orInnerCommandPackage())
                 {
-                    this.SendNetPackage(mPackage);
+                    this.SendNetPackage2(mPackage);
                 }
                 else
                 {
                     UdpStatistical.AddSendCheckPackageCount();
-                    this.SendNetPackage(mPackage);
+                    this.SendNetPackage2(mPackage);
                 }
             }
         }
