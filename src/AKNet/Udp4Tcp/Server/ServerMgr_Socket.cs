@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -54,22 +55,30 @@ namespace AKNet.Udp4Tcp.Server
 
 		private void InitNet(IPAddress mIPAddress, int nPort)
 		{
-            //var s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            //s.ExclusiveAddressUse = false;
-            //// .NET 5+ 才支持
-            //s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReusePort, true);
-            //s.Bind(new IPEndPoint(IPAddress.Any, 5000));
-
             try
 			{
 				mState = SOCKET_SERVER_STATE.NORMAL;
 				this.nPort = nPort;
 
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
-				mSocket.Bind(bindEndPoint);
+                for (int i = 0; i < Environment.ProcessorCount; i++)
+                {
+                    var mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                    mSocket.ExclusiveAddressUse = false;
+                    //mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReusePort, true);
+                    mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+                    mSocket.Bind(bindEndPoint);
 
-				NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
-				StartReceiveFromAsync();
+                    //ReceiveArgs = new SocketAsyncEventArgs();
+                    //ReceiveArgs.Completed += ProcessReceive;
+                    //ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+                    //ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+
+                    StartReceiveFromAsync();
+                }
+
+                NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
 			}
 			catch (SocketException ex)
 			{
@@ -95,33 +104,28 @@ namespace AKNet.Udp4Tcp.Server
             return mState;
         }
 
-		public Socket GetSocket()
-		{
-			return mSocket;
-		}
-
 		private void StartReceiveFromAsync()
 		{
-			bool bIOSyncCompleted = false;
-            if (mSocket != null)
-            {
-                try
-                {
-                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-                }
-                catch (Exception e)
-                {
-                    if (mSocket != null)
-                    {
-                        NetLog.LogException(e);
-                    }
-                }
-            }
+			//bool bIOSyncCompleted = false;
+   //         if (mSocket != null)
+   //         {
+   //             try
+   //             {
+   //                 bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+   //             }
+   //             catch (Exception e)
+   //             {
+   //                 if (mSocket != null)
+   //                 {
+   //                     NetLog.LogException(e);
+   //                 }
+   //             }
+   //         }
 			
-            if (bIOSyncCompleted)
-			{
-				ProcessReceive(null, ReceiveArgs);
-			}
+   //         if (bIOSyncCompleted)
+			//{
+			//	ProcessReceive(null, ReceiveArgs);
+			//}
 		}
 
 		private void ProcessReceive(object sender, SocketAsyncEventArgs e)
@@ -138,37 +142,37 @@ namespace AKNet.Udp4Tcp.Server
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
 			bool bIOSyncCompleted = false;
-			if (mSocket != null)
-			{
-				try
-				{
-					bIOSyncCompleted = !mSocket.SendToAsync(e);
-				}
-				catch (Exception ex)
-				{
-					if (mSocket != null)
-					{
-						NetLog.LogException(ex);
-					}
-				}
-			}
+			//if (mSocket != null)
+			//{
+			//	try
+			//	{
+			//		bIOSyncCompleted = !mSocket.SendToAsync(e);
+			//	}
+			//	catch (Exception ex)
+			//	{
+			//		if (mSocket != null)
+			//		{
+			//			NetLog.LogException(ex);
+			//		}
+			//	}
+			//}
 			
 			return !bIOSyncCompleted;
 		}
 
         public void CloseSocket()
 		{
-            if (mSocket != null)
-            {
-                Socket mSocket2 = mSocket;
-                mSocket = null;
+            //if (mSocket != null)
+            //{
+            //    Socket mSocket2 = mSocket;
+            //    mSocket = null;
 
-                try
-                {
-                    mSocket2.Close();
-                }
-                catch (Exception) { }
-            }
+            //    try
+            //    {
+            //        mSocket2.Close();
+            //    }
+            //    catch (Exception) { }
+            //}
         }
 	}
 

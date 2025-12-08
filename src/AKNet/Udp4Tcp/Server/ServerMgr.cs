@@ -26,7 +26,7 @@ namespace AKNet.Udp4Tcp.Server
         private readonly CryptoMgr mCryptoMgr;
 
         private int nPort = 0;
-        private Socket mSocket = null;
+        private List<Socket> mSocketList = new List<Socket>();
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
@@ -47,14 +47,6 @@ namespace AKNet.Udp4Tcp.Server
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
-
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-            ReceiveArgs = new SocketAsyncEventArgs();
-            ReceiveArgs.Completed += ProcessReceive;
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
             
             mFakeSocketPool = new FakeSocketPool(this, 0, Config.MaxPlayerCount);
             mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
