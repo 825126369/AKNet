@@ -20,6 +20,9 @@ namespace AKNet.Common
         [Obsolete] Udp1Tcp,
         Udp2Tcp,
         Udp3Tcp,
+
+#if DEBUG
         Udp4Tcp,
+#endif
     }
 }
