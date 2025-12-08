@@ -15,30 +15,8 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    internal class ClientPeerSocketMgr
+    internal partial class ClientPeer
     {
-        private UdpServer mNetServer = null;
-        private ClientPeerPrivate mClientPeer = null;
-
-        FakeSocket mSocket = null;
-        readonly object lock_mSocket_object =new object();
-
-        readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularManySpanBuffer mSendStreamList = null;
-        bool bSendIOContexUsed = false;
-
-        IPEndPoint mIPEndPoint;
-
-        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
-        {
-            this.mNetServer = mNetServer;
-            this.mClientPeer = mClientPeer;
-
-            SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
-        }
-
         public void HandleConnectedSocket(FakeSocket mSocket)
         {
             MainThreadCheck.Check();
@@ -46,8 +24,8 @@ namespace AKNet.Udp3Tcp.Server
 
             this.mSocket = mSocket;
             this.mIPEndPoint = mSocket.RemoteEndPoint;
-
-            SendArgs.RemoteEndPoint = this.mIPEndPoint;
+            this.SendArgs.RemoteEndPoint = this.mIPEndPoint;
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -102,12 +80,12 @@ namespace AKNet.Udp3Tcp.Server
             else
             {
                 NetLog.LogError(e.SocketError);
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 bSendIOContexUsed = false;
             }
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        public void SendNetPackage2(NetUdpSendFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
             lock (mSendStreamList)
@@ -127,19 +105,6 @@ namespace AKNet.Udp3Tcp.Server
                 bSendIOContexUsed = true;
                 SendNetStream2();
             }
-        }
-        
-        public void Reset()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Reset();
-            }
-        }
-
-        public void Release()
-        {
-
         }
 
         int nLastSendBytesCount = 0;

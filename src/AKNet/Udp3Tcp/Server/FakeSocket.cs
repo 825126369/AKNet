@@ -18,12 +18,12 @@ namespace AKNet.Udp3Tcp.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly UdpServer mNetServer;
+        private readonly ServerMgr mNetServer;
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
-        public FakeSocket(UdpServer mNetServer)
+        public FakeSocket(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
         }
@@ -90,7 +90,7 @@ namespace AKNet.Udp3Tcp.Server
         
         public bool SendToAsync(SocketAsyncEventArgs mArg)
         {
-            return this.mNetServer.GetSocketMgr().SendToAsync(mArg);
+            return this.mNetServer.SendToAsync(mArg);
         }
 
         public void Reset()

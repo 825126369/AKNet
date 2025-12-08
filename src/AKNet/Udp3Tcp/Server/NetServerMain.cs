@@ -12,12 +12,12 @@ using AKNet.Common;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    public class Udp3TcpNetServerMain : NetServerInterface
+    public class NetServerMain : NetServerInterface
     {
-        private UdpServer mNetServer;
-        public Udp3TcpNetServerMain()
+        private ServerMgr mNetServer;
+        public NetServerMain()
         {
-            mNetServer = new UdpServer();
+            mNetServer = new ServerMgr();
         }
 
         public void Update(double elapsed)

@@ -12,19 +12,15 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    internal class ClientPeerMgr
-	{
-        private UdpServer mNetServer = null;
-        private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
-        private readonly List<ClientPeerPrivate> mClientList = new List<ClientPeerPrivate>();
-        
-        public ClientPeerMgr(UdpServer mNetServer)
-        {
-            this.mNetServer = mNetServer;
-        }
-
+    internal partial class ServerMgr
+    {
         public void Update(double elapsed)
         {
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
+            }
+
             while (CreateClientPeer())
             {
 
@@ -32,7 +28,7 @@ namespace AKNet.Udp3Tcp.Server
 
             for (int i = mClientList.Count - 1; i >= 0; i--)
             {
-                ClientPeerPrivate mClientPeer = mClientList[i];
+                ClientPeerWrap mClientPeer = mClientList[i];
                 if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
                 {
                     mClientPeer.Update(elapsed);
@@ -40,8 +36,8 @@ namespace AKNet.Udp3Tcp.Server
                 else
                 {
                     mClientList.RemoveAt(i);
-                    mClientPeer.CloseSocket();
                     PrintRemoveClientMsg(mClientPeer);
+                    mClientPeer.Reset();
                 }
             }
         }
@@ -66,7 +62,7 @@ namespace AKNet.Udp3Tcp.Server
 
             if (mSocket != null)
             {
-                ClientPeerPrivate clientPeer = new ClientPeerPrivate(mNetServer);
+                ClientPeerWrap clientPeer = new ClientPeerWrap(this);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
@@ -75,7 +71,7 @@ namespace AKNet.Udp3Tcp.Server
             return false;
         }
 
-        private void PrintAddClientMsg(ClientPeerPrivate clientPeer)
+        private void PrintAddClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -90,7 +86,7 @@ namespace AKNet.Udp3Tcp.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeerPrivate clientPeer)
+        private void PrintRemoveClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();

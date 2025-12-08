@@ -17,12 +17,12 @@ namespace AKNet.Udp3Tcp.Server
 {
     internal class FakeSocketMgr
     {
-        private UdpServer mNetServer = null;
+        private ServerMgr mNetServer = null;
         private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly int nMaxPlayerCount = 0;
 
-        public FakeSocketMgr(UdpServer mNetServer)
+        public FakeSocketMgr(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
             nMaxPlayerCount = Config.MaxPlayerCount;
@@ -53,7 +53,7 @@ namespace AKNet.Udp3Tcp.Server
                 {
                     mFakeSocket = mFakeSocketPool.Pop();
                     mFakeSocket.RemoteEndPoint = endPoint;
-                    mNetServer.GetClientPeerMgr().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                    mNetServer.MultiThreadingHandleConnectedSocket(mFakeSocket);
 
                     lock (mAcceptSocketDic)
                     {
