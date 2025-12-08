@@ -8,12 +8,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp3Tcp.Common;
+using AKNet.Udp4Tcp.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;
 
-namespace AKNet.Udp3Tcp.Server
+namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer : UdpClientPeerCommonBase, ClientPeerBase
 	{

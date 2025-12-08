@@ -4,22 +4,20 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:15
+*        ModifyTime:2025/11/30 19:43:17
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
+using System.Diagnostics;
+using System.Net.Sockets;
 
-namespace AKNet.Common
+namespace AKNet.Udp4Tcp.Common
 {
-    public enum NetType
+    internal static class UdpStaticCommon
     {
-        TCP,
-#if NET9_0_OR_GREATER
-        MSQuic,
-#endif
-        [Obsolete] Udp1Tcp,
-        Udp2Tcp,
-        Udp3Tcp,
-        Udp4Tcp,
+        static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
+        public static long GetNowTime()
+        {
+            return mStopwatch.ElapsedMilliseconds;
+        }
     }
 }
