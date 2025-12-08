@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp3Tcp.Common
 {
-    internal class Config
+    internal static class Config
 	{   
 		public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 14;
@@ -21,9 +21,9 @@ namespace AKNet.Udp3Tcp.Common
         public const uint nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
         public const uint nUdpMaxOrderId = uint.MaxValue;
 
-        public readonly double fReceiveHeartBeatTimeOut = 5.0;
-		public readonly double fMySendHeartBeatMaxTime = 2.0;
-        public readonly double fReConnectMaxCdTime = 3.0;
-        public readonly int MaxPlayerCount = 10000;
+        public const double fReceiveHeartBeatTimeOut = 5.0;
+		public const double fMySendHeartBeatMaxTime = 2.0;
+        public const double fReConnectMaxCdTime = 3.0;
+        public const int MaxPlayerCount = 10000;
 	}
 }

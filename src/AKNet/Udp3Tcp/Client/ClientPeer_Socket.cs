@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    internal class SocketUdp
+    internal partial class ClientPeer
     {
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly SocketAsyncEventArgs SendArgs;

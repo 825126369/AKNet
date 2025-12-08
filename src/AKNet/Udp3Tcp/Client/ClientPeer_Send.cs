@@ -13,8 +13,8 @@ using System;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    internal class MsgSendMgr
-	{
+    internal partial class ClientPeer
+    {
         private ClientPeer mClientPeer;
         public MsgSendMgr(ClientPeer mClientPeer)
         {

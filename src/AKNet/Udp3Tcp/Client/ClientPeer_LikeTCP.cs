@@ -13,89 +13,11 @@ using System;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    internal class UDPLikeTCPMgr
-	{
-		private double fReceiveHeartBeatTime = 0.0;
-        private double fMySendHeartBeatCdTime = 0.0;
-
-        private double fReConnectServerCdTime = 0.0;
-        private double fConnectCdTime = 0.0;
-		public const double fConnectMaxCdTime = 2.0;
-
-		private double fDisConnectCdTime = 0.0;
-		public const double fDisConnectMaxCdTime = 2.0;
-
-		private ClientPeer mClientPeer;
-		public UDPLikeTCPMgr(ClientPeer mClientPeer)
-		{
-			this.mClientPeer = mClientPeer;
-        }
-
-		public void Update(double elapsed)
-		{
-			var mSocketPeerState = mClientPeer.GetSocketState();
-			switch (mSocketPeerState)
-			{
-				case SOCKET_PEER_STATE.CONNECTING:
-					{
-						fConnectCdTime += elapsed;
-                        if (fConnectCdTime >= fConnectMaxCdTime)
-						{
-                            mClientPeer.mSocketMgr.ConnectServer();
-						}
-						break;
-					}
-				case SOCKET_PEER_STATE.CONNECTED:
-					{
-						fMySendHeartBeatCdTime += elapsed;
-						if (fMySendHeartBeatCdTime >= mClientPeer.GetConfig().fMySendHeartBeatMaxTime)
-						{
-							SendHeartBeat();
-							fMySendHeartBeatCdTime = 0.0;
-						}
-
-						double fHeatTime = Math.Min(0.3, elapsed);
-						fReceiveHeartBeatTime += fHeatTime;
-						if (fReceiveHeartBeatTime >= mClientPeer.GetConfig().fReceiveHeartBeatTimeOut)
-						{
-							fReceiveHeartBeatTime = 0.0;
-							fReConnectServerCdTime = 0.0;
-#if DEBUG
-							NetLog.Log("Client 接收服务器心跳 超时 ");
-#endif
-							mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-						}
-						break;
-					}
-				case SOCKET_PEER_STATE.DISCONNECTING:
-					{
-						fDisConnectCdTime += elapsed;
-						if (fDisConnectCdTime >= fDisConnectMaxCdTime)
-						{
-							SendDisConnect();
-						}
-						break;
-					}
-				case SOCKET_PEER_STATE.DISCONNECTED:
-					break;
-				case SOCKET_PEER_STATE.RECONNECTING:
-					{
-						fReConnectServerCdTime += elapsed;
-						if (fReConnectServerCdTime >= mClientPeer.GetConfig().fReConnectMaxCdTime)
-						{
-							fReConnectServerCdTime = 0.0;
-							mClientPeer.mSocketMgr.ReConnectServer();
-						}
-						break;
-					}
-				default:
-					break;
-			}
-		}
-
+    internal partial class ClientPeer
+    {
 		private void SendHeartBeat()
 		{
-			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_HEARTBEAT);
+			SendInnerNetData(UdpNetCommand.COMMAND_HEARTBEAT);
 		}
 
         public void ResetSendHeartBeatCdTime()

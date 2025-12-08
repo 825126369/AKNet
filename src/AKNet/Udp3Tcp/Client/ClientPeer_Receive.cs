@@ -15,7 +15,7 @@ using AKNet.Udp3Tcp.Common;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    internal class MsgReceiveMgr
+    internal partial class ClientPeer
     {
         private readonly NetStreamCircularBuffer mReceiveStreamList = null;
         protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
