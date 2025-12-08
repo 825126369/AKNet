@@ -16,9 +16,9 @@ namespace AKNet.Udp2Tcp.Server
     internal class MsgSendMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeerPrivate mClientPeer = null;
+        private ClientPeer mClientPeer = null;
 
-		public MsgSendMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
+		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

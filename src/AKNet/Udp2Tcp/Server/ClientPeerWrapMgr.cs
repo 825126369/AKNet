@@ -12,13 +12,13 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class ClientPeerMgr
+    internal class ClientPeerWrapMgr
 	{
         private UdpServer mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
-        private readonly List<ClientPeer> mClientList = new List<ClientPeer>();
+        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 
-        public ClientPeerMgr(UdpServer mNetServer)
+        public ClientPeerWrapMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
         }
@@ -42,6 +42,7 @@ namespace AKNet.Udp2Tcp.Server
                     mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
                     mClientPeer.Reset();
+                    mClientPeer.CloseSocket();
                 }
             }
         }
@@ -66,7 +67,7 @@ namespace AKNet.Udp2Tcp.Server
 
             if (mSocket != null)
             {
-                ClientPeer clientPeer = new ClientPeer(mNetServer);
+                ClientPeerWrap clientPeer = new ClientPeerWrap(mNetServer);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
@@ -75,7 +76,7 @@ namespace AKNet.Udp2Tcp.Server
             return false;
         }
 
-        private void PrintAddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -90,7 +91,7 @@ namespace AKNet.Udp2Tcp.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();

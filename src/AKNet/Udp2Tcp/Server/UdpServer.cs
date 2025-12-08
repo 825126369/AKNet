@@ -23,7 +23,7 @@ namespace AKNet.Udp2Tcp.Server
         private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
         private readonly FakeSocketMgr mFakeSocketMgr = null;
-        private readonly ClientPeerMgr mClientPeerMgr = null;
+        private readonly ClientPeerWrapMgr mClientPeerMgr = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
         private readonly Config mConfig;
@@ -41,7 +41,7 @@ namespace AKNet.Udp2Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
-            mClientPeerMgr = new ClientPeerMgr(this);
+            mClientPeerMgr = new ClientPeerWrapMgr(this);
             mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
         }
 
@@ -84,7 +84,7 @@ namespace AKNet.Udp2Tcp.Server
             return mFakeSocketMgr;
         }
 
-        public ClientPeerMgr GetClientPeerMgr()
+        public ClientPeerWrapMgr GetClientPeerMgr()
         {
             return mClientPeerMgr;
         }

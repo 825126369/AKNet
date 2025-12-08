@@ -18,9 +18,9 @@ namespace AKNet.Udp2Tcp.Server
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
         private UdpServer mNetServer = null;
-        private ClientPeerPrivate mClientPeer = null;
+        private ClientPeer mClientPeer = null;
 		
-		public UDPLikeTCPMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
+		public UDPLikeTCPMgr(UdpServer mNetServer, ClientPeer mClientPeer)
 		{
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;

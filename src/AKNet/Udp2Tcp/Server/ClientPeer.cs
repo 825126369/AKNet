@@ -8,117 +8,228 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp2Tcp.Common;
 using System;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class ClientPeer : ClientPeerBase
+    internal class ClientPeer : UdpClientPeerCommonBase, ClientPeerBase
 	{
-        private ClientPeerPrivate mInstance = null;
+        internal MsgSendMgr mMsgSendMgr;
+        internal MsgReceiveMgr mMsgReceiveMgr;
+        internal ClientPeerSocketMgr mSocketMgr;
+
+        internal UdpCheckMgr mUdpCheckPool = null;
+		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
+        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private UdpServer mNetServer;
+        private string Name = string.Empty;
+        private uint ID = 0;
+        private bool b_SOCKET_PEER_STATE_Changed = false;
+        internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
+
         public ClientPeer(UdpServer mNetServer)
-		{
+        {
             this.mNetServer = mNetServer;
-            this.mInstance = mNetServer.mClientPeerPool.Pop();
+            mSocketMgr = new ClientPeerSocketMgr(mNetServer, this);
+            mMsgReceiveMgr = new MsgReceiveMgr(mNetServer, this);
+            mMsgSendMgr = new MsgSendMgr(mNetServer, this);
+            mUdpCheckPool = new UdpCheckMgr(this);
+            mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
+            SetSocketState(SOCKET_PEER_STATE.NONE);
         }
 
-        public void Reset()
+        public void Update(double elapsed)
         {
-            mNetServer.mClientPeerPool.recycle(mInstance);
-            mNetServer = null;
-            mInstance = null;
+            if (b_SOCKET_PEER_STATE_Changed)
+            {
+                this.mNetServer.OnSocketStateChanged(this);
+                b_SOCKET_PEER_STATE_Changed = false;
+            }
+
+            mMsgReceiveMgr.Update(elapsed);
+            mUDPLikeTCPMgr.Update(elapsed);
+            mUdpCheckPool.Update(elapsed);
+        }
+
+        public void SetSocketState(SOCKET_PEER_STATE mState)
+        {
+            if (this.mSocketPeerState != mState)
+            {
+                this.mSocketPeerState = mState;
+                if (MainThreadCheck.orInMainThread())
+                {
+                    this.mNetServer.OnSocketStateChanged(this);
+                }
+                else
+                {
+                    b_SOCKET_PEER_STATE_Changed = true;
+                }
+            }
         }
 
         public SOCKET_PEER_STATE GetSocketState()
 		{
-			if (mInstance != null)
-			{
-				return mInstance.GetSocketState();
-			}
-			else
-			{
-				return SOCKET_PEER_STATE.DISCONNECTED;
-			}
+			return mSocketPeerState;
 		}
 
-		public void Update(double elapsed)
-		{
-            if (mInstance != null)
+        public void Reset()
+        {
+            mUDPLikeTCPMgr.Reset();
+            mMsgReceiveMgr.Reset();
+            mUdpCheckPool.Reset();
+            mSocketMgr.Reset();
+            this.Name = string.Empty;
+            this.ID = 0;
+        }
+
+        public void Release()
+        {
+            mMsgReceiveMgr.Release();
+            mSocketMgr.Release();
+        }
+
+        public void CloseSocket()
+        {
+            mSocketMgr.CloseSocket();
+        }
+
+        public void HandleConnectedSocket(FakeSocket mSocket)
+        {
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+            mSocketMgr.HandleConnectedSocket(mSocket);
+        }
+
+        public IPEndPoint GetIPEndPoint()
+        {
+            return mSocketMgr.GetIPEndPoint();
+        }
+
+        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        {
+            bool bCanSendPackage = UdpNetCommand.orInnerCommand(mPackage.GetPackageId()) ||
+                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
+
+            if (bCanSendPackage)
             {
-                mInstance.Update(elapsed);
+                UdpStatistical.AddSendPackageCount();
+                mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+
+                if (Config.bUdpCheck)
+                {
+                    mUdpCheckPool.SetRequestOrderId(mPackage);
+                    if (UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
+                    {
+                        this.mSocketMgr.SendNetPackage(mPackage);
+                    }
+                    else
+                    {
+                        UdpStatistical.AddSendCheckPackageCount();
+                        mPackage.mTcpStanardRTOTimer.BeginRtt();
+                        this.mSocketMgr.SendNetPackage(mPackage);
+                    }
+                }
+                else
+                {
+                    this.mSocketMgr.SendNetPackage(mPackage);
+                }
             }
         }
 
-		public void SendNetData(ushort nPackageId)
-		{
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId);
-            }
+        public void SendInnerNetData(UInt16 id)
+        {
+            mMsgSendMgr.SendInnerNetData(id);
+        }
+
+        public void SendNetData(ushort nPackageId)
+        {
+            mMsgSendMgr.SendNetData(nPackageId);
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId, data);
-            }
+            mMsgSendMgr.SendNetData(nPackageId, data);
         }
 
-        public void SendNetData(NetPackage data)
+        public void SendNetData(NetPackage mNetPackage)
         {
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(data);
-            }
+            mMsgSendMgr.SendNetData(mNetPackage);
         }
 
-		public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> data)
-		{
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId, data);
-            }
-        }
-
-		public void HandleConnectedSocket(FakeSocket mSocket)
-		{
-            if (mInstance != null)
-            {
-                mInstance.HandleConnectedSocket(mSocket);
-            }
-		}
-
-        public IPEndPoint GetIPEndPoint()
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
-            if (mInstance != null)
-            {
-                return mInstance.GetIPEndPoint();
-            }
-            return null;
+            mMsgSendMgr.SendNetData(nPackageId, buffer);
         }
-        
+
         public void SetName(string name)
         {
-            mInstance.SetName(name);
+            this.Name = name;
         }
 
         public string GetName()
         {
-            return mInstance.GetName();
+            return this.Name;
         }
 
         public void SetID(uint id)
         {
-            mInstance.SetID(id);
+            this.ID = id;
         }
 
         public uint GetID()
         {
-            return mInstance.GetID();
+            return this.ID;
+        }
+
+        public void ResetSendHeartBeatCdTime()
+        {
+            this.mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+        }
+
+        public void ReceiveHeartBeat()
+        {
+            this.mUDPLikeTCPMgr.ReceiveHeartBeat();
+        }
+
+        public void ReceiveConnect()
+        {
+            this.mUDPLikeTCPMgr.ReceiveConnect();
+        }
+
+        public void ReceiveDisConnect()
+        {
+            this.mUDPLikeTCPMgr.ReceiveDisConnect();
+        }
+
+        public ObjectPoolManager GetObjectPoolManager()
+        {
+            return mNetServer.GetObjectPoolManager();
+        }
+
+        public TcpStanardRTOFunc GetTcpStanardRTOFunc()
+        {
+            return mTcpStanardRTOFunc;
+        }
+
+        public Config GetConfig()
+        {
+            return mNetServer.GetConfig();
+        }
+
+        public int GetCurrentFrameRemainPackageCount()
+        {
+            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
+        }
+
+        public void NetPackageExecute(NetPackage mPackage)
+        {
+            mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);
+        }
+
+        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        {
+            mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }
     }
-
 }
