@@ -9,10 +9,9 @@
 ************************************Copyright*****************************************/
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
-[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
-[assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
     internal class NetStreamCircularBuffer:AkCircularManyBuffer

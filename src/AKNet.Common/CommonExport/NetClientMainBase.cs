@@ -11,10 +11,9 @@ using System;
 using System.Net;
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
-[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
-[assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
     public class NetClientMainBase : NetClientInterface, ClientPeerBase

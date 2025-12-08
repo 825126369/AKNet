@@ -11,7 +11,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
     internal static class MainThreadCheck
