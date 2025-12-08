@@ -12,7 +12,6 @@ using System;
 
 namespace AKNet.Tcp.Client
 {
-	//和线程打交道
 	internal partial class ClientPeer
     {
         public void SendNetData(ushort nPackageId)

@@ -12,7 +12,6 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
-	//和线程打交道
 	internal partial class ClientPeer
     {
         private void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)

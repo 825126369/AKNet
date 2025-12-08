@@ -163,8 +163,8 @@ namespace AKNet.Tcp.Client
         public void Reset()
         {
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            //Socket
             CloseSocket();
+
             lock (mSendStreamList)
             {
                 mSendStreamList.Reset();
@@ -176,7 +176,6 @@ namespace AKNet.Tcp.Client
                 mReceiveStreamList.Reset();
             }
 
-            
             fReConnectServerCdTime = 0.0f;
             fSendHeartBeatTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
