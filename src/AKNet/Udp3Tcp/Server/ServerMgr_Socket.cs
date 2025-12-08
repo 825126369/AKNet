@@ -123,7 +123,7 @@ namespace AKNet.Udp3Tcp.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-				GetFakeSocketMgr().MultiThreadingReceiveNetPackage(e);
+				MultiThreadingReceiveNetPackage(e);
                 e.RemoteEndPoint = mEndPointEmpty;
 			}
 			StartReceiveFromAsync();

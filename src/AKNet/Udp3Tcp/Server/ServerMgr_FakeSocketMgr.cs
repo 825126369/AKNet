@@ -15,21 +15,8 @@ using AKNet.Udp3Tcp.Common;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    internal class FakeSocketMgr
+    internal partial class ServerMgr
     {
-        private ServerMgr mNetServer = null;
-        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
-        private readonly FakeSocketPool mFakeSocketPool = null;
-        private readonly int nMaxPlayerCount = 0;
-
-        public FakeSocketMgr(ServerMgr mNetServer)
-        {
-            this.mNetServer = mNetServer;
-            nMaxPlayerCount = Config.MaxPlayerCount;
-            mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(nMaxPlayerCount);
-        }
-
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             IPEndPoint nPeerId = (IPEndPoint)e.RemoteEndPoint;
@@ -45,14 +32,14 @@ namespace AKNet.Udp3Tcp.Server
                 if (mAcceptSocketDic.Count >= nMaxPlayerCount)
                 {
 #if DEBUG
-                    NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");
+                    NetLog.Log($"服务器爆满, FakeSocket 总数: {mAcceptSocketDic.Count}");
 #endif
                 }
                 else
                 {
                     mFakeSocket = mFakeSocketPool.Pop();
                     mFakeSocket.RemoteEndPoint = nPeerId;
-                    mNetServer.MultiThreadingHandleConnectedSocket(mFakeSocket);
+                    MultiThreadingHandleConnectedSocket(mFakeSocket);
 
                     lock (mAcceptSocketDic)
                     {

@@ -22,11 +22,8 @@ namespace AKNet.Udp3Tcp.Server
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
         private readonly ClientPeerPool mClientPeerPool = null;
-        private readonly FakeSocketMgr mFakeSocketMgr = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly CryptoMgr mCryptoMgr;
-        private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
-        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 
         private int nPort = 0;
         private Socket mSocket = null;
@@ -34,6 +31,13 @@ namespace AKNet.Udp3Tcp.Server
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+
+        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
+        private readonly FakeSocketPool mFakeSocketPool = null;
+        private readonly int nMaxPlayerCount = 0;
+
+        private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
+        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 
         public ServerMgr()
         {
@@ -43,7 +47,6 @@ namespace AKNet.Udp3Tcp.Server
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -53,6 +56,9 @@ namespace AKNet.Udp3Tcp.Server
             ReceiveArgs.Completed += ProcessReceive;
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+            
+            mFakeSocketPool = new FakeSocketPool(this, 0, Config.MaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
         }
 
         public NetStreamPackage GetLikeTcpNetPackage()
@@ -73,11 +79,6 @@ namespace AKNet.Udp3Tcp.Server
         public ListenNetPackageMgr GetPackageManager()
         {
             return mPackageManager;
-        }
-
-        public FakeSocketMgr GetFakeSocketMgr()
-        {
-            return mFakeSocketMgr;
         }
 
         public ObjectPoolManager GetObjectPoolManager()

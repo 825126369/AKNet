@@ -108,7 +108,7 @@ namespace AKNet.Udp3Tcp.Server
 
         public void Close()
         {
-            this.mNetServer.GetFakeSocketMgr().RemoveFakeSocket(this);
+            this.mNetServer.RemoveFakeSocket(this);
         }
     }
 }
