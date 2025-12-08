@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 
 namespace AKNet.Test
 {
@@ -20,6 +21,11 @@ namespace AKNet.Test
             {
                 Console.WriteLine("!=");
             }
+
+            Dictionary<IPEndPoint, bool> mDic = new Dictionary<IPEndPoint, bool>();
+            mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
+            mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
+            mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
         }
 
         private static void Draw(int N)

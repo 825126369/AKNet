@@ -18,7 +18,7 @@ namespace AKNet.Udp3Tcp.Server
     internal class FakeSocketMgr
     {
         private ServerMgr mNetServer = null;
-        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
+        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly int nMaxPlayerCount = 0;
 
@@ -27,14 +27,13 @@ namespace AKNet.Udp3Tcp.Server
             this.mNetServer = mNetServer;
             nMaxPlayerCount = Config.MaxPlayerCount;
             mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<string, FakeSocket>(nMaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(nMaxPlayerCount);
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
-            IPEndPoint endPoint = (IPEndPoint)e.RemoteEndPoint;
+            IPEndPoint nPeerId = (IPEndPoint)e.RemoteEndPoint;
             FakeSocket mFakeSocket = null;
-            string nPeerId = endPoint.ToString();
 
             lock (mAcceptSocketDic)
             {
@@ -52,7 +51,7 @@ namespace AKNet.Udp3Tcp.Server
                 else
                 {
                     mFakeSocket = mFakeSocketPool.Pop();
-                    mFakeSocket.RemoteEndPoint = endPoint;
+                    mFakeSocket.RemoteEndPoint = nPeerId;
                     mNetServer.MultiThreadingHandleConnectedSocket(mFakeSocket);
 
                     lock (mAcceptSocketDic)
@@ -72,7 +71,7 @@ namespace AKNet.Udp3Tcp.Server
 
         public void RemoveFakeSocket(FakeSocket mFakeSocket)
         {
-            string peerId = mFakeSocket.RemoteEndPoint.ToString();
+            var peerId = mFakeSocket.RemoteEndPoint;
 
             lock (mAcceptSocketDic)
             {
