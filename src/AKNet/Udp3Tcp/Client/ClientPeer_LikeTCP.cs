@@ -33,53 +33,38 @@ namespace AKNet.Udp3Tcp.Client
 		public void SendConnect()
 		{
             this.Reset();
-            mClientPeer.Reset();
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.GetIPEndPoint());
-			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
+			SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+			NetLog.Log("Client: Udp 正在连接服务器: " + GetIPEndPoint());
+			SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
 		public void SendDisConnect()
 		{
 			this.Reset();
-			mClientPeer.Reset();
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-			NetLog.Log("Client: Udp 正在 断开服务器: " + mClientPeer.mSocketMgr.GetIPEndPoint());
-			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+			SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+			NetLog.Log("Client: Udp 正在 断开服务器: " + GetIPEndPoint());
+			SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
 		public void ReceiveConnect()
 		{
-			if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
+			if (GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
 			{
                 this.Reset();
-                mClientPeer.Reset();
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+				SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 				NetLog.Log("Client: Udp连接服务器 成功 ! ");
 			}
 		}
 
 		public void ReceiveDisConnect()
 		{
-			if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.DISCONNECTED)
+			if (GetSocketState() != SOCKET_PEER_STATE.DISCONNECTED)
 			{
 				this.Reset();
-				mClientPeer.Reset();
-				mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+				SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 				NetLog.Log("Client: Udp 断开服务器 成功 ! ");
 			}
 		}
-
-		private void Reset()
-		{
-            fConnectCdTime = 0.0;
-            fDisConnectCdTime = 0.0;
-            fReConnectServerCdTime = 0.0;
-            fReceiveHeartBeatTime = 0.0;
-            fMySendHeartBeatCdTime = 0.0;
-        }
-
-
 
 	}
 

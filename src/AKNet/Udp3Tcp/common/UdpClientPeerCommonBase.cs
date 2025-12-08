@@ -27,7 +27,6 @@ namespace AKNet.Udp3Tcp.Common
         public void ReceiveDisConnect();
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();
-        Config GetConfig();
         int GetCurrentFrameRemainPackageCount();
     }
 }

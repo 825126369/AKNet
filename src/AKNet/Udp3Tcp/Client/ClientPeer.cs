@@ -131,6 +131,11 @@ namespace AKNet.Udp3Tcp.Client
             mUdpCheckPool.Reset();
             this.Name = string.Empty;
             this.ID = 0;
+            this.fConnectCdTime = 0.0;
+            this.fDisConnectCdTime = 0.0;
+            this.fReConnectServerCdTime = 0.0;
+            this.fReceiveHeartBeatTime = 0.0;
+            this.fMySendHeartBeatCdTime = 0.0;
         }
 
         public void Release()
