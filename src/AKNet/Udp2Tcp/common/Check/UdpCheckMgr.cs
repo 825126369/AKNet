@@ -208,7 +208,7 @@ namespace AKNet.Udp2Tcp.Common
 
         public void Reset()
         {
-            mSendStreamList.reset();
+            mSendStreamList.Reset();
             mReSendPackageMgr.Reset();
             while (mCacheReceivePackageList.Count > 0)
             {

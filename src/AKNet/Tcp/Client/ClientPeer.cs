@@ -44,7 +44,7 @@ namespace AKNet.Tcp.Client
         private bool bDisConnectIOContexUsed = false;
         private bool bSendIOContextUsed = false;
         private bool bReceiveIOContextUsed = false;
-        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();

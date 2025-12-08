@@ -128,20 +128,21 @@ namespace AKNet.Quic.Server
 
 		public void Reset()
 		{
-			fSendHeartBeatTime = 0.0;
-			fReceiveHeartBeatTime = 0.0;
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            CloseSocket();
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
+            }
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
             }
-            CloseSocket();
-            lock (mSendStreamList)
-            {
-                mSendStreamList.reset();
-            }
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            
 			this.Name = string.Empty;
 			this.ID = 0;
+            fSendHeartBeatTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
         }
 
         public void Release()

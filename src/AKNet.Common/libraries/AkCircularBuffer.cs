@@ -54,23 +54,18 @@ namespace AKNet.Common
             this.nMaxCapacity = nCapacity;
         }
 
-        public void reset()
+        public void Reset()
 		{
 			dataLength = 0;
 			nBeginReadIndex = 0;
 			nBeginWriteIndex = 0;
 		}
 
-		public void release()
-		{
-			MemoryBuffer = null;
-			mBuffer = null;
-			this.reset ();
-		}
-
 		public void Dispose()
 		{
-			release();
+            MemoryBuffer = null;
+            mBuffer = null;
+            Reset();
         }
 
         public int Capacity
@@ -386,11 +381,14 @@ namespace AKNet.Common
 			return copyLength;
 		}
 
-		public void ClearBuffer (int readLength)
+		public void ClearBuffer(int readLength)
 		{
-			if (readLength >= this.Length) {
-				this.reset ();
-			} else {
+			if (readLength >= this.Length) 
+			{
+				this.Reset();
+			}
+			else 
+			{
 				dataLength -= readLength;
 				nBeginReadIndex += readLength;
 				if (nBeginReadIndex >= this.Capacity) {

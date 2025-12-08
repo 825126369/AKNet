@@ -150,7 +150,7 @@ namespace AKNet.Udp1MSQuic.Server
 			CloseSocket();
 			lock (mSendStreamList)
 			{
-				mSendStreamList.reset();
+				mSendStreamList.Dispose();
 			}
 		}
 	}

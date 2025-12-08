@@ -29,7 +29,7 @@ namespace AKNet.Tcp.Server
         private uint ID = 0;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
 
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();

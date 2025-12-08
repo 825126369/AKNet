@@ -160,7 +160,7 @@ namespace AKNet.Quic.Client
 
             lock (mSendStreamList)
             {
-                mSendStreamList.release();
+                mSendStreamList.Dispose();
             }
         }
 

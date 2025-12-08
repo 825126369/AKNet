@@ -151,7 +151,7 @@ namespace AKNet.Udp2MSQuic.Server
 			CloseSocket();
 			lock (mSendStreamList)
 			{
-				mSendStreamList.reset();
+				mSendStreamList.Reset();
 			}
 		}
 
@@ -159,7 +159,7 @@ namespace AKNet.Udp2MSQuic.Server
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.release();
+                mSendStreamList.Dispose();
             }
             CloseSocket();
         }
