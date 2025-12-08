@@ -19,7 +19,7 @@ namespace AKNet.Common
     /// <summary>
     /// 循环Buffer块，对于 实现 UDP的滑动窗口，TCP的流接受，以及UDP 发送流的吞吐能力，都至关重要
     /// </summary>
-    internal class AkCircularSpanBuffer
+    internal class AkCircularSpanBuffer:IDisposable
 	{
         private byte[] mBuffer = null;
         private Memory<byte> MemoryBuffer = null;
@@ -58,7 +58,7 @@ namespace AKNet.Common
 			this.nMaxCapacity = nCapacity;
 		}
 
-		public void reset()
+		public void Reset()
 		{
 			dataLength = 0;
 			nBeginReadIndex = 0;
@@ -66,12 +66,12 @@ namespace AKNet.Common
 			mSegmentLengthQueue.Clear();
 		}
 
-		public void release()
+		public void Dispose()
 		{
 			mBuffer = null;
 			MemoryBuffer = null;
 			mSegmentLengthQueue = null;
-			this.reset();
+			this.Reset();
 		}
 
 		private int Capacity
@@ -375,7 +375,7 @@ namespace AKNet.Common
                 int readLength = mSegmentLengthQueue.Dequeue();
                 if (readLength >= this.Length)
 				{
-					this.reset();
+					this.Reset();
 				}
 				else
 				{

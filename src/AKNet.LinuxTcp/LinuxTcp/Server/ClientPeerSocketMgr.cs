@@ -161,7 +161,7 @@ namespace AKNet.LinuxTcp.Server
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.reset();
+                mSendStreamList.Reset();
             }
         }
 
@@ -169,7 +169,7 @@ namespace AKNet.LinuxTcp.Server
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.reset();
+                mSendStreamList.Dispose();
             }
         }
 

@@ -267,7 +267,7 @@ namespace AKNet.LinuxTcp.Client
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.reset();
+                mSendStreamList.Reset();
             }
         }
 

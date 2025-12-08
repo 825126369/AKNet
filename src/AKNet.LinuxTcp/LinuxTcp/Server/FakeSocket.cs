@@ -69,7 +69,7 @@ namespace AKNet.LinuxTcp.Server
             MainThreadCheck.Check();
             lock (mAkCircularSpanBuffer)
             {
-                mAkCircularSpanBuffer.reset();
+                mAkCircularSpanBuffer.Reset();
             }
         }
 

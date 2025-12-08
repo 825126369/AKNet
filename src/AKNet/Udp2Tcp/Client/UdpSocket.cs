@@ -331,13 +331,13 @@ namespace AKNet.Udp2Tcp.Client
         {
             lock (mSendStreamList)
             {
-                mSendStreamList.reset();
+                mSendStreamList.Reset();
             }
         }
 
         public void Release()
         {
-            mSendStreamList.release();
+            mSendStreamList.Dispose();
             DisConnectServer();
             CloseSocket();
             NetLog.Log("--------------- Client Release ----------------");

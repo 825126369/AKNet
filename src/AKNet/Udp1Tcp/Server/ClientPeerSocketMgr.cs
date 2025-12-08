@@ -235,7 +235,7 @@ namespace AKNet.Udp1Tcp.Server
             {
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.reset();
+                    mSendStreamList.Reset();
                 }
             }
             else

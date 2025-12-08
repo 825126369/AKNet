@@ -152,7 +152,7 @@ namespace AKNet.Udp1Tcp.Server
 
             lock (mWaitCheckStreamList)
             {
-                mWaitCheckStreamList.reset();
+                mWaitCheckStreamList.Reset();
             }
         }
 

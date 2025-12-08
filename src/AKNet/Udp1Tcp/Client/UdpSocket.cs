@@ -419,7 +419,7 @@ namespace AKNet.Udp1Tcp.Client
             {
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.reset();
+                    mSendStreamList.Reset();
                 }
             }
             else
