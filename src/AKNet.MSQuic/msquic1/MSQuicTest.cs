@@ -35,16 +35,6 @@ namespace MSQuic1
                 }
             }
 
-            for (int i = 0; i < 100000; i++)
-            {
-                int A = RandomTool.Random(0, int.MaxValue - 1);
-                QUIC_SSBuffer mBuf1 = new byte[100];
-                QUIC_SSBuffer mBuf2 = new byte[100];
-                EndianBitConverter.SetBytes(mBuf1.GetSpan(), 0, A);
-                EndianBitConverter2.SetBytes(mBuf2.GetSpan(), 0, A);
-                NetLog.Assert(orBufferEqual(mBuf1, mBuf2));
-            }
-
             QUIC_RANGE mRange = new QUIC_RANGE();
             QuicRangeInitialize(16 * 10, mRange);
 

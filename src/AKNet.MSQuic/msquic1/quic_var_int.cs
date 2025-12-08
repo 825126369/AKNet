@@ -173,7 +173,7 @@ namespace MSQuic1
                     return false;
                 }
 
-                uint v = EndianBitConverter2.ToUInt32(Buffer.GetSpan());
+                uint v = EndianBitConverter.ToUInt32(Buffer.GetSpan());
                 Value = v & 0x3fffffffUL;
                 NetLog.Assert(Value < 0x100000000UL); // 4294967295   uint.MaxValue
                 Buffer += sizeof(uint);
@@ -185,7 +185,7 @@ namespace MSQuic1
                     return false;
                 }
 
-                ulong v = EndianBitConverter2.ToUInt64(Buffer.GetSpan());
+                ulong v = EndianBitConverter.ToUInt64(Buffer.GetSpan());
                 Value = v & 0x3fffffffffffffffUL; // 62 位无符号整数的最大值
                 Buffer += (sizeof(ulong));
             }
