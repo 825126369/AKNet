@@ -14,11 +14,11 @@ using System.Net;
 
 namespace AKNet.LinuxTcp.Client
 {
-    public class Udp4LinuxTcpNetClientMain : NetClientInterface, ClientPeerBase,PrivateConfigInterface
+    public class NetClientMain : NetClientInterface, ClientPeerBase,PrivateConfigInterface
 	{
         private ClientPeer mNetClientPeer;
 
-        public Udp4LinuxTcpNetClientMain()
+        public NetClientMain()
         {
             this.mNetClientPeer = new ClientPeer();
         }

@@ -13,14 +13,7 @@ namespace AKNet.Common
     {
         public NetServerMain(NetType nNetType)
         {
-            if (nNetType == NetType.LinuxTCP)
-            {
-                mInterface = new AKNet.LinuxTcp.Server.Udp4LinuxTcpNetServerMain();
-            }
-            else
-            {
-                NetLog.LogError("Unsupported network type: " + nNetType);
-            }
+            mInterface = new AKNet.LinuxTcp.Server.NetServerMain();
         }
     }
 }
