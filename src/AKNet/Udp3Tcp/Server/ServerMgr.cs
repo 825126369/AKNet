@@ -34,7 +34,6 @@ namespace AKNet.Udp3Tcp.Server
 
         private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
-        private readonly int nMaxPlayerCount = 0;
 
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();

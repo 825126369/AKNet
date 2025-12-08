@@ -29,7 +29,7 @@ namespace AKNet.Udp3Tcp.Server
 
             if (mFakeSocket == null)
             {
-                if (mAcceptSocketDic.Count >= nMaxPlayerCount)
+                if (mAcceptSocketDic.Count >= Config.MaxPlayerCount)
                 {
 #if DEBUG
                     NetLog.Log($"服务器爆满, FakeSocket 总数: {mAcceptSocketDic.Count}");
