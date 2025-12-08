@@ -25,14 +25,12 @@ namespace AKNet.Udp3Tcp.Server
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
-        private readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
         public UdpServer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            mConfig = new Config();
             mCryptoMgr = new CryptoMgr();
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
@@ -40,7 +38,7 @@ namespace AKNet.Udp3Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
         public void Update(double elapsed)
@@ -50,11 +48,6 @@ namespace AKNet.Udp3Tcp.Server
                 NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
             }
             mClientPeerMgr.Update(elapsed);
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
 
         public NetStreamPackage GetLikeTcpNetPackage()

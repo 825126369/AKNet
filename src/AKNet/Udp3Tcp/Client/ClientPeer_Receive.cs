@@ -17,28 +17,9 @@ namespace AKNet.Udp3Tcp.Client
 {
     internal partial class ClientPeer
     {
-        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
-        protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
-        private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
-        internal ClientPeer mClientPeer = null;
-        private int nCurrentCheckPackageCount = 0;
-        public MsgReceiveMgr(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new NetStreamCircularBuffer();
-        }
-
         public int GetCurrentFrameRemainPackageCount()
         {
             return nCurrentCheckPackageCount;
-        }
-
-        public void Update(double elapsed)
-        {
-            while (NetCheckPackageExecute())
-            {
-
-            }
         }
 
         private bool NetCheckPackageExecute()
@@ -58,7 +39,7 @@ namespace AKNet.Udp3Tcp.Client
             if (mPackage != null)
             {
                 UdpStatistical.AddReceivePackageCount();
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                mUdpCheckPool.ReceiveNetPackage(mPackage);
                 return true;
             }
 
@@ -70,7 +51,7 @@ namespace AKNet.Udp3Tcp.Client
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mClientPeer.GetObjectPoolManager().UdpReceivePackage_Pop();
+                var mPackage = GetObjectPoolManager().UdpReceivePackage_Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
@@ -95,7 +76,7 @@ namespace AKNet.Udp3Tcp.Client
                 }
                 else
                 {
-                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                    GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                     NetLog.LogError($"解码失败: {e.MemoryBuffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                     break;
                 }
@@ -104,10 +85,10 @@ namespace AKNet.Udp3Tcp.Client
 
         private bool NetTcpPackageExecute()
         {
-            bool bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
-                mClientPeer.NetPackageExecute(mNetPackage);
+                NetPackageExecute(mNetPackage);
             }
             return bSuccess;
         }
@@ -120,22 +101,5 @@ namespace AKNet.Udp3Tcp.Client
 
             }
         }
-
-        public void Reset()
-        {
-            lock (mWaitCheckPackageQueue)
-            {
-                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-                {
-                    mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                }
-            }
-        }
-
-        public void Release()
-        {
-            Reset();
-        }
-
     }
 }

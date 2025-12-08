@@ -10,17 +10,18 @@
 using AKNet.Common;
 using AKNet.Udp3Tcp.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp3Tcp.Client
 {
     internal partial class ClientPeer : UdpClientPeerCommonBase, NetClientInterface, ClientPeerBase
     {
-        internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
-        internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-
-        internal readonly UdpCheckMgr mUdpCheckPool = null;
-        internal readonly CryptoMgr mCryptoMgr = new CryptoMgr();
+        private readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
+        private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
+        private readonly UdpCheckMgr mUdpCheckPool = null;
+        private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
 
         private readonly ObjectPoolManager mObjectPoolManager = new ObjectPoolManager();
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
@@ -36,10 +37,44 @@ namespace AKNet.Udp3Tcp.Client
         private double fMySendHeartBeatCdTime = 0.0;
         private double fReConnectServerCdTime = 0.0;
 
+        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
+        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
+        private int nCurrentCheckPackageCount = 0;
+
+        private readonly SocketAsyncEventArgs ReceiveArgs;
+        private readonly SocketAsyncEventArgs SendArgs;
+        private bool bReceiveIOContexUsed = false;
+        private bool bSendIOContexUsed = false;
+        private readonly object lock_mSocket_object = new object();
+        private readonly AkCircularManySpanBuffer mSendStreamList = null;
+        private Socket mSocket = null;
+        private IPEndPoint remoteEndPoint = null;
+        private string ip;
+        private int port;
+
         public ClientPeer()
         {
             MainThreadCheck.Check();
             mUdpCheckPool = new UdpCheckMgr(this);
+
+            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+
+            ReceiveArgs = new SocketAsyncEventArgs();
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            ReceiveArgs.Completed += ProcessReceive;
+
+            SendArgs = new SocketAsyncEventArgs();
+            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.Completed += ProcessSend;
+
+            bReceiveIOContexUsed = false;
+            bSendIOContexUsed = false;
+
+            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         }
 
         public void Update(double elapsed)
@@ -48,7 +83,12 @@ namespace AKNet.Udp3Tcp.Client
             {
                 NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
             }
-            
+
+            while (NetCheckPackageExecute())
+            {
+
+            }
+
             switch (mSocketPeerState)
             {
                 case SOCKET_PEER_STATE.CONNECTING:
@@ -112,6 +152,8 @@ namespace AKNet.Udp3Tcp.Client
                 this.mLastSocketPeerState = mSocketPeerState;
                 mListenClientPeerStateMgr.OnSocketStateChanged(this);
             }
+
+
             
             mUdpCheckPool.Update(elapsed);
         }
@@ -129,6 +171,19 @@ namespace AKNet.Udp3Tcp.Client
         public void Reset()
         {
             mUdpCheckPool.Reset();
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                }
+            }
+
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
+            }
+
             this.Name = string.Empty;
             this.ID = 0;
             this.fConnectCdTime = 0.0;
@@ -141,10 +196,25 @@ namespace AKNet.Udp3Tcp.Client
         public void Release()
         {
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            DisConnectServer();
+            CloseSocket();
             mUdpCheckPool.Release();
+
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                }
+            }
+
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
+            }
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        public void SendNetPackage2(NetUdpSendFixedSizePackage mPackage)
         {
             bool bCanSendPackage = mPackage.orInnerCommandPackage() || GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
             if (bCanSendPackage)

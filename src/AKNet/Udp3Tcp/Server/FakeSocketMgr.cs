@@ -11,6 +11,7 @@ using AKNet.Common;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using AKNet.Udp3Tcp.Common;
 
 namespace AKNet.Udp3Tcp.Server
 {
@@ -24,7 +25,7 @@ namespace AKNet.Udp3Tcp.Server
         public FakeSocketMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
+            nMaxPlayerCount = Config.MaxPlayerCount;
             mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
             mAcceptSocketDic = new Dictionary<string, FakeSocket>(nMaxPlayerCount);
         }

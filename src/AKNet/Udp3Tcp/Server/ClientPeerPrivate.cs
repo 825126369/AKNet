@@ -197,11 +197,6 @@ namespace AKNet.Udp3Tcp.Server
             return mNetServer.GetObjectPoolManager();
         }
 
-        public Config GetConfig()
-        {
-            return mNetServer.GetConfig();
-        }
-
         public int GetCurrentFrameRemainPackageCount()
         {
             return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();

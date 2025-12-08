@@ -17,63 +17,25 @@ namespace AKNet.Udp3Tcp.Client
 {
     internal partial class ClientPeer
     {
-        private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly SocketAsyncEventArgs SendArgs;
-        private readonly object lock_mSocket_object = new object();
-
-        readonly AkCircularManySpanBuffer mSendStreamList = null;
-        private Socket mSocket = null;
-        private IPEndPoint remoteEndPoint = null;
-        private string ip;
-        private int port;
-        
-        bool bReceiveIOContexUsed = false;
-        bool bSendIOContexUsed = false;
-
-        ClientPeer mClientPeer;
-        public SocketUdp(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
-
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-
-            ReceiveArgs = new SocketAsyncEventArgs();
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.Completed += ProcessReceive;
-
-            SendArgs = new SocketAsyncEventArgs();
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.Completed += ProcessSend;
-
-            bReceiveIOContexUsed = false;
-            bSendIOContexUsed = false;
-
-            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
-        }
-
         public void ConnectServer(string ip, int nPort)
         {
             this.port = nPort;
             this.ip = ip;
-            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-            ReceiveArgs.RemoteEndPoint = remoteEndPoint;
-            SendArgs.RemoteEndPoint = remoteEndPoint;
-
-            ConnectServer();
-            StartReceiveEventArg();
+            this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            this.ReceiveArgs.RemoteEndPoint = remoteEndPoint;
+            this.SendArgs.RemoteEndPoint = remoteEndPoint;
+            this.ConnectServer();
+            this.StartReceiveEventArg();
         }
 
         public void ConnectServer()
         {
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
+            SendConnect();
         }
 
         public void ReConnectServer()
         {
-            mClientPeer.mUDPLikeTCPMgr.SendConnect();
+            SendConnect();
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -83,10 +45,9 @@ namespace AKNet.Udp3Tcp.Client
 
         public bool DisConnectServer()
         {
-            var mSocketPeerState = mClientPeer.GetSocketState();
             if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
             {
-                mClientPeer.mUDPLikeTCPMgr.SendDisConnect();
+                SendDisConnect();
                 return false;
             }
             else
@@ -152,7 +113,7 @@ namespace AKNet.Udp3Tcp.Client
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                mClientPeer.mMsgReceiveMgr.MultiThreading_ReceiveWaitCheckNetPackage(e);
+                MultiThreading_ReceiveWaitCheckNetPackage(e);
             }
             
             StartReceiveEventArg();
@@ -227,7 +188,7 @@ namespace AKNet.Udp3Tcp.Client
         public void DisConnectedWithNormal()
         {
             NetLog.Log("客户端 正常 断开服务器 ");
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         private void DisConnectedWithException(Exception e)
@@ -246,14 +207,13 @@ namespace AKNet.Udp3Tcp.Client
 
         private void DisConnectedWithError()
         {
-            var mSocketPeerState = mClientPeer.GetSocketState();
             if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
             {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
             else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
             {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 
@@ -270,21 +230,6 @@ namespace AKNet.Udp3Tcp.Client
                 }
                 catch (Exception) { }
             }
-        }
-
-        public void Reset()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Reset();
-            }
-        }
-
-        public void Release()
-        {
-            DisConnectServer();
-            CloseSocket();
-            NetLog.Log("--------------- Client Release ----------------");
         }
     }
 }

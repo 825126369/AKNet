@@ -33,7 +33,7 @@ namespace AKNet.Common
             }
             else if (nNetType == NetType.Udp3Tcp)
             {
-                mInterface = new AKNet.Udp3Tcp.Client.Udp3TcpNetClientMain();
+                mInterface = new AKNet.Udp3Tcp.Client.NetClientMain();
             }
             else
             {
