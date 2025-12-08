@@ -17,11 +17,11 @@ using System.Net;
 
 namespace AKNet.Quic.Client
 {
-    public class QuicNetClientMain : NetClientInterface, ClientPeerBase, PrivateConfigInterface
+    public class NetClientMain : NetClientInterface
     {
         private ClientPeer mClientPeer;
 
-        public QuicNetClientMain()
+        public NetClientMain()
         {
             mClientPeer = new ClientPeer();
         }
@@ -119,11 +119,6 @@ namespace AKNet.Quic.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mClientPeer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mClientPeer.GetConfig();
         }
 
         public void SetName(string name)

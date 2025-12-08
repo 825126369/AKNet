@@ -15,7 +15,7 @@ using System;
 
 namespace AKNet.Quic.Server
 {
-    public class QuicNetServerMain : NetServerInterface,PrivateConfigInterface
+    public class QuicNetServerMain : NetServerInterface
     {
         QuicServer mServer = null;
 
@@ -97,11 +97,6 @@ namespace AKNet.Quic.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mServer.GetConfig();
         }
     }
 }

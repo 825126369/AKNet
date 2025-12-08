@@ -18,26 +18,8 @@ using System.Net.Security;
 
 namespace AKNet.Quic.Client
 {
-    internal class QuicConnectionMgr
-	{
-        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly byte[] mSendBuffer = new byte[1024];
-
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
-        private bool bSendIOContextUsed = false;
-
-        private QuicConnection mQuicConnection = null;
-		private string ServerIp = "";
-		private int nServerPort = 0;
-		private IPEndPoint mIPEndPoint = null;
-        private ClientPeer mClientPeer;
-        private QuicStream mSendQuicStream;
-        public QuicConnectionMgr(ClientPeer mClientPeer)
-		{
-			this.mClientPeer = mClientPeer;
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
-        }
-
+    internal partial class ClientPeer
+    {
 		public void ReConnectServer()
 		{
             ConnectServer(this.ServerIp, this.nServerPort);
@@ -48,11 +30,12 @@ namespace AKNet.Quic.Client
 			this.ServerIp = ServerAddr;
 			this.nServerPort = ServerPort;
 
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+			SetSocketState(SOCKET_PEER_STATE.CONNECTING);
 			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
-			Reset();
-			if (!QuicConnection.IsSupported)
+            CloseSocket();
+
+            if (!QuicConnection.IsSupported)
 			{
 				NetLog.LogError("QUIC is not supported.");
 				return;
@@ -67,7 +50,7 @@ namespace AKNet.Quic.Client
             try
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
                 StartProcessReceive();
@@ -75,7 +58,7 @@ namespace AKNet.Quic.Client
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
 		}
 
@@ -143,7 +126,7 @@ namespace AKNet.Quic.Client
                         int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
                         if (nLength > 0)
                         {
-                            mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                            MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                         }
                         else
                         {
@@ -232,16 +215,6 @@ namespace AKNet.Quic.Client
                 mQuicConnection = null;
 				await mQuicConnection2.CloseAsync(0);
             }
-        }
-
-		public void Reset()
-		{
-            CloseSocket();
-        }
-
-		public void Release()
-		{
-            CloseSocket();
         }
     }
 }

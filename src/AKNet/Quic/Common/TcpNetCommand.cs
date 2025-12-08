@@ -8,11 +8,15 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 #if NET9_0_OR_GREATER
+using System.Runtime.CompilerServices;
+
 namespace AKNet.Quic.Common
 {
     internal static class TcpNetCommand
     {
         public const ushort COMMAND_HEARTBEAT = 1;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orInnerCommand(ushort nPackageId)
         {
             return nPackageId == COMMAND_HEARTBEAT;
