@@ -34,6 +34,7 @@ namespace AKNet.Udp3Tcp.Server
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private readonly AkCircularManySpanBuffer mSendStreamList = null;
         private bool bSendIOContexUsed = false;
+        private int nLastSendBytesCount = 0;
         private IPEndPoint mIPEndPoint;
 
         public ClientPeer(ServerMgr mNetServer)
@@ -101,30 +102,54 @@ namespace AKNet.Udp3Tcp.Server
 			return mSocketPeerState;
 		}
 
-        public void Reset()
+        private void OnConnectReset()
         {
             this.mUdpCheckPool.Reset();
             lock (mSendStreamList)
             {
                 this.mSendStreamList.Reset();
             }
+            this.fReceiveHeartBeatTime = 0;
+            this.fMySendHeartBeatCdTime = 0;
+        }
+
+        private void OnDisConnectReset()
+        {
+            this.mUdpCheckPool.Reset();
+            lock (mSendStreamList)
+            {
+                this.mSendStreamList.Reset();
+            }
+            this.fReceiveHeartBeatTime = 0;
+            this.fMySendHeartBeatCdTime = 0;
+        }
+
+        public void Reset()
+        {
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            CloseSocket();
+
+            this.mUdpCheckPool.Reset();
+            lock (mSendStreamList)
+            {
+                this.mSendStreamList.Reset();
+            }
+
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
+            }
 
             this.Name = string.Empty;
             this.ID = 0;
             this.fReceiveHeartBeatTime = 0;
             this.fMySendHeartBeatCdTime = 0;
+            this.bSendIOContexUsed = false;
         }
 
         public void Release()
         {
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Dispose();
-            }
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Dispose();
-            }
+            Reset();
         }
 
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)

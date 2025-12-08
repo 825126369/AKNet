@@ -38,7 +38,6 @@ namespace AKNet.Udp3Tcp.Server
                     mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
                     mClientPeer.Reset();
-                    mClientPeer.CloseSocket();
                 }
             }
         }

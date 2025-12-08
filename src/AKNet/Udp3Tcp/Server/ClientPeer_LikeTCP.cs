@@ -32,18 +32,14 @@ namespace AKNet.Udp3Tcp.Server
 
 		public void ReceiveConnect()
 		{
-			Reset();
-			fReceiveHeartBeatTime = 0.0;
-			fMySendHeartBeatCdTime = 0.0;
+			OnConnectReset();
 			SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 			SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
 		public void ReceiveDisConnect()
 		{
-			Reset();
-			fMySendHeartBeatCdTime = 0.0;
-			fReceiveHeartBeatTime = 0.0;
+            OnDisConnectReset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
