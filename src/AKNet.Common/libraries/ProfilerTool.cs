@@ -7,8 +7,6 @@
 *        ModifyTime:2025/11/30 19:43:14
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-#if DEBUG
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
-    public static class ProfilerTool2
+    internal static class ProfilerTool2
 
     {
         private static long StartTime = -1;
@@ -67,8 +65,8 @@ namespace AKNet.Common
             }
         }
     }
-        
-    public static class ProfilerTool
+
+    internal static class ProfilerTool
     {
         private static readonly Stack<long> TestStack = new Stack<long>();
         private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
@@ -106,5 +104,3 @@ namespace AKNet.Common
     }
 
 }
-
-#endif

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 using System.Net;
 
 namespace AKNet.Test
@@ -7,6 +8,7 @@ namespace AKNet.Test
     {
         static void Main(string[] args)
         {
+            NetLog.AddConsoleLog();
             Console.WriteLine("Hello, World!");
             Draw(5);
 
@@ -22,10 +24,26 @@ namespace AKNet.Test
                 Console.WriteLine("!=");
             }
 
-            Dictionary<IPEndPoint, bool> mDic = new Dictionary<IPEndPoint, bool>();
-            mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
-            mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
-            mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
+            //Dictionary<IPEndPoint, bool> mDic = new Dictionary<IPEndPoint, bool>();
+            //mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
+            //mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
+            //mDic.Add(new IPEndPoint(IPAddress.Parse("192.168.0.1"), 1), true);
+
+            ProfilerTool.TestStart();
+            Random mRandom = new Random();
+            for (int i = 0; i < 1000000; i++)
+            {
+                int A = mRandom.Next(0, int.MaxValue - 1);
+                var mBuf1 = new byte[100];
+                var mBuf2 = new byte[100];
+                EndianBitConverter.SetBytes(mBuf1, 0, A);
+            }
+            ProfilerTool.TestFinishAndLog("EndianBitConverter");
+
+            while(true)
+            {
+
+            }
         }
 
         private static void Draw(int N)

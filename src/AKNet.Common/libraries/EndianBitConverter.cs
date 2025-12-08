@@ -12,14 +12,15 @@ using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
-[assembly: InternalsVisibleTo("AKNet2")]
-[assembly: InternalsVisibleTo("AKNet.Other")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
+[assembly: InternalsVisibleTo("SimpleTest")]
 namespace AKNet.Common
 {
     //这里默认使用大端存储的
     internal static class EndianBitConverter
     {
-        private const bool bUseBinaryPrimitives = true;
+        private const bool bUseBinaryPrimitives = false;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetBytes(Span<byte> mBuffer, int nBeginIndex, UInt64 value)
