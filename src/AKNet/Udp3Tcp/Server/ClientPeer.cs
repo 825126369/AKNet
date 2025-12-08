@@ -137,7 +137,7 @@ namespace AKNet.Udp3Tcp.Server
 
             lock (mReceiveStreamList)
             {
-                mReceiveStreamList.Dispose();
+                mReceiveStreamList.Reset();
             }
 
             this.Name = string.Empty;
@@ -150,6 +150,16 @@ namespace AKNet.Udp3Tcp.Server
         public void Release()
         {
             Reset();
+
+            lock (mSendStreamList)
+            {
+                this.mSendStreamList.Dispose();
+            }
+
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
+            }
         }
 
         public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
