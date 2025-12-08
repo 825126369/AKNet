@@ -1,0 +1,33 @@
+﻿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#游戏网络库
+*        Author:许珂
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/30 19:43:17
+*        Copyright:MIT软件许可证
+************************************Copyright*****************************************/
+using System;
+using AKNet.Common;
+
+namespace AKNet.Udp1Tcp.Client
+{
+    internal interface UdpClientPeerBase
+    {
+        void ConnectServer(string Ip, int nPort);
+        bool DisConnectServer();
+        void ReConnectServer();
+        void Update(double elapsed);
+        void Release();
+
+        void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> mFunc);
+        void addNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
+        void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc);
+
+        void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc);
+        void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
+        void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc);
+    }
+}

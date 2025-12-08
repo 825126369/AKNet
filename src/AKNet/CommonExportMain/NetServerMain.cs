@@ -23,9 +23,9 @@ namespace AKNet.Common
                 mInterface = new AKNet.Quic.Server.QuicNetServerMain();
             }
 #endif
-            else if (nNetType == NetType.UDP)
+            else if (nNetType == NetType.Udp1Tcp)
             {
-                mInterface = new AKNet.Udp.POINTTOPOINT.Server.UdpNetServerMain();
+                mInterface = new AKNet.Udp1Tcp.Server.UdpNetServerMain();
             }
             else if (nNetType == NetType.Udp2Tcp)
             {
