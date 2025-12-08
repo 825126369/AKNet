@@ -15,7 +15,7 @@ namespace AKNet.Tcp.Client
 	//和线程打交道
 	internal partial class ClientPeer
     {
-        public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
+        private void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{
 			lock (mReceiveStreamList)
 			{
