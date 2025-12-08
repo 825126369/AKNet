@@ -54,7 +54,13 @@ namespace AKNet.Udp4Tcp.Server
 
 		private void InitNet(IPAddress mIPAddress, int nPort)
 		{
-			try
+            //var s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //s.ExclusiveAddressUse = false;
+            //// .NET 5+ 才支持
+            //s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReusePort, true);
+            //s.Bind(new IPEndPoint(IPAddress.Any, 5000));
+
+            try
 			{
 				mState = SOCKET_SERVER_STATE.NORMAL;
 				this.nPort = nPort;
