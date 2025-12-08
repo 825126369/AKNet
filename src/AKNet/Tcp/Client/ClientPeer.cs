@@ -131,17 +131,20 @@ namespace AKNet.Tcp.Client
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
         {
             SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetSendHeartBeatTime()
         {
             fSendHeartBeatTime = 0f;
         }
 
-        public void ReceiveHeartBeat()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0f;
 		}

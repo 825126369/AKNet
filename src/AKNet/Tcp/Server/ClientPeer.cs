@@ -12,6 +12,7 @@ using AKNet.Tcp.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Server
 {
@@ -48,16 +49,6 @@ namespace AKNet.Tcp.Server
 
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
-
-		public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
-		{
-            this.mSocketPeerState = mSocketPeerState;
-        }
-
-        public SOCKET_PEER_STATE GetSocketState()
-		{
-			return mSocketPeerState;
-		}
 
 		public void Update(double elapsed)
 		{
@@ -110,38 +101,54 @@ namespace AKNet.Tcp.Server
             }
         }
 
-		private void SendHeartBeat()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SendHeartBeat()
 		{
 			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetSendHeartBeatTime()
         {
             fSendHeartBeatTime = 0f;
         }
 
-        public void ReceiveHeartBeat()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
 		}
 
-		public void Reset()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        {
+            this.mSocketPeerState = mSocketPeerState;
+        }
+
+        public SOCKET_PEER_STATE GetSocketState()
+        {
+            return mSocketPeerState;
+        }
+
+        public void Reset()
 		{
-			fSendHeartBeatTime = 0.0;
-			fReceiveHeartBeatTime = 0.0;
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            CloseSocket();
+            
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
             }
-
-            CloseSocket();
+            
             lock (mSendStreamList)
             {
                 mSendStreamList.Reset();
             }
 
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-			this.Name = string.Empty;
+            bSendIOContextUsed = false;
+            fSendHeartBeatTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
+            this.Name = string.Empty;
 			this.ID = 0;
 		}
 

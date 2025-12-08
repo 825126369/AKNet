@@ -9,117 +9,176 @@
 ************************************Copyright*****************************************/
 #if NET9_0_OR_GREATER
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System;
 using System.Net;
 using System.Net.Quic;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeer : ClientPeerBase
+    internal partial class ClientPeer : ClientPeerBase, IPoolItemInterface
 	{
-        private ClientPeerPrivate mInstance = null;
-        private QuicServer mNetServer;
-        public ClientPeer(QuicServer mNetServer)
-		{
-            this.mNetServer = mNetServer;
-            this.mInstance = mNetServer.mClientPeerPool.Pop();
-        }
+		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
 
-        public void Reset()
-        {
-            mNetServer.mClientPeerPool.recycle(mInstance);
-            mNetServer = null;
-            mInstance = null;
-        }
+        private double fSendHeartBeatTime = 0.0;
+		private double fReceiveHeartBeatTime = 0.0;
+		
+		private readonly ServerMgr mServerMgr;
+		private string Name = string.Empty;
+        private uint ID = 0;
 
-        public SOCKET_PEER_STATE GetSocketState()
+        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
+        private readonly object lock_mReceiveStreamList_object = new object();
+
+        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
+        private readonly byte[] mSendBuffer = new byte[1024];
+        CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+        private bool bSendIOContextUsed = false;
+        private QuicStream mSendQuicStream;
+        private QuicConnection mQuicConnection;
+
+        public ClientPeer(ServerMgr mNetServer)
 		{
-			if (mInstance != null)
-			{
-				return mInstance.GetSocketState();
-			}
-			else
-			{
-				return SOCKET_PEER_STATE.DISCONNECTED;
-			}
-		}
+			this.mServerMgr = mNetServer;
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+        }
 
 		public void Update(double elapsed)
 		{
-            if (mInstance != null)
+			switch (mSocketPeerState)
+			{
+				case SOCKET_PEER_STATE.CONNECTED:
+                    int nPackageCount = 0;
+                    while (NetPackageExecute())
+                    {
+                        nPackageCount++;
+                    }
+                    if (nPackageCount > 0)
+                    {
+                        ReceiveHeartBeat();
+                    }
+
+                    //if (nPackageCount > 100)
+                    //{
+                    //	NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
+                    //}
+
+                    fSendHeartBeatTime += elapsed;
+					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+					{
+						SendHeartBeat();
+						fSendHeartBeatTime = 0.0;
+					}
+
+                    double fHeatTime = Math.Min(0.3, elapsed);
+                    fReceiveHeartBeatTime += fHeatTime;
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+					{
+						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+						fReceiveHeartBeatTime = 0.0;
+#if DEBUG
+						NetLog.Log("心跳超时");
+#endif
+					}
+
+					break;
+				default:
+					break;
+			}
+
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
             {
-                mInstance.Update(elapsed);
+                this.mLastSocketPeerState = mSocketPeerState;
+                mServerMgr.mListenClientPeerStateMgr.OnSocketStateChanged(this);
             }
         }
 
-		public void SendNetData(ushort nPackageId)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SendHeartBeat()
 		{
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId);
-            }
-        }
-
-        public void SendNetData(ushort nPackageId, byte[] data)
-        {
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId, data);
-            }
-        }
-
-        public void SendNetData(NetPackage data)
-        {
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(data);
-            }
-        }
-
-		public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> data)
-		{
-            if (mInstance != null)
-            {
-                mInstance.SendNetData(nPackageId, data);
-            }
-        }
-
-		public void HandleConnectedSocket(QuicConnection mSocket)
-		{
-            if (mInstance != null)
-            {
-                mInstance.HandleConnectedSocket(mSocket);
-            }
+			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
-        public IPEndPoint GetIPEndPoint()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSendHeartBeatTime()
         {
-            if (mInstance != null)
-            {
-                return mInstance.GetIPEndPoint();
-            }
-            return null;
+            fSendHeartBeatTime = 0f;
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReceiveHeartBeat()
+		{
+			fReceiveHeartBeatTime = 0.0;
+		}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        {
+            this.mSocketPeerState = mSocketPeerState;
+        }
+
+        public SOCKET_PEER_STATE GetSocketState()
+        {
+            return mSocketPeerState;
+        }
+
+		public void Reset()
+		{
+			fSendHeartBeatTime = 0.0;
+			fReceiveHeartBeatTime = 0.0;
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Reset();
+            }
+            CloseSocket();
+            lock (mSendStreamList)
+            {
+                mSendStreamList.reset();
+            }
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+			this.Name = string.Empty;
+			this.ID = 0;
+        }
+
+        public void Release()
+        {
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            CloseSocket();
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
+            }
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Dispose();
+            }
+        }
+
         public void SetName(string name)
         {
-            mInstance.SetName(name);
+            this.Name = name;
         }
 
         public string GetName()
         {
-            return mInstance.GetName();
+            return this.Name;
         }
 
         public void SetID(uint id)
         {
-            mInstance.SetID(id);
+            this.ID = id;
         }
 
         public uint GetID()
         {
-            return mInstance.GetID();
+            return this.ID;
         }
+
     }
 }
+
 #endif

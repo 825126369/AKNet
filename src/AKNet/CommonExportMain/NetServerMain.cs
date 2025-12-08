@@ -20,7 +20,7 @@ namespace AKNet.Common
 #if NET9_0_OR_GREATER
             else if (nNetType == NetType.MSQuic)
             {
-                mInterface = new AKNet.Quic.Server.QuicNetServerMain();
+                mInterface = new AKNet.Quic.Server.NetServerMain();
             }
 #endif
             else if (nNetType == NetType.Udp1Tcp)

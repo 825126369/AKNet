@@ -14,18 +14,18 @@ using System.Collections.Generic;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeerPrivatePool
+    internal class ClientPeerPool
     {
-        readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
-        QuicServer mTcpServer = null;
+        readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
+        ServerMgr mTcpServer = null;
         private int nMaxCapacity = 0;
-        private ClientPeerPrivate GenerateObject()
+        private ClientPeer GenerateObject()
         {
-            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mTcpServer);
+            ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
             return clientPeer;
         }
 
-        public ClientPeerPrivatePool(QuicServer mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPool(ServerMgr mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mTcpServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);
@@ -45,11 +45,11 @@ namespace AKNet.Quic.Server
             return mObjectPool.Count;
         }
 
-        public ClientPeerPrivate Pop()
+        public ClientPeer Pop()
         {
             MainThreadCheck.Check();
 
-            ClientPeerPrivate t = null;
+            ClientPeer t = null;
             if (!mObjectPool.TryPop(out t))
             {
                 t = GenerateObject();
@@ -57,7 +57,7 @@ namespace AKNet.Quic.Server
             return t;
         }
 
-        public void recycle(ClientPeerPrivate t)
+        public void recycle(ClientPeer t)
         {
             MainThreadCheck.Check();
 #if DEBUG

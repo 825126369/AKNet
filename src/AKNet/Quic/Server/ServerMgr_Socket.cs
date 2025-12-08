@@ -19,19 +19,8 @@ using System.Threading.Tasks;
 
 namespace AKNet.Quic.Server
 {
-    internal class QuicListenerMgr
+    internal partial class ServerMgr
     {
-        QuicListener mQuicListener = null;
-        QuicServer mQuicServer = null;
-        private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private int nPort;
-
-        public QuicListenerMgr(QuicServer mQuicServer)
-        {
-            this.mQuicServer = mQuicServer;
-
-        }
-
         public void InitNet()
         {
             List<int> mPortList = IPAddressHelper.GetAvailableTcpPortList();
@@ -136,7 +125,7 @@ namespace AKNet.Quic.Server
                 try
                 {
                     QuicConnection connection = await mQuicListener.AcceptConnectionAsync();
-                    mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
+                    MultiThreadingHandleConnectedSocket(connection);
                 }
                 catch (Exception e)
                 {

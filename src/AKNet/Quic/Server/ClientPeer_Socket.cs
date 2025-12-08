@@ -16,33 +16,14 @@ using System.Threading;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeerSocketMgr
-	{
-        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly byte[] mSendBuffer = new byte[1024];
-        CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
-
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
-        private bool bSendIOContextUsed = false;
-        private QuicStream mSendQuicStream;
-
-        private QuicConnection mQuicConnection;
-        private ClientPeerPrivate mClientPeer;
-		private QuicServer mQuicServer;
-		
-		public ClientPeerSocketMgr(ClientPeerPrivate mClientPeer, QuicServer mQuicServer)
-		{
-			this.mClientPeer = mClientPeer;
-			this.mQuicServer = mQuicServer;
-			mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-		}
-
+    internal partial class ClientPeer
+    {
 		public void HandleConnectedSocket(QuicConnection connection)
 		{
 			MainThreadCheck.Check();
 
 			this.mQuicConnection = connection;
-			this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+			SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
             StartProcessReceive();
 		}
@@ -72,7 +53,7 @@ namespace AKNet.Quic.Server
 			catch (Exception e)
 			{
 				NetLog.LogError(e.ToString());
-				this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+				SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 			}
         }
 
@@ -87,7 +68,7 @@ namespace AKNet.Quic.Server
                         int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
                         if (nLength > 0)
                         {
-                            mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                            MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                         }
                         else
                         {
@@ -100,7 +81,7 @@ namespace AKNet.Quic.Server
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
-                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
 
@@ -136,7 +117,7 @@ namespace AKNet.Quic.Server
             catch (Exception e)
             {
                 //NetLog.LogError(e.ToString());
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
 
@@ -149,21 +130,6 @@ namespace AKNet.Quic.Server
 				await mQuicConnection2.CloseAsync(0);
 			}
 		}
-
-		public void Reset()
-		{
-			CloseSocket();
-			lock (mSendStreamList)
-			{
-				mSendStreamList.reset();
-			}
-		}
-
-        public void Release()
-        {
-            mSendStreamList.reset();
-        }
-
     }
 
 }

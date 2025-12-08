@@ -12,70 +12,44 @@
 using AKNet.Common;
 using AKNet.Quic.Common;
 using System;
+using System.Collections.Generic;
+using System.Net.Quic;
 
 namespace AKNet.Quic.Server
 {
-    internal class QuicServer : NetServerInterface
+    internal partial class ServerMgr : NetServerInterface
     {
-        private readonly QuicListenerMgr mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly NetStreamPackage mNetPackage = null;
-        internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal readonly ClientPeerPrivatePool mClientPeerPool = null;
+        internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
 
-        public QuicServer()
+        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
+        private readonly Queue<QuicConnection> mConnectSocketQueue = new Queue<QuicConnection>();
+
+        QuicListener mQuicListener = null;
+        private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
+        private int nPort;
+
+        public ServerMgr()
         {
             NetLog.Init();
             mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
             mNetPackage = new NetStreamPackage();
-
-            mSocketMgr = new QuicListenerMgr(this);
-            mClientPeerManager = new ClientPeerManager(this);
-
             mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
             mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
-            mClientPeerPool = new ClientPeerPrivatePool(this, 0, Config.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
-        public SOCKET_SERVER_STATE GetServerState()
+        public void Release()
         {
-            return mSocketMgr.GetServerState();
-        }
-
-        public int GetPort()
-        {
-            return mSocketMgr.GetPort();
-        }
-
-        public void InitNet()
-        {
-            mSocketMgr.InitNet();
-        }
-
-        public void InitNet(int nPort)
-        {
-            mSocketMgr.InitNet(nPort);
-        }
-
-        public void InitNet(string Ip, int nPort)
-        {
-            mSocketMgr.InitNet(Ip, nPort);
-        }
-
-        public void Update(double elapsed)
-        {
-            if (elapsed >= 0.3)
-            {
-                NetLog.LogWarning("帧 时间 太长: " + elapsed);
-            }
-            mClientPeerManager.Update(elapsed);
+            CloseNet();
         }
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)
@@ -101,11 +75,6 @@ namespace AKNet.Quic.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public void Release()
-        {
-            mSocketMgr.CloseNet();
         }
 
         public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)

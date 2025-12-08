@@ -16,20 +16,16 @@ using System.Net.Quic;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeerManager
-	{
-		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(0);
-		private readonly Queue<QuicConnection> mConnectSocketQueue = new Queue<QuicConnection>();
-		private QuicServer mNetServer;
-
-		public ClientPeerManager(QuicServer mNetServer)
-		{
-			this.mNetServer = mNetServer;
-		}
-
+    internal partial class ServerMgr
+    {
 		public void Update(double elapsed)
 		{
-			while (CreateClientPeer())
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("帧 时间 太长: " + elapsed);
+            }
+
+            while (CreateClientPeer())
 			{
 				
 			}
@@ -80,7 +76,7 @@ namespace AKNet.Quic.Server
 
 			if (connection != null)
 			{
-				var clientPeer = new ClientPeer(mNetServer);
+				var clientPeer = new ClientPeerWrap(this);
 				clientPeer.HandleConnectedSocket(connection);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
@@ -89,7 +85,7 @@ namespace AKNet.Quic.Server
 			return false;
 		}
 
-        private void PrintAddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeerWrap clientPeer)
 		{
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -104,7 +100,7 @@ namespace AKNet.Quic.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeerWrap clientPeer)
 		{
 #if DEBUG
 			var mRemoteEndPoint = clientPeer.GetIPEndPoint();

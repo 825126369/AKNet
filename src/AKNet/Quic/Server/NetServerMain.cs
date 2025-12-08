@@ -15,13 +15,13 @@ using System;
 
 namespace AKNet.Quic.Server
 {
-    public class QuicNetServerMain : NetServerInterface
+    public class NetServerMain : NetServerInterface
     {
-        QuicServer mServer = null;
+        ServerMgr mServer = null;
 
-        public QuicNetServerMain()
+        public NetServerMain()
         {
-            mServer = new QuicServer();
+            mServer = new ServerMgr();
         }
 
         public void InitNet()
