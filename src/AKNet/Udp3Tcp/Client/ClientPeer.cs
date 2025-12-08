@@ -50,6 +50,7 @@ namespace AKNet.Udp3Tcp.Client
         private readonly AkCircularManySpanBuffer mSendStreamList = null;
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
+        private int nLastSendBytesCount = 0;
         private string ip;
         private int port;
 
@@ -214,7 +215,7 @@ namespace AKNet.Udp3Tcp.Client
             }
         }
 
-        public void SendNetPackage2(NetUdpSendFixedSizePackage mPackage)
+        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
         {
             bool bCanSendPackage = mPackage.orInnerCommandPackage() || GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
             if (bCanSendPackage)
@@ -225,12 +226,12 @@ namespace AKNet.Udp3Tcp.Client
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 if (mPackage.orInnerCommandPackage())
                 {
-                    SendNetPackage(mPackage);
+                    SendNetPackage2(mPackage);
                 }
                 else
                 {
                     UdpStatistical.AddSendCheckPackageCount();
-                    SendNetPackage(mPackage);
+                    SendNetPackage2(mPackage);
                 }
             }
         }

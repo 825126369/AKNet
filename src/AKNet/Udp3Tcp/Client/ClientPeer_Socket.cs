@@ -132,7 +132,7 @@ namespace AKNet.Udp3Tcp.Client
             }
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        private void SendNetPackage2(NetUdpSendFixedSizePackage mPackage)
         {
             MainThreadCheck.Check();
 
@@ -154,8 +154,7 @@ namespace AKNet.Udp3Tcp.Client
                 SendNetStream2();
             }
         }
-
-        int nLastSendBytesCount = 0;
+        
         private void SendNetStream2(int BytesTransferred = -1)
         {
             if (BytesTransferred >= 0)
