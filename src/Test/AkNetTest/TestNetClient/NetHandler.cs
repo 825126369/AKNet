@@ -20,7 +20,6 @@ namespace TestNetClient
         readonly uint[] mClientSendIdArray = new uint[nClientCount];
         readonly int[] mClientSendPackageCount = new int[nClientCount];
         const int COMMAND_TESTCHAT = 1000;
-        const string logFileName = $"TestLog.txt";
 
         const string TalkMsg1 = "Begin..........End";
         const string TalkMsg2 = "Begin。。。。。。。。。。。。............................................" +
@@ -46,7 +45,6 @@ namespace TestNetClient
 
         public void Init()
         {
-            File.Delete(logFileName);
             for (int i = 0; i < nClientCount; i++)
             {
                 NetClientMain mNetClient = new NetClientMain(NetType.TCP);

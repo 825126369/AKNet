@@ -20,7 +20,7 @@ namespace AKNet.Udp2MSQuic.Common
 {
     internal sealed class MsQuicApi
     {
-        private static readonly Lazy<MsQuicApi> _lazyInstance = new Lazy<MsQuicApi>(() => new MsQuicApi()); //�̰߳�ȫ
+        private static readonly Lazy<MsQuicApi> _lazyInstance = new Lazy<MsQuicApi>(() => new MsQuicApi());
         public QUIC_REGISTRATION Registration;
         private static readonly Version s_minMsQuicVersion = new Version(2, 0, 0);
         private static bool bInit = false;

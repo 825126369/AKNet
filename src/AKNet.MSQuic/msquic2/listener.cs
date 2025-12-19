@@ -67,6 +67,7 @@ namespace MSQuic2
         }
     }
 
+
     internal unsafe static partial class MSQuicFunc
     {
         public static int MsQuicListenerOpen(QUIC_REGISTRATION RegistrationHandle, QUIC_LISTENER_CALLBACK Handler, object Context, out QUIC_LISTENER NewListener)

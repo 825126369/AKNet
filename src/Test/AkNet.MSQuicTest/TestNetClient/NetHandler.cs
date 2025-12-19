@@ -21,7 +21,6 @@ namespace TestNetClient
         readonly int[] mClientSendPackageCount = new int[nClientCount];
         readonly int[] mClientReceivePackageCount = new int[nClientCount];
         const int UdpNetCommand_COMMAND_TESTCHAT = 1000;
-        const string logFileName = $"TestLog.txt";
 
         const string TalkMsg1 = "Begin..........End";
         const string TalkMsg2 = "Begin。。。。。。。。。。。。............................................" +
@@ -47,7 +46,6 @@ namespace TestNetClient
 
         public void Init()
         {
-            File.Delete(logFileName);
             for (int i = 0; i < nClientCount; i++)
             {
                 NetClientMain mNetClient = new NetClientMain(NetType.Udp2MSQuic);
