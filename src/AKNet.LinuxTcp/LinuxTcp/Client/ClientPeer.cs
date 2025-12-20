@@ -23,7 +23,6 @@ namespace AKNet.LinuxTcp.Client
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly SocketUdp mSocketMgr;
         internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-        internal readonly Config mConfig = new Config();
         internal readonly UdpCheckMgr mUdpCheckPool;
         internal readonly CryptoMgr mCryptoMgr;
         private readonly ObjectPoolManager mObjectPoolManager;
@@ -177,11 +176,6 @@ namespace AKNet.LinuxTcp.Client
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
 
         public void NetPackageExecute(NetPackage mPackage)

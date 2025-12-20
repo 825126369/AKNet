@@ -12,19 +12,13 @@ using System;
 
 namespace AKNet.LinuxTcp.Common
 {
-    public class Config
+    public static class Config
 	{   
 		public const int nUdpPackageFixedSize = 1400;
-		public const int nUdpPackageFixedHeadSize = 14;
-        public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
-
-        public const uint nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
-        public const uint nUdpMaxOrderId = uint.MaxValue;
-
-        public readonly double fReceiveHeartBeatTimeOut = 5.0;
-		public readonly double fMySendHeartBeatMaxTime = 2.0;
-        public readonly double fReConnectMaxCdTime = 3.0;
-        public readonly int MaxPlayerCount = 10000;
+        public const double fReceiveHeartBeatTimeOut = 5.0;
+		public const double fMySendHeartBeatMaxTime = 2.0;
+        public const double fReConnectMaxCdTime = 3.0;
+        public const int MaxPlayerCount = 10000;
 	}
 }

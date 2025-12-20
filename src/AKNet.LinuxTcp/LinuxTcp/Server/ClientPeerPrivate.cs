@@ -165,11 +165,6 @@ namespace AKNet.LinuxTcp.Server
             return mObjectPoolManager;
         }
 
-        public Config GetConfig()
-        {
-            return mNetServer.GetConfig();
-        }
-
         public void NetPackageExecute(NetPackage mPackage)
         {
             mNetServer.GetPackageManager().NetPackageExecute(this, mPackage);

@@ -48,7 +48,7 @@ namespace AKNet.LinuxTcp.Client
 				case SOCKET_PEER_STATE.CONNECTED:
 					{
 						fMySendHeartBeatCdTime += elapsed;
-						if (fMySendHeartBeatCdTime >= mClientPeer.GetConfig().fMySendHeartBeatMaxTime)
+						if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
 						{
 							SendHeartBeat();
 							fMySendHeartBeatCdTime = 0.0;
@@ -56,7 +56,7 @@ namespace AKNet.LinuxTcp.Client
 
 						double fHeatTime = Math.Min(0.3, elapsed);
 						fReceiveHeartBeatTime += fHeatTime;
-						if (fReceiveHeartBeatTime >= mClientPeer.GetConfig().fReceiveHeartBeatTimeOut)
+						if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 						{
 							fReceiveHeartBeatTime = 0.0;
 							fReConnectServerCdTime = 0.0;
@@ -81,7 +81,7 @@ namespace AKNet.LinuxTcp.Client
 				case SOCKET_PEER_STATE.RECONNECTING:
 					{
 						fReConnectServerCdTime += elapsed;
-						if (fReConnectServerCdTime >= mClientPeer.GetConfig().fReConnectMaxCdTime)
+						if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
 						{
 							fReConnectServerCdTime = 0.0;
 							mClientPeer.mSocketMgr.ReConnectServer();

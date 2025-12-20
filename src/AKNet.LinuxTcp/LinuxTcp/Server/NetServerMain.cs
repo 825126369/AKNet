@@ -13,7 +13,7 @@ using AKNet.LinuxTcp.Common;
 
 namespace AKNet.LinuxTcp.Server
 {
-    public class NetServerMain : NetServerInterface, PrivateConfigInterface
+    public class NetServerMain : NetServerInterface
     {
         private UdpServer mNetServer;
         public NetServerMain()
@@ -94,11 +94,6 @@ namespace AKNet.LinuxTcp.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mNetServer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mNetServer.GetConfig();
         }
     }
 

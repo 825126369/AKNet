@@ -14,7 +14,7 @@ using System.Net;
 
 namespace AKNet.LinuxTcp.Client
 {
-    public class NetClientMain : NetClientInterface, ClientPeerBase,PrivateConfigInterface
+    public class NetClientMain : NetClientInterface, ClientPeerBase
 	{
         private ClientPeer mNetClientPeer;
 
@@ -117,12 +117,6 @@ namespace AKNet.LinuxTcp.Client
         {
             mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
-
-        public Config GetConfig()
-        {
-            return mNetClientPeer.GetConfig();
-        }
-
 
         public void SetName(string name)
         {

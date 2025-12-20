@@ -25,6 +25,5 @@ namespace AKNet.LinuxTcp.Common
         public void ReceiveDisConnect();
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();
-        Config GetConfig();
     }
 }

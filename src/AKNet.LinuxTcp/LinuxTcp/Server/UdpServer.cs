@@ -24,7 +24,6 @@ namespace AKNet.LinuxTcp.Server
         private readonly ClientPeerMgr mClientPeerMgr = null;
         
         private readonly SocketUdp_Server mSocketMgr;
-        private readonly Config mConfig = new Config();
         internal readonly CryptoMgr mCryptoMgr;
         public UdpServer()
         {
@@ -36,7 +35,7 @@ namespace AKNet.LinuxTcp.Server
             mSocketMgr = new SocketUdp_Server(this);
             mFakeSocketMgr = new FakeSocketMgr(this);
             mClientPeerMgr = new ClientPeerMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
         }
@@ -48,11 +47,6 @@ namespace AKNet.LinuxTcp.Server
                 NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
             }
             mClientPeerMgr.Update(elapsed);
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
 
         public NetStreamPackage GetLikeTcpNetPackage()

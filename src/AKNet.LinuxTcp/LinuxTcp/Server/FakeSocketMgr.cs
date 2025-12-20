@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.LinuxTcp.Common;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -24,7 +25,7 @@ namespace AKNet.LinuxTcp.Server
         public FakeSocketMgr(UdpServer mNetServer)
         {
             this.mNetServer = mNetServer;
-            nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
+            nMaxPlayerCount = Config.MaxPlayerCount;
             mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
             mAcceptSocketDic = new Dictionary<string, FakeSocket>(nMaxPlayerCount);
         }
