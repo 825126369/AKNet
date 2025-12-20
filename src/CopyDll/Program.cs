@@ -23,9 +23,9 @@ namespace CopyDll
         static void CopyDLL()
         {
             List<string> outDllDirList = new List<string>();
-            outDllDirList.Add(Path.Combine("Debug", "net10.0"));
+            outDllDirList.Add(Path.Combine("Debug", "net8.0"));
             outDllDirList.Add(Path.Combine("Debug", "netstandard2.1"));
-            outDllDirList.Add(Path.Combine("Release", "net10.0"));
+            outDllDirList.Add(Path.Combine("Release", "net8.0"));
             outDllDirList.Add(Path.Combine("Release", "netstandard2.1"));
 
             foreach (string dirKey in outDllDirList) 

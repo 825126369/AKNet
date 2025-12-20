@@ -4,7 +4,7 @@ This repository is licensed with the [MIT](LICENSE) license.
 
 # AKNet
 
-这是一个包括 TCP，UDP 的C#游戏网络库, 支持Unity游戏引擎以及.Net 10.0更高版本。
+这是一个包括 TCP，UDP 的C#游戏网络库, 支持Unity游戏引擎以及.Net 8.0更高版本。
 
 这是一个致力于实现 UDP 超越 TCP 的可靠有序高性能算法。
 
