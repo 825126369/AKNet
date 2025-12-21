@@ -19,7 +19,6 @@ namespace AKNet.Udp2MSQuic.Client
         internal readonly QuicConnectionMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
-        internal readonly Config mConfig;
         internal readonly ListenNetPackageMgr mPackageManager = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
 
@@ -33,7 +32,6 @@ namespace AKNet.Udp2MSQuic.Client
         private uint ID = 0;
         public ClientPeer()
         {
-            this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
@@ -59,7 +57,7 @@ namespace AKNet.Udp2MSQuic.Client
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= mConfig.fMySendHeartBeatMaxTime)
+					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
                         fSendHeartBeatTime = 0.0;
                         SendHeartBeat();
@@ -67,7 +65,7 @@ namespace AKNet.Udp2MSQuic.Client
 
                     double fHeatTime = Math.Min(0.3, elapsed);
                     fReceiveHeartBeatTime += fHeatTime;
-                    if (fReceiveHeartBeatTime >= mConfig.fReceiveHeartBeatTimeOut)
+                    if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
                     {
                         fReceiveHeartBeatTime = 0.0;
                         fReConnectServerCdTime = 0.0;
@@ -80,7 +78,7 @@ namespace AKNet.Udp2MSQuic.Client
 					break;
 				case SOCKET_PEER_STATE.RECONNECTING:
 					fReConnectServerCdTime += elapsed;
-					if (fReConnectServerCdTime >= mConfig.fReConnectMaxCdTime)
+					if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
 					{
                         fReConnectServerCdTime = 0.0;
                         mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;
@@ -224,11 +222,6 @@ namespace AKNet.Udp2MSQuic.Client
         public IPEndPoint GetIPEndPoint()
         {
             return mSocketMgr.GetIPEndPoint();
-        }
-
-        public Config GetConfig()
-        {
-            return this.mConfig;
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)

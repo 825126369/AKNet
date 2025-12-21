@@ -51,7 +51,7 @@ namespace AKNet.Udp2MSQuic.Server
 		public bool MultiThreadingHandleConnectedSocket(QuicConnection connection)
 		{
 			int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
-			if (nNowConnectCount >= mNetServer.mConfig.MaxPlayerCount)
+			if (nNowConnectCount >= Config.MaxPlayerCount)
 			{
 #if DEBUG
 				NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");

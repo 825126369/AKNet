@@ -43,11 +43,6 @@ namespace AKNet.Udp2MSQuic.Server
             mServer.Update(elapsed);
         }
 
-        public Config GetConfig()
-        {
-            return mServer.GetConfig();
-        }
-
         public SOCKET_SERVER_STATE GetServerState()
         {
             return mServer.GetServerState();

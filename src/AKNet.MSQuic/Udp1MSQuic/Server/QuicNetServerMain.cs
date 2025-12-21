@@ -97,10 +97,5 @@ namespace AKNet.Udp1MSQuic.Server
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
         }
-
-        public Config GetConfig()
-        {
-           return mServer.GetConfig();
-        }
     }
 }

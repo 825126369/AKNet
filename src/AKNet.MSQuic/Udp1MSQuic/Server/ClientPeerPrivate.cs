@@ -71,7 +71,7 @@ namespace AKNet.Udp1MSQuic.Server
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
 					fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= mNetServer.mConfig.fMySendHeartBeatMaxTime)
+					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
 						SendHeartBeat();
 						fSendHeartBeatTime = 0.0;
@@ -79,7 +79,7 @@ namespace AKNet.Udp1MSQuic.Server
 
                     double fHeatTime = Math.Min(0.3, elapsed);
                     fReceiveHeartBeatTime += fHeatTime;
-					if (fReceiveHeartBeatTime >= mNetServer.mConfig.fReceiveHeartBeatTimeOut)
+					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 					{
 						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
@@ -197,11 +197,6 @@ namespace AKNet.Udp1MSQuic.Server
         public uint GetID()
         {
             return ID;
-        }
-
-        public Config GetConfig()
-        {
-            return mNetServer.mConfig;
         }
     }
 }

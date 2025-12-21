@@ -25,11 +25,9 @@ namespace AKNet.Udp1MSQuic.Server
         internal readonly BufferManager mBufferManager = null;
         internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
-        internal readonly Config mConfig = null;
 
         public QuicServer()
         {
-            this.mConfig = new Config();
             mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
@@ -38,9 +36,9 @@ namespace AKNet.Udp1MSQuic.Server
             mSocketMgr = new QuicListenerMgr(this);
             mClientPeerManager = new ClientPeerManager(this);
 
-            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * mConfig.MaxPlayerCount);
-            mReadWriteIOContextPool = new SimpleIOContextPool(mConfig.MaxPlayerCount * 2, mConfig.MaxPlayerCount * 2);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mBufferManager = new BufferManager(Config.nIOContexBufferLength, 2 * Config.MaxPlayerCount);
+            mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
         public SOCKET_SERVER_STATE GetServerState()
@@ -125,11 +123,6 @@ namespace AKNet.Udp1MSQuic.Server
         public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
         {
             mPackageManager.removeNetListenFunc(func);
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
     }
 }

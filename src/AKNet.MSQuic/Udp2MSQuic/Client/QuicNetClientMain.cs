@@ -120,11 +120,6 @@ namespace AKNet.Udp2MSQuic.Client
             mClientPeer.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public Config GetConfig()
-        {
-            return mClientPeer.GetConfig();
-        }
-
         public void SetName(string name)
         {
             mClientPeer.SetName(name);
