@@ -163,9 +163,9 @@ namespace TestNetClient
 
             if (nReceivePackageCount == nSumSendPackageCount)
             {
-                OnTestFinish();
                 string msg = $"全部 接收完成!!!!!!";
                 NetLog.Log(msg);
+                OnTestFinish();
             }
 
             IMessagePool<TESTChatMessage>.recycle(mdata);
