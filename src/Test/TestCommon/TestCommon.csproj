@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\AKNet.Common\AKNet.Common.csproj" />
+    <ProjectReference Include="..\..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,27 +1,26 @@
 ﻿using AKNet.Common;
-using TestCommon;
 
 namespace TestNetClient
 {
-    internal class Program
+    public class NetHandler : NetTestClientBase
     {
-        static NetHandler mTest = null;
-        static void Main(string[] args)
+        public override NetClientMainBase Create()
         {
-            NetLog.AddConsoleLog();
-            mTest = new NetHandler();
-            mTest.Init();
-            UpdateMgr.Do(Update);
+            return new NetClientMain(NetType.Udp2MSQuic);
         }
 
-        static void Update(double fElapsed)
+        public override void OnTestFinish()
         {
-            if (fElapsed >= 0.3)
-            {
-                Console.WriteLine("TestUdpClient 帧 时间 太长: " + fElapsed);
-            }
+            udp_statistic.PrintInfo();
+        }
+    }
 
-            mTest.Update(fElapsed);
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var mTest = new NetHandler();
+            mTest.Start();
         }
     }
 }

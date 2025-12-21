@@ -1,22 +1,27 @@
 ﻿using AKNet.Common;
-using TestCommon;
 
 namespace TestNetClient
 {
-    internal class Program
+    public class NetHandler : NetTestClientBase
     {
-        static NetHandler mTest = null;
-        static void Main(string[] args)
+        public override NetClientMainBase Create()
         {
-            NetLog.AddConsoleLog();
-            mTest = new NetHandler();
-            mTest.Init();
-            UpdateMgr.Do(Update);
+            return new NetClientMain(NetType.TCP);
         }
 
-        static void Update(double fElapsed)
+        public override void OnTestFinish()
         {
-            mTest.Update(fElapsed);
+            
         }
     }
+
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var mTest = new NetHandler();
+            mTest.Start();
+        }
+    }
+
 }

@@ -1,22 +1,21 @@
 ﻿using AKNet.Common;
-using TestCommon;
 
 namespace TestNetServer
 {
+    public class NetHandler : NetTestServerBase
+    {
+        public override NetServerMainBase Create()
+        {
+            return new NetServerMain(NetType.LinuxTCP);
+        }
+    }
+
     internal class Program
     {
-        static NetHandler mTest = null;
         static void Main(string[] args)
         {
-            NetLog.AddConsoleLog();
-            mTest = new NetHandler();
-            mTest.Init();
-            UpdateMgr.Do(Update);
-        }
-
-        static void Update(double fElapsed)
-        {
-            mTest.Update(fElapsed);
+            var mTest = new NetHandler();
+            mTest.Start();
         }
     }
 }

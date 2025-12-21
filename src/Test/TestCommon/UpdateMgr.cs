@@ -59,5 +59,6 @@ namespace TestCommon
                 fElapsed = (fFinishTime - fBeginTime) / 1000.0;
             }
         }
+
     }
 }
