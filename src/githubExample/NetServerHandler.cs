@@ -23,17 +23,16 @@ namespace githubExample
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
-            TESTChatMessage mReceiveMsg = Proto3Tool.GetData<TESTChatMessage>(package);
+            TESTChatMessage mReceiveMsg = TESTChatMessage.Parser.ParseFrom(package.GetData());
             Console.WriteLine(mReceiveMsg.TalkMsg);
             SendMsg(clientPeer);
         }
 
         private static void SendMsg(ClientPeerBase peer)
         {
-            TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
+            TESTChatMessage mdata = new TESTChatMessage();
             mdata.TalkMsg = "Hello, AkNet Client";
             peer.SendNetData(COMMAND_TESTCHAT, mdata.ToByteArray());
-            IMessagePool<TESTChatMessage>.recycle(mdata);
         }
     }
 }

@@ -39,47 +39,19 @@ namespace githubExample
 {
     internal class Program
     {
-        static NetServerHandler mServer;
-        static NetClientHandler mClient;
         static void Main(string[] args)
         {
             NetLog.AddConsoleLog();
-            mServer = new NetServerHandler();
+            var mServer = new NetServerHandler();
             mServer.Init();
-            mClient = new NetClientHandler();
+            var mClient = new NetClientHandler();
             mClient.Init();
-            UpdateMgr.Do(Update);
-        }
 
-        static void Update(double fElapsed)
-        {
-            mServer.Update(fElapsed);
-            mClient.Update(fElapsed);
-        }
-    }
-
-    public static class UpdateMgr
-    {
-        private static readonly Stopwatch mStopWatch = Stopwatch.StartNew();
-        private static double fElapsed = 0;
-
-        public static void Do(Action<double> updateFunc, int nTargetFPS = 30)
-        {
-            int nFrameTime = (int)Math.Ceiling(1000.0 / nTargetFPS);
-
-            long fBeginTime = mStopWatch.ElapsedMilliseconds;
-            long fFinishTime = mStopWatch.ElapsedMilliseconds;
-            fElapsed = 0.0;
             while (true)
             {
-                fBeginTime = mStopWatch.ElapsedMilliseconds;
-                updateFunc(fElapsed);
-
-                int fElapsed2 = (int)(mStopWatch.ElapsedMilliseconds - fBeginTime);
-                int nSleepTime = Math.Max(0, nFrameTime - fElapsed2);
-                Thread.Sleep(nSleepTime);
-                fFinishTime = mStopWatch.ElapsedMilliseconds;
-                fElapsed = (fFinishTime - fBeginTime) / 1000.0;
+                mServer.Update(0.001);
+                mClient.Update(0.001);
+                Thread.Sleep(1);
             }
         }
     }
@@ -101,7 +73,7 @@ namespace githubExample
         const int COMMAND_TESTCHAT = 1000;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.UDP);
+            mNetServer = new NetServerMain(NetType.Udp3Tcp);
             mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
             mNetServer.InitNet(6000);
         }
@@ -113,17 +85,16 @@ namespace githubExample
 
         private static void receive_csChat(ClientPeerBase clientPeer, NetPackage package)
         {
-            TESTChatMessage mReceiveMsg = Proto3Tool.GetData<TESTChatMessage>(package);
+            TESTChatMessage mReceiveMsg = TESTChatMessage.Parser.ParseFrom(package.GetData());
             Console.WriteLine(mReceiveMsg.TalkMsg);
             SendMsg(clientPeer);
         }
 
         private static void SendMsg(ClientPeerBase peer)
         {
-            TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
+            TESTChatMessage mdata = new TESTChatMessage();
             mdata.TalkMsg = "Hello, AkNet Client";
             peer.SendNetData(COMMAND_TESTCHAT, mdata.ToByteArray());
-            IMessagePool<TESTChatMessage>.recycle(mdata);
         }
     }
 }
@@ -143,7 +114,7 @@ namespace githubExample
 
         public void Init()
         {
-            mNetClient = new NetClientMain(NetType.UDP);
+            mNetClient = new NetClientMain(NetType.Udp3Tcp);
             mNetClient.addListenClientPeerStateFunc(OnSocketStateChanged);
             mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);
@@ -176,5 +147,7 @@ namespace githubExample
         }
     }
 }
+
+
 
 ```
