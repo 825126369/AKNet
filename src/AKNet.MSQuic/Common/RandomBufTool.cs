@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 
 namespace AKNet.Common
 {
-    internal static partial class RandomTool2
+    internal static class RandomBufTool
     {
         public static void Random(Span<byte> randomBytes)
         {

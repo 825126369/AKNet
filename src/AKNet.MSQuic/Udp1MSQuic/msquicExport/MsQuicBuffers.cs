@@ -9,8 +9,10 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using AKNet.MSQuic.Common;
 
-#if USE_MSQUIC_2 
+
+#if USE_MSQUIC_2
 using MSQuic2;
 #else
 using MSQuic1;

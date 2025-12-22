@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.MSQuic.Common;
 using AKNet.Udp2MSQuic.Common;
 using System;
 

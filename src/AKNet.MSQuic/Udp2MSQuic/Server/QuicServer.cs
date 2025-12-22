@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.MSQuic.Common;
 using AKNet.Udp2MSQuic.Common;
 using System;
 
@@ -22,7 +23,6 @@ namespace AKNet.Udp2MSQuic.Server
         internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
         internal readonly ClientPeerPool mClientPeerPool = null;
-        internal readonly SimpleIOContextPool mReadWriteIOContextPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
 
         public QuicServer()
@@ -34,7 +34,6 @@ namespace AKNet.Udp2MSQuic.Server
 
             mSocketMgr = new QuicListenerMgr(this);
             mClientPeerManager = new ClientPeerManager(this);
-            mReadWriteIOContextPool = new SimpleIOContextPool(Config.MaxPlayerCount * 2, Config.MaxPlayerCount * 2);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 

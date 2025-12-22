@@ -109,7 +109,7 @@ namespace AKNet.Common
             if (string.IsNullOrWhiteSpace(Password))
             {
                 Span<byte> PasswordBuffer = new byte[50];
-                RandomTool2.Random(PasswordBuffer);
+                RandomBufTool.Random(PasswordBuffer);
                 Password = Convert.ToBase64String(PasswordBuffer);
             }
 

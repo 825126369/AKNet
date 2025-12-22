@@ -7,17 +7,15 @@
 *        ModifyTime:2025/11/30 19:43:19
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
-
-namespace AKNet.Udp1MSQuic.Common
+namespace AKNet.MSQuic.Common
 {
-    public static class Config
+    internal static class TcpNetCommand
     {
-        //Common
-        public const int nIOContexBufferLength = 1024;
-        public const double fReceiveHeartBeatTimeOut = 5.0;
-        public const double fMySendHeartBeatMaxTime = 2.0;
-        public const double fReConnectMaxCdTime = 3.0;
-        public const int MaxPlayerCount = 10000;
+        public const ushort COMMAND_HEARTBEAT = 1;
+        public static bool orInnerCommand(ushort nPackageId)
+        {
+            return nPackageId == COMMAND_HEARTBEAT;
+        }
     }
 }
+

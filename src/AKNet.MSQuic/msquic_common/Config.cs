@@ -4,14 +4,12 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:20
+*        ModifyTime:2025/11/30 19:43:19
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
-
-namespace AKNet.Udp2MSQuic.Common
+namespace AKNet.MSQuic.Common
 {
-    public static class Config
+    internal static class Config
     {
         //Common
         public const int nIOContexBufferLength = 1024;
