@@ -14,11 +14,7 @@ namespace AKNet.Common
 {
     internal class XORCrypto
     {
-        readonly byte[] key;
-        public XORCrypto()
-        {
-            key = Encoding.ASCII.GetBytes(VersionPublishConfig.m_BuildTime.ToString());
-        }
+        readonly byte[] key = Encoding.ASCII.GetBytes(VersionPublishConfig.m_BuildTime.ToString());
 
         public byte Encode(int i, byte input, byte token)
         {

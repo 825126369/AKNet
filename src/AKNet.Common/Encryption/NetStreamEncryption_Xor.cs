@@ -15,7 +15,7 @@ namespace AKNet.Common
     internal class NetStreamEncryption_Xor : NetStreamEncryptionInterface
     {
 		private const int nPackageFixedHeadSize = 10;
-        readonly XORCrypto mCryptoInterface = null;
+        private readonly XORCrypto mCryptoInterface = null;
         private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
 		private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
