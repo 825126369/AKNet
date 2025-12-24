@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
+	[Obsolete]
     internal class NetStreamEncryption:NetStreamEncryptionInterface
     {
         private const int nPackageFixedHeadSize = 9;
