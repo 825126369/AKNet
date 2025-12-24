@@ -1,0 +1,21 @@
+﻿<#@ template language="C#" #>
+<#@ import namespace="System.IO" #>
+<#
+var now_Year = DateTime.Now.Year;
+var now_Month = DateTime.Now.Month;
+var now_Day = DateTime.Now.Day;
+var now_Hour = DateTime.Now.Hour;
+var now_Minute = DateTime.Now.Minute;
+var now_Second = DateTime.Now.Second;
+#>
+
+using System;
+
+namespace AKNet.Common
+{
+    public static class VersionPublishConfig
+    {
+        public static readonly DateTime m_BuildTime = new DateTime(<#= now_Year #>, <#= now_Month #>, <#= now_Day #>, <#= now_Hour #>, <#= now_Minute #>, <#= now_Second #>);
+        public static readonly System.Version m_Version = new System.Version(0, 0, 0);
+    }
+}

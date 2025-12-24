@@ -22,13 +22,7 @@ namespace AKNet.Common
         readonly NetStreamEncryptionInterface mNetPackageEncryption = null;
         public CryptoMgr()
         {
-#if DEBUG
-            mNetPackageEncryption = new NetStreamEncryption();
-
-#else
-            var mCryptoInterface = new XORCrypto();
-            mNetPackageEncryption = new NetStreamEncryption_Xor(mCryptoInterface);
-#endif
+            mNetPackageEncryption = new NetStreamEncryption_Xor();
         }
 
         public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)

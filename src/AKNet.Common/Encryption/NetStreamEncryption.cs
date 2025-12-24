@@ -14,9 +14,9 @@ namespace AKNet.Common
 {
     internal class NetStreamEncryption:NetStreamEncryptionInterface
     {
-        private const int nPackageFixedHeadSize = 8;
-        private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
-		private byte[] mCacheSendBuffer = new byte[1024];
+        private const int nPackageFixedHeadSize = 9;
+        private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
+        private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
         private byte[] mCacheHead = new byte[nPackageFixedHeadSize];
 
@@ -42,7 +42,7 @@ namespace AKNet.Common
 
             int nHeadLength = mReceiveStreamList.CopyTo(mCacheHead);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
 			{
 				if (mCacheHead[i] != mCheck[i])
 				{
@@ -80,9 +80,9 @@ namespace AKNet.Common
 			int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
 
-			Buffer.BlockCopy(mCheck, 0, mCacheSendBuffer, 0, 4);
-            EndianBitConverter.SetBytes(mCacheSendBuffer, 4, nPackageId);
-            EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)mBufferSegment.Length);
+			Buffer.BlockCopy(mCheck, 0, mCacheSendBuffer, 0, 5);
+            EndianBitConverter.SetBytes(mCacheSendBuffer, 5, nPackageId);
+            EndianBitConverter.SetBytes(mCacheSendBuffer, 7, (ushort)mBufferSegment.Length);
 
             Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
             mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));

@@ -14,16 +14,16 @@ namespace AKNet.Common
 {
     internal class NetStreamEncryption_Xor : NetStreamEncryptionInterface
     {
-		private const int nPackageFixedHeadSize = 9;
+		private const int nPackageFixedHeadSize = 10;
         readonly XORCrypto mCryptoInterface = null;
-        private byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
 		private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
         private byte[] mCacheHead = new byte[nPackageFixedHeadSize];
 
-        public NetStreamEncryption_Xor(XORCrypto mCryptoInterface)
+        public NetStreamEncryption_Xor()
 		{
-			this.mCryptoInterface = mCryptoInterface;
+			this.mCryptoInterface = new XORCrypto();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -47,7 +47,7 @@ namespace AKNet.Common
 
             int nHeadLength = mReceiveStreamList.CopyTo(mCacheHead);
             byte nEncodeToken = mCacheHead[0];
-			for (int i = 0; i < 4 ; i++)
+			for (int i = 0; i < 5 ; i++)
 			{
 				if (mCacheHead[i + 1] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
 				{
@@ -55,8 +55,8 @@ namespace AKNet.Common
 				}
 			}
 
-            ushort nPackageId = EndianBitConverter.ToUInt16(mCacheHead, 5);
-            int nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 7);
+            ushort nPackageId = EndianBitConverter.ToUInt16(mCacheHead, 6);
+            int nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 8);
             NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
@@ -85,13 +85,13 @@ namespace AKNet.Common
 
 			byte nEncodeToken = (byte)RandomTool.Random(0, 255);
 			mCacheSendBuffer[0] = nEncodeToken;
-			for (int i = 0; i < 4; i++)
+			for (int i = 0; i < 5; i++)
 			{
 				mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
 			}
 
-			EndianBitConverter.SetBytes(mCacheSendBuffer, 5, (ushort)nPackageId);
-			EndianBitConverter.SetBytes(mCacheSendBuffer, 7, (ushort)mBufferSegment.Length);
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)nPackageId);
+			EndianBitConverter.SetBytes(mCacheSendBuffer, 8, (ushort)mBufferSegment.Length);
 
 			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
 			if (mBufferSegment.Length > 0)

@@ -14,18 +14,10 @@ namespace AKNet.Common
 {
     internal class XORCrypto
     {
-        readonly string default_password = "qwertyuiopasd";
-        readonly byte[] key = new byte[64];
-        public XORCrypto(string password = null)
+        readonly byte[] key;
+        public XORCrypto()
         {
-            if (!string.IsNullOrWhiteSpace(password))
-            {
-                key = Encoding.ASCII.GetBytes(password);
-            }
-            else
-            {
-                key = Encoding.ASCII.GetBytes(default_password);
-            }
+            key = Encoding.ASCII.GetBytes(VersionPublishConfig.m_BuildTime.ToString());
         }
 
         public byte Encode(int i, byte input, byte token)

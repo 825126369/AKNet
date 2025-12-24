@@ -77,5 +77,6 @@ namespace CopyrightProtectionTool
             code = GetCopyrightContent() + code;
             File.WriteAllText(filePath, code, Encoding.UTF8);
         }
+
     }
 }

@@ -16,7 +16,7 @@ using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
-    internal static partial class RandomTool
+    internal static class RandomTool
     {
         private static readonly Random mRandom = new Random(RandomNumberGenerator.GetInt32(int.MaxValue));
 
