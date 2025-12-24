@@ -1,5 +1,9 @@
 ﻿<#@ template language="C#" #>
+<#@ output extension=".cs" #>
+
+<#@ import namespace="System" #>
 <#@ import namespace="System.IO" #>
+
 <#
 var now_Year = DateTime.Now.Year;
 var now_Month = DateTime.Now.Month;
