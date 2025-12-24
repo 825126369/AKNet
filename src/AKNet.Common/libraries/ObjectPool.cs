@@ -1,4 +1,4 @@
-﻿ /************************************Copyright*****************************************
+﻿/************************************Copyright*****************************************
 *        ProjectName:AKNet
 *        Web:https://github.com/825126369/AKNet
 *        Description:C#游戏网络库
@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:14
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -24,7 +25,7 @@ namespace AKNet.Common
 	//Object 池子
 	internal class ObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
-		private readonly Stack<T> mObjectPool = null;
+        private readonly Stack<T> mObjectPool = null;
 		private readonly int nMaxCapacity = 0;
 		public ObjectPool(int initCapacity = 16, int MaxCapacity = 0)
 		{
