@@ -17,7 +17,7 @@ namespace AKNet.Udp3Tcp.Common
     /// </summary>
     internal static class UdpPackageEncryption
     {
-        private static readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        private static readonly byte[] mCheck = new byte[2] { (byte)'$', (byte)'$'};
         private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
 
         public static bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
@@ -28,7 +28,7 @@ namespace AKNet.Udp3Tcp.Common
                 return false;
             }
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 2; i++)
             {
                 if (mBuff[i] != mCheck[i])
                 {
@@ -37,9 +37,9 @@ namespace AKNet.Udp3Tcp.Common
                 }
             }
 
-            mPackage.nOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(4));
-            mPackage.nRequestOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(8));
-            mPackage.nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(12));
+            mPackage.nOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(2));
+            mPackage.nRequestOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(6));
+            mPackage.nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(10));
             
             ushort nBodyLength = mPackage.nBodyLength;
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
@@ -58,10 +58,10 @@ namespace AKNet.Udp3Tcp.Common
             uint nRequestOrderId = mPackage.nRequestOrderId;
             ushort nBodyLength = (ushort)mPackage.nBodyLength;
 
-            Buffer.BlockCopy(mCheck, 0, mCacheSendHeadBuffer, 0, 4);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 4, nOrderId);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 8, nRequestOrderId);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 12, nBodyLength);
+            Buffer.BlockCopy(mCheck, 0, mCacheSendHeadBuffer, 0, 2);
+            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 2, nOrderId);
+            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 6, nRequestOrderId);
+            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 10, nBodyLength);
 
             return mCacheSendHeadBuffer;
         }

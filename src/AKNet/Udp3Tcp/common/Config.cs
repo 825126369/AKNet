@@ -14,7 +14,7 @@ namespace AKNet.Udp3Tcp.Common
     internal static class Config
 	{   
 		public const int nUdpPackageFixedSize = 1400;
-		public const int nUdpPackageFixedHeadSize = 14;
+		public const int nUdpPackageFixedHeadSize = 12;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
 
