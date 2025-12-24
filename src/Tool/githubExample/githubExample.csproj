@@ -6,10 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-    
+
   <ItemGroup>
-    <ProjectReference Include="..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
-    <ProjectReference Include="..\AKNet\AKNet.csproj" />
+    <ProjectReference Include="..\..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
+    <ProjectReference Include="..\..\AKNet\AKNet.csproj" />
   </ItemGroup>
 
 </Project>
