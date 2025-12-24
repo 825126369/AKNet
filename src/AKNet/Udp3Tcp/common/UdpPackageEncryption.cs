@@ -37,18 +37,17 @@ namespace AKNet.Udp3Tcp.Common
                 }
             }
 
-            mPackage.nOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(2));
-            mPackage.nRequestOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(6));
-            mPackage.nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(10));
-            
-            ushort nBodyLength = mPackage.nBodyLength;
+            ushort nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(10));
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
                 NetLog.LogError($"解码失败 3: {nBodyLength} | {Config.nUdpPackageFixedSize}");
                 return false;
             }
 
-            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
+            mPackage.nBodyLength = nBodyLength;
+            mPackage.nOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(2));
+            mPackage.nRequestOrderId = EndianBitConverter.ToUInt32(mBuff.Slice(6));
+            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
             return true;
         }
         
