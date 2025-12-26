@@ -44,13 +44,4 @@ namespace AKNet.Udp4Tcp.Common
             return false;
         }
     }
-
-    internal interface ReSendPackageMgrInterface
-    {
-        void AddTcpStream(ReadOnlySpan<byte> buffer);
-        void ReceiveOrderIdRequestPackage(uint nRequestOrderId);
-        void Update(double elapsed);
-        void Reset();
-    }
-
 }

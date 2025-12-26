@@ -7,26 +7,12 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 
 namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer
     {
-        private bool GetReceiveCheckPackage()
-        {
-            NetUdpReceiveFixedSizePackage mPackage = null;
-            if (GetReceivePackage(out mPackage))
-            {
-                UdpStatistical.AddReceivePackageCount();
-                NetLog.Assert(mPackage != null, "mPackage == null");
-                mUdpCheckPool.ReceiveNetPackage(mPackage);
-                return true;
-            }
-            return false;
-        }
-
         public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());

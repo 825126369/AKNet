@@ -22,67 +22,6 @@ namespace AKNet.Udp4Tcp.Client
             return nCurrentCheckPackageCount;
         }
 
-        private bool NetCheckPackageExecute()
-        {
-            NetUdpReceiveFixedSizePackage mPackage = null;
-            lock (mWaitCheckPackageQueue)
-            {
-                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
-                {
-                    if (!mPackage.orInnerCommandPackage())
-                    {
-                        nCurrentCheckPackageCount--;
-                    }
-                }
-            }
-
-            if (mPackage != null)
-            {
-                UdpStatistical.AddReceivePackageCount();
-                mUdpCheckPool.ReceiveNetPackage(mPackage);
-                return true;
-            }
-
-            return false;
-        }
-
-        public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
-        {
-            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-            while (true)
-            {
-                var mPackage = GetObjectPoolManager().UdpReceivePackage_Pop();
-                bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
-                if (bSucccess)
-                {
-                    int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
-                    lock (mWaitCheckPackageQueue)
-                    {
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (!mPackage.orInnerCommandPackage())
-                        {
-                            nCurrentCheckPackageCount++;
-                        }
-                    }
-
-                    if (mBuff.Length > nReadBytesCount)
-                    {
-                        mBuff = mBuff.Slice(nReadBytesCount);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
-                    NetLog.LogError($"解码失败: {e.MemoryBuffer.Length} {e.BytesTransferred} | {mBuff.Length}");
-                    break;
-                }
-            }
-        }
-
         private bool NetTcpPackageExecute()
         {
             bool bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);

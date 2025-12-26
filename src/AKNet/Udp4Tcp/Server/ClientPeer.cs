@@ -10,41 +10,25 @@
 using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
-using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer : UdpClientPeerCommonBase, ClientPeerBase
 	{
-        internal UdpCheckMgr mUdpCheckPool = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private ServerMgr mServerMgr;
-
         private string Name = string.Empty;
         private uint ID = 0;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
-
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-
-        private FakeSocket mSocket = null;
-        private readonly object lock_mSocket_object = new object();
-        private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        private readonly AkCircularManySpanBuffer mSendStreamList = null;
-        private bool bSendIOContexUsed = false;
-        private int nLastSendBytesCount = 0;
+        private ConnectionPeer mConnectionPeer = null;
 
         public ClientPeer(ServerMgr mNetServer)
         {
             this.mServerMgr = mNetServer;
-            mUdpCheckPool = new UdpCheckMgr(this);
             SetSocketState(SOCKET_PEER_STATE.NONE);
-
-            SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         }
 
         public void Update(double elapsed)
@@ -87,8 +71,6 @@ namespace AKNet.Udp4Tcp.Server
                 this.mLastSocketPeerState = mSocketPeerState;
                 mServerMgr.OnSocketStateChanged(this);
             }
-
-            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -128,12 +110,6 @@ namespace AKNet.Udp4Tcp.Server
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             CloseSocket();
 
-            this.mUdpCheckPool.Reset();
-            lock (mSendStreamList)
-            {
-                this.mSendStreamList.Reset();
-            }
-
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
@@ -143,44 +119,12 @@ namespace AKNet.Udp4Tcp.Server
             this.ID = 0;
             this.fReceiveHeartBeatTime = 0;
             this.fMySendHeartBeatCdTime = 0;
-            this.bSendIOContexUsed = false;
         }
 
         public void Release()
         {
             Reset();
-
-            lock (mSendStreamList)
-            {
-                this.mSendStreamList.Dispose();
-            }
-
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Dispose();
-            }
-        }
-
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
-        {
-            bool bCanSendPackage = mPackage.orInnerCommandPackage() ||
-                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
-
-            if (bCanSendPackage)
-            {
-                UdpStatistical.AddSendPackageCount();
-                ResetSendHeartBeatCdTime();
-                mUdpCheckPool.SetRequestOrderId(mPackage);
-                if (mPackage.orInnerCommandPackage())
-                {
-                    this.SendNetPackage2(mPackage);
-                }
-                else
-                {
-                    UdpStatistical.AddSendCheckPackageCount();
-                    this.SendNetPackage2(mPackage);
-                }
-            }
+            CloseSocket();
         }
 
         public ObjectPoolManager GetObjectPoolManager()

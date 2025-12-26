@@ -10,64 +10,63 @@
 using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
-using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
-    internal partial class ClientPeer
+    internal partial class ConnectionPeer
     {
-        public void HandleConnectedSocket(FakeSocket mSocket)
-        {
-            MainThreadCheck.Check();
-            NetLog.Assert(mSocket != null, "mSocket == null");
-
-            this.mSocket = mSocket;
-            this.SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
-            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-        }
-
-        public IPEndPoint GetIPEndPoint()
-        {
-            if (mSocket != null)
-            {
-                return mSocket.RemoteEndPoint;
-            }
-            else
-            {
-                return null;
-            }
-        }
-
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mSocket.GetCurrentFrameRemainPackageCount();
-        }
-
-        public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
-        {
-            return mSocket.GetReceivePackage(out mPackage);
-        }
-
         public bool SendToAsync(SocketAsyncEventArgs e)
         {
-            bool bIOSyncCompleted = false;
-            if (mSocket != null)
+            bool bIOPending = false;
+
+            try
             {
-                try
+                bIOPending = this.mNetServer.SendToAsync(e);
+            }
+            catch (Exception ex)
+            {
+                NetLog.LogException(ex);
+            }
+
+            return bIOPending;
+        }
+
+        public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
+        {
+            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
+            while (true)
+            {
+                var mPackage = mNetServer.GetObjectPoolManager().UdpReceivePackage_Pop();
+                bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
+                if (bSucccess)
                 {
-                    bIOSyncCompleted = !mSocket.SendToAsync(e);
-                }
-                catch (Exception ex)
-                {
-                    bSendIOContexUsed = false;
-                    if (mSocket != null)
+                    int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
+                    lock (mWaitCheckPackageQueue)
                     {
-                        NetLog.LogException(ex);
+                        mWaitCheckPackageQueue.Enqueue(mPackage);
+                        if (!mPackage.orInnerCommandPackage())
+                        {
+                            nCurrentCheckPackageCount++;
+                        }
+                    }
+                    if (mBuff.Length > nReadBytesCount)
+                    {
+                        mBuff = mBuff.Slice(nReadBytesCount);
+                    }
+                    else
+                    {
+                        NetLog.Assert(mBuff.Length == nReadBytesCount);
+                        break;
                     }
                 }
+                else
+                {
+                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                    NetLog.LogError("解码失败 !!!");
+                    break;
+                }
             }
-            return !bIOSyncCompleted;
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -79,14 +78,27 @@ namespace AKNet.Udp4Tcp.Server
             else
             {
                 NetLog.LogError(e.SocketError);
-                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 bSendIOContexUsed = false;
             }
         }
 
-        public void SendNetPackage2(NetUdpSendFixedSizePackage mPackage)
+        public void AddUDPPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            MainThreadCheck.Check();
+            lock (mSendStreamList)
+            {
+                var mBufferItem = mSendStreamList.BeginSpan();
+                mSendStreamList.WriteFrom(UdpPackageEncryption.EncodeHead(mPackage));
+                if (mPackage.WindowBuff != null)
+                {
+                    mPackage.WindowBuff.CopyTo(mBufferItem.GetCanWriteSpan(), mPackage.WindowOffset, mPackage.WindowLength);
+                    mBufferItem.nSpanLength += mPackage.WindowLength;
+                }
+                mSendStreamList.FinishSpan();
+            }
+        }
+
+        public void SendUDPPackage(NetUdpSendFixedSizePackage mPackage)
+        {
             lock (mSendStreamList)
             {
                 var mBufferItem = mSendStreamList.BeginSpan();
@@ -129,7 +141,7 @@ namespace AKNet.Udp4Tcp.Server
                 SendArgs.SetBuffer(0, nSendBytesCount);
                 if (!SendToAsync(SendArgs))
                 {
-                    ProcessSend(null, SendArgs);
+                    ProcessSend(this, SendArgs);
                 }
             }
             else
@@ -138,13 +150,9 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public void CloseSocket()
+        public void Close()
         {
-            if (mSocket != null)
-            {
-                mSocket.Close();
-                mSocket = null;
-            }
+            this.mNetServer.RemoveFakeSocket(this);
         }
 
     }

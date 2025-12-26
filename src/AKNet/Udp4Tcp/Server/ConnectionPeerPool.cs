@@ -13,24 +13,24 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Server
 {
-    internal class FakeSocketPool
+    internal class ConnectionPeerPool
     {
-        readonly Stack<FakeSocket> mObjectPool = new Stack<FakeSocket>();
+        readonly Stack<ConnectionPeer> mObjectPool = new Stack<ConnectionPeer>();
         ServerMgr mUdpServer = null;
         private int nMaxCapacity = 0;
-        private FakeSocket GenerateObject()
+        private ConnectionPeer GenerateObject()
         {
-            FakeSocket clientPeer = new FakeSocket(this.mUdpServer);
+            ConnectionPeer clientPeer = new ConnectionPeer(this.mUdpServer);
             return clientPeer;
         }
 
-        public FakeSocketPool(ServerMgr mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ConnectionPeerPool(ServerMgr mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mUdpServer = mUdpServer;
             SetMaxCapacity(nMaxCapacity);
             for (int i = 0; i < initCapacity; i++)
             {
-                FakeSocket clientPeer = GenerateObject();
+                ConnectionPeer clientPeer = GenerateObject();
                 mObjectPool.Push(clientPeer);
             }
         }
@@ -45,9 +45,9 @@ namespace AKNet.Udp4Tcp.Server
             return mObjectPool.Count;
         }
 
-        public FakeSocket Pop()
+        public ConnectionPeer Pop()
         {
-            FakeSocket t = null;
+            ConnectionPeer t = null;
             lock (mObjectPool)
             {
                 mObjectPool.TryPop(out t);
@@ -61,7 +61,7 @@ namespace AKNet.Udp4Tcp.Server
             return t;
         }
 
-        public void recycle(FakeSocket t)
+        public void recycle(ConnectionPeer t)
         {
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));

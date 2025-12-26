@@ -26,16 +26,16 @@ namespace AKNet.Udp4Tcp.Server
         private readonly CryptoMgr mCryptoMgr;
 
         private int nPort = 0;
-        private List<Socket> mSocketList = new List<Socket>();
+        private Socket mSocket = null;
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
 
-        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
-        private readonly FakeSocketPool mFakeSocketPool = null;
+        private readonly Dictionary<IPEndPoint, ConnectionPeer> mConnectionPeerDic = null;
+        private readonly ConnectionPeerPool mConnectionPeerPool = null;
 
-        private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
+        private readonly Queue<ConnectionPeer> mConnectSocketQueue = new Queue<ConnectionPeer>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 
         public ServerMgr()
@@ -47,9 +47,17 @@ namespace AKNet.Udp4Tcp.Server
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
-            
-            mFakeSocketPool = new FakeSocketPool(this, 0, Config.MaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
+
+            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+            ReceiveArgs = new SocketAsyncEventArgs();
+            ReceiveArgs.Completed += ProcessReceive;
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+
+            mConnectionPeerPool = new ConnectionPeerPool(this, 0, Config.MaxPlayerCount);
+            mConnectionPeerDic = new Dictionary<IPEndPoint, ConnectionPeer>(Config.MaxPlayerCount);
         }
 
         public NetStreamPackage GetLikeTcpNetPackage()

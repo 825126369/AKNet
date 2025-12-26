@@ -29,19 +29,5 @@ namespace AKNet.Udp4Tcp.Server
 		{
             fReceiveHeartBeatTime = 0.0;
         }
-
-		public void ReceiveConnect()
-		{
-			OnConnectReset();
-			SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-			SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
-		}
-
-		public void ReceiveDisConnect()
-		{
-            OnDisConnectReset();
-			SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-			SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
-		}
 	}
 }

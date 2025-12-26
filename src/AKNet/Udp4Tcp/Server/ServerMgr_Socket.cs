@@ -13,7 +13,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -56,43 +55,31 @@ namespace AKNet.Udp4Tcp.Server
 		private void InitNet(IPAddress mIPAddress, int nPort)
 		{
             try
-			{
-				mState = SOCKET_SERVER_STATE.NORMAL;
-				this.nPort = nPort;
+            {
+                mState = SOCKET_SERVER_STATE.NORMAL;
+                this.nPort = nPort;
 
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
-                for (int i = 0; i < Environment.ProcessorCount; i++)
-                {
-                    var mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                    mSocket.ExclusiveAddressUse = false;
-                    //mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReusePort, true);
-                    mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-                    mSocket.Bind(bindEndPoint);
-
-                    //ReceiveArgs = new SocketAsyncEventArgs();
-                    //ReceiveArgs.Completed += ProcessReceive;
-                    //ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-                    //ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
-
-                    StartReceiveFromAsync();
-                }
+                mSocket.Bind(bindEndPoint);
 
                 NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
-			}
-			catch (SocketException ex)
-			{
-				mState = SOCKET_SERVER_STATE.EXCEPTION;
-				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
-			}
-			catch (Exception ex)
-			{
-				mState = SOCKET_SERVER_STATE.EXCEPTION;
-				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
-			}
-		}
+
+                InitThreadWorker();
+                StartReceiveFromAsync();
+            }
+            catch (SocketException ex)
+            {
+                mState = SOCKET_SERVER_STATE.EXCEPTION;
+                NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
+                NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+            }
+            catch (Exception ex)
+            {
+                mState = SOCKET_SERVER_STATE.EXCEPTION;
+                NetLog.LogError(ex.Message + " | " + ex.StackTrace);
+                NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+            }
+        }
 
 		public int GetPort()
 		{
@@ -106,26 +93,25 @@ namespace AKNet.Udp4Tcp.Server
 
 		private void StartReceiveFromAsync()
 		{
-			//bool bIOSyncCompleted = false;
-   //         if (mSocket != null)
-   //         {
-   //             try
-   //             {
-   //                 bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-   //             }
-   //             catch (Exception e)
-   //             {
-   //                 if (mSocket != null)
-   //                 {
-   //                     NetLog.LogException(e);
-   //                 }
-   //             }
-   //         }
-			
-   //         if (bIOSyncCompleted)
-			//{
-			//	ProcessReceive(null, ReceiveArgs);
-			//}
+			bool bIOPending = false;
+			if (mSocket != null)
+			{
+				try
+				{
+                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
+                    if (!bIOPending)
+                    {
+                        ProcessReceive(null, ReceiveArgs);
+                    }
+                }
+				catch (Exception e)
+				{
+					if (mSocket != null)
+					{
+						NetLog.LogException(e);
+					}
+				}
+			}
 		}
 
 		private void ProcessReceive(object sender, SocketAsyncEventArgs e)
@@ -141,39 +127,23 @@ namespace AKNet.Udp4Tcp.Server
 
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
-			bool bIOSyncCompleted = false;
-			//if (mSocket != null)
-			//{
-			//	try
-			//	{
-			//		bIOSyncCompleted = !mSocket.SendToAsync(e);
-			//	}
-			//	catch (Exception ex)
-			//	{
-			//		if (mSocket != null)
-			//		{
-			//			NetLog.LogException(ex);
-			//		}
-			//	}
-			//}
-			
-			return !bIOSyncCompleted;
+			return mSocket.SendToAsync(e);
 		}
 
         public void CloseSocket()
 		{
-            //if (mSocket != null)
-            //{
-            //    Socket mSocket2 = mSocket;
-            //    mSocket = null;
+			if (mSocket != null)
+			{
+				Socket mSocket2 = mSocket;
+				mSocket = null;
 
-            //    try
-            //    {
-            //        mSocket2.Close();
-            //    }
-            //    catch (Exception) { }
-            //}
-        }
+				try
+				{
+					mSocket2.Close();
+				}
+				catch (Exception) { }
+			}
+		}
 	}
 
 }

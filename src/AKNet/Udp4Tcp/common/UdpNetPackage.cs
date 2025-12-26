@@ -15,15 +15,14 @@ namespace AKNet.Udp4Tcp.Common
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
-        public readonly CheckPackageInfo_TimeOutGenerator mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
-
         public TcpSlidingWindow mTcpSlidingWindow;
 
         public uint nOrderId;
         public uint nRequestOrderId;
         public ushort nBodyLength;
-
         public ushort nSendCount;
+        public long nLastSendTime = 0;
+        public long nInternalTime;
 
         public NetUdpSendFixedSizePackage()
         {
@@ -38,7 +37,17 @@ namespace AKNet.Udp4Tcp.Common
             this.nOrderId = 0;
             this.nBodyLength = 0;
         }
-        
+
+        public bool orTimeOut()
+        {
+            return UdpStaticCommon.GetNowTime() - nLastSendTime >= this.nInternalTime;
+        }
+
+        public void SetInternalTime(long InternalTime)
+        {
+            this.nInternalTime = InternalTime;
+        }
+
         public TcpSlidingWindow WindowBuff { 
             get {
                 return mTcpSlidingWindow; 

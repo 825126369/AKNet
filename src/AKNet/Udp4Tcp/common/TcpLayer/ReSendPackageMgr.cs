@@ -13,7 +13,7 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ReSendPackageMgr : ReSendPackageMgrInterface
+    internal partial class ReSendPackageMgr
     {
         private UdpClientPeerCommonBase mClientPeer;
         private UdpCheckMgr mUdpCheckMgr;
@@ -87,11 +87,10 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
-        public void Update(double elapsed)
+        public void Update()
         {
             UdpStatistical.AddSearchCount(this.nSearchCount);
             UdpStatistical.AddFrameCount();
-            nLastFrameTime = elapsed;
 
             AddPackage();
             if (mWaitCheckSendQueue.Count == 0) return;
@@ -102,7 +101,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 if (mPackage.nSendCount > 0)
                 {
-                    if (mPackage.mTimeOutGenerator_ReSend.orTimeOut(elapsed))
+                    if (mPackage.orTimeOut())
                     {
                         UdpStatistical.AddReSendCheckPackageCount();
                         SendNetPackage(mPackage);
@@ -148,10 +147,8 @@ namespace AKNet.Udp4Tcp.Common
         private void ArrangeReSendTimeOut(NetUdpSendFixedSizePackage mPackage)
         {
             long nTimeOutTime = GetRTOTime();
-            double fTimeOutTime = nTimeOutTime / 1000.0;
-
             UdpStatistical.AddRTO(nTimeOutTime);
-            mPackage.mTimeOutGenerator_ReSend.SetInternalTime(fTimeOutTime);
+            mPackage.SetInternalTime(nTimeOutTime);
         }
 
         //快速重传

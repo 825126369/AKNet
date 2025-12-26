@@ -101,6 +101,7 @@ namespace AKNet.Udp4Tcp.Common
         readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
         long nLastSendSurePackageTime = 0;
         long nSameOrderIdSureCount = 0;
+
         private void CheckReceivePackageLoss(NetUdpReceiveFixedSizePackage mPackage)
         {
             UdpStatistical.AddReceiveCheckPackageCount();
@@ -162,10 +163,10 @@ namespace AKNet.Udp4Tcp.Common
             mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mCheckPackage);
         }
 
-        public void Update(double elapsed)
+        public void Update()
         {
             if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-            mReSendPackageMgr.Update(elapsed);
+            mReSendPackageMgr.Update();
         }
 
         public void SetRequestOrderId(NetUdpSendFixedSizePackage mPackage)

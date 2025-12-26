@@ -48,7 +48,7 @@ namespace AKNet.Udp4Tcp.Client
 
 		public void ReceiveConnect()
 		{
-			if (GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
+			if (mSocketPeerState != SOCKET_PEER_STATE.CONNECTED)
 			{
                 this.Reset();
 				SetSocketState(SOCKET_PEER_STATE.CONNECTED);
@@ -58,7 +58,7 @@ namespace AKNet.Udp4Tcp.Client
 
 		public void ReceiveDisConnect()
 		{
-			if (GetSocketState() != SOCKET_PEER_STATE.DISCONNECTED)
+			if (mSocketPeerState != SOCKET_PEER_STATE.DISCONNECTED)
 			{
 				this.Reset();
 				SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);

@@ -15,15 +15,6 @@ namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer
     {
-        public void SendInnerNetData(byte id)
-        {
-            NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpSendFixedSizePackage mPackage = GetObjectPoolManager().UdpSendPackage_Pop();
-            mPackage.SetInnerCommandId(id);
-            SendNetPackage(mPackage);
-            GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
-        }
-
         public void SendNetData(NetPackage mNetPackage)
         {
             if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
@@ -36,7 +27,7 @@ namespace AKNet.Udp4Tcp.Server
         {
             if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
-                mUdpCheckPool.SendTcpStream(ReadOnlySpan<byte>.Empty);
+                SendTcpStream(ReadOnlySpan<byte>.Empty);
             }
         }
 
@@ -50,10 +41,9 @@ namespace AKNet.Udp4Tcp.Server
             if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
                 ReadOnlySpan<byte> mData = mServerMgr.GetCryptoMgr().Encode(id, data);
-                mUdpCheckPool.SendTcpStream(mData);
+                SendTcpStream(mData);
             }
         }
-
     }
 
 }

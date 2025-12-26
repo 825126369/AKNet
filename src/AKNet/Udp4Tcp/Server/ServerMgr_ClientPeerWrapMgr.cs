@@ -42,7 +42,7 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public void MultiThreadingHandleConnectedSocket(FakeSocket mSocket)
+        public void MultiThreadingHandleConnectedSocket(ConnectionPeer mSocket)
         {
             lock (mConnectSocketQueue)
             {
@@ -54,7 +54,7 @@ namespace AKNet.Udp4Tcp.Server
         {
             MainThreadCheck.Check();
 
-            FakeSocket mSocket = null;
+            ConnectionPeer mSocket = null;
             lock (mConnectSocketQueue)
             {
                 mConnectSocketQueue.TryDequeue(out mSocket);

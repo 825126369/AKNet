@@ -20,7 +20,6 @@ namespace AKNet.Udp4Tcp.Client
     {
         private readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-        private readonly UdpCheckMgr mUdpCheckPool = null;
         private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
 
         private readonly ObjectPoolManager mObjectPoolManager = new ObjectPoolManager();
@@ -76,6 +75,8 @@ namespace AKNet.Udp4Tcp.Client
             bSendIOContexUsed = false;
 
             mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
+
+            InitThreadWorker();
         }
 
         public void Update(double elapsed)
@@ -83,11 +84,6 @@ namespace AKNet.Udp4Tcp.Client
             if (elapsed >= 0.3)
             {
                 NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
-            }
-
-            while (NetCheckPackageExecute())
-            {
-
             }
 
             switch (mSocketPeerState)
@@ -153,10 +149,6 @@ namespace AKNet.Udp4Tcp.Client
                 this.mLastSocketPeerState = mSocketPeerState;
                 mListenClientPeerStateMgr.OnSocketStateChanged(this);
             }
-
-
-            
-            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
