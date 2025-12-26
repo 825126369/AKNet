@@ -7,12 +7,14 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal static class ThreadWorkerMgr
     {
+        private readonly static List<ConnectionPeer> mConnectionPeerList = new List<ThreadWorker>();
         private readonly static List<ThreadWorker> mThreadWorkerList = new List<ThreadWorker>();
         private static bool bInit = false;
 
@@ -20,10 +22,15 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (bInit) return;
             bInit = true;
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < Environment.ProcessorCount; i++)
             {
                 mThreadWorkerList.Add(new ThreadWorker());
             }
+        }
+
+        public static ThreadWorker GetMainThreadWorker()
+        {
+            return mThreadWorkerList[0];
         }
     }
 }
