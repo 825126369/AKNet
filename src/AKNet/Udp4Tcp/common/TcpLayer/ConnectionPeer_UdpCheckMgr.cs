@@ -18,7 +18,6 @@ namespace AKNet.Udp4Tcp.Common
         public const int nDefaultSendPackageCount = 1024;
         public const int nDefaultCacheReceivePackageCount = 2048;
         private uint nCurrentWaitReceiveOrderId;
-        private readonly ReSendPackageMgr mReSendPackageMgr = null;
         private UdpClientPeerCommonBase mClientPeer = null;
 
         public void AddReceivePackageOrderId(int nLength)
@@ -37,7 +36,7 @@ namespace AKNet.Udp4Tcp.Common
                 NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
             }
 #endif
-            mReSendPackageMgr.AddTcpStream(buffer);
+            AddTcpStream(buffer);
         }
 
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)

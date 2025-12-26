@@ -28,7 +28,6 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
-        public UdpCheckMgr mUdpCheckPool = null;
 
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
@@ -39,29 +38,76 @@ namespace AKNet.Udp4Tcp.Common
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
 
+        private readonly TcpSlidingWindow mTcpSlidingWindow = new TcpSlidingWindow();
+        private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
+        private uint nCurrentWaitSendOrderId;
+        private long nLastRequestOrderIdTime = 0;
+        private uint nLastRequestOrderId = 0;
+        private int nContinueSameRequestOrderIdCount = 0;
+        private double nLastFrameTime = 0;
+        private int nSearchCount = 0;
+        private const int nMinSearchCount = 10;
+        private int nMaxSearchCount = int.MaxValue;
+        private int nRemainNeedSureCount = 0;
+
         public ConnectionPeer(ServerMgr mNetServer)
         {
             this.mServerMgr = mNetServer;
-            this.mUdpCheckPool = new UdpCheckMgr(this);
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
-
-
-            mReSendPackageMgr = new ReSendPackageMgr(mClientPeer, this);
-            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+            
+            this.nSearchCount = nMinSearchCount;
+            this.nMaxSearchCount = this.nSearchCount * 2;
+            this.nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
+            this.nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+            InitRTO();
         }
 
         public void Update()
         {
-            mUdpCheckPool.Update();
             GetReceiveCheckPackage();
-        }
 
-        public void AddTcpStream(ReadOnlySpan<byte> mBuffer)
-        {
-            mUdpCheckPool.SendTcpStream(mBuffer);
+            UdpStatistical.AddSearchCount(this.nSearchCount);
+            UdpStatistical.AddFrameCount();
+
+            AddPackage();
+            if (mWaitCheckSendQueue.Count == 0) return;
+            bool bTimeOut = false;
+            int nSearchCount = this.nSearchCount;
+            foreach (var mPackage in mWaitCheckSendQueue)
+            {
+                if (mPackage.nSendCount > 0)
+                {
+                    if (mPackage.orTimeOut())
+                    {
+                        UdpStatistical.AddReSendCheckPackageCount();
+                        SendNetPackage(mPackage);
+                        ArrangeReSendTimeOut(mPackage);
+                        mPackage.nSendCount++;
+                        bTimeOut = true;
+                    }
+                }
+                else
+                {
+                    UdpStatistical.AddFirstSendCheckPackageCount();
+                    SendNetPackage(mPackage);
+                    ArrangeReSendTimeOut(mPackage);
+                    mPackage.mTcpStanardRTOTimer.BeginRtt();
+                    mPackage.nSendCount++;
+                }
+
+                if (--nSearchCount <= 0)
+                {
+                    break;
+                }
+            }
+
+            if (bTimeOut)
+            {
+                this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
+            }
         }
 
         public void SendInnerNetData(byte id)

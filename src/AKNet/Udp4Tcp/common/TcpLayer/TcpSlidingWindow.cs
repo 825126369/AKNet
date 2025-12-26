@@ -11,10 +11,9 @@ using AKNet.Common;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal class TcpSlidingWindow:AkCircularManyBuffer
+    internal class TcpSlidingWindow : AkCircularManyBuffer
     {
         public uint nBeginOrderId; //待确认的OrderId
-
         public TcpSlidingWindow(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = Config.nUdpPackageFixedBodySize):
             base(nInitBlockCount, nMaxBlockCount, nBlockSize)
         {

@@ -15,30 +15,6 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer
     {
-        private readonly TcpSlidingWindow mTcpSlidingWindow = new TcpSlidingWindow();
-        private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
-        public uint nCurrentWaitSendOrderId;
-
-        private long nLastRequestOrderIdTime = 0;
-        private uint nLastRequestOrderId = 0;
-        private int nContinueSameRequestOrderIdCount = 0;
-        private double nLastFrameTime = 0;
-        private int nSearchCount = 0;
-
-        private const int nMinSearchCount = 10;
-        private int nMaxSearchCount = int.MaxValue;
-        private int nRemainNeedSureCount = 0;
-
-        public ReSendPackageMgr(UdpClientPeerCommonBase mClientPeer, UdpCheckMgr mUdpCheckMgr)
-        {
-            this.mClientPeer = mClientPeer;
-            this.mUdpCheckMgr = mUdpCheckMgr;
-            this.nSearchCount = nMinSearchCount;
-            this.nMaxSearchCount = this.nSearchCount * 2;
-            this.nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            InitRTO();
-        }
-
         public void AddTcpStream(ReadOnlySpan<byte> buffer)
         {
             mTcpSlidingWindow.WriteFrom(buffer);
@@ -81,50 +57,6 @@ namespace AKNet.Udp4Tcp.Common
                 AddSendPackageOrderId(mPackage.nBodyLength);
 
                 nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
-            }
-        }
-
-        public void Update()
-        {
-            UdpStatistical.AddSearchCount(this.nSearchCount);
-            UdpStatistical.AddFrameCount();
-
-            AddPackage();
-            if (mWaitCheckSendQueue.Count == 0) return;
-
-            bool bTimeOut = false;
-            int nSearchCount = this.nSearchCount;
-            foreach (var mPackage in mWaitCheckSendQueue)
-            {
-                if (mPackage.nSendCount > 0)
-                {
-                    if (mPackage.orTimeOut())
-                    {
-                        UdpStatistical.AddReSendCheckPackageCount();
-                        SendNetPackage(mPackage);
-                        ArrangeReSendTimeOut(mPackage);
-                        mPackage.nSendCount++;
-                        bTimeOut = true;
-                    }
-                }
-                else
-                {
-                    UdpStatistical.AddFirstSendCheckPackageCount();
-                    SendNetPackage(mPackage);
-                    ArrangeReSendTimeOut(mPackage);
-                    mPackage.mTcpStanardRTOTimer.BeginRtt();
-                    mPackage.nSendCount++;
-                }
-
-                if (--nSearchCount <= 0)
-                {
-                    break;
-                }
-            }
-
-            if (bTimeOut)
-            {
-                this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
             }
         }
 
