@@ -36,11 +36,6 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mConnectionPeer.GetCurrentFrameRemainPackageCount();
-        }
-
         public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
         {
             return mConnectionPeer.GetReceivePackage(out mPackage);

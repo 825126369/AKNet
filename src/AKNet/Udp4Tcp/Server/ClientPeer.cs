@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Tcp.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
 
@@ -33,15 +34,15 @@ namespace AKNet.Udp4Tcp.Server
 
         public void Update(double elapsed)
         {
-            while (GetReceiveCheckPackage())
-            {
-
-            }
-
             switch (mSocketPeerState)
             {
                 case SOCKET_PEER_STATE.CONNECTED:
                     {
+                        while (NetPackageExecute())
+                        {
+
+                        }
+
                         fMySendHeartBeatCdTime += elapsed;
                         if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
                         {
@@ -82,6 +83,21 @@ namespace AKNet.Udp4Tcp.Server
 		{
 			return mSocketPeerState;
 		}
+
+        private void SendHeartBeat()
+        {
+            SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+        }
+
+        public void ResetSendHeartBeatCdTime()
+        {
+            fMySendHeartBeatCdTime = 0.0;
+        }
+
+        public void ReceiveHeartBeat()
+        {
+            fReceiveHeartBeatTime = 0.0;
+        }
 
         private void OnConnectReset()
         {

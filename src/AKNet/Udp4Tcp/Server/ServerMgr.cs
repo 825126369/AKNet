@@ -18,7 +18,7 @@ namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ServerMgr : NetServerInterface
 	{
-        private readonly NetStreamPackage mLikeTcpNetPackage = new NetStreamPackage();
+        private readonly NetStreamPackage mNetStreamPackage = new NetStreamPackage();
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
         private readonly ClientPeerPool mClientPeerPool = null;
@@ -60,9 +60,9 @@ namespace AKNet.Udp4Tcp.Server
             mConnectionPeerDic = new Dictionary<IPEndPoint, ConnectionPeer>(Config.MaxPlayerCount);
         }
 
-        public NetStreamPackage GetLikeTcpNetPackage()
+        public NetStreamPackage GetNetStreamPackage()
         {
-            return mLikeTcpNetPackage;
+            return mNetStreamPackage;
         }
 
         public CryptoMgr GetCryptoMgr()

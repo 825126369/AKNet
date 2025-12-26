@@ -11,7 +11,7 @@ using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ReSendPackageMgr
+    internal partial class ConnectionPeer
     {
         private const ushort HZ = 1000;
         private const long TCP_RTO_MAX = 120 * HZ;

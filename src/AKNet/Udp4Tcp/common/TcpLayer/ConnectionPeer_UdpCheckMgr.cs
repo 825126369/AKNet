@@ -13,22 +13,13 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal class UdpCheckMgr
+    internal partial class ConnectionPeer
     {
         public const int nDefaultSendPackageCount = 1024;
         public const int nDefaultCacheReceivePackageCount = 2048;
-
         private uint nCurrentWaitReceiveOrderId;
         private readonly ReSendPackageMgr mReSendPackageMgr = null;
-
         private UdpClientPeerCommonBase mClientPeer = null;
-        public UdpCheckMgr(UdpClientPeerCommonBase mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-
-            mReSendPackageMgr = new ReSendPackageMgr(mClientPeer, this);
-            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
-        }
 
         public void AddReceivePackageOrderId(int nLength)
         {

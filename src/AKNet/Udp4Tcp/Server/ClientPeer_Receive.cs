@@ -7,30 +7,45 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Udp4Tcp.Common;
+using AKNet.Common;
+using AKNet.Tcp.Common;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer
     {
-        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
         {
-            mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
-            while (NetTcpPackageExecute())
+            lock (mReceiveStreamList)
             {
-
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
             }
         }
 
-        private bool NetTcpPackageExecute()
+        private bool NetPackageExecute()
         {
-            var mNetPackage = mServerMgr.GetLikeTcpNetPackage();
-            bool bSuccess = mServerMgr.GetCryptoMgr().Decode(mReceiveStreamList, mNetPackage);
+            NetStreamPackage mNetStreamPackage = mServerMgr.GetNetStreamPackage();
+            bool bSuccess = false;
+            lock (mReceiveStreamList)
+            {
+                bSuccess = mServerMgr.GetCryptoMgr().Decode(mReceiveStreamList, mNetStreamPackage);
+            }
+
             if (bSuccess)
             {
-                NetPackageExecute(mNetPackage);
+                if (TcpNetCommand.orInnerCommand(mNetStreamPackage.nPackageId))
+                {
+
+                }
+                else
+                {
+                    mServerMgr.GetPackageManager().NetPackageExecute(this, mNetStreamPackage);
+                }
             }
+
             return bSuccess;
         }
+
     }
 }

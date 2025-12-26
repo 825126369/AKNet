@@ -8,17 +8,23 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4Tcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace AKNet.Udp4Tcp.Server
+namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer : IPoolItemInterface
     {
-        private readonly ServerMgr mNetServer;
+        enum E_CONNECTION_EVENT_TYPE : byte
+        {
+            CONNECTED = 0,
+            CLOSED = 1,  
+            DATA_RECEIVED = 2,
+        }
+
+        private readonly ServerMgr mServerMgr;
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
@@ -29,15 +35,22 @@ namespace AKNet.Udp4Tcp.Server
         private readonly AkCircularManySpanBuffer mSendStreamList = null;
         private bool bSendIOContexUsed = false;
         private int nLastSendBytesCount = 0;
+        private bool Connected;
+        private double fReceiveHeartBeatTime = 0.0;
+        private double fMySendHeartBeatCdTime = 0.0;
 
         public ConnectionPeer(ServerMgr mNetServer)
         {
-            this.mNetServer = mNetServer;
-            mUdpCheckPool = new UdpCheckMgr(this);
+            this.mServerMgr = mNetServer;
+            this.mUdpCheckPool = new UdpCheckMgr(this);
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
+
+
+            mReSendPackageMgr = new ReSendPackageMgr(mClientPeer, this);
+            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
         public void Update()
@@ -48,7 +61,7 @@ namespace AKNet.Udp4Tcp.Server
 
         public void AddTcpStream(ReadOnlySpan<byte> mBuffer)
         {
-            mSendStreamList.ad
+            mUdpCheckPool.SendTcpStream(mBuffer);
         }
 
         public void SendInnerNetData(byte id)
@@ -56,15 +69,13 @@ namespace AKNet.Udp4Tcp.Server
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
             NetUdpSendFixedSizePackage mPackage = GetObjectPoolManager().UdpSendPackage_Pop();
             mPackage.SetInnerCommandId(id);
-            SendNetPackage(mPackage);
+            SendUDPPackage(mPackage);
             GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
         }
 
-        public void SendNetPackage(NetUdpSendFixedSizePackage mPackage)
+        public void SendUDPPackage(NetUdpSendFixedSizePackage mPackage)
         {
-            bool bCanSendPackage = mPackage.orInnerCommandPackage() ||
-                GetSocketState() == SOCKET_PEER_STATE.CONNECTED;
-
+            bool bCanSendPackage = mPackage.orInnerCommandPackage() || Connected;
             if (bCanSendPackage)
             {
                 UdpStatistical.AddSendPackageCount();
@@ -72,12 +83,12 @@ namespace AKNet.Udp4Tcp.Server
                 mUdpCheckPool.SetRequestOrderId(mPackage);
                 if (mPackage.orInnerCommandPackage())
                 {
-                    this.SendUDPPackage(mPackage);
+                    this.SendUDPPackage2(mPackage);
                 }
                 else
                 {
                     UdpStatistical.AddSendCheckPackageCount();
-                    this.SendUDPPackage(mPackage);
+                    this.SendUDPPackage2(mPackage);
                 }
             }
         }
@@ -126,9 +137,37 @@ namespace AKNet.Udp4Tcp.Server
             {
                 while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
                 {
-                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                    mServerMgr.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
                 }
             }
         }
+
+        private void SendHeartBeat()
+        {
+            SendInnerNetData(UdpNetCommand.COMMAND_HEARTBEAT);
+        }
+
+        public void ResetSendHeartBeatCdTime()
+        {
+            fMySendHeartBeatCdTime = 0.0;
+        }
+
+        //private void HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)
+        //{
+        //    NetLog.Log("Connection Event: " + connectionEvent.Type.ToString());
+        //    switch (connectionEvent.Type)
+        //    {
+        //        case E_CONNECTION_EVENT_TYPE.CONNECTED:
+        //            HandleEventConnected(ref connectionEvent.CONNECTED);
+        //            break;
+        //        case E_CONNECTION_EVENT_TYPE.CLOSED:
+        //            HandleEventShutdownInitiatedByTransport(ref connectionEvent.SHUTDOWN_INITIATED_BY_TRANSPORT);
+        //            break;
+        //        case E_CONNECTION_EVENT_TYPE.DATA_RECEIVED:
+        //            HandleEventShutdownInitiatedByPeer(ref connectionEvent.SHUTDOWN_INITIATED_BY_PEER);
+        //            break;
+        //    }
+        //}
+
     }
 }

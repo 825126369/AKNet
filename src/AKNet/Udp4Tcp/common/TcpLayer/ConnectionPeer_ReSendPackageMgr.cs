@@ -13,11 +13,8 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ReSendPackageMgr
+    internal partial class ConnectionPeer
     {
-        private UdpClientPeerCommonBase mClientPeer;
-        private UdpCheckMgr mUdpCheckMgr;
-
         private readonly TcpSlidingWindow mTcpSlidingWindow = new TcpSlidingWindow();
         private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
         public uint nCurrentWaitSendOrderId;
