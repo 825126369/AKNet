@@ -11,12 +11,16 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ThreadWorkerMgr
+    internal static class ThreadWorkerMgr
     {
-        readonly List<ThreadWorker> mThreadWorkerList = new List<ThreadWorker>();
-        public void Init()
+        private readonly static List<ThreadWorker> mThreadWorkerList = new List<ThreadWorker>();
+        private static bool bInit = false;
+
+        public static void Init()
         {
-            for (int i = 0; i < mThreadWorkerList.Count; i++)
+            if (bInit) return;
+            bInit = true;
+            for (int i = 0; i < 1; i++)
             {
                 mThreadWorkerList.Add(new ThreadWorker());
             }
