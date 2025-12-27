@@ -12,11 +12,10 @@ using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class SocketMgr:IDisposable
+    internal partial class SocketMgr : IDisposable
     {
         public class Config
         {
@@ -27,33 +26,44 @@ namespace AKNet.Udp4Tcp.Common
 
         readonly List<SocketItem> mSocketList = new List<SocketItem();
 
-        private int InitNet(Config mConfig)
+        public int InitNet(Config mConfig)
 		{
             try
             {
                 IPAddress mIPAddress = IPAddress.Parse(mConfig.IP);
                 EndPoint mIPEndPoint = new IPEndPoint(mIPAddress, mConfig.nPort);
-                for (int i = 0; i < mSocketList.Count; i++)
+
+                int nSocketCount = mConfig.bServer ? Environment.ProcessorCount : 1;
+                for (int i = 0; i < nSocketCount; i++)
                 {
                     var mSocketItem = new SocketItem();
+                    mSocketList.Add(mSocketItem);
+                    mSocketItem.RemoteEndPoint = mIPEndPoint as IPEndPoint;
+
                     if (mConfig.bServer)
                     {
                         mSocketItem.mSocket.Bind(mIPEndPoint);
-                        NetLog.Log("Udp Server 初始化成功:  " + mIPEndPoint.ToString());
                     }
                     else
                     {
                         mSocketItem.mSocket.Connect(mIPEndPoint);
-                        NetLog.Log("Udp Client 初始化成功:  " + mIPEndPoint.ToString());
                     }
 
                     mSocketItem.StartReceiveFromAsync();
                 }
+
+                if (mConfig.bServer)
+                {
+                    NetLog.Log("Udp Server 初始化成功:  " + mIPEndPoint.ToString());
+                }
+                else
+                {
+                    NetLog.Log("Udp Client 连接服务器成功:  " + mIPEndPoint.ToString());
+                }
             }
             catch (Exception ex)
             {
-                NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-                NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+                NetLog.LogError($"服务器 初始化失败: {ex.Message}");
                 return 1;
             }
 
@@ -66,6 +76,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 mSocketList[i].Dispose();
             }
+            mSocketList.Clear();
         }
     }
 

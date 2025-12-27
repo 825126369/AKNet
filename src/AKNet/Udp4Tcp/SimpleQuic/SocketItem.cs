@@ -21,6 +21,7 @@ namespace AKNet.Udp4Tcp.Common
         public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private static readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+        public IPEndPoint RemoteEndPoint;
 
         public SocketItem()
         {

@@ -23,8 +23,7 @@ namespace AKNet.Udp4Tcp.Common
             CLOSED = 1,  
             DATA_RECEIVED = 2,
         }
-
-        private readonly ServerMgr mServerMgr;
+        
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
@@ -50,9 +49,9 @@ namespace AKNet.Udp4Tcp.Common
         private int nMaxSearchCount = int.MaxValue;
         private int nRemainNeedSureCount = 0;
 
-        public ConnectionPeer(ServerMgr mNetServer)
+        public ConnectionPeer()
         {
-            this.mServerMgr = mNetServer;
+            //this.mServerMgr = mNetServer;
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);

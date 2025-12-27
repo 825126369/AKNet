@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
@@ -16,25 +15,15 @@ namespace AKNet.Udp4Tcp.Common
     internal partial class ThreadWorker:IDisposable
     {
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
-        private Socket mSocket = null;
 
-        private void InitThreadWorker()
+        public void Init()
         {
             Thread mThread = new Thread(ThreadFunc);
             mThread.IsBackground = true;
             mThread.Start();
-
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-
-            ReceiveArgs = new SocketAsyncEventArgs();
-            ReceiveArgs.Completed += ProcessReceive;
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
         }
 
-        private void ThreadFunc()
+        public void ThreadFunc()
         {
             while (true)
             {
