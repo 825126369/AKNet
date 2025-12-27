@@ -11,28 +11,9 @@ using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ThreadWorker
+    internal partial class LogicWorker
     {
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
-
-        private void InitThreadWorker()
-        {
-            Thread mThread = new Thread(ThreadFunc);
-            mThread.IsBackground = true;
-            mThread.Start();
-        }
-
-        private void ThreadFunc()
-        {
-            while (true)
-            {
-                mEventQReady.WaitOne();
-                //foreach (var v in mConnectionPeerDic)
-                //{
-                //    v.Value.Update();
-                //}
-            }
-        }
     }
 }
 

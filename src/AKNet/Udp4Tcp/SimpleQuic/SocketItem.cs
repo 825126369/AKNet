@@ -33,22 +33,22 @@ namespace AKNet.Udp4Tcp.Common
             ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
         }
 
-        private void StartReceiveFromAsync(SocketParam mSocketParam)
+        public void StartReceiveFromAsync()
         {
             bool bIOPending = false;
-            if (mSocketParam != null)
+            if (mSocket != null)
             {
                 try
                 {
-                    bIOPending = mSocketParam.mSocket.ReceiveFromAsync(mSocketParam.ReceiveArgs);
+                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
                     if (!bIOPending)
                     {
-                        ProcessReceive(mSocketParam, mSocketParam.ReceiveArgs);
+                        ProcessReceive(null, ReceiveArgs);
                     }
                 }
                 catch (Exception e)
                 {
-                    if (mSocketParam != null)
+                    if (mSocket != null)
                     {
                         NetLog.LogException(e);
                     }
@@ -64,7 +64,7 @@ namespace AKNet.Udp4Tcp.Common
                 MultiThreadingReceiveNetPackage(e);
                 e.RemoteEndPoint = mEndPointEmpty;
             }
-            StartReceiveFromAsync(sender);
+            StartReceiveFromAsync();
         }
 
         public bool SendToAsync(SocketAsyncEventArgs e)

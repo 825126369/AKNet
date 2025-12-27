@@ -3,11 +3,9 @@
     internal class Listener
     {
         SocketMgr mSocketMgr;
-
         public void Init()
         {
 
         }
-
     }
 }

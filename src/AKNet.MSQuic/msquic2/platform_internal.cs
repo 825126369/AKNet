@@ -74,7 +74,6 @@ namespace MSQuic2
         public CXPLAT_SOCKET Parent;
         public CxPlatSocketHandle Socket;
         public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
-        public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         public bool bReceiveIOContexUsed = false;
         public bool bSendIOContexUsed = false;
         public bool Freed;
