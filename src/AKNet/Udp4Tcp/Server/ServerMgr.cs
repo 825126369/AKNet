@@ -26,8 +26,8 @@ namespace AKNet.Udp4Tcp.Server
         private readonly CryptoMgr mCryptoMgr;
 
         private int nPort = 0;
-        private Socket mSocket = null;
-        private readonly SocketAsyncEventArgs ReceiveArgs;
+        private Listener mSocket = null;
+        private readonly ConnectionPeerEventArgs ReceiveArgs;
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
@@ -48,16 +48,9 @@ namespace AKNet.Udp4Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
 
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-            ReceiveArgs = new SocketAsyncEventArgs();
+            mSocket = new Listener();
+            ReceiveArgs = new  ConnectionPeerEventArgs();
             ReceiveArgs.Completed += ProcessReceive;
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
-
-            mConnectionPeerPool = new ConnectionPeerPool(this, 0, Config.MaxPlayerCount);
-            mConnectionPeerDic = new Dictionary<IPEndPoint, ConnectionPeer>(Config.MaxPlayerCount);
         }
 
         public NetStreamPackage GetNetStreamPackage()

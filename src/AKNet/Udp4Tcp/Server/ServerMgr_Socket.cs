@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 
 using AKNet.Common;
+using AKNet.Udp4Tcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -63,7 +64,6 @@ namespace AKNet.Udp4Tcp.Server
                 mSocket.Bind(bindEndPoint);
 
                 NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
-
                 InitThreadWorker();
                 StartReceiveFromAsync();
             }
@@ -98,7 +98,7 @@ namespace AKNet.Udp4Tcp.Server
 			{
 				try
 				{
-                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
+                    bIOPending = mSocket.AcceptAsync(ReceiveArgs);
                     if (!bIOPending)
                     {
                         ProcessReceive(null, ReceiveArgs);
@@ -114,15 +114,10 @@ namespace AKNet.Udp4Tcp.Server
 			}
 		}
 
-		private void ProcessReceive(object sender, SocketAsyncEventArgs e)
+		private void ProcessReceive(object sender, ConnectionPeerEventArgs e)
 		{
-			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
-			{
-				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-				MultiThreadingReceiveNetPackage(e);
-                e.RemoteEndPoint = mEndPointEmpty;
-			}
-			StartReceiveFromAsync();
+            MultiThreadingHandleConnectedSocket(e.mConnectionPeer);
+            StartReceiveFromAsync();
 		}
 
 		public bool SendToAsync(SocketAsyncEventArgs e)

@@ -20,12 +20,10 @@ namespace AKNet.Udp4Tcp.Common
         public class Config
         {
             public bool bServer;
-            public string IP;
-            public int nPort;
+            public EndPoint mEndPoint;
         }
 
         readonly List<SocketItem> mSocketList = new List<SocketItem();
-
         public int InitNet(Config mConfig)
 		{
             try
@@ -52,7 +50,7 @@ namespace AKNet.Udp4Tcp.Common
                     mSocketItem.StartReceiveFromAsync();
                 }
 
-                if (mConfig.bServer)
+                if(mConfig.bServer)
                 {
                     NetLog.Log("Udp Server 初始化成功:  " + mIPEndPoint.ToString());
                 }
