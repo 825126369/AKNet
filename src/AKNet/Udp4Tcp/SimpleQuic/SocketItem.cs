@@ -22,16 +22,32 @@ namespace AKNet.Udp4Tcp.Common
         public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private static readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public IPEndPoint RemoteEndPoint;
+        private SocketMgr.Config mConfig;
 
-        public SocketItem()
+        public SocketItem(SocketMgr.Config mConfig)
         {
+            this.mConfig = mConfig;
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-
             ReceiveArgs.Completed += ProcessReceive;
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+        }
+
+        public void InitNet()
+        {
+            RemoteEndPoint = mConfig.mEndPoint as IPEndPoint;
+            if (mConfig.bServer)
+            {
+                mSocket.Bind(RemoteEndPoint);
+            }
+            else
+            {
+                mSocket.Connect(RemoteEndPoint);
+            }
+
+            StartReceiveFromAsync();
         }
 
         public void StartReceiveFromAsync()
@@ -62,7 +78,7 @@ namespace AKNet.Udp4Tcp.Common
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
                 NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-                MultiThreadingReceiveNetPackage(e);
+                mConfig.mReceiveFunc(e);
                 e.RemoteEndPoint = mEndPointEmpty;
             }
             StartReceiveFromAsync();

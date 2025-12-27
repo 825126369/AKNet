@@ -23,12 +23,10 @@ namespace AKNet.Udp4Tcp.Common
             SocketMgr.Config mConfig = new SocketMgr.Config();
             mConfig.bServer = true;
             mConfig.mEndPoint = mEndPoint;
+            mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
             this.mConfig = mConfig;
-            ThreadWorkerMgr.mListenerList.AddLast(this);
-        }
 
-        public void Start()
-        {
+            ThreadWorkerMgr.mListenerList.AddLast(this);
             mSocketMgr.InitNet(mConfig);
         }
 

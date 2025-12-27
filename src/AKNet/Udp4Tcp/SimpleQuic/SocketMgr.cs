@@ -12,6 +12,7 @@ using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -21,33 +22,20 @@ namespace AKNet.Udp4Tcp.Common
         {
             public bool bServer;
             public EndPoint mEndPoint;
+            public Action<SocketAsyncEventArgs> mReceiveFunc;
         }
 
-        readonly List<SocketItem> mSocketList = new List<SocketItem();
+        readonly List<SocketItem> mSocketList = new List<SocketItem>();
         public int InitNet(Config mConfig)
 		{
             try
             {
-                IPAddress mIPAddress = IPAddress.Parse(mConfig.IP);
-                EndPoint mIPEndPoint = new IPEndPoint(mIPAddress, mConfig.nPort);
-
                 int nSocketCount = mConfig.bServer ? Environment.ProcessorCount : 1;
                 for (int i = 0; i < nSocketCount; i++)
                 {
-                    var mSocketItem = new SocketItem();
+                    var mSocketItem = new SocketItem(mConfig);
                     mSocketList.Add(mSocketItem);
-                    mSocketItem.RemoteEndPoint = mIPEndPoint as IPEndPoint;
-
-                    if (mConfig.bServer)
-                    {
-                        mSocketItem.mSocket.Bind(mIPEndPoint);
-                    }
-                    else
-                    {
-                        mSocketItem.mSocket.Connect(mIPEndPoint);
-                    }
-
-                    mSocketItem.StartReceiveFromAsync();
+                    mSocketItem.InitNet();
                 }
 
                 if(mConfig.bServer)
