@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    public class SocketItem : IDisposable
+    internal class SocketItem : IDisposable
     {
         public Socket mSocket;
         public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
@@ -23,6 +23,7 @@ namespace AKNet.Udp4Tcp.Common
         private static readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public IPEndPoint RemoteEndPoint;
         private SocketMgr.Config mConfig;
+        public ThreadWorker mThreadWorker;
 
         public SocketItem(SocketMgr.Config mConfig)
         {
@@ -30,9 +31,11 @@ namespace AKNet.Udp4Tcp.Common
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-            ReceiveArgs.Completed += ProcessReceive;
+
+            ReceiveArgs.Completed += OnIOComplete1;
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+            ReceiveArgs.UserToken = this;
         }
 
         public void InitNet()
@@ -115,6 +118,32 @@ namespace AKNet.Udp4Tcp.Common
                 NetLog.LogError(e.SocketError);
             }
         }
+
+        void OnIOComplete1(object Cqe, SocketAsyncEventArgs arg)
+        {
+            arg.Completed -= OnIOComplete1;
+            arg.Completed += OnIOComplete2;
+            mThreadWorker.Add_SocketAsyncEventArgs(arg);
+        }
+        
+        void OnIOComplete2(object Cqe, SocketAsyncEventArgs arg)
+        {
+            arg.Completed -= OnIOComplete2;
+            switch (arg.LastOperation)
+            {
+                case SocketAsyncOperation.ReceiveMessageFrom:
+                    ProcessReceive(null, arg);
+                    break;
+
+                case SocketAsyncOperation.SendTo:
+                    ProcessSend(null, arg);
+                    break;
+                default:
+                    NetLog.Assert(false, arg.LastOperation);
+                    break;
+            }
+        }
+
 
         public void Dispose()
         {

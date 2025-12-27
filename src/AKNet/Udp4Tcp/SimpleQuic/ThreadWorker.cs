@@ -8,12 +8,15 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Collections.Concurrent;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ThreadWorker:IDisposable
     {
+        public ConcurrentQueue<SocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SocketAsyncEventArgs>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
 
         public void Init()
@@ -21,6 +24,11 @@ namespace AKNet.Udp4Tcp.Common
             Thread mThread = new Thread(ThreadFunc);
             mThread.IsBackground = true;
             mThread.Start();
+        }
+
+        public void Dispose()
+        {
+            
         }
 
         public void ThreadFunc()
@@ -32,13 +40,19 @@ namespace AKNet.Udp4Tcp.Common
                 //{
                 //    v.Value.Update();
                 //}
+
+                while(mSocketAsyncEventArgsQueue.TryDequeue(out SocketAsyncEventArgs arg))
+                {
+
+                }
             }
         }
 
-        public void Dispose()
+        public void Add_SocketAsyncEventArgs(SocketAsyncEventArgs arg)
         {
-            throw new NotImplementedException();
+            mSocketAsyncEventArgsQueue.Enqueue(arg);
         }
+
     }
 }
 

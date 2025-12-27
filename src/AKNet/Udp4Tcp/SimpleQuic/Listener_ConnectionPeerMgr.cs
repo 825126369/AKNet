@@ -16,7 +16,7 @@ namespace AKNet.Udp4Tcp.Common
     internal partial class Listener
     {
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
-        {
+        { 
             IPEndPoint nPeerId = (IPEndPoint)e.RemoteEndPoint;
             ConnectionPeer mConnectionPeer = null;
 

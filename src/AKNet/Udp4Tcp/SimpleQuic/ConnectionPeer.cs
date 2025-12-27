@@ -30,7 +30,8 @@ namespace AKNet.Udp4Tcp.Common
 
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        private readonly AkCircularManySpanBuffer mSendStreamList = null;
+        private readonly AkCircularManySpanBuffer mSendUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
+        private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private bool bSendIOContexUsed = false;
         private int nLastSendBytesCount = 0;
         private bool Connected;
@@ -52,10 +53,6 @@ namespace AKNet.Udp4Tcp.Common
         public ConnectionPeer()
         {
             //this.mServerMgr = mNetServer;
-
-            SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
             
             this.nSearchCount = nMinSearchCount;
             this.nMaxSearchCount = this.nSearchCount * 2;

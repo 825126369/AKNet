@@ -19,7 +19,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly static List<ThreadWorker> mThreadWorkerList = new List<ThreadWorker>();
         private static bool bInit = false;
 
-        public static void Init(bool bServer)
+        public static void Init()
         {
             if (bInit) return;
             bInit = true;

@@ -25,7 +25,7 @@ namespace AKNet.Common
         public class BufferItem : IDisposable
         {
             public readonly LinkedListNode<BufferItem> mEntry = null;
-            private readonly IMemoryOwner<byte> mBufferMemory;
+            private readonly Memory<byte> mBufferMemory;
             public int nSpanLength;
             private bool bDispose = false;
 
@@ -38,8 +38,7 @@ namespace AKNet.Common
             {
                 this.bDispose = false;
                 mEntry = new LinkedListNode<BufferItem>(this);
-                mBufferMemory = MemoryPool<byte>.Shared.Rent(nSpanMaxLength);
-				NetLog.Assert(mBufferMemory.Memory.Length != nSpanMaxLength);
+                mBufferMemory = new byte[nSpanMaxLength];
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -52,13 +51,13 @@ namespace AKNet.Common
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanReadSpan()
             {
-                return mBufferMemory.Memory.Span.Slice(0, nSpanLength);
+                return mBufferMemory.Span.Slice(0, nSpanLength);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Span<byte> GetCanWriteSpan()
             {
-                return mBufferMemory.Memory.Span.Slice(nSpanLength);
+                return mBufferMemory.Span.Slice(nSpanLength);
             }
 
             public void Reset()
@@ -71,7 +70,6 @@ namespace AKNet.Common
                 if (bDispose) return;
                 this.nSpanLength = 0;
                 this.bDispose = true;
-                this.mBufferMemory.Dispose();
             }
         }
 

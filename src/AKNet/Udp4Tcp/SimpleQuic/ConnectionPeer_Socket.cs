@@ -15,28 +15,12 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer
     {
-        public bool SendToAsync(SocketAsyncEventArgs e)
-        {
-            bool bIOPending = false;
-
-            try
-            {
-                bIOPending = this.mNetServer.SendToAsync(e);
-            }
-            catch (Exception ex)
-            {
-                NetLog.LogException(ex);
-            }
-
-            return bIOPending;
-        }
-
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mNetServer.GetObjectPoolManager().UdpReceivePackage_Pop();
+                var mPackage = GetObjectPoolManager().UdpReceivePackage_Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {

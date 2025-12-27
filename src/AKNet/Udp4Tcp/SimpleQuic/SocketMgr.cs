@@ -34,6 +34,7 @@ namespace AKNet.Udp4Tcp.Common
                 for (int i = 0; i < nSocketCount; i++)
                 {
                     var mSocketItem = new SocketItem(mConfig);
+                    mSocketItem.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(i);
                     mSocketList.Add(mSocketItem);
                     mSocketItem.InitNet();
                 }
