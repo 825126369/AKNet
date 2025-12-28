@@ -4,16 +4,22 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:16
+*        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
+using System.Runtime.CompilerServices;
 
-namespace AKNet.Udp4Tcp.Client
+namespace AKNet.Common
 {
-    internal class NetClientMain : ClientPeer, NetClientInterface
-	{
-       
+    internal static class TcpNetCommand
+    {
+        public const ushort COMMAND_HEARTBEAT = 1;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool orInnerCommand(ushort nPackageId)
+        {
+            return nPackageId == COMMAND_HEARTBEAT;
+        }
     }
 }
 

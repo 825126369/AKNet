@@ -34,7 +34,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private bool bSendIOContexUsed = false;
         private int nLastSendBytesCount = 0;
-        private bool Connected;
+        protected bool m_Connected;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
 

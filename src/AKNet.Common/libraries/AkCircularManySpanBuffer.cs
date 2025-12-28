@@ -79,6 +79,7 @@ namespace AKNet.Common
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
 		private int nSpanCount;
+        private int nSumByteCount;
 
         public AkCircularManySpanBuffer(int nMaxBlockSize = 1024, int nInitBlockCount = 1, int nMaxBlockCount = -1)
         {
@@ -94,6 +95,7 @@ namespace AKNet.Common
 
             nCurrentWriteBlock = mItemList.First;
 			nSpanCount = 0;
+            nSumByteCount = 0;
         }
 
         private LinkedListNode<BufferItem> nCurrentReadBlock => mItemList.First;
@@ -123,7 +125,15 @@ namespace AKNet.Common
             }
         }
 
-		public int GetSpanCount()
+        public int Length
+        {
+            get
+            {
+                return this.nSumByteCount;
+            }
+        }
+
+        public int GetSpanCount()
 		{
 			return nSpanCount;
 		}
@@ -160,6 +170,7 @@ namespace AKNet.Common
         public void WriteFrom(ReadOnlySpan<byte> readOnlySpan)
 		{
             nCurrentWriteBlock.Value.AddSpan(readOnlySpan);
+            nSumByteCount += readOnlySpan.Length;
         }
 
         public int WriteTo(Span<byte> readBuffer)
@@ -262,6 +273,7 @@ namespace AKNet.Common
         {
             // 回收/销毁这个Item
             var mItem = nCurrentReadBlock.Value;
+            nSumByteCount -= mItem.GetCanReadSpan().Length;
             mItem.Reset();
             mItemList.Remove(mItem.mEntry);
             if (nMaxBlockCount <= 0 || mItemList.Count < nMaxBlockCount)

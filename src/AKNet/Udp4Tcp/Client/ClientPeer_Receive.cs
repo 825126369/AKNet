@@ -7,38 +7,43 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
 using AKNet.Common;
-using AKNet.Udp4Tcp.SimpleQuic;
+using AKNet.Udp4Tcp.Common;
 
 namespace AKNet.Udp4Tcp.Client
 {
     internal partial class ClientPeer
     {
-        public int GetCurrentFrameRemainPackageCount()
+        private void MultiThreadingReceiveSocketStream(ConnectionEventArgs e)
         {
-            return nCurrentCheckPackageCount;
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+            }
         }
 
-        private bool NetTcpPackageExecute()
+        private bool NetPackageExecute()
         {
-            bool bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = false;
+
+            lock (mReceiveStreamList)
+            {
+                bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+            }
+
             if (bSuccess)
             {
-                NetPackageExecute(mNetPackage);
+                if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+                {
+
+                }
+                else
+                {
+                    mPackageManager.NetPackageExecute(this, mNetPackage);
+                }
             }
+
             return bSuccess;
-        }
-
-        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
-        {
-            mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
-            while (NetTcpPackageExecute())
-            {
-
-            }
         }
     }
 }
