@@ -39,6 +39,11 @@ namespace AKNet.Udp4Tcp.Common
             this.Length = Length;
         }
 
+        public ReadOnlySpan<byte> GetSpan()
+        {
+            return MemoryBuffer.Span.Slice(Offset, Length);
+        }
+
         public void TriggerEvent()
         {
             Completed?.Invoke(null, this);

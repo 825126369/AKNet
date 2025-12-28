@@ -16,7 +16,10 @@ namespace AKNet.Udp4Tcp.Common
 
 
         public bool SendAsync(ConnectionEventArgs arg) 
-        { 
+        {
+            arg.LastOperation = ConnectionAsyncOperation.Send;
+            arg.ConnectionError = ConnectionError.Success;
+            mSendStreamList.WriteFrom(arg.GetSpan());
             return true; 
         }
 

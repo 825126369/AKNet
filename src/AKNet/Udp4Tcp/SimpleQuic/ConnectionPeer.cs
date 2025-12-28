@@ -23,13 +23,17 @@ namespace AKNet.Udp4Tcp.Common
             CLOSED = 1,  
             DATA_RECEIVED = 2,
         }
-        
+
+        protected readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
+
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
+
+
         private readonly AkCircularManySpanBuffer mSendUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private bool bSendIOContexUsed = false;
