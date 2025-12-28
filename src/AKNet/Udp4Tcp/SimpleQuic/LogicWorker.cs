@@ -7,13 +7,45 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal partial class LogicWorker
     {
+        private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
+        private readonly static LinkedList<ConnectionPeer> mConnectionList = new LinkedList<ConnectionPeer>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
+
+        private readonly LinkedListNode<LogicWorker> mEntry;
+
+        public LogicWorker()
+        {
+            mEntry = new LinkedListNode<LogicWorker>(this);
+        }
+
+
+        public void Update()
+        {
+            mEventQReady.WaitOne();
+            foreach (var v in mConnectionList)
+            {
+                //v.Update();
+            }
+
+            while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
+            {
+                arg.Do();
+            }
+        }
+
+        public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
+        {
+            mSocketAsyncEventArgsQueue.Enqueue(arg);
+        }
     }
 }
 

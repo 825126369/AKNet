@@ -9,20 +9,16 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net.Sockets;
 using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ThreadWorker:IDisposable
     {
-        private readonly static LinkedList<ConnectionPeer> mConnectionList = new LinkedList<ConnectionPeer>();
-        private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
-        private AutoResetEvent mEventQReady = new AutoResetEvent(false);
-
+        //每个线程，被多个逻辑Worker使用，比如创建了 N个服务器，那么线程池复用。
+        private readonly static LinkedList<LogicWorker> mLogicWorkerList = new LinkedList<LogicWorker>();
+        private readonly AutoResetEvent mEventQReady = new AutoResetEvent(false);
         private readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = null;
         private readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
         private readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
@@ -44,23 +40,14 @@ namespace AKNet.Udp4Tcp.Common
             while (true)
             {
                 mEventQReady.WaitOne();
-                foreach (var v in mConnectionList)
+                var mLogicWorker = mLogicWorkerList.First;
+                while (mLogicWorker != null)
                 {
-                    //v.Update();
-                }
-
-                while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
-                {
-                    arg.Do();
+                    mLogicWorker.Value.Update();
+                    mLogicWorker = mLogicWorker.Next;
                 }
             }
         }
-
-        public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
-        {
-            mSocketAsyncEventArgsQueue.Enqueue(arg);
-        }
-
     }
 }
 
