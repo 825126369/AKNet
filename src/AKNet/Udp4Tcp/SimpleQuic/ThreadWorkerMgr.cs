@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {

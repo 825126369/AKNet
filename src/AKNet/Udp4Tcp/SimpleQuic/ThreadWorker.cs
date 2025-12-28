@@ -48,6 +48,12 @@ namespace AKNet.Udp4Tcp.Common
                 }
             }
         }
+
+        public void AddLogicWorker(LogicWorker mWorker)
+        {
+            mLogicWorkerList.AddFirst(mWorker);
+        }
+
     }
 }
 

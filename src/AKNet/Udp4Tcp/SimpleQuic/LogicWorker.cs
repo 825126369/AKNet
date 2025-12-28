@@ -21,10 +21,16 @@ namespace AKNet.Udp4Tcp.Common
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
 
         private readonly LinkedListNode<LogicWorker> mEntry;
-
-        public LogicWorker()
+        private int nIndex;
+        public LogicWorker(int nIndex)
         {
+            this.nIndex = nIndex;
             mEntry = new LinkedListNode<LogicWorker>(this);
+        }
+
+        public void Init()
+        {
+
         }
 
 

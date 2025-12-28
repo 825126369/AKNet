@@ -18,6 +18,8 @@ namespace AKNet.Udp4Tcp.Common
         private readonly ConcurrentQueue<ConnectionPeer> mAcceptConnectionQueue = new ConcurrentQueue<ConnectionPeer>();
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
 
+        readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Environment.ProcessorCount];
+
         public void Bind(EndPoint mEndPoint)
         {
             SocketMgr.Config mConfig = new SocketMgr.Config();
@@ -26,7 +28,13 @@ namespace AKNet.Udp4Tcp.Common
             mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
             this.mConfig = mConfig;
 
-            ThreadWorkerMgr.mListenerList.AddLast(this);
+            ThreadWorkerMgr.Init();
+            for (int i = 0; i < mLogicWorkerList.Length; i++)
+            {
+                mLogicWorkerList[i] = new LogicWorker(i);
+                mLogicWorkerList[i].Init();
+            }
+
             mSocketMgr.InitNet(mConfig);
         }
 
