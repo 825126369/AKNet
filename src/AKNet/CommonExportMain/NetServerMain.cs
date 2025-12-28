@@ -37,7 +37,7 @@ namespace AKNet.Common
             }
             else if (nNetType == NetType.Udp4Tcp)
             {
-                mInterface = new AKNet.Udp4Tcp.Client.NetServerMain();
+                mInterface = new AKNet.Udp4Tcp.Server.NetServerMain();
             }
             else
             {
