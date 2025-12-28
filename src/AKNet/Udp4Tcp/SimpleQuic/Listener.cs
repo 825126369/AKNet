@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -19,14 +20,11 @@ namespace AKNet.Udp4Tcp.Common
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
 
         readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Environment.ProcessorCount];
-
-        public void Bind(EndPoint mEndPoint)
+        private bool bInit = false;
+        private void Init()
         {
-            SocketMgr.Config mConfig = new SocketMgr.Config();
-            mConfig.bServer = true;
-            mConfig.mEndPoint = mEndPoint;
-            mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
-            this.mConfig = mConfig;
+            if (bInit) return;
+            bInit = true;
 
             ThreadWorkerMgr.Init();
             for (int i = 0; i < mLogicWorkerList.Length; i++)
@@ -34,7 +32,18 @@ namespace AKNet.Udp4Tcp.Common
                 mLogicWorkerList[i] = new LogicWorker(i);
                 mLogicWorkerList[i].Init();
             }
+        }
 
+
+        public void Bind(EndPoint mEndPoint)
+        {
+            Init();
+
+            SocketMgr.Config mConfig = new SocketMgr.Config();
+            mConfig.bServer = true;
+            mConfig.mEndPoint = mEndPoint;
+            mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
+            this.mConfig = mConfig;
             mSocketMgr.InitNet(mConfig);
         }
 
