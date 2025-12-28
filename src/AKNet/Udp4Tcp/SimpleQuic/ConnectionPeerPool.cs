@@ -15,17 +15,16 @@ namespace AKNet.Udp4Tcp.Common
     internal class ConnectionPeerPool
     {
         readonly Stack<ConnectionPeer> mObjectPool = new Stack<ConnectionPeer>();
-        ServerMgr mUdpServer = null;
         private int nMaxCapacity = 0;
+
         private ConnectionPeer GenerateObject()
         {
-            ConnectionPeer clientPeer = new ConnectionPeer(this.mUdpServer);
+            ConnectionPeer clientPeer = new ConnectionPeer();
             return clientPeer;
         }
 
-        public ConnectionPeerPool(ServerMgr mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ConnectionPeerPool(int initCapacity = 0, int nMaxCapacity = 0)
         {
-            this.mUdpServer = mUdpServer;
             SetMaxCapacity(nMaxCapacity);
             for (int i = 0; i < initCapacity; i++)
             {

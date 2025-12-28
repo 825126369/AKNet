@@ -11,7 +11,7 @@ using AKNet.Common;
 using System;
 
 namespace AKNet.Udp4Tcp.Common
-{
+{ 
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
@@ -26,26 +26,26 @@ namespace AKNet.Udp4Tcp.Common
 
         public NetUdpSendFixedSizePackage()
         {
-            this.Reset();
+            Reset();
         }
 
         public void Reset()
         {
-            this.nSendCount = 0;
-            this.mTcpSlidingWindow = null;
-            this.nRequestOrderId = 0;
-            this.nOrderId = 0;
-            this.nBodyLength = 0;
+            nSendCount = 0;
+            mTcpSlidingWindow = null;
+            nRequestOrderId = 0;
+            nOrderId = 0;
+            nBodyLength = 0;
         }
 
         public bool orTimeOut()
         {
-            return UdpStaticCommon.GetNowTime() - nLastSendTime >= this.nInternalTime;
+            return UdpStaticCommon.GetNowTime() - nLastSendTime >= nInternalTime;
         }
 
         public void SetInternalTime(long InternalTime)
         {
-            this.nInternalTime = InternalTime;
+            nInternalTime = InternalTime;
         }
 
         public TcpSlidingWindow WindowBuff { 
@@ -78,14 +78,14 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (nOrderId < Config.nUdpMinOrderId)
             {
-                return (byte)this.nOrderId;
+                return (byte)nOrderId;
             }
             return 0;
         }
 
         public void SetInnerCommandId(byte nPackageId)
         {
-            this.nOrderId = nPackageId;
+            nOrderId = nPackageId;
         }
     }
 
@@ -98,8 +98,8 @@ namespace AKNet.Udp4Tcp.Common
 
         public void Reset()
         {
-            this.nRequestOrderId = 0;
-            this.nOrderId = 0;
+            nRequestOrderId = 0;
+            nOrderId = 0;
         }
 
         public bool orInnerCommandPackage()
@@ -111,19 +111,19 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (nOrderId < Config.nUdpMinOrderId)
             {
-                return (byte)this.nOrderId;
+                return (byte)nOrderId;
             }
             return 0;
         }
 
         public void SetInnerCommandId(byte nPackageId)
         {
-            this.nOrderId = nPackageId;
+            nOrderId = nPackageId;
         }
 
         public void CopyFrom(ReadOnlySpan<byte> stream)
         {
-            stream.CopyTo(this.mBuffer);
+            stream.CopyTo(mBuffer);
         }
 
         public ReadOnlySpan<byte> GetTcpBufferSpan()

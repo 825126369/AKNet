@@ -18,15 +18,14 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ThreadWorker:IDisposable
     {
-        public readonly static LinkedList<Connection> mConnectionPeerList = new LinkedList<Connection>();
-        public readonly static LinkedList<Listener> mListenerList = new LinkedList<Listener>();
+        private readonly static LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
+        private readonly static LinkedList<Listener> mListenerList = new LinkedList<Listener>();
 
-        public ConcurrentQueue<SocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SocketAsyncEventArgs>();
+        private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
-        private readonly ConnectionPeerPool mConnectionPeerPool = null;
-        private readonly ObjectPoolManager mObjectPoolManager;
-        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
-        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
+        private readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = null;
+        private readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
+        private readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
 
         public void Init()
         {
@@ -45,14 +44,19 @@ namespace AKNet.Udp4Tcp.Common
             while (true)
             {
                 mEventQReady.WaitOne();
-                foreach (var v in mEventQReady)
+                foreach (var v in mListenerList)
                 {
-                    v.Value.Update();
+                    v.Update();
                 }
 
-                while (mSocketAsyncEventArgsQueue.TryDequeue(out SocketAsyncEventArgs arg))
+                foreach (var v in mConnectionList)
                 {
+                    v.Update();
+                }
 
+                while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
+                {
+                    arg.Do();
                 }
             }
         }

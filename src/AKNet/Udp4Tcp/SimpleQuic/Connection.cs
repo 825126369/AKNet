@@ -2,6 +2,9 @@
 {
     internal class Connection : ConnectionPeer
     {
+        public void Update()
+        {
 
+        }
     }
 }

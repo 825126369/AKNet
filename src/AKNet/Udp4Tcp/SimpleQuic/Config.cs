@@ -7,9 +7,6 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
-using AKNet.Udp4Tcp.SimpleQuic;
-
 namespace AKNet.Udp4Tcp.Common
 {
     internal static class Config

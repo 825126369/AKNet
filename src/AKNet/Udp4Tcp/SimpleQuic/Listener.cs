@@ -35,6 +35,11 @@ namespace AKNet.Udp4Tcp.Common
             mSocketMgr.Dispose();
         }
 
+        public void Update()
+        {
+
+        }
+
         public bool AcceptAsync(ConnectionPeerEventArgs arg)
         {
             arg.nLastOpType = ConnectionPeerEventArgs.E_OP_TYPE.Accept;
