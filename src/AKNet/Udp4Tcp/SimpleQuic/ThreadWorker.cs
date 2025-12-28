@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -16,6 +17,9 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ThreadWorker:IDisposable
     {
+        public readonly static LinkedList<Connection> mConnectionPeerList = new LinkedList<Connection>();
+        public readonly static LinkedList<Listener> mListenerList = new LinkedList<Listener>();
+
         public ConcurrentQueue<SocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SocketAsyncEventArgs>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
 
@@ -36,12 +40,12 @@ namespace AKNet.Udp4Tcp.Common
             while (true)
             {
                 mEventQReady.WaitOne();
-                //foreach (var v in mConnectionPeerDic)
-                //{
-                //    v.Value.Update();
-                //}
+                foreach (var v in mEventQReady)
+                {
+                    v.Value.Update();
+                }
 
-                while(mSocketAsyncEventArgsQueue.TryDequeue(out SocketAsyncEventArgs arg))
+                while (mSocketAsyncEventArgsQueue.TryDequeue(out SocketAsyncEventArgs arg))
                 {
 
                 }

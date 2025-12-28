@@ -14,9 +14,9 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal static class ThreadWorkerMgr
     {
-        public readonly static LinkedList<Connection> mConnectionPeerList = new LinkedList<Connection>();
-        public readonly static LinkedList<Listener> mListenerList = new LinkedList<Listener>();
-        private readonly static List<ThreadWorker> mThreadWorkerList = new List<ThreadWorker>();
+        public static readonly LinkedList<Connection> mConnectionPeerList = new LinkedList<Connection>();
+        public static readonly LinkedList<Listener> mListenerList = new LinkedList<Listener>();
+        private static readonly ThreadWorker[] mThreadWorkerList = new ThreadWorker[Environment.ProcessorCount];
         private static bool bInit = false;
 
         public static void Init()
@@ -26,9 +26,8 @@ namespace AKNet.Udp4Tcp.Common
             
             for (int i = 0; i < Environment.ProcessorCount; i++)
             {
-                var mWorker = new ThreadWorker();
-                mThreadWorkerList.Add(mWorker);
-                mWorker.Init();
+                mThreadWorkerList[i] = new ThreadWorker();
+                mThreadWorkerList[i].Init();
             }
         }
 
