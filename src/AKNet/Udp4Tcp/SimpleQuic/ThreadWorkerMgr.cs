@@ -14,8 +14,6 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal static class ThreadWorkerMgr
     {
-        public static readonly LinkedList<Connection> mConnectionPeerList = new LinkedList<Connection>();
-        public static readonly LinkedList<Listener> mListenerList = new LinkedList<Listener>();
         private static readonly ThreadWorker[] mThreadWorkerList = new ThreadWorker[Environment.ProcessorCount];
         private static bool bInit = false;
 

@@ -11,6 +11,7 @@ using AKNet.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -18,11 +19,10 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ThreadWorker:IDisposable
     {
-        private readonly static LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
-        private readonly static LinkedList<Listener> mListenerList = new LinkedList<Listener>();
-
+        private readonly static LinkedList<ConnectionPeer> mConnectionList = new LinkedList<ConnectionPeer>();
         private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
+
         private readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = null;
         private readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
         private readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
@@ -44,14 +44,9 @@ namespace AKNet.Udp4Tcp.Common
             while (true)
             {
                 mEventQReady.WaitOne();
-                foreach (var v in mListenerList)
-                {
-                    v.Update();
-                }
-
                 foreach (var v in mConnectionList)
                 {
-                    v.Update();
+                    //v.Update();
                 }
 
                 while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
@@ -61,7 +56,7 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
-        public void Add_SocketAsyncEventArgs(SocketAsyncEventArgs arg)
+        public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
         {
             mSocketAsyncEventArgsQueue.Enqueue(arg);
         }

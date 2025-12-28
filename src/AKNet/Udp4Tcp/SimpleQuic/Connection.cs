@@ -1,10 +1,17 @@
-﻿namespace AKNet.Udp4Tcp.Common
+﻿using System;
+
+namespace AKNet.Udp4Tcp.Common
 {
-    internal class Connection : ConnectionPeer
+    internal class Connection : ConnectionPeer,IDisposable
     {
         public void Update()
         {
 
+        }
+
+        public void Dispose()
+        {
+           
         }
     }
 }
