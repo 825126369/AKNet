@@ -25,11 +25,7 @@ namespace AKNet.Udp4Tcp.Client
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
         private uint ID = 0;
-
-        private const double fConnectMaxCdTime = 2.0;
-        private const double fDisConnectMaxCdTime = 2.0;
-        private double fDisConnectCdTime = 0.0;
-        private double fConnectCdTime = 0.0;
+        
         private double fReceiveHeartBeatTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
         private double fReConnectServerCdTime = 0.0;
@@ -160,11 +156,9 @@ namespace AKNet.Udp4Tcp.Client
 
             this.Name = string.Empty;
             this.ID = 0;
-            this.fConnectCdTime = 0.0;
-            this.fDisConnectCdTime = 0.0;
             this.fReConnectServerCdTime = 0.0;
             this.fReceiveHeartBeatTime = 0.0;
-            this.fMySendHeartBeatCdTime = 0.0;
+            this.fSendHeartBeatTime = 0.0;
         }
 
         public void Release()
@@ -202,11 +196,6 @@ namespace AKNet.Udp4Tcp.Client
         public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> mFunc)
         {
             mPackageManager.removeNetListenFunc(mFunc);
-        }
-
-        private void OnSocketStateChanged()
-        {
-            mListenClientPeerStateMgr.OnSocketStateChanged(this);
         }
 
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)

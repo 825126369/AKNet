@@ -40,10 +40,10 @@ namespace AKNet.Udp4Tcp.Common
 
         }
 
-        public bool AcceptAsync(ConnectionPeerEventArgs arg)
+        public bool AcceptAsync(ConnectionEventArgs arg)
         {
-            arg.nLastOpType = ConnectionPeerEventArgs.E_OP_TYPE.Accept;
-            arg.Result = true;
+            arg.LastOperation = ConnectionAsyncOperation.Accept;
+            arg.ConnectionError =  ConnectionError.Success;
             if (mAcceptConnectionQueue.TryDequeue(out arg.mConnectionPeer))
             {
                 return false;

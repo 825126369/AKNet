@@ -27,8 +27,8 @@ namespace AKNet.Udp4Tcp.Server
         private readonly CryptoMgr mCryptoMgr;
 
         private int nPort = 0;
-        private Listener mSocket = null;
-        private readonly ConnectionPeerEventArgs ReceiveArgs;
+        private Listener mListenSocket = null;
+        private readonly ConnectionEventArgs mAcceptIOContex;
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
@@ -49,9 +49,9 @@ namespace AKNet.Udp4Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
 
-            mSocket = new Listener();
-            ReceiveArgs = new  ConnectionPeerEventArgs();
-            ReceiveArgs.Completed += ProcessReceive;
+            mListenSocket = new Listener();
+            mAcceptIOContex = new  ConnectionEventArgs();
+            mAcceptIOContex.Completed += OnIOCompleted;
         }
 
         public NetStreamPackage GetNetStreamPackage()

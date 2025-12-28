@@ -61,11 +61,10 @@ namespace AKNet.Udp4Tcp.Server
                 this.nPort = nPort;
 
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
-                mSocket.Bind(bindEndPoint);
+                mListenSocket.Bind(bindEndPoint);
 
                 NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
-                InitThreadWorker();
-                StartReceiveFromAsync();
+                StartAcceptEventArg();
             }
             catch (SocketException ex)
             {
@@ -91,50 +90,85 @@ namespace AKNet.Udp4Tcp.Server
             return mState;
         }
 
-		private void StartReceiveFromAsync()
-		{
-			bool bIOPending = false;
-			if (mSocket != null)
-			{
-				try
-				{
-                    bIOPending = mSocket.AcceptAsync(ReceiveArgs);
-                    if (!bIOPending)
+        private void StartAcceptEventArg()
+        {
+            bool bIOSyncCompleted = false;
+            mAcceptIOContex.AcceptConnection = null;
+            if (mListenSocket != null)
+            {
+                try
+                {
+                    bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
+                }
+                catch (Exception e)
+                {
+                    if (mListenSocket != null)
                     {
-                        ProcessReceive(null, ReceiveArgs);
+                        NetLog.LogException(e);
                     }
                 }
-				catch (Exception e)
-				{
-					if (mSocket != null)
-					{
-						NetLog.LogException(e);
-					}
-				}
-			}
-		}
+            }
+            
+            if (bIOSyncCompleted)
+            {
+                this.ProcessAccept(mAcceptIOContex);
+            }
+        }
 
-		private void ProcessReceive(object sender, ConnectionPeerEventArgs e)
-		{
-            MultiThreadingHandleConnectedSocket(e.mConnectionPeer);
-            StartReceiveFromAsync();
-		}
+        private void OnIOCompleted(object sender, ConnectionEventArgs e)
+        {
+            switch (e.LastOperation)
+            {
+                case ConnectionAsyncOperation.Accept:
+                    this.ProcessAccept(e);
+                    break;
+                default:
+                    break;
+            }
+        }
 
-		public bool SendToAsync(SocketAsyncEventArgs e)
-		{
-            return mSocket.SendToAsync(e);
-		}
+        private void ProcessAccept(ConnectionEventArgs e)
+        {
+            if (e.ConnectionError == ConnectionError.Success)
+            {
+                ConnectionPeer mClientSocket = e.AcceptConnection;
+#if DEBUG
+                NetLog.Assert(mClientSocket != null);
+#endif
+                if (!MultiThreadingHandleConnectedSocket(mClientSocket))
+                {
+                    HandleConnectFull(mClientSocket);
+                }
+            }
+            else
+            {
+                NetLog.LogError("ProcessAccept: " + e.ConnectionError);
+            }
+            StartAcceptEventArg();
+        }
+
+        private void HandleConnectFull(ConnectionPeer mClientSocket)
+        {
+            try
+            {
+                mClientSocket.Close();
+            }
+            catch
+            {
+
+            }
+        }
 
         public void CloseSocket()
 		{
-			if (mSocket != null)
+			if (mListenSocket != null)
 			{
-				Socket mSocket2 = mSocket;
-				mSocket = null;
+				Listener mSocket2 = mListenSocket;
+                mListenSocket = null;
 
 				try
 				{
-					mSocket2.Close();
+					mSocket2.Dispose();
 				}
 				catch (Exception) { }
 			}

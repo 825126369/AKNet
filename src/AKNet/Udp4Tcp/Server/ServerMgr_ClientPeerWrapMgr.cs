@@ -10,6 +10,7 @@
 using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -43,11 +44,23 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public void MultiThreadingHandleConnectedSocket(ConnectionPeer mSocket)
+        public bool MultiThreadingHandleConnectedSocket(ConnectionPeer mSocket)
         {
-            lock (mConnectSocketQueue)
+            int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
+            if (nNowConnectCount >= Config.MaxPlayerCount)
             {
-                mConnectSocketQueue.Enqueue(mSocket);
+#if DEBUG
+                NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");
+#endif
+                return false;
+            }
+            else
+            {
+                lock (mConnectSocketQueue)
+                {
+                    mConnectSocketQueue.Enqueue(mSocket);
+                }
+                return true;
             }
         }
 
