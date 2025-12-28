@@ -8,9 +8,10 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp4Tcp.Common;
 using System;
 
-namespace AKNet.Udp4Tcp.Common
+namespace AKNet.Udp4Tcp.SimpleQuic
 {
     /// <summary>
     /// 把数据拿出来
@@ -37,7 +38,7 @@ namespace AKNet.Udp4Tcp.Common
                 return false;
             }
 
-            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, (int)nBodyLength));
+            mPackage.CopyFrom(mBuff.Slice(Config.nUdpPackageFixedHeadSize, nBodyLength));
             return true;
         }
         
@@ -45,7 +46,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;
-            ushort nBodyLength = (ushort)mPackage.nBodyLength;
+            ushort nBodyLength = mPackage.nBodyLength;
             EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 0, nOrderId);
             EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 4, nRequestOrderId);
             EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 8, nBodyLength);

@@ -10,8 +10,9 @@
 using System;
 using System.Net;
 using AKNet.Common;
+using AKNet.Udp4Tcp.Common;
 
-namespace AKNet.Udp4Tcp.Common
+namespace AKNet.Udp4Tcp.SimpleQuic
 {
     internal interface UdpClientPeerCommonBase
     {

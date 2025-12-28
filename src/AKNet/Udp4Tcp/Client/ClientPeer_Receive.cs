@@ -11,7 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using AKNet.Common;
-using AKNet.Udp4Tcp.Common;
+using AKNet.Udp4Tcp.SimpleQuic;
 
 namespace AKNet.Udp4Tcp.Client
 {

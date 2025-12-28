@@ -24,7 +24,7 @@ namespace AKNet.Udp4Tcp.Common
             if (bInit) return;
             bInit = true;
             
-            for (int i = 0; i < Environment.ProcessorCount; i++)
+            for (int i = 0; i < mThreadWorkerList.Length; i++)
             {
                 mThreadWorkerList[i] = new ThreadWorker();
                 mThreadWorkerList[i].Init();

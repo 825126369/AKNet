@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -22,6 +23,10 @@ namespace AKNet.Udp4Tcp.Common
 
         public ConcurrentQueue<SocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SocketAsyncEventArgs>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
+        private readonly ConnectionPeerPool mConnectionPeerPool = null;
+        private readonly ObjectPoolManager mObjectPoolManager;
+        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
+        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
 
         public void Init()
         {

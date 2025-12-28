@@ -8,7 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4Tcp.Common;
+using AKNet.Udp4Tcp.SimpleQuic;
 using System;
 using System.Net;
 using System.Net.Sockets;
