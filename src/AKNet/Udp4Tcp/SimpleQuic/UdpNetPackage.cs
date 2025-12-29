@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 { 
@@ -16,6 +17,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
         public TcpSlidingWindow mTcpSlidingWindow;
+        public readonly SocketAsyncEventArgs mSendArgs = new SocketAsyncEventArgs();
 
         public uint nOrderId;
         public uint nRequestOrderId;
@@ -26,6 +28,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public NetUdpSendFixedSizePackage()
         {
+            mSendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             Reset();
         }
 

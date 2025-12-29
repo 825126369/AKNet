@@ -37,7 +37,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 NetLog.Assert(nOffset >= 0);
 
-                var mPackage = mClientPeer.GetObjectPoolManager().UdpSendPackage_Pop();
+                var mPackage = mThreadWorker.mSendPackagePool.Pop();
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
                 int nRemainLength = mTcpSlidingWindow.Length - nOffset;
@@ -57,19 +57,6 @@ namespace AKNet.Udp4Tcp.Common
 
                 nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
             }
-        }
-
-        public void Reset()
-        {
-            MainThreadCheck.Check();
-            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            mTcpSlidingWindow.WindowReset();
-
-            foreach (var mRemovePackage in mWaitCheckSendQueue)
-            {
-                mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mRemovePackage);
-            }
-            mWaitCheckSendQueue.Clear();
         }
 
         private void ArrangeReSendTimeOut(NetUdpSendFixedSizePackage mPackage)
@@ -99,7 +86,7 @@ namespace AKNet.Udp4Tcp.Common
                     {
                         if (mPackage.nOrderId == nRequestOrderId)
                         {
-                            SendNetPackage(mPackage);
+                            SendUDPPackage(mPackage);
                             mPackage.nSendCount++;
                             UdpStatistical.AddQuickReSendCount();
                             
@@ -142,7 +129,8 @@ namespace AKNet.Udp4Tcp.Common
                     {
                         mPackage.mTcpStanardRTOTimer.FinishRtt(this);
                     }
-                    mClientPeer.GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
+
+                    mThreadWorker.mSendPackagePool.recycle(mPackage);
                     Sure();
                 }
 
@@ -175,11 +163,6 @@ namespace AKNet.Udp4Tcp.Common
 
                 this.nRemainNeedSureCount = this.nMaxSearchCount / 3 + 1;
             }
-        }
-
-        private void SendNetPackage(NetUdpSendFixedSizePackage mCheckPackage)
-        {
-            mClientPeer.SendNetPackage(mCheckPackage);
         }
     }
 

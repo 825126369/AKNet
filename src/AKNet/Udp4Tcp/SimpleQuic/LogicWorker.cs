@@ -19,22 +19,22 @@ namespace AKNet.Udp4Tcp.Common
         private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
         private readonly static LinkedList<ConnectionPeer> mConnectionList = new LinkedList<ConnectionPeer>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
-
         private readonly LinkedListNode<LogicWorker> mEntry;
-        private readonly int nIndex;
+        private readonly int nThreadIndex;
         private ThreadWorker mThreadWorker;
+        private SocketItem mSocketItem;
 
-        public LogicWorker(int nIndex)
+        public LogicWorker(int nThreadIndex)
         {
-            this.nIndex = nIndex;
+            this.nThreadIndex = nThreadIndex;
             this.mEntry = new LinkedListNode<LogicWorker>(this);
-            this.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(nIndex);
+            this.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(nThreadIndex);
             this.mThreadWorker.AddLogicWorker(this);
         }
 
-        public void Init()
+        public void SetSocketItem(SocketItem mSocketItem)
         {
-
+            this.mSocketItem = mSocketItem;
         }
 
         public void ThreadUpdate()
@@ -49,6 +49,14 @@ namespace AKNet.Udp4Tcp.Common
             {
                 arg.Do();
             }
+        }
+
+        public void AddConnectionPeer(ConnectionPeer peer)
+        {
+            peer.mLogicWorker = this;
+            peer.mThreadWorker = mThreadWorker;
+            peer.mSocketItem = mSocketItem;
+            mConnectionList.AddLast(peer);
         }
 
         public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)

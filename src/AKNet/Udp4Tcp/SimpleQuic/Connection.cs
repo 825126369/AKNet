@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AKNet.Common;
+using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -14,7 +15,8 @@ namespace AKNet.Udp4Tcp.Common
             ThreadWorkerMgr.Init();
             for (int i = 0; i < mLogicWorkerList.Length; i++)
             {
-                mLogicWorkerList[i] = new LogicWorker(i);
+                int nThreadWorkerIndex = RandomTool.RandomArrayIndex(0, Environment.ProcessorCount);
+                mLogicWorkerList[i] = new LogicWorker(nThreadWorkerIndex);
                 mLogicWorkerList[i].Init();
             }
         }

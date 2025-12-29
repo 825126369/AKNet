@@ -18,7 +18,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly ConcurrentQueue<ConnectionPeer> mAcceptConnectionQueue = new ConcurrentQueue<ConnectionPeer>();
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
 
-        readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Environment.ProcessorCount];
+        readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
         private bool bInit = false;
         private void Init()
         {
@@ -29,10 +29,8 @@ namespace AKNet.Udp4Tcp.Common
             for (int i = 0; i < mLogicWorkerList.Length; i++)
             {
                 mLogicWorkerList[i] = new LogicWorker(i);
-                mLogicWorkerList[i].Init();
             }
         }
-
 
         public void Bind(EndPoint mEndPoint)
         {
@@ -44,6 +42,10 @@ namespace AKNet.Udp4Tcp.Common
             mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
             this.mConfig = mConfig;
             mSocketMgr.InitNet(mConfig);
+            for (int i = 0; i < mLogicWorkerList.Length; i++)
+            {
+                mLogicWorkerList[i].SetSocketItem(mSocketMgr.GetSocketItem(i));
+            }
         }
 
         public void Dispose()

@@ -3,7 +3,13 @@ using System.Net;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    public enum ConnectionAsyncOperation
+    internal enum ConnectionPeerType
+    {
+        Client,
+        Server,
+    }
+
+    internal enum ConnectionAsyncOperation
     {
         None = 0,
         Accept,
@@ -13,7 +19,7 @@ namespace AKNet.Udp4Tcp.Common
         Send,
     }
 
-    public enum ConnectionError
+    internal enum ConnectionError
     {
         Success = 1,
         Error = 2,

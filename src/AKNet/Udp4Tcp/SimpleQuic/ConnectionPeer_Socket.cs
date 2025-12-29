@@ -15,6 +15,27 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer
     {
+        private void SendUDPPackage2(NetUdpSendFixedSizePackage mPackage)
+        {
+            lock (mSendUDPPackageList)
+            {
+                var mBufferItem = mSendUDPPackageList.BeginSpan();
+
+                Span<byte> mMemoryBuffer = mPackage.mSendArgs.MemoryBuffer.Span;
+                ReadOnlySpan<byte> mEncodeHead = UdpPackageEncryption.EncodeHead(mPackage);
+                mEncodeHead.CopyTo(mMemoryBuffer);
+                mMemoryBuffer = mMemoryBuffer.Slice(mEncodeHead.Length);
+                
+                if (mPackage.WindowBuff != null)
+                {
+                    mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
+                }
+                mPackage.mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
+
+                mSocketItem.SendToAsync(mPackage.mSendArgs);
+            }
+        }
+
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
@@ -49,11 +70,5 @@ namespace AKNet.Udp4Tcp.Common
                 }
             }
         }
-
-        public void Close()
-        {
-            this.mNetServer.RemoveFakeSocket(this);
-        }
-
     }
 }

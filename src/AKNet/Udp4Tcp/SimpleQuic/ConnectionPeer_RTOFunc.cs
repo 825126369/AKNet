@@ -123,7 +123,7 @@ namespace AKNet.Udp4Tcp.Common
             nStartTime = GetNowTime();
         }
 
-        public void FinishRtt(ReSendPackageMgr mReSendPackageMgr)
+        public void FinishRtt(ConnectionPeer mReSendPackageMgr)
         {
             long nRtt = GetNowTime() - nStartTime;
             mReSendPackageMgr.FinishRttSuccess(nRtt);

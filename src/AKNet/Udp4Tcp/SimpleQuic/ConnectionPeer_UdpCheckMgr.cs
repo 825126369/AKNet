@@ -8,19 +8,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4Tcp.SimpleQuic;
 using System;
-using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer
     {
-        public const int nDefaultSendPackageCount = 1024;
-        public const int nDefaultCacheReceivePackageCount = 2048;
-        private uint nCurrentWaitReceiveOrderId;
-        private UdpClientPeerCommonBase mClientPeer = null;
-
         public void AddReceivePackageOrderId(int nLength)
         {
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId, nLength);
@@ -30,7 +23,7 @@ namespace AKNet.Udp4Tcp.Common
         public void SendTcpStream(ReadOnlySpan<byte> buffer)
         {
             MainThreadCheck.Check();
-            if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
+            if (!m_Connected) return;
 #if DEBUG
             if (buffer.Length > Config.nMaxDataLength)
             {
@@ -45,9 +38,9 @@ namespace AKNet.Udp4Tcp.Common
             UdpStatistical.AddReceivePackageCount();
             byte nInnerCommandId = mReceivePackage.GetInnerCommandId();
             MainThreadCheck.Check();
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (m_Connected)
             {
-                this.mClientPeer.ReceiveHeartBeat();
+                ReceiveHeartBeat();
 
                 if (mReceivePackage.nRequestOrderId > 0)
                 {
@@ -60,11 +53,11 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else if (nInnerCommandId == UdpNetCommand.COMMAND_CONNECT)
                 {
-                    this.mClientPeer.ReceiveConnect();
+                    ReceiveConnect();
                 }
                 else if (nInnerCommandId == UdpNetCommand.COMMAND_DISCONNECT)
                 {
-                    this.mClientPeer.ReceiveDisConnect();
+                    ReceiveDisConnect();
                 }
 
                 if (UdpNetCommand.orInnerCommand(nInnerCommandId))
@@ -89,10 +82,6 @@ namespace AKNet.Udp4Tcp.Common
                 mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mReceivePackage);
             }
         }
-        
-        readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
-        long nLastSendSurePackageTime = 0;
-        long nSameOrderIdSureCount = 0;
 
         private void CheckReceivePackageLoss(NetUdpReceiveFixedSizePackage mPackage)
         {
@@ -155,12 +144,6 @@ namespace AKNet.Udp4Tcp.Common
             mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mCheckPackage);
         }
 
-        public void Update()
-        {
-            if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
-            mReSendPackageMgr.Update();
-        }
-
         public void SetRequestOrderId(NetUdpSendFixedSizePackage mPackage)
         {
             mPackage.nRequestOrderId = nCurrentWaitReceiveOrderId;
@@ -171,25 +154,6 @@ namespace AKNet.Udp4Tcp.Common
         {
             mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_PACKAGE_CHECK_SURE_ORDERID);
             UdpStatistical.AddSendSureOrderIdPackageCount();
-        }
-
-        public void Reset()
-        {
-            mReSendPackageMgr.Reset();
-            while (mCacheReceivePackageList.Count > 0)
-            {
-                int nRemoveIndex = mCacheReceivePackageList.Count - 1;
-                NetUdpReceiveFixedSizePackage mRemovePackage = mCacheReceivePackageList[nRemoveIndex];
-                mCacheReceivePackageList.RemoveAt(nRemoveIndex);
-                mClientPeer.GetObjectPoolManager().UdpReceivePackage_Recycle(mRemovePackage);
-            }
-
-            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
-        }
-
-        public void Release()
-        {
-
         }
     }
 }

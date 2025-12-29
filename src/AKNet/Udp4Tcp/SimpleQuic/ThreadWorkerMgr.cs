@@ -37,6 +37,11 @@ namespace AKNet.Udp4Tcp.Common
         {
             return mThreadWorkerList[i];
         }
+
+        public static ThreadWorker GetRandomWorker(int i)
+        {
+            return mThreadWorkerList[i];
+        }
     }
 }
 

@@ -30,7 +30,7 @@ namespace AKNet.Udp4Tcp.Common
 		{
             try
             {
-                int nSocketCount = mConfig.bServer ? Environment.ProcessorCount : 1;
+                int nSocketCount = mConfig.bServer ? AKNet.Udp4Tcp.Common.Config.nSocketCount : 1;
                 for (int i = 0; i < nSocketCount; i++)
                 {
                     var mSocketItem = new SocketItem(mConfig);
@@ -41,11 +41,11 @@ namespace AKNet.Udp4Tcp.Common
 
                 if(mConfig.bServer)
                 {
-                    NetLog.Log("Udp Server 初始化成功:  " + mIPEndPoint.ToString());
+                    NetLog.Log("Udp Server 初始化成功:  " + mConfig.mEndPoint.ToString());
                 }
                 else
                 {
-                    NetLog.Log("Udp Client 连接服务器成功:  " + mIPEndPoint.ToString());
+                    NetLog.Log("Udp Client 连接服务器成功:  " + mConfig.mEndPoint.ToString());
                 }
             }
             catch (Exception ex)
@@ -55,6 +55,11 @@ namespace AKNet.Udp4Tcp.Common
             }
 
             return 0;
+        }
+
+        public SocketItem GetSocketItem(int nSocketIndex)
+        {
+            return mSocketList[nSocketIndex];
         }
 
         public void Dispose()
