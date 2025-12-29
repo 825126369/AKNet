@@ -22,10 +22,14 @@ namespace AKNet.Udp4Tcp.Common
 
         private readonly LinkedListNode<LogicWorker> mEntry;
         private readonly int nIndex;
+        private ThreadWorker mThreadWorker;
+
         public LogicWorker(int nIndex)
         {
             this.nIndex = nIndex;
             this.mEntry = new LinkedListNode<LogicWorker>(this);
+            this.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(nIndex);
+            this.mThreadWorker.AddLogicWorker(this);
         }
 
         public void Init()
@@ -33,13 +37,12 @@ namespace AKNet.Udp4Tcp.Common
 
         }
 
-
-        public void Update()
+        public void ThreadUpdate()
         {
             mEventQReady.WaitOne();
             foreach (var v in mConnectionList)
             {
-                //v.Update();
+                v.ThreadUpdate();
             }
 
             while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))

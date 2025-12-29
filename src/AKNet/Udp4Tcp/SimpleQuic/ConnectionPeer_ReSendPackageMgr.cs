@@ -102,8 +102,7 @@ namespace AKNet.Udp4Tcp.Common
                             SendNetPackage(mPackage);
                             mPackage.nSendCount++;
                             UdpStatistical.AddQuickReSendCount();
-
-
+                            
                             //this.nMaxSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
                             //this.nSearchCount = this.nMaxSearchCount + 3;
                             //this.nSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);

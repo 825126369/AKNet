@@ -17,23 +17,13 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer : IPoolItemInterface
     {
-        enum E_CONNECTION_EVENT_TYPE : byte
-        {
-            CONNECTED = 0,
-            CLOSED = 1,  
-            DATA_RECEIVED = 2,
-        }
-
-        protected readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
-
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-
-
+        
         private readonly AkCircularManySpanBuffer mSendUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private bool bSendIOContexUsed = false;
@@ -53,6 +43,7 @@ namespace AKNet.Udp4Tcp.Common
         private const int nMinSearchCount = 10;
         private int nMaxSearchCount = int.MaxValue;
         private int nRemainNeedSureCount = 0;
+        private ThreadWorker mThreadWorker = null;
 
         public ConnectionPeer()
         {
@@ -65,7 +56,7 @@ namespace AKNet.Udp4Tcp.Common
             InitRTO();
         }
 
-        public void Update()
+        public void ThreadUpdate()
         {
             GetReceiveCheckPackage();
 
@@ -142,37 +133,6 @@ namespace AKNet.Udp4Tcp.Common
         public int GetCurrentFrameRemainPackageCount()
         {
             return nCurrentCheckPackageCount;
-        }
-
-        private bool GetReceiveCheckPackage()
-        {
-            NetUdpReceiveFixedSizePackage mPackage = null;
-            if (GetReceivePackage(out mPackage))
-            {
-                UdpStatistical.AddReceivePackageCount();
-                NetLog.Assert(mPackage != null, "mPackage == null");
-                mUdpCheckPool.ReceiveNetPackage(mPackage);
-                return true;
-            }
-            return false;
-        }
-
-        public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
-        {
-            lock (mWaitCheckPackageQueue)
-            {
-                if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
-                {
-                    if (!mPackage.orInnerCommandPackage())
-                    {
-                        nCurrentCheckPackageCount--;
-                    }
-
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         public void Reset()

@@ -7,11 +7,14 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
+
 namespace AKNet.Udp4Tcp.Common
 {
     internal static class Config
-	{   
-		public const int nUdpPackageFixedSize = 1400;
+	{
+        public static readonly int nSocketCount = Environment.ProcessorCount;
+        public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 10;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;

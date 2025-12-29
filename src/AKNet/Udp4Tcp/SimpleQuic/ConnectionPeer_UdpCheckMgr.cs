@@ -42,6 +42,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
         {
+            UdpStatistical.AddReceivePackageCount();
             byte nInnerCommandId = mReceivePackage.GetInnerCommandId();
             MainThreadCheck.Check();
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)

@@ -15,24 +15,22 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class ConnectionPeer
     {
-        public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
+        public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = GetObjectPoolManager().UdpReceivePackage_Pop();
+                var mPackage = mThreadWorker.mReceivePackagePool.Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
-                    lock (mWaitCheckPackageQueue)
+                    ReceiveNetPackage(mPackage);
+                    if (!mPackage.orInnerCommandPackage())
                     {
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (!mPackage.orInnerCommandPackage())
-                        {
-                            nCurrentCheckPackageCount++;
-                        }
+                        nCurrentCheckPackageCount++;
                     }
+
                     if (mBuff.Length > nReadBytesCount)
                     {
                         mBuff = mBuff.Slice(nReadBytesCount);
@@ -45,7 +43,7 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else
                 {
-                    mNetServer.GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                    mThreadWorker.mReceivePackagePool.recycle(mPackage);
                     NetLog.LogError("解码失败 !!!");
                     break;
                 }

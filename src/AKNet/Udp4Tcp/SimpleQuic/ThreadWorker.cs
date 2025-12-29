@@ -17,11 +17,13 @@ namespace AKNet.Udp4Tcp.Common
     internal partial class ThreadWorker:IDisposable
     {
         //每个线程，被多个逻辑Worker使用，比如创建了 N个服务器，那么线程池复用。
-        private readonly static LinkedList<LogicWorker> mLogicWorkerList = new LinkedList<LogicWorker>();
+        private readonly static List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
+        private readonly static List<LogicWorker> mPendingLogicWorkerList = new List<LogicWorker>();
         private readonly AutoResetEvent mEventQReady = new AutoResetEvent(false);
-        private readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = null;
-        private readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
-        private readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
+
+        public readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = null;
+        public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
+        public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
 
         public void Init()
         {
@@ -40,18 +42,25 @@ namespace AKNet.Udp4Tcp.Common
             while (true)
             {
                 mEventQReady.WaitOne();
-                var mLogicWorker = mLogicWorkerList.First;
-                while (mLogicWorker != null)
+                foreach(var v in mLogicWorkerList)
                 {
-                    mLogicWorker.Value.Update();
-                    mLogicWorker = mLogicWorker.Next;
+                    v.ThreadUpdate();
+                }
+
+                lock (mPendingLogicWorkerList)
+                {
+                    mLogicWorkerList.AddRange(mPendingLogicWorkerList);
+                    mPendingLogicWorkerList.Clear();
                 }
             }
         }
 
         public void AddLogicWorker(LogicWorker mWorker)
         {
-            mLogicWorkerList.AddFirst(mWorker);
+            lock (mPendingLogicWorkerList)
+            {
+                mPendingLogicWorkerList.Add(mWorker);
+            }
         }
 
     }
