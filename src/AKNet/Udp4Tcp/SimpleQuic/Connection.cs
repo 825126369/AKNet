@@ -36,13 +36,12 @@ namespace AKNet.Udp4Tcp.Common
         {
             return true;
         }
-
-
+        
         public bool SendAsync(ConnectionEventArgs arg)
         {
             arg.LastOperation = ConnectionAsyncOperation.Send;
             arg.ConnectionError = ConnectionError.Success;
-            mSendStreamList.WriteFrom(arg.GetSpan());
+            SendTcpStream(arg.GetSpan());
             return true;
         }
 

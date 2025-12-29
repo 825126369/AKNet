@@ -50,7 +50,7 @@ namespace AKNet.Udp4Tcp.Common
 
                 if (mReceivePackage.nRequestOrderId > 0)
                 {
-                    mReSendPackageMgr.ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
+                    ReceiveOrderIdRequestPackage(mReceivePackage.nRequestOrderId);
                 }
 
                 if (nInnerCommandId == UdpNetCommand.COMMAND_HEARTBEAT)
