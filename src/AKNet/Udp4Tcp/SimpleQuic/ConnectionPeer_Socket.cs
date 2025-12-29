@@ -17,23 +17,19 @@ namespace AKNet.Udp4Tcp.Common
     {
         private void SendUDPPackage2(NetUdpSendFixedSizePackage mPackage)
         {
-            lock (mSendUDPPackageList)
+            SocketAsyncEventArgs mSendArgs = mPackage.mSendArgs;
+            Span<byte> mMemoryBuffer = mSendArgs.MemoryBuffer.Span;
+            ReadOnlySpan<byte> mEncodeHead = UdpPackageEncryption.EncodeHead(mPackage);
+            mEncodeHead.CopyTo(mMemoryBuffer);
+            mMemoryBuffer = mMemoryBuffer.Slice(mEncodeHead.Length);
+
+            if (mPackage.WindowBuff != null)
             {
-                var mBufferItem = mSendUDPPackageList.BeginSpan();
-
-                Span<byte> mMemoryBuffer = mPackage.mSendArgs.MemoryBuffer.Span;
-                ReadOnlySpan<byte> mEncodeHead = UdpPackageEncryption.EncodeHead(mPackage);
-                mEncodeHead.CopyTo(mMemoryBuffer);
-                mMemoryBuffer = mMemoryBuffer.Slice(mEncodeHead.Length);
-                
-                if (mPackage.WindowBuff != null)
-                {
-                    mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
-                }
-                mPackage.mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
-
-                mSocketItem.SendToAsync(mPackage.mSendArgs);
+                mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
             }
+            mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
+            mSendArgs.UserToken = mPackage;
+            mSocketItem.SendToAsync(mSendArgs);
         }
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)

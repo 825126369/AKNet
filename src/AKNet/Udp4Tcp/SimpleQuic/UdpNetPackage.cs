@@ -18,6 +18,7 @@ namespace AKNet.Udp4Tcp.Common
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
         public TcpSlidingWindow mTcpSlidingWindow;
         public readonly SocketAsyncEventArgs mSendArgs = new SocketAsyncEventArgs();
+        public ThreadWorker mThreadWorker;
 
         public uint nOrderId;
         public uint nRequestOrderId;

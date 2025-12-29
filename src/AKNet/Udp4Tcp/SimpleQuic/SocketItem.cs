@@ -111,7 +111,8 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (e.SocketError == SocketError.Success)
             {
-                
+                var mPackage = e.UserToken as NetUdpSendFixedSizePackage;
+                mPackage.mThreadWorker.mSendPackagePool.recycle(mPackage);
             }
             else
             {
