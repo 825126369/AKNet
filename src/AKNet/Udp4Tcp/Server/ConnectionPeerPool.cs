@@ -20,7 +20,7 @@ namespace AKNet.Udp4Tcp.Server
         private int nMaxCapacity = 0;
         private ConnectionPeer GenerateObject()
         {
-            ConnectionPeer clientPeer = new ConnectionPeer(this.mUdpServer);
+            ConnectionPeer clientPeer = new ConnectionPeer();
             return clientPeer;
         }
 

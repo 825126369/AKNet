@@ -38,6 +38,7 @@ namespace AKNet.Udp4Tcp.Common
                 NetLog.Assert(nOffset >= 0);
 
                 var mPackage = mThreadWorker.mSendPackagePool.Pop();
+                mPackage.mThreadWorker = mThreadWorker;
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
                 int nRemainLength = mTcpSlidingWindow.Length - nOffset;

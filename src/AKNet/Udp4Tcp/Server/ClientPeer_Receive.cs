@@ -8,21 +8,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer
     {
-        public void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
-        {
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
-            }
-        }
-
         private bool NetPackageExecute()
         {
             NetStreamPackage mNetStreamPackage = mServerMgr.GetNetStreamPackage();

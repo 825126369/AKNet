@@ -9,11 +9,9 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
-using AKNet.Udp4Tcp.SimpleQuic;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -23,7 +21,6 @@ namespace AKNet.Udp4Tcp.Server
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
         private readonly ClientPeerPool mClientPeerPool = null;
-        private readonly ObjectPoolManager mObjectPoolManager;
         private readonly CryptoMgr mCryptoMgr;
 
         private int nPort = 0;
@@ -44,7 +41,6 @@ namespace AKNet.Udp4Tcp.Server
             MainThreadCheck.Check();
 
             mCryptoMgr = new CryptoMgr();
-            mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
@@ -72,11 +68,6 @@ namespace AKNet.Udp4Tcp.Server
         public ListenNetPackageMgr GetPackageManager()
         {
             return mPackageManager;
-        }
-
-        public ObjectPoolManager GetObjectPoolManager()
-        {
-            return mObjectPoolManager;
         }
 
         public void Release()

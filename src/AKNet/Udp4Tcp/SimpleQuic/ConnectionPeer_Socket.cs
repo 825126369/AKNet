@@ -17,7 +17,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         private void SendUDPPackage2(NetUdpSendFixedSizePackage mPackage)
         {
-            SocketAsyncEventArgs mSendArgs = mPackage.mSendArgs;
+            SSocketAsyncEventArgs mSendArgs = mPackage.mSendArgs;
             Span<byte> mMemoryBuffer = mSendArgs.MemoryBuffer.Span;
             ReadOnlySpan<byte> mEncodeHead = UdpPackageEncryption.EncodeHead(mPackage);
             mEncodeHead.CopyTo(mMemoryBuffer);

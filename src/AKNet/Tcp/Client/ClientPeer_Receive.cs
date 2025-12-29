@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using AKNet.Tcp.Common;
 using System.Net.Sockets;
 

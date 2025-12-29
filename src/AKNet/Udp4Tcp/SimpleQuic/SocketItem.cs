@@ -87,7 +87,7 @@ namespace AKNet.Udp4Tcp.Common
             StartReceiveFromAsync();
         }
 
-        public bool SendToAsync(SocketAsyncEventArgs e)
+        public bool SendToAsync(SSocketAsyncEventArgs e)
         {
             bool bIOPending = false;
 
@@ -124,7 +124,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             arg.Completed -= OnIOComplete1;
             arg.Completed += OnIOComplete2;
-            mThreadWorker.Add_SocketAsyncEventArgs(arg);
+            mThreadWorker.Add_SocketAsyncEventArgs(arg as SSocketAsyncEventArgs);
         }
         
         void OnIOComplete2(object Cqe, SocketAsyncEventArgs arg)

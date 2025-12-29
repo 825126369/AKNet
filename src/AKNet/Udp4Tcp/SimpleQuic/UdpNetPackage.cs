@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 { 
@@ -17,7 +16,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
         public TcpSlidingWindow mTcpSlidingWindow;
-        public readonly SocketAsyncEventArgs mSendArgs = new SocketAsyncEventArgs();
+        public readonly SSocketAsyncEventArgs mSendArgs = new SSocketAsyncEventArgs();
         public ThreadWorker mThreadWorker;
 
         public uint nOrderId;
@@ -37,9 +36,11 @@ namespace AKNet.Udp4Tcp.Common
         {
             nSendCount = 0;
             mTcpSlidingWindow = null;
+            mThreadWorker = null;
             nRequestOrderId = 0;
             nOrderId = 0;
             nBodyLength = 0;
+            mSendArgs.SetBuffer(0, Config.nUdpPackageFixedSize);
         }
 
         public bool orTimeOut()

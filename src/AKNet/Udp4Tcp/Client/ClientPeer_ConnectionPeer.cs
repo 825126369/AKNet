@@ -417,7 +417,7 @@ namespace AKNet.Udp4Tcp.Client
 
                 try
                 {
-                    mSocket2.Close();
+                    mSocket2.Dispose();
                 }
                 catch { }
             }

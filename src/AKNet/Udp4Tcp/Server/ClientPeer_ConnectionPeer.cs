@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
-using AKNet.Udp4Tcp.SimpleQuic;
 using System;
 using System.Net;
 
@@ -37,22 +36,25 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public bool GetReceivePackage(out NetUdpReceiveFixedSizePackage mPackage)
-        {
-            return mConnectionPeer.GetReceivePackage(out mPackage);
-        }
-
         public void SendTcpStream(ReadOnlySpan<byte> data)
         {
             MainThreadCheck.Check();
             mConnectionPeer.AddTcpStream(data);
         }
 
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        {
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+            }
+        }
+
         public void CloseSocket()
         {
             if (mConnectionPeer != null)
             {
-                mConnectionPeer.Close();
+                mConnectionPeer.Dispose();
                 mConnectionPeer = null;
             }
         }

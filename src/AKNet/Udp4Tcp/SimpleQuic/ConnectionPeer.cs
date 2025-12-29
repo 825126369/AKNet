@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ConnectionPeer : IPoolItemInterface
+    internal partial class ConnectionPeer : IPoolItemInterface, IDisposable
     {
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
@@ -52,6 +52,8 @@ namespace AKNet.Udp4Tcp.Common
         readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
         long nLastSendSurePackageTime = 0;
         long nSameOrderIdSureCount = 0;
+
+        UdpClientPeerCommonBase mClientPeer;
 
         public ConnectionPeer()
         {
@@ -168,9 +170,9 @@ namespace AKNet.Udp4Tcp.Common
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
-        public void Release()
+        public void Dispose()
         {
-
+            
         }
 
         //private void HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)

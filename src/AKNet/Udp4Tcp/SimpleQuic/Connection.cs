@@ -17,7 +17,6 @@ namespace AKNet.Udp4Tcp.Common
             {
                 int nThreadWorkerIndex = RandomTool.RandomArrayIndex(0, Environment.ProcessorCount);
                 mLogicWorkerList[i] = new LogicWorker(nThreadWorkerIndex);
-                mLogicWorkerList[i].Init();
             }
         }
 
@@ -25,9 +24,7 @@ namespace AKNet.Udp4Tcp.Common
         {
 
         }
-
-
-
+        
         public bool ConnectAsync(ConnectionEventArgs arg)
         {
             Init();

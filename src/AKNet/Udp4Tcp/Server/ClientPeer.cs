@@ -8,9 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using AKNet.Udp4Tcp.Common;
-using AKNet.Udp4Tcp.SimpleQuic;
 using System;
 
 namespace AKNet.Udp4Tcp.Server
@@ -100,28 +98,6 @@ namespace AKNet.Udp4Tcp.Server
             fReceiveHeartBeatTime = 0.0;
         }
 
-        private void OnConnectReset()
-        {
-            this.mUdpCheckPool.Reset();
-            lock (mSendStreamList)
-            {
-                this.mSendStreamList.Reset();
-            }
-            this.fReceiveHeartBeatTime = 0;
-            this.fMySendHeartBeatCdTime = 0;
-        }
-
-        private void OnDisConnectReset()
-        {
-            this.mUdpCheckPool.Reset();
-            lock (mSendStreamList)
-            {
-                this.mSendStreamList.Reset();
-            }
-            this.fReceiveHeartBeatTime = 0;
-            this.fMySendHeartBeatCdTime = 0;
-        }
-
         public void Reset()
         {
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
@@ -142,11 +118,6 @@ namespace AKNet.Udp4Tcp.Server
         {
             Reset();
             CloseSocket();
-        }
-
-        public ObjectPoolManager GetObjectPoolManager()
-        {
-            return mServerMgr.GetObjectPoolManager();
         }
 
         public void NetPackageExecute(NetPackage mPackage)

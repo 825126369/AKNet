@@ -151,7 +151,7 @@ namespace AKNet.Udp4Tcp.Server
         {
             try
             {
-                mClientSocket.Close();
+                mClientSocket.Dispose();
             }
             catch
             {

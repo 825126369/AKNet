@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -24,6 +25,9 @@ namespace AKNet.Udp4Tcp.Common
         public readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = null;
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = null;
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = null;
+
+        private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
+
 
         public void Init()
         {
@@ -52,6 +56,11 @@ namespace AKNet.Udp4Tcp.Common
                     mLogicWorkerList.AddRange(mPendingLogicWorkerList);
                     mPendingLogicWorkerList.Clear();
                 }
+
+                while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
+                {
+                    arg.Do();
+                }
             }
         }
 
@@ -61,6 +70,11 @@ namespace AKNet.Udp4Tcp.Common
             {
                 mPendingLogicWorkerList.Add(mWorker);
             }
+        }
+
+        public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
+        {
+            mSocketAsyncEventArgsQueue.Enqueue(arg);
         }
 
     }
