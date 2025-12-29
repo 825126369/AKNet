@@ -64,7 +64,7 @@ namespace AKNet.Udp4Tcp.Common
                 mConnectionPeerDic.Remove(peerId);
             }
 
-            mConnectionPeerPool.recycle(mConnectionPeer);
+            mConnectionPeer.mThreadWorker.mConnectionPeerPool.recycle(mConnectionPeer);
             PrintRemoveFakeSocketMsg(mConnectionPeer);
         }
 
