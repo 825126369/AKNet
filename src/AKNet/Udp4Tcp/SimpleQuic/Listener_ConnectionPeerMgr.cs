@@ -17,6 +17,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         { 
+            SocketItem mSocketItem = e.UserToken as SocketItem;
             IPEndPoint nPeerId = (IPEndPoint)e.RemoteEndPoint;
             ConnectionPeer mConnectionPeer = null;
 
@@ -37,7 +38,7 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else
                 {
-                    mConnectionPeer = mConnectionPeerPool.Pop();
+                    mConnectionPeer = mSocketItem.mThreadWorker.mConnectionPeerPool.Pop();
                     mConnectionPeer.RemoteEndPoint = nPeerId;
                     lock (mConnectionPeerDic)
                     {

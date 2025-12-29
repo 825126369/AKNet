@@ -13,8 +13,6 @@ namespace AKNet.Udp4Tcp.Common
         private SocketMgr.Config mConfig;
         private readonly SocketMgr mSocketMgr = new SocketMgr();
         private readonly Dictionary<IPEndPoint, ConnectionPeer> mConnectionPeerDic = new Dictionary<IPEndPoint, ConnectionPeer>();
-        private readonly ConnectionPeerPool mConnectionPeerPool = null;
-
         private readonly ConcurrentQueue<ConnectionPeer> mAcceptConnectionQueue = new ConcurrentQueue<ConnectionPeer>();
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
 
