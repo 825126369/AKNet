@@ -38,15 +38,6 @@ namespace AKNet.Udp4Tcp.Common
                     mSocketList.Add(mSocketItem);
                     mSocketItem.InitNet();
                 }
-
-                if(mConfig.bServer)
-                {
-                    NetLog.Log("Udp Server 初始化成功:  " + mConfig.mEndPoint.ToString());
-                }
-                else
-                {
-                    NetLog.Log("Udp Client 连接服务器成功:  " + mConfig.mEndPoint.ToString());
-                }
             }
             catch (Exception ex)
             {
