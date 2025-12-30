@@ -13,11 +13,12 @@ namespace AKNet.Udp4Tcp.Common
         private SocketMgr.Config mConfig;
         private readonly SocketMgr mSocketMgr = new SocketMgr();
         private readonly Dictionary<IPEndPoint, ConnectionPeer> mConnectionPeerDic = new Dictionary<IPEndPoint, ConnectionPeer>();
-        private readonly ConcurrentQueue<ConnectionPeer> mAcceptConnectionQueue = new ConcurrentQueue<ConnectionPeer>();
+        private readonly Queue<ConnectionPeer> mNewConnectionQueue = new Queue<ConnectionPeer>();
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
-
+        readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
         readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
         private bool bInit = false;
+
         private void Init()
         {
             if (bInit) return;
@@ -58,29 +59,43 @@ namespace AKNet.Udp4Tcp.Common
 
         public bool AcceptAsync(ConnectionEventArgs arg)
         {
+            bool bIOPending = true;
             arg.LastOperation = ConnectionAsyncOperation.Accept;
-            arg.ConnectionError =  ConnectionError.Success;
-            if (mAcceptConnectionQueue.TryDequeue(out arg.mConnectionPeer))
-            {
-                return false;
-            }
-            else
-            {
-                mManualResetEventSlim.Reset();
-                Task.Run(() =>
-                {
-                    while(true)
-                    {
-                        mManualResetEventSlim.Wait(1000);
-                        if (mAcceptConnectionQueue.TryDequeue(out arg.mConnectionPeer))
-                        {
-                            arg.TriggerEvent();
-                        }
-                    }
-                });
+            arg.ConnectionError = ConnectionError.Success;
 
-                return true;
+            lock (mNewConnectionQueue)
+            {
+                if (mNewConnectionQueue.TryDequeue(out arg.mConnectionPeer))
+                {
+                    bIOPending = false;
+                    arg.TriggerEvent();
+                }
+                else
+                {
+                    mWRAcceptEventArgs.SetTarget(arg);
+                    bIOPending = true;
+                }
+            }
+
+            return bIOPending;
+        }
+
+        private void HandleNewConntion(ConnectionPeer peer)
+        {
+            lock (mNewConnectionQueue)
+            {
+                mNewConnectionQueue.Enqueue(peer);
+
+                if (mWRAcceptEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+                {
+                    mWRAcceptEventArgs.SetTarget(null);
+                    arg.LastOperation = ConnectionAsyncOperation.Accept;
+                    arg.ConnectionError = ConnectionError.Success;
+                    arg.mConnectionPeer = mNewConnectionQueue.Dequeue();
+                    arg.TriggerEvent();
+                }
             }
         }
+
     }
 }

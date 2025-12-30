@@ -45,6 +45,7 @@ namespace AKNet.Udp4Tcp.Common
                         mConnectionPeerDic.Add(nPeerId, mConnectionPeer);
                     }
 
+                    HandleNewConntion(mConnectionPeer);
                     PrintAddFakeSocketMsg(mConnectionPeer);
                 }
             }

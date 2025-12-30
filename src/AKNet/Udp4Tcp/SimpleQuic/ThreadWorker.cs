@@ -25,8 +25,7 @@ namespace AKNet.Udp4Tcp.Common
         public readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = new ObjectPool<ConnectionPeer>();
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>();
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
-
-        private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
+        private readonly ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
 
 
         public void Init()

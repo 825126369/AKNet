@@ -16,7 +16,10 @@ namespace AKNet.Udp4Tcp.Common
     {
         public void AddTcpStream(ReadOnlySpan<byte> buffer)
         {
-            mTcpSlidingWindow.WriteFrom(buffer);
+            lock (mTcpSlidingWindow)
+            {
+                mTcpSlidingWindow.WriteFrom(buffer);
+            }
         }
 
         private void AddSendPackageOrderId(int nLength)

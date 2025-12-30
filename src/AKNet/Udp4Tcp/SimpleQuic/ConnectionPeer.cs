@@ -170,7 +170,7 @@ namespace AKNet.Udp4Tcp.Common
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             
         }
