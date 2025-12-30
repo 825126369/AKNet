@@ -3,28 +3,6 @@ using System.Net;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal enum ConnectionPeerType
-    {
-        Client,
-        Server,
-    }
-
-    internal enum ConnectionAsyncOperation
-    {
-        None = 0,
-        Accept,
-        Connect,
-        Disconnect,
-        Receive,
-        Send,
-    }
-
-    internal enum ConnectionError
-    {
-        Success = 1,
-        Error = 2,
-    }
-
     internal class ConnectionEventArgs
     {
         public event EventHandler<ConnectionEventArgs> Completed;

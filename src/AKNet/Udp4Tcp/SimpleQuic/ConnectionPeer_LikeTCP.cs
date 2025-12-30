@@ -54,7 +54,14 @@ namespace AKNet.Udp4Tcp.Common
 			{
                 this.Reset();
                 m_Connected = true;
-                NetLog.Log("Client: Udp连接服务器 成功 ! ");
+
+                if(mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+				{
+                    mWRConnectEventArgs.SetTarget(null);
+                    arg.LastOperation = ConnectionAsyncOperation.Connect;
+                    arg.ConnectionError = ConnectionError.Success;
+                    arg.TriggerEvent();
+                }
 			}
 		}
 
@@ -64,8 +71,15 @@ namespace AKNet.Udp4Tcp.Common
 			{
 				this.Reset();
                 m_Connected = false;
-                NetLog.Log("Client: Udp 断开服务器 成功 ! ");
-			}
+
+                if (mWRDisConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+                {
+                    mWRDisConnectEventArgs.SetTarget(null);
+                    arg.LastOperation = ConnectionAsyncOperation.Disconnect;
+                    arg.ConnectionError = ConnectionError.Success;
+                    arg.TriggerEvent();
+                }
+            }
 		}
 
 	}

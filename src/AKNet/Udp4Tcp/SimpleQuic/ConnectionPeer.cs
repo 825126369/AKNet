@@ -55,6 +55,9 @@ namespace AKNet.Udp4Tcp.Common
 
         UdpClientPeerCommonBase mClientPeer;
 
+        protected readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        protected readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
+
         public ConnectionPeer()
         {
             //this.mServerMgr = mNetServer;
