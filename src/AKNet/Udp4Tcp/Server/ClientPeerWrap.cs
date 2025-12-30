@@ -83,7 +83,7 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-		public void HandleConnectedSocket(ConnectionPeer mSocket)
+		public void HandleConnectedSocket(Connection mSocket)
 		{
             if (mInstance != null)
             {

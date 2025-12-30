@@ -17,7 +17,7 @@ namespace AKNet.Udp4Tcp.Common
     internal partial class LogicWorker
     {
         private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
-        private readonly static LinkedList<ConnectionPeer> mConnectionList = new LinkedList<ConnectionPeer>();
+        private readonly static LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
         private readonly LinkedListNode<LogicWorker> mEntry;
         private readonly int nThreadIndex;
@@ -51,7 +51,7 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
-        public void AddConnectionPeer(ConnectionPeer peer)
+        public void AddConnectionPeer(Connection peer)
         {
             peer.mLogicWorker = this;
             peer.mThreadWorker = mThreadWorker;

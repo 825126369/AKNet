@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ConnectionPeer
+    internal partial class Connection
     {
 		private void SendHeartBeat()
 		{

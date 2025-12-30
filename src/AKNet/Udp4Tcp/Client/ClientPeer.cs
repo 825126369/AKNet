@@ -34,17 +34,17 @@ namespace AKNet.Udp4Tcp.Client
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
 
-        private readonly ConnectionEventArgs ReceiveArgs;
-        private readonly ConnectionEventArgs SendArgs;
-        private readonly ConnectionEventArgs ConnectArgs;
-        private readonly ConnectionEventArgs DisConnectArgs;
+        private readonly ConnectionEventArgs ReceiveArgs = new ConnectionEventArgs();
+        private readonly ConnectionEventArgs SendArgs = new ConnectionEventArgs();
+        private readonly ConnectionEventArgs ConnectArgs = new ConnectionEventArgs();
+        private readonly ConnectionEventArgs DisConnectArgs = new ConnectionEventArgs();
 
         private bool bConnectIOContexUsed = false;
         private bool bReceiveIOContexUsed = false;
         private bool bSendIOContexUsed = false;
         private bool bDisConnectIOContexUsed = false;
         
-        private Connection mSocket = new Connection();
+        private Connection mConnection = new Connection();
         private IPEndPoint mIPEndPoint = null;
         private string ServerIp;
         private int nServerPort;

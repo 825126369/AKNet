@@ -11,6 +11,6 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal interface UdpClientPeerCommonBase
     {
-        void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage);
+       // void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage);
     }
 }

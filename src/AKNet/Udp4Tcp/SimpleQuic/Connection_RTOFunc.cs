@@ -11,7 +11,7 @@ using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ConnectionPeer
+    internal partial class Connection
     {
         private const ushort HZ = 1000;
         private const long TCP_RTO_MAX = 120 * HZ;
@@ -123,7 +123,7 @@ namespace AKNet.Udp4Tcp.Common
             nStartTime = GetNowTime();
         }
 
-        public void FinishRtt(ConnectionPeer mReSendPackageMgr)
+        public void FinishRtt(Connection mReSendPackageMgr)
         {
             long nRtt = GetNowTime() - nStartTime;
             mReSendPackageMgr.FinishRttSuccess(nRtt);

@@ -12,8 +12,8 @@ namespace AKNet.Udp4Tcp.Common
         public int Length;
         public int BytesTransferred;
 
-        public ConnectionPeer AcceptConnection;
-        public ConnectionPeer mConnectionPeer;
+        public Connection AcceptConnection;
+        public Connection mConnection;
         public IPEndPoint RemoteEndPoint;
         public ConnectionError ConnectionError;
 

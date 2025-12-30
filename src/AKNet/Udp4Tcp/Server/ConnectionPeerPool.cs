@@ -15,12 +15,12 @@ namespace AKNet.Udp4Tcp.Server
 {
     internal class ConnectionPeerPool
     {
-        readonly Stack<ConnectionPeer> mObjectPool = new Stack<ConnectionPeer>();
+        readonly Stack<Connection> mObjectPool = new Stack<Connection>();
         ServerMgr mUdpServer = null;
         private int nMaxCapacity = 0;
-        private ConnectionPeer GenerateObject()
+        private Connection GenerateObject()
         {
-            ConnectionPeer clientPeer = new ConnectionPeer();
+            Connection clientPeer = new Connection();
             return clientPeer;
         }
 
@@ -30,7 +30,7 @@ namespace AKNet.Udp4Tcp.Server
             SetMaxCapacity(nMaxCapacity);
             for (int i = 0; i < initCapacity; i++)
             {
-                ConnectionPeer clientPeer = GenerateObject();
+                Connection clientPeer = GenerateObject();
                 mObjectPool.Push(clientPeer);
             }
         }
@@ -45,9 +45,9 @@ namespace AKNet.Udp4Tcp.Server
             return mObjectPool.Count;
         }
 
-        public ConnectionPeer Pop()
+        public Connection Pop()
         {
-            ConnectionPeer t = null;
+            Connection t = null;
             lock (mObjectPool)
             {
                 mObjectPool.TryPop(out t);
@@ -61,7 +61,7 @@ namespace AKNet.Udp4Tcp.Server
             return t;
         }
 
-        public void recycle(ConnectionPeer t)
+        public void recycle(Connection t)
         {
 #if DEBUG
             NetLog.Assert(!mObjectPool.Contains(t));

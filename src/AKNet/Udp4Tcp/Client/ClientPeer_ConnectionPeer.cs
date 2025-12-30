@@ -21,7 +21,7 @@ namespace AKNet.Udp4Tcp.Client
             bool Connected = false;
             try
             {
-                Connected = mSocket != null && mSocket.Connected;
+                Connected = mConnection != null && mConnection.Connected;
             }
             catch { }
             
@@ -44,7 +44,7 @@ namespace AKNet.Udp4Tcp.Client
             NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
             Reset();
-            mSocket = new Connection();
+            mConnection = new Connection();
 
             if (mIPEndPoint == null)
             {
@@ -72,7 +72,7 @@ namespace AKNet.Udp4Tcp.Client
                 bool Connected = false;
                 try
                 {
-                    Connected = mSocket != null && mSocket.Connected;
+                    Connected = mConnection != null && mConnection.Connected;
                 }
                 catch { }
 
@@ -96,13 +96,15 @@ namespace AKNet.Udp4Tcp.Client
 
         private void StartConnectEventArg()
         {
-            bool bIOSyncCompleted = false;
-
-            if (mSocket != null)
+            if (mConnection != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mSocket.ConnectAsync(ConnectArgs);
+                    bool bIOPending = mConnection.ConnectAsync(ConnectArgs);
+                    if (!bIOPending)
+                    {
+                        this.ProcessConnect(ConnectArgs);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -114,21 +116,19 @@ namespace AKNet.Udp4Tcp.Client
             {
                 bConnectIOContexUsed = false;
             }
-
-            if (bIOSyncCompleted)
-            {
-                this.ProcessConnect(ConnectArgs);
-            }
         }
 
         private void StartDisconnectEventArg()
         {
-            bool bIOSyncCompleted = false;
-            if (mSocket != null)
+            if (mConnection != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mSocket.DisconnectAsync(DisConnectArgs);
+                    bool bIOPending = mConnection.DisconnectAsync(DisConnectArgs);
+                    if (!bIOPending)
+                    {
+                        this.ProcessDisconnect(DisConnectArgs);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -139,24 +139,21 @@ namespace AKNet.Udp4Tcp.Client
             else
             {
                 bDisConnectIOContexUsed = false;
-            }
-                
-            if (bIOSyncCompleted)
-            {
-                this.ProcessDisconnect(DisConnectArgs);
-            }
+            } 
         }
 
 
         private void StartReceiveEventArg()
         {
-            bool bIOSyncCompleted = false;
-
-            if (mSocket != null)
+            if (mConnection != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mSocket.ReceiveAsync(ReceiveArgs);
+                    bool bIOPending = mConnection.ReceiveAsync(ReceiveArgs);
+                    if (!bIOPending)
+                    {
+                        this.ProcessReceive(ReceiveArgs);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -167,39 +164,6 @@ namespace AKNet.Udp4Tcp.Client
             else
             {
                 bReceiveIOContexUsed = false;
-            }
-            
-            if (bIOSyncCompleted)
-            {
-                this.ProcessReceive(ReceiveArgs);
-            }
-        }
-
-        private void StartSendEventArg()
-        {
-            bool bIOSyncCompleted = false;
-
-            if (mSocket != null)
-            {
-                try
-                {
-                    bIOSyncCompleted = !mSocket.SendAsync(SendArgs);
-                }
-                catch (Exception e)
-                {
-                    bSendIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-
-
-            if (bIOSyncCompleted)
-            {
-                this.ProcessSend(SendArgs);
             }
         }
 
@@ -215,9 +179,6 @@ namespace AKNet.Udp4Tcp.Client
                     break;
                 case ConnectionAsyncOperation.Receive:
                     this.ProcessReceive(e);
-                    break;
-                case ConnectionAsyncOperation.Send:
-                    this.ProcessSend(e);
                     break;
                 default:
                     NetLog.LogError("The last operation completed on the socket was not a receive or send");
@@ -273,7 +234,7 @@ namespace AKNet.Udp4Tcp.Client
             {
                 if (e.BytesTransferred > 0)
                 {
-                    MultiThreadingReceiveSocketStream(e);
+                    MultiThreadingReceiveStream(e);
                     StartReceiveEventArg();
                 }
                 else
@@ -289,68 +250,9 @@ namespace AKNet.Udp4Tcp.Client
             }
         }
 
-        private void ProcessSend(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                if (e.BytesTransferred > 0)
-                {
-                    SendNetStream1(e.BytesTransferred);
-                }
-                else
-                {
-                    DisConnectedWithNormal();
-                    bSendIOContexUsed = false;
-                }
-            }
-            else
-            {
-                DisConnectedWithSocketError(e.ConnectionError);
-                bSendIOContexUsed = false;
-            }
-        }
-
         public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.WriteFrom(mBufferSegment);
-            }
-
-            if (!bSendIOContexUsed)
-            {
-                bSendIOContexUsed = true;
-                SendNetStream1();
-            }
-        }
-
-        private void SendNetStream1(int BytesTransferred = 0)
-        {
-            if (BytesTransferred > 0)
-            {
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.ClearBuffer(BytesTransferred);
-                }
-            }
-
-            int nLength = mSendStreamList.Length;
-            if (nLength > 0)
-            {
-                nLength = Math.Min(SendArgs.MemoryBuffer.Length, nLength);
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.CopyTo(SendArgs.MemoryBuffer.Span.Slice(0, nLength));
-                }
-
-                SendArgs.SetBuffer(0, nLength);
-                StartSendEventArg();
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-
+            mConnection.Send(mBufferSegment);
         }
 
         private void DisConnectedWithNormal()
@@ -364,7 +266,7 @@ namespace AKNet.Udp4Tcp.Client
         private void DisConnectedWithException(Exception e)
         {
 #if DEBUG
-            if (mSocket != null)
+            if (mConnection != null)
             {
                 NetLog.LogException(e);
             }
@@ -382,12 +284,12 @@ namespace AKNet.Udp4Tcp.Client
 
         private void DisConnectedWithError()
         {
-            var mSocketPeerState = GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
+            var mConnectionPeerState = GetSocketState();
+            if (mConnectionPeerState == SOCKET_PEER_STATE.DISCONNECTING)
             {
                 SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
+            else if (mConnectionPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
                 SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
@@ -398,9 +300,9 @@ namespace AKNet.Udp4Tcp.Client
             IPEndPoint mRemoteEndPoint = null;
             try
             {
-                if (mSocket != null && mSocket.RemoteEndPoint != null)
+                if (mConnection != null && mConnection.RemoteEndPoint != null)
                 {
-                    mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
+                    mRemoteEndPoint = mConnection.RemoteEndPoint as IPEndPoint;
                 }
             }
             catch { }
@@ -410,14 +312,14 @@ namespace AKNet.Udp4Tcp.Client
 
         private void CloseSocket()
         {
-            if (mSocket != null)
+            if (mConnection != null)
             {
-                Connection mSocket2 = mSocket;
-                mSocket = null;
+                Connection mConnection2 = mConnection;
+                mConnection = null;
 
                 try
                 {
-                    mSocket2.Dispose();
+                    mConnection2.Dispose();
                 }
                 catch { }
             }

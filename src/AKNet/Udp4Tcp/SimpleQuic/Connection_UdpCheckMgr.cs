@@ -12,25 +12,12 @@ using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ConnectionPeer
+    internal partial class Connection
     {
         public void AddReceivePackageOrderId(int nLength)
         {
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId, nLength);
             nSameOrderIdSureCount = 0;
-        }
-
-        public void SendTcpStream(ReadOnlySpan<byte> buffer)
-        {
-            MainThreadCheck.Check();
-            if (!m_Connected) return;
-#if DEBUG
-            if (buffer.Length > Config.nMaxDataLength)
-            {
-                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
-            }
-#endif
-            AddTcpStream(buffer);
         }
 
         public void ReceiveNetPackage(NetUdpReceiveFixedSizePackage mReceivePackage)
@@ -141,7 +128,7 @@ namespace AKNet.Udp4Tcp.Common
 
         private void CheckCombinePackage(NetUdpReceiveFixedSizePackage mCheckPackage)
         {
-            mClientPeer.ReceiveTcpStream(mCheckPackage);
+            ReceiveTcpStream(mCheckPackage);
             mThreadWorker.mReceivePackagePool.recycle(mCheckPackage);
         }
 

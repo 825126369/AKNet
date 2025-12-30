@@ -12,8 +12,8 @@ namespace AKNet.Udp4Tcp.Common
     {
         private SocketMgr.Config mConfig;
         private readonly SocketMgr mSocketMgr = new SocketMgr();
-        private readonly Dictionary<IPEndPoint, ConnectionPeer> mConnectionPeerDic = new Dictionary<IPEndPoint, ConnectionPeer>();
-        private readonly Queue<ConnectionPeer> mNewConnectionQueue = new Queue<ConnectionPeer>();
+        private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = new Dictionary<IPEndPoint, Connection>();
+        private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
         readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
         readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
@@ -65,10 +65,9 @@ namespace AKNet.Udp4Tcp.Common
 
             lock (mNewConnectionQueue)
             {
-                if (mNewConnectionQueue.TryDequeue(out arg.mConnectionPeer))
+                if (mNewConnectionQueue.TryDequeue(out arg.mConnection))
                 {
                     bIOPending = false;
-                    arg.TriggerEvent();
                 }
                 else
                 {
@@ -80,7 +79,7 @@ namespace AKNet.Udp4Tcp.Common
             return bIOPending;
         }
 
-        private void HandleNewConntion(ConnectionPeer peer)
+        private void HandleNewConntion(Connection peer)
         {
             lock (mNewConnectionQueue)
             {
@@ -91,7 +90,7 @@ namespace AKNet.Udp4Tcp.Common
                     mWRAcceptEventArgs.SetTarget(null);
                     arg.LastOperation = ConnectionAsyncOperation.Accept;
                     arg.ConnectionError = ConnectionError.Success;
-                    arg.mConnectionPeer = mNewConnectionQueue.Dequeue();
+                    arg.mConnection = mNewConnectionQueue.Dequeue();
                     arg.TriggerEvent();
                 }
             }

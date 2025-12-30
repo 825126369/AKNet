@@ -131,7 +131,7 @@ namespace AKNet.Udp4Tcp.Server
         {
             if (e.ConnectionError == ConnectionError.Success)
             {
-                ConnectionPeer mClientSocket = e.AcceptConnection;
+                Connection mClientSocket = e.AcceptConnection;
 #if DEBUG
                 NetLog.Assert(mClientSocket != null);
 #endif
@@ -147,7 +147,7 @@ namespace AKNet.Udp4Tcp.Server
             StartAcceptEventArg();
         }
 
-        private void HandleConnectFull(ConnectionPeer mClientSocket)
+        private void HandleConnectFull(Connection mClientSocket)
         {
             try
             {

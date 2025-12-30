@@ -27,26 +27,4 @@ namespace AKNet.Udp4Tcp.Common
         public const double fReConnectMaxCdTime = 3.0;
         public const int MaxPlayerCount = 10000;
 	}
-
-    internal enum ConnectionPeerType
-    {
-        Client,
-        Server,
-    }
-
-    internal enum ConnectionAsyncOperation
-    {
-        None = 0,
-        Accept,
-        Connect,
-        Disconnect,
-        Receive,
-        Send,
-    }
-
-    internal enum ConnectionError
-    {
-        Success = 1,
-        Error = 2,
-    }
 }

@@ -9,66 +9,36 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ConnectionPeer : IPoolItemInterface, IDisposable
+    internal partial class Connection
     {
-        private int nCurrentCheckPackageCount = 0;
-        public IPEndPoint RemoteEndPoint;
-
-        private readonly object lock_mSocket_object = new object();
-        private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        
-        private readonly AkCircularManySpanBuffer mSendUDPPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
-        private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
-        protected bool m_Connected;
-        private double fReceiveHeartBeatTime = 0.0;
-        private double fMySendHeartBeatCdTime = 0.0;
-
-        private const int nDefaultSendPackageCount = 1024;
-        private const int nDefaultCacheReceivePackageCount = 2048;
-        private uint nCurrentWaitReceiveOrderId;
-        private readonly TcpSlidingWindow mTcpSlidingWindow = new TcpSlidingWindow();
-        private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
-        private uint nCurrentWaitSendOrderId;
-        private long nLastRequestOrderIdTime = 0;
-        private uint nLastRequestOrderId = 0;
-        private int nContinueSameRequestOrderIdCount = 0;
-        private double nLastFrameTime = 0;
-        private int nSearchCount = 0;
-        private const int nMinSearchCount = 10;
-        private int nMaxSearchCount = int.MaxValue;
-        private int nRemainNeedSureCount = 0;
-
-        public ThreadWorker mThreadWorker = null;
-        public LogicWorker mLogicWorker = null;
-        public SocketItem mSocketItem = null;
-        private ConnectionPeerType mConnectionPeerType;
-
-        readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
-        long nLastSendSurePackageTime = 0;
-        long nSameOrderIdSureCount = 0;
-
-        UdpClientPeerCommonBase mClientPeer;
-
-        protected readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        protected readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
-
-        public ConnectionPeer()
+        public void SendTcpStream(ReadOnlySpan<byte> buffer)
         {
-            //this.mServerMgr = mNetServer;
-            
-            this.nSearchCount = nMinSearchCount;
-            this.nMaxSearchCount = this.nSearchCount * 2;
-            this.nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            this.nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
-            InitRTO();
+            if (!m_Connected) return;
+#if DEBUG
+            if (buffer.Length > Config.nMaxDataLength)
+            {
+                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
+            }
+#endif
+            lock (mMTSendStreamList)
+            {
+                mMTSendStreamList.WriteFrom(buffer);
+            }
         }
-        
+
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
+        {
+            if (!m_Connected) return;
+
+            lock (mMTReceiveStreamList)
+            {
+                mMTReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+            }
+        }
+
         public void ThreadUpdate()
         {
             if (!m_Connected) return;
@@ -171,11 +141,6 @@ namespace AKNet.Udp4Tcp.Common
             }
 
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
-        }
-
-        public virtual void Dispose()
-        {
-            
         }
 
         //private void HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)

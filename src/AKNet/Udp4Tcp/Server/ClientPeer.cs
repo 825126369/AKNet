@@ -23,7 +23,14 @@ namespace AKNet.Udp4Tcp.Server
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private ConnectionPeer mConnectionPeer = null;
+        private Connection mConnection = null;
+
+        private readonly ConnectionEventArgs ReceiveArgs = new ConnectionEventArgs();
+        private readonly ConnectionEventArgs SendArgs = new ConnectionEventArgs();
+        private readonly ConnectionEventArgs DisConnectArgs = new ConnectionEventArgs();
+        private bool bReceiveIOContexUsed = false;
+        private bool bSendIOContexUsed = false;
+        private bool bDisConnectIOContexUsed = false;
 
         public ClientPeer(ServerMgr mNetServer)
         {

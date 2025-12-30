@@ -12,14 +12,11 @@ using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ConnectionPeer
+    internal partial class Connection
     {
         public void AddTcpStream(ReadOnlySpan<byte> buffer)
         {
-            lock (mTcpSlidingWindow)
-            {
-                mTcpSlidingWindow.WriteFrom(buffer);
-            }
+            mTcpSlidingWindow.WriteFrom(buffer);
         }
 
         private void AddSendPackageOrderId(int nLength)

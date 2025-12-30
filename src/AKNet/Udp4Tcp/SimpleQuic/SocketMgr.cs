@@ -26,7 +26,7 @@ namespace AKNet.Udp4Tcp.Common
         }
 
         readonly List<SocketItem> mSocketList = new List<SocketItem>();
-        public int InitNet(Config mConfig)
+        public E_LOGIC_RESULT InitNet(Config mConfig)
 		{
             try
             {
@@ -42,10 +42,10 @@ namespace AKNet.Udp4Tcp.Common
             catch (Exception ex)
             {
                 NetLog.LogError($"服务器 初始化失败: {ex.Message}");
-                return 1;
+                return E_LOGIC_RESULT.Error;
             }
 
-            return 0;
+            return E_LOGIC_RESULT.Success;
         }
 
         public SocketItem GetSocketItem(int nSocketIndex)

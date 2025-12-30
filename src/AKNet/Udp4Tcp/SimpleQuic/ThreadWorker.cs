@@ -22,7 +22,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly static List<LogicWorker> mPendingLogicWorkerList = new List<LogicWorker>();
         private readonly AutoResetEvent mEventQReady = new AutoResetEvent(false);
 
-        public readonly ObjectPool<ConnectionPeer> mConnectionPeerPool = new ObjectPool<ConnectionPeer>();
+        public readonly ObjectPool<Connection> mConnectionPeerPool = new ObjectPool<Connection>();
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>();
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
         private readonly ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();

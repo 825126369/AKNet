@@ -44,7 +44,7 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public bool MultiThreadingHandleConnectedSocket(ConnectionPeer mSocket)
+        public bool MultiThreadingHandleConnectedSocket(Connection mSocket)
         {
             int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
             if (nNowConnectCount >= Config.MaxPlayerCount)
@@ -68,7 +68,7 @@ namespace AKNet.Udp4Tcp.Server
         {
             MainThreadCheck.Check();
 
-            ConnectionPeer mSocket = null;
+            Connection mSocket = null;
             lock (mConnectSocketQueue)
             {
                 mConnectSocketQueue.TryDequeue(out mSocket);

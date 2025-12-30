@@ -26,7 +26,7 @@ namespace AKNet.Udp4Tcp.Server
         {
             if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
-                SendTcpStream(ReadOnlySpan<byte>.Empty);
+                SendNetStream(ReadOnlySpan<byte>.Empty);
             }
         }
 
@@ -40,7 +40,7 @@ namespace AKNet.Udp4Tcp.Server
             if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
                 ReadOnlySpan<byte> mData = mServerMgr.GetCryptoMgr().Encode(id, data);
-                SendTcpStream(mData);
+                SendNetStream(mData);
             }
         }
     }

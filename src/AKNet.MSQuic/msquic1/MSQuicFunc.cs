@@ -63,13 +63,13 @@ namespace MSQuic1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(QUIC_SSBuffer buffer1, QUIC_SSBuffer buffer2)
         {
-            return orBufferEqual(buffer1.GetSpan(), buffer2.GetSpan());
+            return BufferTool.orBufferEqual(buffer1.GetSpan(), buffer2.GetSpan());
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool orBufferEqual(ReadOnlySpan<byte> buffer1, ReadOnlySpan<byte> buffer2)
         {
-            return buffer1.SequenceEqual(buffer2);
+            return BufferTool.orBufferEqual(buffer1, buffer2);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

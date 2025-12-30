@@ -14,7 +14,7 @@ namespace AKNet.Udp4Tcp.Client
 {
     internal partial class ClientPeer
     {
-        private void MultiThreadingReceiveSocketStream(ConnectionEventArgs e)
+        private void MultiThreadingReceiveStream(ConnectionEventArgs e)
         {
             lock (mReceiveStreamList)
             {
