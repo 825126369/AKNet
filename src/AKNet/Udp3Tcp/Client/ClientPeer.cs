@@ -211,7 +211,12 @@ namespace AKNet.Udp3Tcp.Client
 
             lock (mSendStreamList)
             {
-                mSendStreamList.Reset();
+                mSendStreamList.Dispose();
+            }
+
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
             }
         }
 
