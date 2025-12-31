@@ -142,7 +142,7 @@ namespace AKNet.Udp2Tcp.Client
             {
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.WriteOneSpan(mPackage.GetBufferSpan());
+                    mSendStreamList.WriteFromOneSpan(mPackage.GetBufferSpan());
                 }
 
                 if (!bSendIOContexUsed)

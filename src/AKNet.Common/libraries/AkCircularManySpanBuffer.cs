@@ -168,7 +168,7 @@ namespace AKNet.Common
             }
         }
 
-        public void WriteOneSpan(ReadOnlySpan<byte> readOnlySpan)
+        public void WriteFromOneSpan(ReadOnlySpan<byte> readOnlySpan)
         {
             var mItem = BeginSpan();
             mItem.AddSpan(readOnlySpan);

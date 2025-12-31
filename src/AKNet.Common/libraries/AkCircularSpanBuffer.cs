@@ -206,7 +206,7 @@ namespace AKNet.Common
             Check();
         }
 
-        public void WriteOneSpan(AkCircularBuffer mOtherStreamList, int nOffset, int nCount)
+        public void WriteFrom(AkCircularBuffer mOtherStreamList, int nOffset, int nCount)
 		{
 			if (nCount <= 0)
 			{
