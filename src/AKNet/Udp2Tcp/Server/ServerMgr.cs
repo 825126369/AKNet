@@ -31,13 +31,11 @@ namespace AKNet.Udp2Tcp.Server
         private int nPort = 0;
         private Socket mSocket = null;
         private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
 
         public ServerMgr()
         {
-            NetLog.Init();
             MainThreadCheck.Check();
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();

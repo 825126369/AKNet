@@ -28,7 +28,6 @@ namespace AKNet.Udp2Tcp.Server
         private double fMySendHeartBeatCdTime = 0.0;
 
         FakeSocket mSocket = null;
-        readonly object lock_mSocket_object = new object();
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         bool bSendIOContexUsed = false;

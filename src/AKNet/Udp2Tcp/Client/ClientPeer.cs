@@ -31,13 +31,13 @@ namespace AKNet.Udp2Tcp.Client
         private string Name = string.Empty;
         private uint ID = 0;
 
+        public const double fConnectMaxCdTime = 2.0;
+        public const double fDisConnectMaxCdTime = 2.0;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
         private double fReConnectServerCdTime = 0.0;
         private double fConnectCdTime = 0.0;
-        public const double fConnectMaxCdTime = 2.0;
         private double fDisConnectCdTime = 0.0;
-        public const double fDisConnectMaxCdTime = 2.0;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
@@ -46,7 +46,6 @@ namespace AKNet.Udp2Tcp.Client
 
         private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        private readonly object lock_mSocket_object = new object();
         private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
@@ -58,7 +57,6 @@ namespace AKNet.Udp2Tcp.Client
 
         public ClientPeer()
         {
-            NetLog.Init();
             MainThreadCheck.Check();
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
