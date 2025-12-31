@@ -60,40 +60,24 @@ namespace AKNet.Udp2Tcp.Client
         private void StartReceiveEventArg()
         {
             bool bIOSyncCompleted = false;
-            if (Config.bUseSocketLock)
+
+            if (mSocket != null)
             {
-                lock (lock_mSocket_object)
+                try
                 {
-                    if (mSocket != null)
-                    {
-                        bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-                    }
-                    else
-                    {
-                        bReceiveIOContexUsed = false;
-                    }
+                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                }
+                catch (Exception e)
+                {
+                    bReceiveIOContexUsed = false;
+                    DisConnectedWithException(e);
                 }
             }
             else
             {
-                if (mSocket != null)
-                {
-                    try
-                    {
-                        bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-                    }
-                    catch (Exception e)
-                    {
-                        bReceiveIOContexUsed = false;
-                        DisConnectedWithException(e);
-                    }
-                }
-                else
-                {
-                    bReceiveIOContexUsed = false;
-                }
+                bReceiveIOContexUsed = false;
             }
-
+            
             UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
             if (bIOSyncCompleted)
             {
@@ -104,40 +88,23 @@ namespace AKNet.Udp2Tcp.Client
         private void StartSendEventArg()
         {
             bool bIOSyncCompleted = false;
-            if (Config.bUseSocketLock)
+            if (mSocket != null)
             {
-                lock (lock_mSocket_object)
+                try
                 {
-                    if (mSocket != null)
-                    {
-                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
-                    }
-                    else
-                    {
-                        bSendIOContexUsed = false;
-                    }
+                    bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
+                }
+                catch (Exception e)
+                {
+                    bSendIOContexUsed = false;
+                    DisConnectedWithException(e);
                 }
             }
             else
             {
-                if (mSocket != null)
-                {
-                    try
-                    {
-                        bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
-                    }
-                    catch (Exception e)
-                    {
-                        bSendIOContexUsed = false;
-                        DisConnectedWithException(e);
-                    }
-                }
-                else
-                {
-                    bSendIOContexUsed = false;
-                }
+                bSendIOContexUsed = false;
             }
-
+            
             UdpStatistical.AddSendIOCount(bIOSyncCompleted);
             if (bIOSyncCompleted)
             {
@@ -257,34 +224,16 @@ namespace AKNet.Udp2Tcp.Client
 
         private void CloseSocket()
         {
-            if (Config.bUseSocketLock)
+            if (mSocket != null)
             {
-                lock (lock_mSocket_object)
-                {
-                    if (mSocket != null)
-                    {
-                        try
-                        {
-                            mSocket.Close();
-                        }
-                        catch (Exception) { }
-                        mSocket = null;
-                    }
-                }
-            }
-            else
-            {
-                if (mSocket != null)
-                {
-                    Socket mSocket2 = mSocket;
-                    mSocket = null;
+                Socket mSocket2 = mSocket;
+                mSocket = null;
 
-                    try
-                    {
-                        mSocket2.Close();
-                    }
-                    catch (Exception) { }
+                try
+                {
+                    mSocket2.Close();
                 }
+                catch (Exception) { }
             }
         }
     }

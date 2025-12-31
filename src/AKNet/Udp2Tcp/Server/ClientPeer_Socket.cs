@@ -51,36 +51,23 @@ namespace AKNet.Udp2Tcp.Server
 
         public bool SendToAsync(SocketAsyncEventArgs e)
         {
-            bool bIOSyncCompleted = false;
-            if (Config.bUseSocketLock)
+            bool bIOPending = false;
+            if (mSocket != null)
             {
-                lock (lock_mSocket_object)
+                try
                 {
+                    bIOPending = mSocket.SendToAsync(e);
+                }
+                catch (Exception ex)
+                {
+                    bSendIOContexUsed = false;
                     if (mSocket != null)
                     {
-                        bIOSyncCompleted = !mSocket.SendToAsync(e);
+                        NetLog.LogException(ex);
                     }
                 }
             }
-            else
-            {
-                if (mSocket != null)
-                {
-                    try
-                    {
-                        bIOSyncCompleted = !mSocket.SendToAsync(e);
-                    }
-                    catch (Exception ex)
-                    {
-                        bSendIOContexUsed = false;
-                        if (mSocket != null)
-                        {
-                            NetLog.LogException(ex);
-                        }
-                    }
-                }
-            }
-            return !bIOSyncCompleted;
+            return bIOPending;
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)

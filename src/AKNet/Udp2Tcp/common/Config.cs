@@ -12,7 +12,6 @@ namespace AKNet.Udp2Tcp.Common
     public static class Config
 	{
         public const bool bUdpCheck = true;
-        public const bool bUseSocketLock = false;
         public const bool bUseSendAsync = true;
 
         public const ushort nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
