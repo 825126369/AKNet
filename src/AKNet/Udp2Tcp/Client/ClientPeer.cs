@@ -91,11 +91,6 @@ namespace AKNet.Udp2Tcp.Client
 
             }
 
-            while (NetTcpPackageExecute())
-            {
-
-            }
-
             switch (mSocketPeerState)
             {
                 case SOCKET_PEER_STATE.CONNECTING:
@@ -109,6 +104,11 @@ namespace AKNet.Udp2Tcp.Client
                     }
                 case SOCKET_PEER_STATE.CONNECTED:
                     {
+                        while (NetTcpPackageExecute())
+                        {
+
+                        }
+
                         fMySendHeartBeatCdTime += elapsed;
                         if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
                         {

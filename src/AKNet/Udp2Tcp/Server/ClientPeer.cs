@@ -47,18 +47,7 @@ namespace AKNet.Udp2Tcp.Server
 
         public void Update(double elapsed)
         {
-            if (mLastSocketPeerState != mSocketPeerState)
-            {
-                mLastSocketPeerState = mSocketPeerState;
-                this.mServerMgr.OnSocketStateChanged(this);
-            }
-
             while (GetReceiveCheckPackage())
-            {
-
-            }
-
-            while (NetTcpPackageExecute())
             {
 
             }
@@ -67,6 +56,11 @@ namespace AKNet.Udp2Tcp.Server
             {
                 case SOCKET_PEER_STATE.CONNECTED:
                     {
+                        while (NetTcpPackageExecute())
+                        {
+
+                        }
+
                         fMySendHeartBeatCdTime += elapsed;
                         if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
                         {
@@ -89,6 +83,12 @@ namespace AKNet.Udp2Tcp.Server
                     }
                 default:
                     break;
+            }
+
+            if (mLastSocketPeerState != mSocketPeerState)
+            {
+                mLastSocketPeerState = mSocketPeerState;
+                this.mServerMgr.OnSocketStateChanged(this);
             }
 
             mUdpCheckPool.Update(elapsed);

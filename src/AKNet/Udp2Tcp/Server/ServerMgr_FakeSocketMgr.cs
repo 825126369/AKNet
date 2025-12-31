@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Udp2Tcp.Common;
 using System.Net;
 using System.Net.Sockets;
 
@@ -28,7 +29,7 @@ namespace AKNet.Udp2Tcp.Server
 
             if (mFakeSocket == null)
             {
-                if (mAcceptSocketDic.Count >= nMaxPlayerCount)
+                if (mAcceptSocketDic.Count >= Config.MaxPlayerCount)
                 {
 #if DEBUG
                     NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");

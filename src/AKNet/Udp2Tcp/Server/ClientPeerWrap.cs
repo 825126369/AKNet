@@ -101,27 +101,45 @@ namespace AKNet.Udp2Tcp.Server
 
         public void CloseSocket()
         {
-            mInstance.CloseSocket();
+            if (mInstance != null)
+            {
+                mInstance.CloseSocket();
+            }
         }
 
         public void SetName(string name)
         {
-            mInstance.SetName(name);
+            if (mInstance != null)
+            {
+                mInstance.SetName(name);
+            }
         }
 
         public string GetName()
         {
-            return mInstance.GetName();
+            if (mInstance != null)
+            {
+                return mInstance.GetName();
+            }
+            return null;
         }
 
         public void SetID(uint id)
         {
-            mInstance.SetID(id);
+            if (mInstance != null)
+            {
+                mInstance.SetID(id);
+            }
         }
 
         public uint GetID()
         {
-            return mInstance.GetID();
+            if (mInstance != null)
+            {
+                return mInstance.GetID();
+            }
+
+            return 0;
         }
     }
 

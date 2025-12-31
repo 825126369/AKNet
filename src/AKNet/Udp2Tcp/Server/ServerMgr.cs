@@ -27,8 +27,6 @@ namespace AKNet.Udp2Tcp.Server
 
         private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
-        private readonly int nMaxPlayerCount = 0;
-        private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
 
         private int nPort = 0;
         private Socket mSocket = null;
@@ -47,9 +45,8 @@ namespace AKNet.Udp2Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
 
-            nMaxPlayerCount = Config.MaxPlayerCount;
-            mFakeSocketPool = new FakeSocketPool(this, nMaxPlayerCount, nMaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(nMaxPlayerCount);
+            mFakeSocketPool = new FakeSocketPool(this, Config.MaxPlayerCount, Config.MaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
