@@ -21,10 +21,10 @@ namespace AKNet.Udp2Tcp.Client
         {
             this.ServerPort = nPort;
             this.ServerIp = ip;
-            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), nPort);
+            this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ServerIp), ServerPort);
+            //mSocket.Connect(remoteEndPoint);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
-
             ConnectServer();
             StartReceiveEventArg();
         }

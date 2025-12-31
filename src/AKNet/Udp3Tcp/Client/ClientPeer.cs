@@ -47,7 +47,7 @@ namespace AKNet.Udp3Tcp.Client
         private bool bReceiveIOContexUsed = false;
         private bool bSendIOContexUsed = false;
         private readonly object lock_mSocket_object = new object();
-        private readonly AkCircularManySpanBuffer mSendStreamList = null;
+        private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private int nLastSendBytesCount = 0;
@@ -74,8 +74,6 @@ namespace AKNet.Udp3Tcp.Client
 
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
-
-            mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         }
 
         public void Update(double elapsed)

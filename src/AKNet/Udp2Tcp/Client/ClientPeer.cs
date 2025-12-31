@@ -20,11 +20,10 @@ namespace AKNet.Udp2Tcp.Client
     {
         private readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-        private readonly UdpCheckMgr mUdpCheckPool = null;
         private readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
-        private readonly CryptoMgr mCryptoMgr;
-
+        private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
         private readonly ObjectPoolManager mObjectPoolManager = new ObjectPoolManager();
+
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
@@ -38,14 +37,16 @@ namespace AKNet.Udp2Tcp.Client
         private double fConnectCdTime = 0.0;
         private double fDisConnectCdTime = 0.0;
 
-        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
+        private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
+        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+
+        private readonly UdpCheckMgr mUdpCheckPool = null;
         private int nCurrentCheckPackageCount = 0;
 
         private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ServerIp;
@@ -57,7 +58,6 @@ namespace AKNet.Udp2Tcp.Client
         public ClientPeer()
         {
             MainThreadCheck.Check();
-            mCryptoMgr = new CryptoMgr();
             mUdpCheckPool = new UdpCheckMgr(this);
 
             SetSocketState(SOCKET_PEER_STATE.NONE);
