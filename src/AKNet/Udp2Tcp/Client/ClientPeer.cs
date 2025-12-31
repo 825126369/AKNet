@@ -39,15 +39,15 @@ namespace AKNet.Udp2Tcp.Client
         private double fDisConnectCdTime = 0.0;
         public const double fDisConnectMaxCdTime = 2.0;
 
-        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
+        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
 
-        private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly SocketAsyncEventArgs SendArgs;
+        private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private readonly object lock_mSocket_object = new object();
-        private readonly AkCircularSpanBuffer mSendStreamList = null;
+        private readonly AkCircularSpanBuffer mSendStreamList = new AkCircularSpanBuffer();
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ServerIp;
@@ -69,18 +69,13 @@ namespace AKNet.Udp2Tcp.Client
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
 
-            ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.Completed += ProcessReceive;
-
-            SendArgs = new SocketAsyncEventArgs();
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             SendArgs.Completed += ProcessSend;
 
             bReceiveIOContexUsed = false;
             bSendIOContexUsed = false;
-
-            mSendStreamList = new AkCircularSpanBuffer();
 
         }
 

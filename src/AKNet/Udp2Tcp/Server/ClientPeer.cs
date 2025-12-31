@@ -30,7 +30,7 @@ namespace AKNet.Udp2Tcp.Server
         FakeSocket mSocket = null;
         readonly object lock_mSocket_object = new object();
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularSpanBuffer mSendStreamList = null;
+        readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         bool bSendIOContexUsed = false;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
@@ -41,10 +41,8 @@ namespace AKNet.Udp2Tcp.Server
             mUdpCheckPool = new UdpCheckMgr(this);
             SetSocketState(SOCKET_PEER_STATE.NONE);
 
-
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularSpanBuffer();
         }
 
         public void Update(double elapsed)

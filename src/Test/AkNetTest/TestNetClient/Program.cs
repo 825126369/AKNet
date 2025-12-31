@@ -6,7 +6,7 @@ namespace TestNetClient
     {
         public override NetClientMainBase Create()
         {
-            return new NetClientMain(NetType.Udp3Tcp);
+            return new NetClientMain(NetType.Udp2Tcp);
         }
 
         public override void OnTestFinish()
