@@ -98,7 +98,6 @@ namespace AKNet.Udp2Tcp.Server
 				}
 			}
 			
-            UdpStatistical.AddReceiveIOCount(!bIOPending);
             if (!bIOPending)
 			{
 				ProcessReceive(null, ReceiveArgs);

@@ -30,7 +30,7 @@ namespace AKNet.Udp2Tcp.Server
 
         private int nPort = 0;
         private Socket mSocket = null;
-        private readonly SocketAsyncEventArgs ReceiveArgs;
+        private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
 
@@ -49,7 +49,6 @@ namespace AKNet.Udp2Tcp.Server
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-            ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.Completed += ProcessReceive;
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.RemoteEndPoint = mEndPointEmpty;

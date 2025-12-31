@@ -137,8 +137,6 @@ namespace AKNet.Udp2Tcp.Client
         public void SendNetPackage2(NetUdpFixedSizePackage mPackage)
         {
             UdpPackageEncryption.Encode(mPackage);
-            mPackage.remoteEndPoint = GetIPEndPoint();
-
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
