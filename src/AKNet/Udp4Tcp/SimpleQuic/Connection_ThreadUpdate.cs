@@ -36,6 +36,13 @@ namespace AKNet.Udp4Tcp.Common
             lock (mMTReceiveStreamList)
             {
                 mMTReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+                if (mWRReceiveEventArgs.TryGetTarget(out ConnectionEventArgs arg)) 
+                {
+                    arg.Offset = 0;
+                    arg.Length = arg.MemoryBuffer.Length;
+                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetSpan());
+                    arg.TriggerEvent();
+                }
             }
         }
 

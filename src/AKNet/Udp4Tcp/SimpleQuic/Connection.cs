@@ -52,6 +52,7 @@ namespace AKNet.Udp4Tcp.Common
 
         protected readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         protected readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        protected readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
 
 
         public Connection()
@@ -140,7 +141,25 @@ namespace AKNet.Udp4Tcp.Common
 
         public bool ReceiveAsync(ConnectionEventArgs arg)
         {
-            return true;
+            bool bIOPending = true;
+            arg.LastOperation = ConnectionAsyncOperation.Receive;
+            arg.ConnectionError = ConnectionError.Success;
+            lock (mMTReceiveStreamList)
+            {
+                if (mMTReceiveStreamList.Length > 0)
+                {
+                    bIOPending = false;
+                    arg.Offset = 0;
+                    arg.Length = arg.MemoryBuffer.Length;
+                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetSpan());
+                }
+                else
+                {
+                    mWRReceiveEventArgs.SetTarget(arg);
+                }
+            }
+
+            return bIOPending;
         }
 
         public bool Connected

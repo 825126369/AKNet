@@ -13,7 +13,7 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal static class Config
 	{
-        public static readonly int nSocketCount = Environment.ProcessorCount;
+        public static readonly int nSocketCount = 1;
         public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 10;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;

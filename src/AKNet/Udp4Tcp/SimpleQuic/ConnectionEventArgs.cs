@@ -23,7 +23,7 @@ namespace AKNet.Udp4Tcp.Common
             this.Length = Length;
         }
 
-        public ReadOnlySpan<byte> GetSpan()
+        public Span<byte> GetSpan()
         {
             return MemoryBuffer.Span.Slice(Offset, Length);
         }
