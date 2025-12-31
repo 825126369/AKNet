@@ -50,8 +50,8 @@ namespace AKNet.Udp2Tcp.Client
         private readonly AkCircularSpanBuffer mSendStreamList = null;
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
-        private string ip;
-        private int port;
+        private string ServerIp;
+        private int ServerPort;
 
         bool bReceiveIOContexUsed = false;
         bool bSendIOContexUsed = false;

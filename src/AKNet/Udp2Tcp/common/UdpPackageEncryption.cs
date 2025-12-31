@@ -12,12 +12,9 @@ using System;
 
 namespace AKNet.Udp2Tcp.Common
 {
-    /// <summary>
-    /// 把数据拿出来
-    /// </summary>
     internal static class UdpPackageEncryption
     {
-        private static readonly byte[] mCheck = new byte[4] { (byte)'$', (byte)'$', (byte)'$', (byte)'$' };
+        private static readonly byte[] mCheck = new byte[2] { (byte)'$', (byte)'$'};
         public static bool Decode(ReadOnlySpan<byte> mBuff, NetUdpFixedSizePackage mPackage)
         {
             if (mBuff.Length < Config.nUdpPackageFixedHeadSize)
@@ -26,7 +23,7 @@ namespace AKNet.Udp2Tcp.Common
                 return false;
             }
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 2; i++)
             {
                 if (mBuff[i] != mCheck[i])
                 {
@@ -35,15 +32,15 @@ namespace AKNet.Udp2Tcp.Common
                 }
             }
 
-            mPackage.nOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(4));
+            mPackage.nOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(2));
             if (mPackage.nOrderId == 0)
             {
                 NetLog.LogError($"解码失败 3");
                 return false;
             }
 
-            mPackage.nRequestOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(6));
-            ushort nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(8));
+            mPackage.nRequestOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(4));
+            ushort nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(6));
 
             if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
             {
@@ -61,10 +58,10 @@ namespace AKNet.Udp2Tcp.Common
             ushort nRequestOrderId = mPackage.nRequestOrderId;
             ushort nBodyLength = (ushort)(mPackage.Length - Config.nUdpPackageFixedHeadSize);
 
-            Array.Copy(mCheck, 0, mPackage.buffer, 0, 4);
-            EndianBitConverter.SetBytes(mPackage.buffer, 4, nOrderId);
-            EndianBitConverter.SetBytes(mPackage.buffer, 6, nRequestOrderId);
-            EndianBitConverter.SetBytes(mPackage.buffer, 8, nBodyLength);
+            Array.Copy(mCheck, 0, mPackage.buffer, 0, 2);
+            EndianBitConverter.SetBytes(mPackage.buffer, 2, nOrderId);
+            EndianBitConverter.SetBytes(mPackage.buffer, 4, nRequestOrderId);
+            EndianBitConverter.SetBytes(mPackage.buffer, 6, nBodyLength);
         }
 
 	}

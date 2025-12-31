@@ -19,9 +19,9 @@ namespace AKNet.Udp2Tcp.Client
     {
         public void ConnectServer(string ip, int nPort)
         {
-            this.port = nPort;
-            this.ip = ip;
-            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            this.ServerPort = nPort;
+            this.ServerIp = ip;
+            remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), nPort);
             ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             SendArgs.RemoteEndPoint = remoteEndPoint;
 
