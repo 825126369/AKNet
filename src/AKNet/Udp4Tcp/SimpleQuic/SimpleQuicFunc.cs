@@ -1,6 +1,6 @@
 ﻿namespace AKNet.Udp4Tcp.Common
 {
-    internal enum ConnectionPeerType
+    internal enum ConnectionType
     {
         Client,
         Server,

@@ -7,13 +7,15 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal static class ThreadWorkerMgr
     {
-        private static readonly ThreadWorker[] mThreadWorkerList = new ThreadWorker[Environment.ProcessorCount];
+        private static readonly List<ThreadWorker> mThreadWorkerList = new List<ThreadWorker>();
         private static bool bInit = false;
 
         public static void Init()
@@ -21,10 +23,11 @@ namespace AKNet.Udp4Tcp.Common
             if (bInit) return;
             bInit = true;
             
-            for (int i = 0; i < mThreadWorkerList.Length; i++)
+            int nThreadCount = Environment.ProcessorCount;
+            for (int i = 0; i < nThreadCount; i++)
             {
-                mThreadWorkerList[i] = new ThreadWorker();
-                mThreadWorkerList[i].Init();
+                var mThreadWorker = new ThreadWorker();
+                mThreadWorkerList.Add(mThreadWorker);
             }
         }
 
@@ -38,9 +41,10 @@ namespace AKNet.Udp4Tcp.Common
             return mThreadWorkerList[i];
         }
 
-        public static ThreadWorker GetRandomWorker(int i)
+        public static ThreadWorker GetRandomThreadWorker()
         {
-            return mThreadWorkerList[i];
+            int nRandomIndex = RandomTool.RandomArrayIndex(0, mThreadWorkerList.Count);
+            return mThreadWorkerList[nRandomIndex];
         }
     }
 }

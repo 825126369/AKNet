@@ -15,8 +15,8 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = new Dictionary<IPEndPoint, Connection>();
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
         private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
-        readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
+        private readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        private readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
         private bool bInit = false;
 
         private void Init()
@@ -27,7 +27,8 @@ namespace AKNet.Udp4Tcp.Common
             ThreadWorkerMgr.Init();
             for (int i = 0; i < mLogicWorkerList.Length; i++)
             {
-                mLogicWorkerList[i] = new LogicWorker(i);
+                mLogicWorkerList[i] = new LogicWorker();
+                mLogicWorkerList[i].Init(i);
             }
         }
 

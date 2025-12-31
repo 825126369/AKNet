@@ -48,7 +48,7 @@ namespace AKNet.Udp4Tcp.Common
 
                 if (UdpNetCommand.orInnerCommand(nInnerCommandId))
                 {
-                    mThreadWorker.mReceivePackagePool.recycle(mReceivePackage);
+                    mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mReceivePackage);
                 }
                 else
                 {
@@ -66,7 +66,7 @@ namespace AKNet.Udp4Tcp.Common
                     ReceiveDisConnect();
                 }
 
-                mThreadWorker.mReceivePackagePool.recycle(mReceivePackage);
+                mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mReceivePackage);
             }
         }
 
@@ -92,7 +92,7 @@ namespace AKNet.Udp4Tcp.Common
                     var mTempPackage = mCacheReceivePackageList[i];
                     if (mTempPackage.nOrderId <= nCurrentWaitReceiveOrderId)
                     {
-                        mThreadWorker.mReceivePackagePool.recycle(mTempPackage);
+                        mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mTempPackage);
                         mCacheReceivePackageList.RemoveAt(i);
                     }
                 }
@@ -115,7 +115,7 @@ namespace AKNet.Udp4Tcp.Common
                 else
                 {
                     UdpStatistical.AddGarbagePackageCount();
-                    mThreadWorker.mReceivePackagePool.recycle(mPackage);
+                    mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mPackage);
                 }
             }
 
@@ -128,7 +128,7 @@ namespace AKNet.Udp4Tcp.Common
         private void CheckCombinePackage(NetUdpReceiveFixedSizePackage mCheckPackage)
         {
             ReceiveTcpStream(mCheckPackage);
-            mThreadWorker.mReceivePackagePool.recycle(mCheckPackage);
+            mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mCheckPackage);
         }
 
         public void SetRequestOrderId(NetUdpSendFixedSizePackage mPackage)

@@ -15,7 +15,7 @@ using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class ThreadWorker:IDisposable
+    internal class ThreadWorker:IDisposable
     {
         //每个线程，被多个逻辑Worker使用，比如创建了 N个服务器，那么线程池复用。
         private readonly static List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
@@ -27,9 +27,13 @@ namespace AKNet.Udp4Tcp.Common
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
         private readonly ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
 
-
+        private bool bInit = false;
+        //谁用到他，再启动他
         public void Init()
         {
+            if(bInit) return; 
+            bInit = true;
+
             Thread mThread = new Thread(ThreadFunc);
             mThread.IsBackground = true;
             mThread.Start();

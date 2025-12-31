@@ -29,7 +29,7 @@ namespace AKNet.Udp4Tcp.Common
             }
             mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
             mSendArgs.UserToken = mPackage;
-            mSocketItem.SendToAsync(mSendArgs);
+            mLogicWorker.mSocketItem.SendToAsync(mSendArgs);
         }
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
@@ -37,7 +37,7 @@ namespace AKNet.Udp4Tcp.Common
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mThreadWorker.mReceivePackagePool.Pop();
+                var mPackage = mLogicWorker.mThreadWorker.mReceivePackagePool.Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
@@ -60,7 +60,7 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else
                 {
-                    mThreadWorker.mReceivePackagePool.recycle(mPackage);
+                    mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mPackage);
                     NetLog.LogError("解码失败 !!!");
                     break;
                 }

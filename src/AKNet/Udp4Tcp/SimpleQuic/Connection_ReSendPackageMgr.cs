@@ -37,8 +37,8 @@ namespace AKNet.Udp4Tcp.Common
             {
                 NetLog.Assert(nOffset >= 0);
 
-                var mPackage = mThreadWorker.mSendPackagePool.Pop();
-                mPackage.mThreadWorker = mThreadWorker;
+                var mPackage = mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
+                mPackage.mLogicWorker = mLogicWorker;
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
                 int nRemainLength = mTcpSlidingWindow.Length - nOffset;
@@ -131,7 +131,7 @@ namespace AKNet.Udp4Tcp.Common
                         mPackage.mTcpStanardRTOTimer.FinishRtt(this);
                     }
 
-                    mThreadWorker.mSendPackagePool.recycle(mPackage);
+                    mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
                     Sure();
                 }
 

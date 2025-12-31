@@ -20,16 +20,27 @@ namespace AKNet.Udp4Tcp.Common
         private readonly static LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
         private readonly LinkedListNode<LogicWorker> mEntry;
-        private readonly int nThreadIndex;
-        private ThreadWorker mThreadWorker;
-        private SocketItem mSocketItem;
 
-        public LogicWorker(int nThreadIndex)
+        public ThreadWorker mThreadWorker;
+        public SocketItem mSocketItem;
+
+        public LogicWorker()
         {
-            this.nThreadIndex = nThreadIndex;
             this.mEntry = new LinkedListNode<LogicWorker>(this);
+        }
+
+        public void Init(int nThreadIndex)
+        {
             this.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(nThreadIndex);
             this.mThreadWorker.AddLogicWorker(this);
+            this.mThreadWorker.Init();
+        }
+
+        public void Init(ThreadWorker mThreadWorker)
+        {
+            this.mThreadWorker = mThreadWorker;
+            this.mThreadWorker.AddLogicWorker(this);
+            this.mThreadWorker.Init();
         }
 
         public void SetSocketItem(SocketItem mSocketItem)
@@ -54,8 +65,6 @@ namespace AKNet.Udp4Tcp.Common
         public void AddConnectionPeer(Connection peer)
         {
             peer.mLogicWorker = this;
-            peer.mThreadWorker = mThreadWorker;
-            peer.mSocketItem = mSocketItem;
             mConnectionList.AddLast(peer);
         }
 

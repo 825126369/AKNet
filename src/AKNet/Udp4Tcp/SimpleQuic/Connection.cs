@@ -7,9 +7,7 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection : IDisposable, IPoolItemInterface
     {
-        SocketMgr.Config mConfig;
-        readonly LogicWorker[] mLogicWorkerList = new LogicWorker[1];
-        private bool bInit = false;
+        private SocketMgr.Config mConfig;
         private SocketMgr mSocketMgr = new SocketMgr();
 
         private int nCurrentCheckPackageCount = 0;
@@ -20,7 +18,7 @@ namespace AKNet.Udp4Tcp.Common
 
         private readonly AkCircularManySpanBuffer mSendUDPPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
-        protected bool m_Connected;
+        private bool m_Connected;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
 
@@ -39,10 +37,8 @@ namespace AKNet.Udp4Tcp.Common
         private int nMaxSearchCount = int.MaxValue;
         private int nRemainNeedSureCount = 0;
 
-        public ThreadWorker mThreadWorker = null;
         public LogicWorker mLogicWorker = null;
-        public SocketItem mSocketItem = null;
-        private ConnectionPeerType mConnectionPeerType;
+        private ConnectionType mConnectionType;
 
         readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
         long nLastSendSurePackageTime = 0;
@@ -50,18 +46,22 @@ namespace AKNet.Udp4Tcp.Common
 
         UdpClientPeerCommonBase mClientPeer;
 
-        protected readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        protected readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        protected readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        private readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        private readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        private bool bInit = false;
 
-
-        public Connection()
+        public void Init(ConnectionType nType)
         {
-            ThreadWorkerMgr.Init();
-            for (int i = 0; i < mLogicWorkerList.Length; i++)
+            if (bInit) return;
+            bInit = true;
+
+            this.mConnectionType = nType;
+            if (this.mConnectionType == ConnectionType.Client)
             {
-                int nThreadWorkerIndex = RandomTool.RandomArrayIndex(0, Environment.ProcessorCount);
-                mLogicWorkerList[i] = new LogicWorker(nThreadWorkerIndex);
+                ThreadWorkerMgr.Init();
+                mLogicWorker = new LogicWorker();
+                mLogicWorker.Init(ThreadWorkerMgr.GetRandomThreadWorker());
             }
 
             this.nSearchCount = nMinSearchCount;
@@ -71,6 +71,11 @@ namespace AKNet.Udp4Tcp.Common
             InitRTO();
         }
 
+        private void OnConnectInit()
+        {
+            Init(ConnectionType.Client);
+        }
+
         public void Dispose()
         {
             
@@ -78,6 +83,8 @@ namespace AKNet.Udp4Tcp.Common
         
         public bool ConnectAsync(ConnectionEventArgs arg)
         {
+            OnConnectInit();
+
             bool bIOPending = true;
             if (m_Connected)
             {
@@ -95,6 +102,7 @@ namespace AKNet.Udp4Tcp.Common
 
                 if (SimpleQuicFunc.SUCCEEDED(mSocketMgr.InitNet(mConfig)))
                 {
+                    mLogicWorker.mSocketItem = mSocketMgr.GetSocketItem(0);
                     mWRConnectEventArgs.SetTarget(arg);
                     SendConnect();
                 }

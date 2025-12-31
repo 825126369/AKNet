@@ -27,7 +27,7 @@ namespace AKNet.Common
 	{
         private readonly Stack<T> mObjectPool = null;
 		private readonly int nMaxCapacity = 0;
-		public ObjectPool(int initCapacity = 16, int MaxCapacity = 0)
+		public ObjectPool(int initCapacity = 0, int MaxCapacity = 0)
 		{
             this.nMaxCapacity = MaxCapacity;
             mObjectPool = new Stack<T>(initCapacity);
@@ -35,7 +35,6 @@ namespace AKNet.Common
 			{
 				mObjectPool.Push(new T());
 			}
-			mObjectPool.TrimExcess();
 		}
 
 		public int Count()

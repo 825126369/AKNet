@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.WebSocket")]
+[assembly: InternalsVisibleTo("AKNet.Extentions.Protobuf")]
 namespace AKNet.Common
 {
     internal static class BufferTool

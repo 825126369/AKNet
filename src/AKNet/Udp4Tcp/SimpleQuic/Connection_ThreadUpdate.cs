@@ -96,10 +96,10 @@ namespace AKNet.Udp4Tcp.Common
         public void SendInnerNetData(byte id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpSendFixedSizePackage mPackage = mThreadWorker.mSendPackagePool.Pop();
+            NetUdpSendFixedSizePackage mPackage = mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
             mPackage.SetInnerCommandId(id);
             SendUDPPackage(mPackage);
-            mThreadWorker.mSendPackagePool.recycle(mPackage);
+            mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
         }
 
         public void SendUDPPackage(NetUdpSendFixedSizePackage mPackage)
@@ -135,7 +135,7 @@ namespace AKNet.Udp4Tcp.Common
             mTcpSlidingWindow.WindowReset();
             foreach (var mRemovePackage in mWaitCheckSendQueue)
             {
-                mThreadWorker.mSendPackagePool.recycle(mRemovePackage);
+                mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mRemovePackage);
             }
             mWaitCheckSendQueue.Clear();
 
@@ -144,7 +144,7 @@ namespace AKNet.Udp4Tcp.Common
                 int nRemoveIndex = mCacheReceivePackageList.Count - 1;
                 NetUdpReceiveFixedSizePackage mRemovePackage = mCacheReceivePackageList[nRemoveIndex];
                 mCacheReceivePackageList.RemoveAt(nRemoveIndex);
-                mThreadWorker.mReceivePackagePool.recycle(mRemovePackage);
+                mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mRemovePackage);
             }
 
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;

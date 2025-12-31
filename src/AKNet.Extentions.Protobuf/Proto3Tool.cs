@@ -56,16 +56,7 @@ namespace AKNet.Extentions.Protobuf
         private static byte[] EnSureSendBufferOk(IMessage data)
         {
             int Length = data.CalculateSize();
-            if (cacheSendProtobufBuffer.Length < Length)
-            {
-                int newSize = cacheSendProtobufBuffer.Length * 2;
-                while (newSize < Length)
-                {
-                    newSize *= 2;
-                }
-
-                cacheSendProtobufBuffer = new byte[newSize];
-            }
+            BufferTool.EnSureBufferOk_Power2(ref cacheSendProtobufBuffer, Length);
             return cacheSendProtobufBuffer;
         }
     }

@@ -44,8 +44,8 @@ namespace AKNet.Udp4Tcp.Client
             NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
             Reset();
-            mConnection = new Connection();
 
+            mConnection = new Connection();
             if (mIPEndPoint == null)
             {
                 IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
