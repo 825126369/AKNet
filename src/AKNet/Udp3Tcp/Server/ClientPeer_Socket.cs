@@ -90,7 +90,7 @@ namespace AKNet.Udp3Tcp.Server
             lock (mSendStreamList)
             {
                 var mBufferItem = mSendStreamList.BeginSpan();
-                mSendStreamList.WriteFrom(UdpPackageEncryption.EncodeHead(mPackage));
+                mBufferItem.AddSpan(UdpPackageEncryption.EncodeHead(mPackage));
                 if (mPackage.WindowBuff != null)
                 {
                     mPackage.WindowBuff.CopyTo(mBufferItem.GetCanWriteSpan(), mPackage.WindowOffset, mPackage.WindowLength);

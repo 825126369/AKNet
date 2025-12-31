@@ -42,11 +42,10 @@ namespace AKNet.Udp3Tcp.Client
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
 
-        private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly SocketAsyncEventArgs SendArgs;
+        private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
+        private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private bool bReceiveIOContexUsed = false;
         private bool bSendIOContexUsed = false;
-        private readonly object lock_mSocket_object = new object();
         private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
@@ -64,11 +63,8 @@ namespace AKNet.Udp3Tcp.Client
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
 
-            ReceiveArgs = new SocketAsyncEventArgs();
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.Completed += ProcessReceive;
-
-            SendArgs = new SocketAsyncEventArgs();
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             SendArgs.Completed += ProcessSend;
 

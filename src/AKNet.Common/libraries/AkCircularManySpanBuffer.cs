@@ -158,7 +158,8 @@ namespace AKNet.Common
         
         public void FinishSpan()
 		{
-			nCurrentWriteBlock = nCurrentWriteBlock.Next;
+            nSumByteCount += nCurrentWriteBlock.Value.nSpanLength;
+            nCurrentWriteBlock = nCurrentWriteBlock.Next;
 			if(nCurrentWriteBlock == null)
 			{
                 BufferItem mItem = new BufferItem(nMaxBlockSize);
@@ -167,12 +168,13 @@ namespace AKNet.Common
             }
         }
 
-        public void WriteFrom(ReadOnlySpan<byte> readOnlySpan)
-		{
-            nCurrentWriteBlock.Value.AddSpan(readOnlySpan);
-            nSumByteCount += readOnlySpan.Length;
+        public void WriteOneSpan(ReadOnlySpan<byte> readOnlySpan)
+        {
+            var mItem = BeginSpan();
+            mItem.AddSpan(readOnlySpan);
+            FinishSpan();
         }
-
+        
         public int WriteTo(Span<byte> readBuffer)
 		{
 			ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetCanReadSpan();
