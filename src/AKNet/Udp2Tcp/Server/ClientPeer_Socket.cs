@@ -49,14 +49,14 @@ namespace AKNet.Udp2Tcp.Server
             return mSocket.GetReceivePackage(out mPackage);
         }
 
-        public void SendToAsync(SocketAsyncEventArgs e)
+        public void StartSendEventArg()
         {
             bool bIOPending = false;
             if (mSocket != null)
             {
                 try
                 {
-                    bIOPending = mSocket.SendToAsync(e);
+                    bIOPending = mSocket.SendToAsync(SendArgs);
                 }
                 catch (Exception ex)
                 {
@@ -135,7 +135,7 @@ namespace AKNet.Udp2Tcp.Server
             {
                 nLastSendBytesCount = nSendBytesCount;
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                SendToAsync(SendArgs);
+                StartSendEventArg();
             }
             else
             {
