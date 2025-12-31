@@ -29,7 +29,7 @@ namespace AKNet.Common
             }
             else if (nNetType == NetType.Udp2Tcp)
             {
-                mInterface = new AKNet.Udp2Tcp.Client.Udp2TcpNetClientMain();
+                mInterface = new AKNet.Udp2Tcp.Client.NetClientMain();
             }
             else if (nNetType == NetType.Udp3Tcp)
             {

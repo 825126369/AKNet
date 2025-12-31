@@ -10,23 +10,22 @@
 using AKNet.Common;
 using System;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
     internal class ClientPeerWrap : ClientPeerBase
 	{
         private ClientPeer mInstance = null;
-        private UdpServer mNetServer;
-        public ClientPeerWrap(UdpServer mNetServer)
+        private ServerMgr mNetServer;
+        public ClientPeerWrap(ServerMgr mNetServer)
 		{
             this.mNetServer = mNetServer;
-            this.mInstance = mNetServer.mClientPeerPool.Pop();
+            this.mInstance = mNetServer.GetClientPeerPool().Pop();
         }
 
         public void Reset()
         {
-            mNetServer.mClientPeerPool.recycle(mInstance);
+            mNetServer.GetClientPeerPool().recycle(mInstance);
             mNetServer = null;
             mInstance = null;
         }

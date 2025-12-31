@@ -13,29 +13,20 @@ using System;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class MsgSendMgr
-	{
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
-
-		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-		{
-			this.mNetServer = mNetServer;
-			this.mClientPeer = mClientPeer;
-		}
-
+    internal partial class ClientPeer
+    {
         public void SendInnerNetData(UInt16 id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+            NetUdpFixedSizePackage mPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
             mPackage.SetPackageId(id);
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            mClientPeer.SendNetPackage(mPackage);
+            SendNetPackage(mPackage);
         }
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
                 SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
             }
@@ -43,20 +34,25 @@ namespace AKNet.Udp2Tcp.Server
 
         public void SendNetData(UInt16 id)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                mClientPeer.mUdpCheckPool.SendTcpStream(ReadOnlySpan<byte>.Empty);
+                mUdpCheckPool.SendTcpStream(ReadOnlySpan<byte>.Empty);
             }
+        }
+
+        public void SendNetData(UInt16 id, byte[] data)
+        {
+            SendNetData(id, data.AsSpan());
         }
 
         public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                ReadOnlySpan<byte> mData = mNetServer.mCryptoMgr.Encode(id, data);
-                mClientPeer.mUdpCheckPool.SendTcpStream(mData);
+                ReadOnlySpan<byte> mData = mServerMgr.GetCryptoMgr().Encode(id, data);
+                mUdpCheckPool.SendTcpStream(mData);
             }
         }
 

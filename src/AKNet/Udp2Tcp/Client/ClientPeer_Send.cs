@@ -13,26 +13,20 @@ using System;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    internal class MsgSendMgr
-	{
-        private ClientPeer mClientPeer;
-        public MsgSendMgr(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-        }
-
+    internal partial class ClientPeer
+    {
 		public void SendInnerNetData(UInt16 id)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+			NetUdpFixedSizePackage mPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
 			mPackage.SetPackageId(id);
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
-			mClientPeer.SendNetPackage(mPackage);
+			SendNetPackage(mPackage);
 		}
 
 		public void SendNetData(NetPackage mNetPackage)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
                 SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
             }
@@ -40,11 +34,11 @@ namespace AKNet.Udp2Tcp.Client
 
 		public void SendNetData(UInt16 id)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-				ReadOnlySpan<byte> mData = mClientPeer.mCryptoMgr.Encode(id, ReadOnlySpan<byte>.Empty);
-				mClientPeer.mUdpCheckPool.SendTcpStream(mData);
+				ReadOnlySpan<byte> mData = mCryptoMgr.Encode(id, ReadOnlySpan<byte>.Empty);
+				mUdpCheckPool.SendTcpStream(mData);
 			}
 		}
 
@@ -55,11 +49,11 @@ namespace AKNet.Udp2Tcp.Client
 
         public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                ReadOnlySpan<byte> mData = mClientPeer.mCryptoMgr.Encode(id, data);
-                mClientPeer.mUdpCheckPool.SendTcpStream(mData);
+                ReadOnlySpan<byte> mData = mCryptoMgr.Encode(id, data);
+                mUdpCheckPool.SendTcpStream(mData);
             }
         }
     }

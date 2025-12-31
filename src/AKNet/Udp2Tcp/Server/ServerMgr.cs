@@ -10,39 +10,54 @@
 using AKNet.Common;
 using AKNet.Udp2Tcp.Common;
 using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class UdpServer:NetServerInterface
+    internal partial class ServerMgr : NetServerInterface
 	{
         private readonly NetStreamPackage mLikeTcpNetPackage = new NetStreamPackage();
-
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
-
-        private readonly InnerCommandSendMgr mInnerCommandSendMgr = null;
-        internal readonly ClientPeerPool mClientPeerPool = null;
-        private readonly FakeSocketMgr mFakeSocketMgr = null;
-        private readonly ClientPeerWrapMgr mClientPeerMgr = null;
+        private readonly ClientPeerPool mClientPeerPool = null;
         private readonly ObjectPoolManager mObjectPoolManager;
-        private readonly SocketUdp_Server mSocketMgr;
-        private readonly Config mConfig;
-        internal readonly CryptoMgr mCryptoMgr;
+        private readonly CryptoMgr mCryptoMgr;
 
-        public UdpServer()
+        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
+        private readonly FakeSocketPool mFakeSocketPool = null;
+        private readonly int nMaxPlayerCount = 0;
+        private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
+
+        private int nPort = 0;
+        private Socket mSocket = null;
+        private readonly SocketAsyncEventArgs ReceiveArgs;
+        private readonly object lock_mSocket_object = new object();
+        private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
+        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+
+        public ServerMgr()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            mConfig = new Config();
             mCryptoMgr = new CryptoMgr();
-            mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mInnerCommandSendMgr = new InnerCommandSendMgr(this);
-            mFakeSocketMgr = new FakeSocketMgr(this);
-            mClientPeerMgr = new ClientPeerWrapMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+
+            nMaxPlayerCount = Config.MaxPlayerCount;
+            mFakeSocketPool = new FakeSocketPool(this, nMaxPlayerCount, nMaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(nMaxPlayerCount);
+
+            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+            ReceiveArgs = new SocketAsyncEventArgs();
+            ReceiveArgs.Completed += ProcessReceive;
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
         }
 
         public void Update(double elapsed)
@@ -51,12 +66,27 @@ namespace AKNet.Udp2Tcp.Server
             {
                 NetLog.LogWarning("NetServer 帧 时间 太长: " + elapsed);
             }
-            mClientPeerMgr.Update(elapsed);
-        }
 
-        public Config GetConfig()
-        {
-            return mConfig;
+            while (CreateClientPeer())
+            {
+
+            }
+
+            for (int i = mClientList.Count - 1; i >= 0; i--)
+            {
+                var mClientPeer = mClientList[i];
+                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    mClientPeer.Update(elapsed);
+                }
+                else
+                {
+                    mClientList.RemoveAt(i);
+                    PrintRemoveClientMsg(mClientPeer);
+                    mClientPeer.Reset();
+                    mClientPeer.CloseSocket();
+                }
+            }
         }
 
         public NetStreamPackage GetLikeTcpNetPackage()
@@ -74,59 +104,29 @@ namespace AKNet.Udp2Tcp.Server
 			return mPackageManager;
 		}
 
-        public InnerCommandSendMgr GetInnerCommandSendMgr()
-        {
-            return mInnerCommandSendMgr;
-        }
-
-        public FakeSocketMgr GetFakeSocketMgr()
-        {
-            return mFakeSocketMgr;
-        }
-
-        public ClientPeerWrapMgr GetClientPeerMgr()
-        {
-            return mClientPeerMgr;
-        }
-
         public ObjectPoolManager GetObjectPoolManager()
         {
             return mObjectPoolManager;
         }
 
-        public SocketUdp_Server GetSocketMgr()
+        public ClientPeerPool GetClientPeerPool()
         {
-            return mSocketMgr;
-        }
-
-        public void InitNet()
-        {
-            mSocketMgr.InitNet();
-        }
-
-        public void InitNet(int nPort)
-        {
-            mSocketMgr.InitNet(nPort);
-        }
-
-        public void InitNet(string Ip, int nPort)
-        {
-            mSocketMgr.InitNet(Ip, nPort);
+            return mClientPeerPool;
         }
 
         public void Release()
         {
-            mSocketMgr.Release();
+            CloseSocket();
         }
 
         public SOCKET_SERVER_STATE GetServerState()
         {
-            return mSocketMgr.GetServerState();
+            return mState;
         }
 
         public int GetPort()
         {
-            return mSocketMgr.GetPort();
+            return nPort;
         }
 
         public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> mFunc)

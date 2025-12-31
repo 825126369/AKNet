@@ -17,30 +17,8 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class SocketUdp_Server
-	{
-		private int nPort = 0;
-		private Socket mSocket = null;
-		private UdpServer mNetServer = null;
-		
-        private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly object lock_mSocket_object = new object();
-		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
-        public SocketUdp_Server(UdpServer mNetServer)
-		{
-			this.mNetServer = mNetServer;
-
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-
-            ReceiveArgs = new SocketAsyncEventArgs();
-            ReceiveArgs.Completed += ProcessReceive;
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
-        }
-
+    internal partial class ServerMgr
+    {
 		public void InitNet()
 		{
 			List<int> mPortList = IPAddressHelper.GetAvailableUdpPortList();
@@ -102,21 +80,6 @@ namespace AKNet.Udp2Tcp.Server
 			}
 		}
 
-		public int GetPort()
-		{
-			return this.nPort;
-		}
-
-        public SOCKET_SERVER_STATE GetServerState()
-        {
-            return mState;
-        }
-
-		public Socket GetSocket()
-		{
-			return mSocket;
-		}
-
 		private void StartReceiveFromAsync()
 		{
 			bool bIOSyncCompleted = false;
@@ -160,7 +123,7 @@ namespace AKNet.Udp2Tcp.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-                mNetServer.GetFakeSocketMgr().MultiThreadingReceiveNetPackage(e);
+                MultiThreadingReceiveNetPackage(e);
                 e.RemoteEndPoint = mEndPointEmpty;
 			}
 			StartReceiveFromAsync();
@@ -228,7 +191,7 @@ namespace AKNet.Udp2Tcp.Server
 			return !bIOSyncCompleted;
 		}
 
-        public void Release()
+        public void CloseSocket()
 		{
 			if (Config.bUseSocketLock) 
 			{

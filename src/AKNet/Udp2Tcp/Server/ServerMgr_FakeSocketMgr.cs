@@ -8,30 +8,13 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp2Tcp.Common;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class FakeSocketMgr
+    internal partial class ServerMgr
     {
-        private UdpServer mNetServer = null;
-        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
-        private readonly FakeSocketPool mFakeSocketPool = null;
-        private readonly int nMaxPlayerCount = 0;
-
-        private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
-
-        public FakeSocketMgr(UdpServer mNetServer)
-        {
-            this.mNetServer = mNetServer;
-            nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
-            mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(nMaxPlayerCount);
-        }
-
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             IPEndPoint endPoint = (IPEndPoint)e.RemoteEndPoint;
@@ -55,7 +38,7 @@ namespace AKNet.Udp2Tcp.Server
                 {
                     mFakeSocket = mFakeSocketPool.Pop();
                     mFakeSocket.RemoteEndPoint = endPoint;
-                    mNetServer.GetClientPeerMgr().MultiThreadingHandleConnectedSocket(mFakeSocket);
+                    MultiThreadingHandleConnectedSocket(mFakeSocket);
 
                     lock (mAcceptSocketDic)
                     {

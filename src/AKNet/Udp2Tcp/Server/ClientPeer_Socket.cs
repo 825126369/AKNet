@@ -15,39 +15,16 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class ClientPeerSocketMgr
+    internal partial class ClientPeer
     {
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
-
-        FakeSocket mSocket = null;
-        readonly object lock_mSocket_object =new object();
-
-        readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularSpanBuffer mSendStreamList = null;
-        bool bSendIOContexUsed = false;
-
-        IPEndPoint mIPEndPoint;
-
-        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-        {
-            this.mNetServer = mNetServer;
-            this.mClientPeer = mClientPeer;
-
-            SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            mSendStreamList = new AkCircularSpanBuffer();
-        }
-
         public void HandleConnectedSocket(FakeSocket mSocket)
         {
             MainThreadCheck.Check();
             NetLog.Assert(mSocket != null, "mSocket == null");
 
             this.mSocket = mSocket;
-            this.mIPEndPoint = mSocket.RemoteEndPoint;
-
-            SendArgs.RemoteEndPoint = this.mIPEndPoint;
+            SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -58,7 +35,7 @@ namespace AKNet.Udp2Tcp.Server
             }
             else
             {
-                return mIPEndPoint;
+                return null;
             }
         }
 
@@ -115,12 +92,12 @@ namespace AKNet.Udp2Tcp.Server
             else
             {
                 NetLog.LogError(e.SocketError);
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 bSendIOContexUsed = false;
             }
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        public void SendNetPackage2(NetUdpFixedSizePackage mPackage)
         {
             mPackage.remoteEndPoint = GetIPEndPoint();
             UdpPackageEncryption.Encode(mPackage);
@@ -128,7 +105,6 @@ namespace AKNet.Udp2Tcp.Server
             MainThreadCheck.Check();
             if (Config.bUseSendAsync)
             {
-
                 lock (mSendStreamList)
                 {
                     mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
@@ -143,23 +119,7 @@ namespace AKNet.Udp2Tcp.Server
             }
             else
             {
-                mNetServer.GetSocketMgr().SendTo(mPackage);
-            }
-        }
-        
-        public void Reset()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Reset();
-            }
-        }
-
-        public void Release()
-        {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Dispose();
+                mServerMgr.SendTo(mPackage);
             }
         }
 

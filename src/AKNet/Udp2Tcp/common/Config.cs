@@ -7,12 +7,9 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
-using System;
-
 namespace AKNet.Udp2Tcp.Common
 {
-    public class Config
+    public static class Config
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSocketLock = false;
@@ -25,9 +22,9 @@ namespace AKNet.Udp2Tcp.Common
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
 
-		public readonly double fReceiveHeartBeatTimeOut = 5.0;
-		public readonly double fMySendHeartBeatMaxTime = 2.0;
-        public readonly double fReConnectMaxCdTime = 3.0;
-        public readonly int MaxPlayerCount = 10000;
+		public static readonly double fReceiveHeartBeatTimeOut = 5.0;
+		public static readonly double fMySendHeartBeatMaxTime = 2.0;
+        public static readonly double fReConnectMaxCdTime = 3.0;
+        public static readonly int MaxPlayerCount = 10000;
 	}
 }

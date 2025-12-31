@@ -24,7 +24,6 @@ namespace AKNet.Udp2Tcp.Common
 
         public NetUdpFixedSizePackage NetUdpFixedSizePackage_Pop()
         {
-           // return new NetUdpFixedSizePackage();
             return mUdpFixedSizePackagePool.Pop();
         }
 

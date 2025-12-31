@@ -18,14 +18,14 @@ namespace AKNet.Udp2Tcp.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly UdpServer mNetServer;
+        private readonly ServerMgr mServerMgr;
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint { get; set; }
 
-        public FakeSocket(UdpServer mNetServer)
+        public FakeSocket(ServerMgr mServerMgr)
         {
-            this.mNetServer = mNetServer;
+            this.mServerMgr = mServerMgr;
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
@@ -33,7 +33,7 @@ namespace AKNet.Udp2Tcp.Server
             Span<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                var mPackage = mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
@@ -60,7 +60,7 @@ namespace AKNet.Udp2Tcp.Server
                 }
                 else
                 {
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                     NetLog.LogError("解码失败 !!!");
                     break;
                 }
@@ -90,7 +90,7 @@ namespace AKNet.Udp2Tcp.Server
 
         public bool SendToAsync(SocketAsyncEventArgs mArg)
         {
-            return this.mNetServer.GetSocketMgr().SendToAsync(mArg);
+            return this.mServerMgr.SendToAsync(mArg);
         }
 
         public void Reset()
@@ -100,14 +100,14 @@ namespace AKNet.Udp2Tcp.Server
             {
                 while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
                 {
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
             }
         }
 
         public void Close()
         {
-            this.mNetServer.GetFakeSocketMgr().RemoveFakeSocket(this);
+            this.mServerMgr.RemoveFakeSocket(this);
         }
     }
 }

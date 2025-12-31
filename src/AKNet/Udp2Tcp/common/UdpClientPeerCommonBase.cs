@@ -28,7 +28,6 @@ namespace AKNet.Udp2Tcp.Common
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();
         TcpStanardRTOFunc GetTcpStanardRTOFunc();
-        Config GetConfig();
         int GetCurrentFrameRemainPackageCount();
     }
 }

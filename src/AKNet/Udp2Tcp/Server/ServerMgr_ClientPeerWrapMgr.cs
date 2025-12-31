@@ -12,40 +12,10 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal class ClientPeerWrapMgr
+    internal partial class ServerMgr
 	{
-        private UdpServer mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
-
-        public ClientPeerWrapMgr(UdpServer mNetServer)
-        {
-            this.mNetServer = mNetServer;
-        }
-
-        public void Update(double elapsed)
-        {
-            while (CreateClientPeer())
-            {
-
-            }
-
-            for (int i = mClientList.Count - 1; i >= 0; i--)
-            {
-                var mClientPeer = mClientList[i];
-                if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-                {
-                    mClientPeer.Update(elapsed);
-                }
-                else
-                {
-                    mClientList.RemoveAt(i);
-                    PrintRemoveClientMsg(mClientPeer);
-                    mClientPeer.Reset();
-                    mClientPeer.CloseSocket();
-                }
-            }
-        }
 
         public void MultiThreadingHandleConnectedSocket(FakeSocket mSocket)
         {
@@ -67,7 +37,7 @@ namespace AKNet.Udp2Tcp.Server
 
             if (mSocket != null)
             {
-                ClientPeerWrap clientPeer = new ClientPeerWrap(mNetServer);
+                ClientPeerWrap clientPeer = new ClientPeerWrap(this);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

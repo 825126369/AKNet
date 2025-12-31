@@ -7,44 +7,18 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
 using AKNet.Common;
 using AKNet.Udp2Tcp.Common;
+using System;
+using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    internal class MsgReceiveMgr
+    internal partial class ClientPeer
     {
-        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
-        protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
-        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
-        private int nCurrentCheckPackageCount = 0;
-        internal ClientPeer mClientPeer = null;
-
-        public MsgReceiveMgr(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-            mReceiveStreamList = new NetStreamCircularBuffer();
-        }
-
         public int GetCurrentFrameRemainPackageCount()
         {
             return nCurrentCheckPackageCount;
-        }
-
-        public void Update(double elapsed)
-        {
-            while (NetCheckPackageExecute())
-            {
-
-            }
-
-            while (NetTcpPackageExecute())
-            {
-
-            }
         }
 
         private bool NetCheckPackageExecute()
@@ -64,7 +38,7 @@ namespace AKNet.Udp2Tcp.Client
             if (mPackage != null)
             {
                 UdpStatistical.AddReceivePackageCount();
-                mClientPeer.mUdpCheckPool.ReceiveNetPackage(mPackage);
+                mUdpCheckPool.ReceiveNetPackage(mPackage);
                 return true;
             }
 
@@ -76,7 +50,7 @@ namespace AKNet.Udp2Tcp.Client
             var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                var mPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
@@ -102,7 +76,7 @@ namespace AKNet.Udp2Tcp.Client
                 }
                 else
                 {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                     NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                     break;
                 }
@@ -111,10 +85,10 @@ namespace AKNet.Udp2Tcp.Client
 
         private bool NetTcpPackageExecute()
         {
-            bool bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+            bool bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
-                mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mNetPackage);
+                mPackageManager.NetPackageExecute(this, mNetPackage);
             }
             return bSuccess;
         }
@@ -122,23 +96,6 @@ namespace AKNet.Udp2Tcp.Client
         public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
-        }
-
-        public void Reset()
-        {
-            lock (mWaitCheckPackageQueue)
-            {
-                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
-                {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
-            }
-        }
-
-        public void Release()
-        {
-            Reset();
-            mReceiveStreamList.Dispose();
         }
     }
 

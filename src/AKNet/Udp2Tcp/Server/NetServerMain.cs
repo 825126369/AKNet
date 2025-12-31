@@ -13,12 +13,12 @@ using AKNet.Udp2Tcp.Common;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    public class Udp2TcpNetServerMain : NetServerInterface
+    public class NetServerMain : NetServerInterface
     {
-        private UdpServer mNetServer;
-        public Udp2TcpNetServerMain()
+        private ServerMgr mNetServer;
+        public NetServerMain()
         {
-            mNetServer = new UdpServer();
+            mNetServer = new ServerMgr();
         }
 
         public void Update(double elapsed)
@@ -94,11 +94,6 @@ namespace AKNet.Udp2Tcp.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mNetServer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mNetServer.GetConfig();
         }
     }
 

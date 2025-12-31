@@ -15,7 +15,7 @@ namespace AKNet.Udp2Tcp.Server
     internal class FakeSocketPool
     {
         readonly Stack<FakeSocket> mObjectPool = new Stack<FakeSocket>();
-        UdpServer mUdpServer = null;
+        ServerMgr mUdpServer = null;
         private int nMaxCapacity = 0;
         private FakeSocket GenerateObject()
         {
@@ -23,7 +23,7 @@ namespace AKNet.Udp2Tcp.Server
             return clientPeer;
         }
 
-        public FakeSocketPool(UdpServer mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public FakeSocketPool(ServerMgr mUdpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mUdpServer = mUdpServer;
             SetMaxCapacity(nMaxCapacity);

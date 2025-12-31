@@ -10,43 +10,78 @@
 using AKNet.Common;
 using AKNet.Udp2Tcp.Common;
 using System;
+using System.Collections.Generic;
 using System.Net;
-using System.Xml.Linq;
+using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    internal class ClientPeer : UdpClientPeerCommonBase, NetClientInterface, ClientPeerBase
+    internal partial class ClientPeer : UdpClientPeerCommonBase, NetClientInterface, ClientPeerBase
     {
         internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
 
-        internal readonly MsgSendMgr mMsgSendMgr;
-        internal readonly MsgReceiveMgr mMsgReceiveMgr;
-        internal readonly SocketUdp mSocketMgr;
         internal readonly UdpCheckMgr mUdpCheckPool = null;
-        internal readonly UDPLikeTCPMgr mUDPLikeTCPMgr = null;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
-        internal readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
         private readonly ObjectPoolManager mObjectPoolManager;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private bool b_SOCKET_PEER_STATE_Changed = false;
+        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
         private uint ID = 0;
+
+        private double fReceiveHeartBeatTime = 0.0;
+        private double fMySendHeartBeatCdTime = 0.0;
+        private double fReConnectServerCdTime = 0.0;
+        private double fConnectCdTime = 0.0;
+        public const double fConnectMaxCdTime = 2.0;
+        private double fDisConnectCdTime = 0.0;
+        public const double fDisConnectMaxCdTime = 2.0;
+
+        private readonly NetStreamCircularBuffer mReceiveStreamList = null;
+        protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
+        private int nCurrentCheckPackageCount = 0;
+
+        private readonly SocketAsyncEventArgs ReceiveArgs;
+        private readonly SocketAsyncEventArgs SendArgs;
+        private readonly object lock_mSocket_object = new object();
+        private readonly AkCircularSpanBuffer mSendStreamList = null;
+        private Socket mSocket = null;
+        private IPEndPoint remoteEndPoint = null;
+        private string ip;
+        private int port;
+
+        bool bReceiveIOContexUsed = false;
+        bool bSendIOContexUsed = false;
 
         public ClientPeer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            mConfig = new Config();
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
-            mMsgSendMgr = new MsgSendMgr(this);
-            mMsgReceiveMgr = new MsgReceiveMgr(this);
-            mSocketMgr = new SocketUdp(this);
             mUdpCheckPool = new UdpCheckMgr(this);
-            mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
+
+            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+
+            ReceiveArgs = new SocketAsyncEventArgs();
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            ReceiveArgs.Completed += ProcessReceive;
+
+            SendArgs = new SocketAsyncEventArgs();
+            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.Completed += ProcessSend;
+
+            bReceiveIOContexUsed = false;
+            bSendIOContexUsed = false;
+
+            mSendStreamList = new AkCircularSpanBuffer();
+
         }
 
         public void Update(double elapsed)
@@ -56,32 +91,86 @@ namespace AKNet.Udp2Tcp.Client
                 NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
             }
 
-            if (b_SOCKET_PEER_STATE_Changed)
+            while (NetCheckPackageExecute())
             {
-                OnSocketStateChanged();
-                b_SOCKET_PEER_STATE_Changed = false;
+
             }
 
-            mMsgReceiveMgr.Update(elapsed);
-            mUDPLikeTCPMgr.Update(elapsed);
+            while (NetTcpPackageExecute())
+            {
+
+            }
+
+            switch (mSocketPeerState)
+            {
+                case SOCKET_PEER_STATE.CONNECTING:
+                    {
+                        fConnectCdTime += elapsed;
+                        if (fConnectCdTime >= fConnectMaxCdTime)
+                        {
+                            ConnectServer();
+                        }
+                        break;
+                    }
+                case SOCKET_PEER_STATE.CONNECTED:
+                    {
+                        fMySendHeartBeatCdTime += elapsed;
+                        if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
+                        {
+                            SendHeartBeat();
+                            fMySendHeartBeatCdTime = 0.0;
+                        }
+
+                        double fHeatTime = Math.Min(0.3, elapsed);
+                        fReceiveHeartBeatTime += fHeatTime;
+                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        {
+                            fReceiveHeartBeatTime = 0.0;
+                            fReConnectServerCdTime = 0.0;
+#if DEBUG
+                            NetLog.Log("Client 接收服务器心跳 超时 ");
+#endif
+                            SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                        }
+                        break;
+                    }
+                case SOCKET_PEER_STATE.DISCONNECTING:
+                    {
+                        fDisConnectCdTime += elapsed;
+                        if (fDisConnectCdTime >= fDisConnectMaxCdTime)
+                        {
+                            SendDisConnect();
+                        }
+                        break;
+                    }
+                case SOCKET_PEER_STATE.DISCONNECTED:
+                    break;
+                case SOCKET_PEER_STATE.RECONNECTING:
+                    {
+                        fReConnectServerCdTime += elapsed;
+                        if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
+                        {
+                            fReConnectServerCdTime = 0.0;
+                            ReConnectServer();
+                        }
+                        break;
+                    }
+                default:
+                    break;
+            }
+
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mListenClientPeerStateMgr.OnSocketStateChanged(this);
+            }
+
             mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            if (this.mSocketPeerState != mState)
-            {
-                this.mSocketPeerState = mState;
-
-                if (MainThreadCheck.orInMainThread())
-                {
-                    OnSocketStateChanged();
-                }
-                else
-                {
-                    b_SOCKET_PEER_STATE_Changed = true;
-                }
-            }
+            this.mSocketPeerState = mState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -91,50 +180,48 @@ namespace AKNet.Udp2Tcp.Client
 
         public void Reset()
         {
-            mSocketMgr.Reset();
-            mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
+            }
+
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
+            }
+
             this.Name = string.Empty;
             this.ID = 0;
+            this.fConnectCdTime = 0.0;
+            this.fDisConnectCdTime = 0.0;
+            this.fReConnectServerCdTime = 0.0;
+            this.fReceiveHeartBeatTime = 0.0;
+            this.fMySendHeartBeatCdTime = 0.0;
         }
 
         public void Release()
         {
-            mSocketMgr.Release();
-            mMsgReceiveMgr.Release();
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            DisConnectServer();
+            CloseSocket();
             mUdpCheckPool.Release();
 
-            SetSocketState(SOCKET_PEER_STATE.NONE);
-        }
+            lock (mWaitCheckPackageQueue)
+            {
+                while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
+                {
+                    GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
+            }
 
-        public void ConnectServer(string Ip, int nPort)
-        {
-            mSocketMgr.ConnectServer(Ip, nPort);
-        }
-
-        public bool DisConnectServer()
-        {
-            return mSocketMgr.DisConnectServer();
-        }
-
-        public void ReConnectServer()
-        {
-            mSocketMgr.ReConnectServer();
-        }
-
-        public void SendInnerNetData(UInt16 id)
-        {
-            mMsgSendMgr.SendInnerNetData(id);
-        }
-
-        public void SendNetData(ushort nPackageId)
-        {
-            mMsgSendMgr.SendNetData(nPackageId);
-        }
-
-        public void SendNetData(ushort nPackageId, byte[] data)
-        {
-            mMsgSendMgr.SendNetData(nPackageId, data);
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
+            }
         }
 
         public void SendNetPackage(NetUdpFixedSizePackage mPackage)
@@ -145,62 +232,27 @@ namespace AKNet.Udp2Tcp.Client
             if (bCanSendPackage)
             {
                 UdpStatistical.AddSendPackageCount();
-                mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
+                ResetSendHeartBeatCdTime();
 
                 if (Config.bUdpCheck)
                 {
                     mUdpCheckPool.SetRequestOrderId(mPackage);
                     if (UdpNetCommand.orInnerCommand(mPackage.GetPackageId()))
                     {
-                        this.mSocketMgr.SendNetPackage(mPackage);
+                        SendNetPackage2(mPackage);
                     }
                     else
                     {
                         UdpStatistical.AddSendCheckPackageCount();
                         mPackage.mTcpStanardRTOTimer.BeginRtt();
-                        this.mSocketMgr.SendNetPackage(mPackage);
+                        SendNetPackage2(mPackage);
                     }
                 }
                 else
                 {
-                    this.mSocketMgr.SendNetPackage(mPackage);
+                    SendNetPackage2(mPackage);
                 }
             }
-        }
-
-        public IPEndPoint GetIPEndPoint()
-        {
-            return mSocketMgr.GetIPEndPoint();
-        }
-
-        public void SendNetData(NetPackage mNetPackage)
-        {
-            mMsgSendMgr.SendNetData(mNetPackage);
-        }
-
-        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
-        {
-            mMsgSendMgr.SendNetData(nPackageId, buffer);
-        }
-
-        public void ResetSendHeartBeatCdTime()
-        {
-            this.mUDPLikeTCPMgr.ResetSendHeartBeatCdTime();
-        }
-
-        public void ReceiveHeartBeat()
-        {
-            this.mUDPLikeTCPMgr.ReceiveHeartBeat();
-        }
-
-        public void ReceiveConnect()
-        {
-            this.mUDPLikeTCPMgr.ReceiveConnect();
-        }
-
-        public void ReceiveDisConnect()
-        {
-            this.mUDPLikeTCPMgr.ReceiveDisConnect();
         }
 
         public ObjectPoolManager GetObjectPoolManager()
@@ -213,19 +265,9 @@ namespace AKNet.Udp2Tcp.Client
             return mTcpStanardRTOFunc;
         }
 
-        public Config GetConfig()
-        {
-            return mConfig;
-        }
-
         public CryptoMgr GetCryptoMgr()
         {
             return mCryptoMgr;
-        }
-
-        public int GetCurrentFrameRemainPackageCount()
-        {
-            return mMsgReceiveMgr.GetCurrentFrameRemainPackageCount();
         }
 
         public void NetPackageExecute(NetPackage mPackage)
@@ -276,11 +318,6 @@ namespace AKNet.Udp2Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
-        {
-            mMsgReceiveMgr.ReceiveTcpStream(mPackage);
         }
 
         public void SetName(string name)
