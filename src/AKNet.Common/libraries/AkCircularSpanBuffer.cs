@@ -206,6 +206,7 @@ namespace AKNet.Common
             Check();
         }
 
+        //这里的话：如果当前有 bIsSpan == false 标志, 表示往块中写入数据。否则当作一个块写完。
         public void WriteFrom(AkCircularBuffer mOtherStreamList, int nOffset, int nCount)
 		{
 			if (nCount <= 0)
