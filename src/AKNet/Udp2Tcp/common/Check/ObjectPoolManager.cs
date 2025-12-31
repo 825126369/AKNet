@@ -8,14 +8,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Buffers;
 
 namespace AKNet.Udp2Tcp.Common
 {
     internal class ObjectPoolManager
 	{
 		private readonly SafeObjectPool<NetUdpFixedSizePackage> mUdpFixedSizePackagePool = null;
-        private readonly ArrayPool<byte> mArrayPool = ArrayPool<byte>.Shared;
         public ObjectPoolManager()
         {
             int nMaxCapacity = 0;

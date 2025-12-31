@@ -291,11 +291,6 @@ namespace AKNet.Udp2Tcp.Client
             mPackageManager.removeNetListenFunc(mFunc);
         }
 
-        private void OnSocketStateChanged()
-        {
-            mListenClientPeerStateMgr.OnSocketStateChanged(this);
-        }
-
         public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);

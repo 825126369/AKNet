@@ -60,7 +60,6 @@ namespace AKNet.Udp2Tcp.Client
         private void StartReceiveEventArg()
         {
             bool bIOPending = false;
-
             if (mSocket != null)
             {
                 try

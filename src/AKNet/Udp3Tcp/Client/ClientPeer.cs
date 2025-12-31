@@ -51,8 +51,8 @@ namespace AKNet.Udp3Tcp.Client
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private int nLastSendBytesCount = 0;
-        private string ip;
-        private int port;
+        private string ServerIp;
+        private int ServerPort;
 
         public ClientPeer()
         {

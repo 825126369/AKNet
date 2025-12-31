@@ -19,9 +19,9 @@ namespace AKNet.Udp3Tcp.Client
     {
         public void ConnectServer(string ip, int nPort)
         {
-            this.port = nPort;
-            this.ip = ip;
-            this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+            this.ServerPort = nPort;
+            this.ServerIp = ip;
+            this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ServerIp), ServerPort);
             this.ReceiveArgs.RemoteEndPoint = remoteEndPoint;
             this.SendArgs.RemoteEndPoint = remoteEndPoint;
             this.ConnectServer();

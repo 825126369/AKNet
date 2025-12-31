@@ -90,7 +90,6 @@ namespace AKNet.Udp2Tcp.Server
 
         public void SendNetPackage2(NetUdpFixedSizePackage mPackage)
         {
-            mPackage.remoteEndPoint = GetIPEndPoint();
             UdpPackageEncryption.Encode(mPackage);
 
             MainThreadCheck.Check();
