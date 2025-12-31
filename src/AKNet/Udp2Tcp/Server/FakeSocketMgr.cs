@@ -18,7 +18,7 @@ namespace AKNet.Udp2Tcp.Server
     internal class FakeSocketMgr
     {
         private UdpServer mNetServer = null;
-        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
+        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly int nMaxPlayerCount = 0;
 
@@ -29,14 +29,14 @@ namespace AKNet.Udp2Tcp.Server
             this.mNetServer = mNetServer;
             nMaxPlayerCount = mNetServer.GetConfig().MaxPlayerCount;
             mFakeSocketPool = new FakeSocketPool(mNetServer, nMaxPlayerCount, nMaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<string, FakeSocket>(nMaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(nMaxPlayerCount);
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
             IPEndPoint endPoint = (IPEndPoint)e.RemoteEndPoint;
             FakeSocket mFakeSocket = null;
-            string nPeerId = endPoint.ToString();
+            IPEndPoint nPeerId = endPoint;
 
             lock (mAcceptSocketDic)
             {
@@ -74,7 +74,7 @@ namespace AKNet.Udp2Tcp.Server
 
         public void RemoveFakeSocket(FakeSocket mFakeSocket)
         {
-            string peerId = mFakeSocket.RemoteEndPoint.ToString();
+            IPEndPoint peerId = mFakeSocket.RemoteEndPoint;
 
             lock (mAcceptSocketDic)
             {
