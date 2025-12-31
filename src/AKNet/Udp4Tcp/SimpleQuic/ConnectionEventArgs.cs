@@ -23,9 +23,19 @@ namespace AKNet.Udp4Tcp.Common
             this.Length = Length;
         }
 
-        public Span<byte> GetSpan()
+        public Span<byte> GetCanReadSpan()
         {
             return MemoryBuffer.Span.Slice(Offset, Length);
+        }
+
+        public Span<byte> GetCanWriteSpan()
+        {
+            return MemoryBuffer.Span;
+        }
+
+        public Span<byte> GetReceiveSpan()
+        {
+            return MemoryBuffer.Span.Slice(0, BytesTransferred);
         }
 
         public void TriggerEvent()

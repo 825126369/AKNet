@@ -130,7 +130,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             arg.LastOperation = ConnectionAsyncOperation.Send;
             arg.ConnectionError = ConnectionError.Success;
-            SendTcpStream(arg.GetSpan());
+            SendTcpStream(arg.GetCanReadSpan());
             return true;
         }
 
@@ -151,7 +151,7 @@ namespace AKNet.Udp4Tcp.Common
                     bIOPending = false;
                     arg.Offset = 0;
                     arg.Length = arg.MemoryBuffer.Length;
-                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetSpan());
+                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetCanWriteSpan());
                 }
                 else
                 {

@@ -40,7 +40,7 @@ namespace AKNet.Udp4Tcp.Common
                 {
                     arg.Offset = 0;
                     arg.Length = arg.MemoryBuffer.Length;
-                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetSpan());
+                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetCanWriteSpan());
                     arg.TriggerEvent();
                 }
             }

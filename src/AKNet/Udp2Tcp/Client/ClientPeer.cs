@@ -47,7 +47,7 @@ namespace AKNet.Udp2Tcp.Client
         private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private readonly object lock_mSocket_object = new object();
-        private readonly AkCircularSpanBuffer mSendStreamList = new AkCircularSpanBuffer();
+        private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
         private string ServerIp;
