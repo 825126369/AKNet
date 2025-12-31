@@ -18,21 +18,20 @@ namespace AKNet.Udp2Tcp.Client
 {
     internal partial class ClientPeer : UdpClientPeerCommonBase, NetClientInterface, ClientPeerBase
     {
-        internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
-        internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
+        private readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
+        private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
+        private readonly UdpCheckMgr mUdpCheckPool = null;
+        private readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
+        private readonly CryptoMgr mCryptoMgr;
 
-        internal readonly UdpCheckMgr mUdpCheckPool = null;
-        internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
-        internal readonly CryptoMgr mCryptoMgr;
-
-        private readonly ObjectPoolManager mObjectPoolManager;
+        private readonly ObjectPoolManager mObjectPoolManager = new ObjectPoolManager();
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
         private uint ID = 0;
 
-        public const double fConnectMaxCdTime = 2.0;
-        public const double fDisConnectMaxCdTime = 2.0;
+        private const double fConnectMaxCdTime = 2.0;
+        private const double fDisConnectMaxCdTime = 2.0;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
         private double fReConnectServerCdTime = 0.0;
@@ -40,7 +39,7 @@ namespace AKNet.Udp2Tcp.Client
         private double fDisConnectCdTime = 0.0;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        protected readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
 
@@ -52,14 +51,13 @@ namespace AKNet.Udp2Tcp.Client
         private string ServerIp;
         private int ServerPort;
 
-        bool bReceiveIOContexUsed = false;
-        bool bSendIOContexUsed = false;
+        private bool bReceiveIOContexUsed = false;
+        private bool bSendIOContexUsed = false;
 
         public ClientPeer()
         {
             MainThreadCheck.Check();
             mCryptoMgr = new CryptoMgr();
-            mObjectPoolManager = new ObjectPoolManager();
             mUdpCheckPool = new UdpCheckMgr(this);
 
             SetSocketState(SOCKET_PEER_STATE.NONE);

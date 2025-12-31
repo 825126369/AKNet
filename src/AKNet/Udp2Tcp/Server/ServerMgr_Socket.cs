@@ -82,12 +82,12 @@ namespace AKNet.Udp2Tcp.Server
 
 		private void StartReceiveFromAsync()
 		{
-			bool bIOSyncCompleted = false;
+			bool bIOPending = false;
 			if (mSocket != null)
 			{
 				try
 				{
-					bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
 				}
 				catch (Exception e)
 				{
@@ -98,8 +98,8 @@ namespace AKNet.Udp2Tcp.Server
 				}
 			}
 			
-            UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
-            if (bIOSyncCompleted)
+            UdpStatistical.AddReceiveIOCount(!bIOPending);
+            if (!bIOPending)
 			{
 				ProcessReceive(null, ReceiveArgs);
 			}

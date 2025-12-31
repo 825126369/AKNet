@@ -23,8 +23,8 @@ namespace AKNet.Udp2Tcp.Server
             NetLog.Assert(mSocket != null, "mSocket == null");
 
             this.mSocket = mSocket;
-            SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
-            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+            this.SendArgs.RemoteEndPoint = mSocket.RemoteEndPoint;
+            this.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -49,7 +49,7 @@ namespace AKNet.Udp2Tcp.Server
             return mSocket.GetReceivePackage(out mPackage);
         }
 
-        public bool SendToAsync(SocketAsyncEventArgs e)
+        public void SendToAsync(SocketAsyncEventArgs e)
         {
             bool bIOPending = false;
             if (mSocket != null)
@@ -67,7 +67,11 @@ namespace AKNet.Udp2Tcp.Server
                     }
                 }
             }
-            return bIOPending;
+            
+            if(!bIOPending)
+            {
+                ProcessSend(null, SendArgs);
+            }
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -102,7 +106,6 @@ namespace AKNet.Udp2Tcp.Server
                     bSendIOContexUsed = true;
                     SendNetStream2();
                 }
-
             }
             else
             {
@@ -132,10 +135,7 @@ namespace AKNet.Udp2Tcp.Server
             {
                 nLastSendBytesCount = nSendBytesCount;
                 SendArgs.SetBuffer(0, nSendBytesCount);
-                if (!SendToAsync(SendArgs))
-                {
-                    ProcessSend(null, SendArgs);
-                }
+                SendToAsync(SendArgs);
             }
             else
             {
