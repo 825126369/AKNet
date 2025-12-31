@@ -14,23 +14,23 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection
     {
-        public void AddTcpStream(ReadOnlySpan<byte> buffer)
+        public void ReSendPackageMgr_AddTcpStream(ReadOnlySpan<byte> buffer)
         {
             mTcpSlidingWindow.WriteFrom(buffer);
         }
 
-        private void AddSendPackageOrderId(int nLength)
+        private void ReSendPackageMgr_AddSendPackageOrderId(int nLength)
         {
             nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId, nLength);
         }
 
-        void DoTcpSlidingWindowForward(uint nRequestOrderId)
+        void ReSendPackageMgr_DoTcpSlidingWindowForward(uint nRequestOrderId)
         {
             mTcpSlidingWindow.DoWindowForward(nRequestOrderId);
-            AddPackage();
+            ReSendPackageMgr_AddPackage();
         }
 
-        private void AddPackage()
+        private void ReSendPackageMgr_AddPackage()
         {
             int nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
             while (nOffset < mTcpSlidingWindow.Length)
@@ -54,7 +54,7 @@ namespace AKNet.Udp4Tcp.Common
                 }
 
                 mWaitCheckSendQueue.Enqueue(mPackage);
-                AddSendPackageOrderId(mPackage.nBodyLength);
+                ReSendPackageMgr_AddSendPackageOrderId(mPackage.nBodyLength);
 
                 nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
             }
@@ -103,7 +103,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ReceiveOrderIdRequestPackage(uint nRequestOrderId)
         {
-            AddPackage();
+            ReSendPackageMgr_AddPackage();
 
             bool bHit = false;
             int nRemoveCount = 0;
@@ -137,15 +137,12 @@ namespace AKNet.Udp4Tcp.Common
 
                 if (bHaveRemove)
                 {
-                    DoTcpSlidingWindowForward(nRequestOrderId);
+                    ReSendPackageMgr_DoTcpSlidingWindowForward(nRequestOrderId);
                 }
                 else
                 {
                     QuickReSend(nRequestOrderId);
                 }
-
-                //DoTcpSlidingWindowForward(nRequestOrderId);
-                //QuickReSend(nRequestOrderId);
             }
         }
 

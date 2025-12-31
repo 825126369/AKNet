@@ -13,7 +13,7 @@ using AKNet.Udp2Tcp.Common;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    public class Udp2TcpNetServerMain : NetServerInterface,PrivateConfigInterface
+    public class Udp2TcpNetServerMain : NetServerInterface
     {
         private UdpServer mNetServer;
         public Udp2TcpNetServerMain()

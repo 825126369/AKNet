@@ -14,7 +14,7 @@ using System.Net;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    public class Udp2TcpNetClientMain:NetClientInterface, ClientPeerBase, PrivateConfigInterface
+    public class Udp2TcpNetClientMain:NetClientInterface, ClientPeerBase
     {
         private readonly ClientPeer mNetClientPeer;
 

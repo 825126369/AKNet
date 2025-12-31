@@ -53,7 +53,7 @@ namespace AKNet.Udp4Tcp.Common
             UdpStatistical.AddSearchCount(this.nSearchCount);
             UdpStatistical.AddFrameCount();
 
-            AddPackage();
+            ReSendPackageMgr_AddPackage();
             if (mWaitCheckSendQueue.Count == 0) return;
 
             bool bTimeOut = false;
