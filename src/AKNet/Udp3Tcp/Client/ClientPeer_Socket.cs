@@ -58,12 +58,12 @@ namespace AKNet.Udp3Tcp.Client
 
         private void StartReceiveEventArg()
         {
-            bool bIOSyncCompleted = false;
+            bool bIOPending = false;
             if (mSocket != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
                 }
                 catch (Exception e)
                 {
@@ -76,7 +76,7 @@ namespace AKNet.Udp3Tcp.Client
                 bReceiveIOContexUsed = false;
             }
             
-            if (bIOSyncCompleted)
+            if (!bIOPending)
             {
                 ProcessReceive(null, ReceiveArgs);
             }
@@ -84,13 +84,13 @@ namespace AKNet.Udp3Tcp.Client
 
         private void StartSendEventArg()
         {
-            bool bIOSyncCompleted = false;
+            bool bIOPending = false;
 
             if (mSocket != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mSocket.SendToAsync(SendArgs);
+                    bIOPending = mSocket.SendToAsync(SendArgs);
                 }
                 catch (Exception e)
                 {
@@ -103,7 +103,7 @@ namespace AKNet.Udp3Tcp.Client
                 bSendIOContexUsed = false;
             }
                 
-            if (bIOSyncCompleted)
+            if (!bIOPending)
             {
                 ProcessSend(null, SendArgs);
             }
