@@ -29,6 +29,8 @@ namespace AKNet.Udp4Tcp.Common
             }
             mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
             mSendArgs.UserToken = mPackage;
+            mSendArgs.RemoteEndPoint = RemoteEndPoint;
+            mPackage.mLogicWorker = this.mLogicWorker;
             mLogicWorker.mSocketItem.SendToAsync(mSendArgs);
         }
 

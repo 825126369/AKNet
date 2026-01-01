@@ -35,7 +35,7 @@
             return Status == E_LOGIC_RESULT.Error;
         }
 
-        public static bool SUCCEEDED(E_LOGIC_RESULT Status)
+        public static bool SUCCESSED(E_LOGIC_RESULT Status)
         {
             return Status == E_LOGIC_RESULT.Success;
         }

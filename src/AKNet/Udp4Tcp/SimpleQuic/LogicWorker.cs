@@ -46,6 +46,7 @@ namespace AKNet.Udp4Tcp.Common
         public void SetSocketItem(SocketItem mSocketItem)
         {
             this.mSocketItem = mSocketItem;
+            mSocketItem.mLogicWorker = this;
         }
 
         public void ThreadUpdate()

@@ -94,15 +94,16 @@ namespace AKNet.Udp4Tcp.Common
             }
             else
             {
+                RemoteEndPoint = arg.RemoteEndPoint;
                 SocketMgr.Config mConfig = new SocketMgr.Config();
                 mConfig.bServer = false;
                 mConfig.mEndPoint = arg.RemoteEndPoint;
                 mConfig.mReceiveFunc = WorkerThreadReceiveNetPackage;
                 this.mConfig = mConfig;
 
-                if (SimpleQuicFunc.SUCCEEDED(mSocketMgr.InitNet(mConfig)))
+                if (SimpleQuicFunc.SUCCESSED(mSocketMgr.InitNet(mConfig)))
                 {
-                    mLogicWorker.mSocketItem = mSocketMgr.GetSocketItem(0);
+                    mLogicWorker.SetSocketItem(mSocketMgr.GetSocketItem(0));
                     mWRConnectEventArgs.SetTarget(arg);
                     SendConnect();
                 }

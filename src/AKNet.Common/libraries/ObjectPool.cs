@@ -25,12 +25,11 @@ namespace AKNet.Common
 	//Object 池子
 	internal class ObjectPool<T> where T : class, IPoolItemInterface, new()
 	{
-        private readonly Stack<T> mObjectPool = null;
+        private readonly Stack<T> mObjectPool = new Stack<T>();
 		private readonly int nMaxCapacity = 0;
 		public ObjectPool(int initCapacity = 0, int MaxCapacity = 0)
 		{
             this.nMaxCapacity = MaxCapacity;
-            mObjectPool = new Stack<T>(initCapacity);
 			for (int i = 0; i < initCapacity; i++)
 			{
 				mObjectPool.Push(new T());

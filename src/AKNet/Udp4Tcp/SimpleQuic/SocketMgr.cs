@@ -34,14 +34,13 @@ namespace AKNet.Udp4Tcp.Common
                 for (int i = 0; i < nSocketCount; i++)
                 {
                     var mSocketItem = new SocketItem(mConfig);
-                    mSocketItem.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(i);
                     mSocketList.Add(mSocketItem);
                     mSocketItem.InitNet();
                 }
             }
             catch (Exception ex)
             {
-                NetLog.LogError($"服务器 初始化失败: {ex.Message}");
+                NetLog.LogError($"SocketMgr 初始化失败: {ex.Message}");
                 return E_LOGIC_RESULT.Error;
             }
 

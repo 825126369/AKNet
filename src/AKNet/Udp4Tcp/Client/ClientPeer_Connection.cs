@@ -300,9 +300,9 @@ namespace AKNet.Udp4Tcp.Client
             IPEndPoint mRemoteEndPoint = null;
             try
             {
-                if (mConnection != null && mConnection.RemoteEndPoint != null)
+                if (mConnection != null)
                 {
-                    mRemoteEndPoint = mConnection.RemoteEndPoint as IPEndPoint;
+                    mRemoteEndPoint = mConnection.RemoteEndPoint;
                 }
             }
             catch { }

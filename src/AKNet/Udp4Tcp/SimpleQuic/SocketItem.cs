@@ -23,7 +23,7 @@ namespace AKNet.Udp4Tcp.Common
         private static readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public IPEndPoint RemoteEndPoint;
         private SocketMgr.Config mConfig;
-        public ThreadWorker mThreadWorker;
+        public LogicWorker mLogicWorker;
 
         public SocketItem(SocketMgr.Config mConfig)
         {
@@ -34,8 +34,16 @@ namespace AKNet.Udp4Tcp.Common
 
             ReceiveArgs.Completed += OnIOComplete1;
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
             ReceiveArgs.UserToken = this;
+
+            if(mConfig.bServer)
+            {
+                ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
+            }
+            else
+            {
+                ReceiveArgs.RemoteEndPoint = mConfig.mEndPoint;
+            }
         }
 
         public void InitNet()
@@ -111,8 +119,8 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (e.SocketError == SocketError.Success)
             {
-                var mPackage = e.UserToken as NetUdpSendFixedSizePackage;
-                mPackage.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
+                //var mPackage = e.UserToken as NetUdpSendFixedSizePackage;
+                //mPackage.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
             }
             else
             {
@@ -124,7 +132,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             arg.Completed -= OnIOComplete1;
             arg.Completed += OnIOComplete2;
-            mThreadWorker.Add_SocketAsyncEventArgs(arg as SSocketAsyncEventArgs);
+            mLogicWorker.mThreadWorker.Add_SocketAsyncEventArgs(arg as SSocketAsyncEventArgs);
         }
         
         void OnIOComplete2(object Cqe, SocketAsyncEventArgs arg)
