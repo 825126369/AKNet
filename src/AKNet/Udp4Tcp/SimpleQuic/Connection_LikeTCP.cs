@@ -61,6 +61,7 @@ namespace AKNet.Udp4Tcp.Common
                     arg.LastOperation = ConnectionAsyncOperation.Connect;
                     arg.ConnectionError = ConnectionError.Success;
                     arg.TriggerEvent();
+					mLogicWorker.AddConnection(this);
                 }
 			}
 		}

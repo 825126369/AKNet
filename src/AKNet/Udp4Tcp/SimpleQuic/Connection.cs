@@ -7,6 +7,7 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection : IDisposable, IPoolItemInterface
     {
+        public readonly LinkedListNode<Connection> mEntry;
         private SocketMgr.Config mConfig;
         private SocketMgr mSocketMgr = new SocketMgr();
 
@@ -50,6 +51,13 @@ namespace AKNet.Udp4Tcp.Common
         private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private bool bInit = false;
+        public bool HasQueuedWork;
+        public LinkedList<OP> mOPList;
+
+        public Connection()
+        {
+            mEntry = new LinkedListNode<Connection>(this);
+        }
 
         public void Init(ConnectionType nType)
         {
@@ -178,5 +186,14 @@ namespace AKNet.Udp4Tcp.Common
                 return m_Connected;
             }
         }
+
+        static void QuicConnQueueOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
+        {
+            if(QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper))
+            {
+                QuicWorkerQueueConnection(Connection.Worker, Connection);
+            }
+        }
+        
     }
 }

@@ -24,6 +24,7 @@ namespace AKNet.Udp4Tcp.Common
 
         private readonly ManualResetEventSlim mWaitHandle = new ManualResetEventSlim(true);
 
+        public readonly ObjectPool<OP> mOPPool = new ObjectPool<OP>();
         public readonly ObjectPool<Connection> mConnectionPeerPool = new ObjectPool<Connection>();
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>();
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
@@ -96,6 +97,15 @@ namespace AKNet.Udp4Tcp.Common
                 if(mSocketAsyncEventArgsQueue.IsEmpty && 
                     mAddLogicWorkerList.Count == 0 && 
                     mRemoveLogicWorkerList.Count == 0)
+                {
+                    NoWorkCount++;
+                }
+                else
+                {
+                    NoWorkCount = 0;
+                }
+
+                if (NoWorkCount >= 2)
                 {
                     mWaitHandle.Reset();
                 }
