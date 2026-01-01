@@ -18,15 +18,25 @@ namespace AKNet.Udp4Tcp.Common
     internal class ThreadWorker:IDisposable
     {
         //每个线程，被多个逻辑Worker使用，比如创建了 N个服务器，那么线程池复用。
-        private readonly static List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
-        private readonly static List<LogicWorker> mPendingLogicWorkerList = new List<LogicWorker>();
-        private readonly AutoResetEvent mEventQReady = new AutoResetEvent(false);
+        private readonly static LinkedList<LogicWorker> mLogicWorkerList = new LinkedList<LogicWorker>();
+        private readonly static LinkedList<LogicWorker> mAddLogicWorkerList = new LinkedList<LogicWorker>();
+        private readonly static LinkedList<LogicWorker> mRemoveLogicWorkerList = new LinkedList<LogicWorker>();
+
+        private readonly ManualResetEventSlim mWaitHandle = new ManualResetEventSlim(true);
 
         public readonly ObjectPool<Connection> mConnectionPeerPool = new ObjectPool<Connection>();
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>();
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
         private readonly ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
 
+        public bool IsActive;
+        public long TimeNow;
+        public long LastWorkTime;
+        public long LastPoolProcessTime;
+        public long WaitTime;
+        public int NoWorkCount;
+        public int ThreadID;
+        public int nThreadIndex;
         private bool bInit = false;
         //谁用到他，再启动他
         public void Init()
@@ -46,38 +56,74 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadFunc()
         {
-            while (true)
+            ThreadID = Thread.CurrentThread.ManagedThreadId;
+            IsActive = true;
+            while (IsActive)
             {
-                mEventQReady.WaitOne();
-                foreach(var v in mLogicWorkerList)
+                mWaitHandle.Wait();
+
+                ++NoWorkCount;
+                TimeNow = SimpleQuicFunc.CxPlatTimeUs();
+
+                foreach (var v in mLogicWorkerList)
                 {
                     v.ThreadUpdate();
                 }
 
-                lock (mPendingLogicWorkerList)
+                lock (mRemoveLogicWorkerList)
                 {
-                    mLogicWorkerList.AddRange(mPendingLogicWorkerList);
-                    mPendingLogicWorkerList.Clear();
+                    foreach (var v in mRemoveLogicWorkerList)
+                    {
+                        mLogicWorkerList.Remove(v);
+                    }
+                    mRemoveLogicWorkerList.Clear();
+                }
+
+                lock (mAddLogicWorkerList)
+                {
+                    foreach (var v in mAddLogicWorkerList)
+                    {
+                        mLogicWorkerList.AddLast(v);
+                    }
+                    mAddLogicWorkerList.Clear();
                 }
 
                 while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
                 {
                     arg.Do();
                 }
+
+                if(mSocketAsyncEventArgsQueue.IsEmpty && 
+                    mAddLogicWorkerList.Count == 0 && 
+                    mRemoveLogicWorkerList.Count == 0)
+                {
+                    mWaitHandle.Reset();
+                }
             }
         }
 
         public void AddLogicWorker(LogicWorker mWorker)
         {
-            lock (mPendingLogicWorkerList)
+            lock (mAddLogicWorkerList)
             {
-                mPendingLogicWorkerList.Add(mWorker);
+                mAddLogicWorkerList.AddLast(mWorker);
             }
+            mWaitHandle.Set();
+        }
+
+        public void RemoveLogicWorker(LogicWorker mWorker)
+        {
+            lock (mRemoveLogicWorkerList)
+            {
+                mRemoveLogicWorkerList.AddLast(mWorker);
+            }
+            mWaitHandle.Set();
         }
 
         public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
         {
             mSocketAsyncEventArgsQueue.Enqueue(arg);
+            mWaitHandle.Set();
         }
 
     }

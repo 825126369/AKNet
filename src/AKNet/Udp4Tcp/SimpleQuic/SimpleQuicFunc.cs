@@ -28,7 +28,7 @@
         Error = 1,
     }
 
-    internal static class SimpleQuicFunc
+    internal static partial class SimpleQuicFunc
     {
         public static bool FAILED(E_LOGIC_RESULT Status)
         {

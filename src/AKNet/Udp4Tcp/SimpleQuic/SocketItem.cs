@@ -18,8 +18,7 @@ namespace AKNet.Udp4Tcp.Common
     internal class SocketItem : IDisposable
     {
         public Socket mSocket;
-        public readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
-        public readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
+        public readonly SSocketAsyncEventArgs ReceiveArgs = new SSocketAsyncEventArgs();
         private static readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public IPEndPoint RemoteEndPoint;
         private SocketMgr.Config mConfig;
@@ -95,7 +94,7 @@ namespace AKNet.Udp4Tcp.Common
             StartReceiveFromAsync();
         }
 
-        public bool SendToAsync(SSocketAsyncEventArgs e)
+        public bool SendToAsync(SocketAsyncEventArgs e)
         {
             bool bIOPending = false;
 

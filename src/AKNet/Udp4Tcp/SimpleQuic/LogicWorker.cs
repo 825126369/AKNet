@@ -17,7 +17,8 @@ namespace AKNet.Udp4Tcp.Common
     internal partial class LogicWorker
     {
         private readonly static LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
-        private AutoResetEvent mEventQReady = new AutoResetEvent(false);
+        public EventWaitHandle Ready = new AutoResetEvent(false);
+        public EventWaitHandle Done = new AutoResetEvent(false);
         private readonly LinkedListNode<LogicWorker> mEntry;
 
         public ThreadWorker mThreadWorker;
@@ -50,7 +51,6 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadUpdate()
         {
-            mEventQReady.WaitOne();
             foreach (var v in mConnectionList)
             {
                 v.ThreadUpdate();
