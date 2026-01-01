@@ -53,6 +53,13 @@ namespace AKNet.Udp4Tcp.Client
         {
             MainThreadCheck.Check();
             SetSocketState(SOCKET_PEER_STATE.NONE);
+
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.Completed += OnIOCompleted;
+            ReceiveArgs.Completed += OnIOCompleted;
+            ConnectArgs.Completed += OnIOCompleted;
+            DisConnectArgs.Completed += OnIOCompleted;
         }
 
         public void Update(double elapsed)

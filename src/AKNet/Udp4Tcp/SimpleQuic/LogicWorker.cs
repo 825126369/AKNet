@@ -8,21 +8,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.Quic;
 using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class LogicWorker
+    internal class LogicWorker
     {
         private readonly LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
         private readonly LinkedList<OP> mOPList = new LinkedList<OP>();
 
         public EventWaitHandle Ready = new AutoResetEvent(false);
         public EventWaitHandle Done = new AutoResetEvent(false);
-        private readonly LinkedListNode<LogicWorker> mEntry;
+        public readonly LinkedListNode<LogicWorker> mEntry;
 
         public ThreadWorker mThreadWorker;
         public SocketItem mSocketItem;
@@ -62,7 +60,11 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadUpdate()
         {
-            WorkerLoop();
+            //WorkerLoop();
+            foreach (var v in mConnectionList)
+            {
+                v.ThreadUpdate();
+            }
         }
 
         public void AddConnection(Connection peer)
@@ -150,46 +152,46 @@ namespace AKNet.Udp4Tcp.Common
                 FreeOper = true;
                 switch (Oper.Type)
                 {
-                    case E_OP_TYPE.QUIC_OPER_TYPE_API_CALL:
-                        NetLog.Assert(Oper.API_CALL.Context != null);
-                        QuicConnProcessApiOperation(Connection, Oper.API_CALL.Context);
-                        break;
+                    //case E_OP_TYPE.QUIC_OPER_TYPE_API_CALL:
+                    //    NetLog.Assert(Oper.API_CALL.Context != null);
+                    //    QuicConnProcessApiOperation(Connection, Oper.API_CALL.Context);
+                    //    break;
 
                     case E_OP_TYPE.FLUSH_RECV:
-                        if (Connection.State.ShutdownComplete)
-                        {
-                            break;
-                        }
+                        //if (Connection.State.ShutdownComplete)
+                        //{
+                        //    break;
+                        //}
 
-                        if (!QuicConnFlushRecv(Connection))
-                        {
-                            FreeOper = false;
-                            QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper);
-                        }
+                        //if (!QuicConnFlushRecv(Connection))
+                        //{
+                        //    FreeOper = false;
+                        //    QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper);
+                        //}
                         break;
 
                     case E_OP_TYPE.FLUSH_SEND:
-                        if (Connection.State.ShutdownComplete)
-                        {
-                            break;
-                        }
-                        if (QuicSendFlush(Connection.Send))
-                        {
-                            Connection.Send.FlushOperationPending = false;
-                        }
-                        else
-                        {
-                            FreeOper = false;
-                            QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper);
-                        }
+                        //if (Connection.State.ShutdownComplete)
+                        //{
+                        //    break;
+                        //}
+                        //if (QuicSendFlush(Connection.Send))
+                        //{
+                        //    Connection.Send.FlushOperationPending = false;
+                        //}
+                        //else
+                        //{
+                        //    FreeOper = false;
+                        //    QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper);
+                        //}
                         break;
 
                     case E_OP_TYPE.TIMER_EXPIRED:
-                        if (Connection.State.ShutdownComplete)
-                        {
-                            break;
-                        }
-                        QuicConnProcessExpiredTimer(Connection, Oper.TIMER_EXPIRED.Type);
+                        //if (Connection.State.ShutdownComplete)
+                        //{
+                        //    break;
+                        //}
+                        //QuicConnProcessExpiredTimer(Connection, Oper.TIMER_EXPIRED.Type);
                         break;
 
                     default:

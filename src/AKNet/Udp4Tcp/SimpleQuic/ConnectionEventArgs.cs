@@ -17,6 +17,13 @@ namespace AKNet.Udp4Tcp.Common
         public IPEndPoint RemoteEndPoint;
         public ConnectionError ConnectionError;
 
+        public void SetBuffer(Memory<Byte> mBuffer, int Offset, int Length)
+        {
+            this.MemoryBuffer = mBuffer;
+            this.Offset = Offset;
+            this.Length = Length;
+        }
+
         public void SetBuffer(int Offset, int Length)
         {
             this.Offset = Offset;

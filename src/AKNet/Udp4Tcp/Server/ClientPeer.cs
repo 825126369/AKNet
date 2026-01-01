@@ -36,6 +36,13 @@ namespace AKNet.Udp4Tcp.Server
         {
             this.mServerMgr = mNetServer;
             SetSocketState(SOCKET_PEER_STATE.NONE);
+
+            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.Completed += OnIOCompleted;
+            ReceiveArgs.Completed += OnIOCompleted;
+            DisConnectArgs.Completed += OnIOCompleted;
+            bSendIOContexUsed = false;
         }
 
         public void Update(double elapsed)

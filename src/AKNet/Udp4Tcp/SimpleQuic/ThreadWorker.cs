@@ -61,7 +61,7 @@ namespace AKNet.Udp4Tcp.Common
             IsActive = true;
             while (IsActive)
             {
-                mWaitHandle.Wait();
+                //mWaitHandle.Wait();
 
                 ++NoWorkCount;
                 TimeNow = SimpleQuicFunc.CxPlatTimeUs();
@@ -75,7 +75,7 @@ namespace AKNet.Udp4Tcp.Common
                 {
                     foreach (var v in mRemoveLogicWorkerList)
                     {
-                        mLogicWorkerList.Remove(v);
+                        mLogicWorkerList.Remove(v.mEntry);
                     }
                     mRemoveLogicWorkerList.Clear();
                 }
@@ -84,7 +84,7 @@ namespace AKNet.Udp4Tcp.Common
                 {
                     foreach (var v in mAddLogicWorkerList)
                     {
-                        mLogicWorkerList.AddLast(v);
+                        mLogicWorkerList.AddLast(v.mEntry);
                     }
                     mAddLogicWorkerList.Clear();
                 }
@@ -94,21 +94,23 @@ namespace AKNet.Udp4Tcp.Common
                     arg.Do();
                 }
 
-                if(mSocketAsyncEventArgsQueue.IsEmpty && 
-                    mAddLogicWorkerList.Count == 0 && 
-                    mRemoveLogicWorkerList.Count == 0)
-                {
-                    NoWorkCount++;
-                }
-                else
-                {
-                    NoWorkCount = 0;
-                }
+                Thread.Sleep(1);
 
-                if (NoWorkCount >= 2)
-                {
-                    mWaitHandle.Reset();
-                }
+                //if(mSocketAsyncEventArgsQueue.IsEmpty && 
+                //    mAddLogicWorkerList.Count == 0 && 
+                //    mRemoveLogicWorkerList.Count == 0)
+                //{
+                //    NoWorkCount++;
+                //}
+                //else
+                //{
+                //    NoWorkCount = 0;
+                //}
+
+                //if (NoWorkCount >= 2)
+                //{
+                //    mWaitHandle.Reset();
+                //}
             }
         }
 

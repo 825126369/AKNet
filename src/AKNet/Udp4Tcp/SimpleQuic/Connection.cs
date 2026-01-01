@@ -187,13 +187,13 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
-        static void QuicConnQueueOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
-        {
-            if(QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper))
-            {
-                QuicWorkerQueueConnection(Connection.Worker, Connection);
-            }
-        }
+        //static void QuicConnQueueOper(QUIC_CONNECTION Connection, QUIC_OPERATION Oper)
+        //{
+        //    if(QuicOperationEnqueue(Connection.OperQ, Connection.Partition, Oper))
+        //    {
+        //        QuicWorkerQueueConnection(Connection.Worker, Connection);
+        //    }
+        //}
         
     }
 }
