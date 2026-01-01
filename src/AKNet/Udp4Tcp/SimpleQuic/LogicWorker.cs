@@ -16,7 +16,6 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class LogicWorker
     {
-        private ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
         private readonly static LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
         private AutoResetEvent mEventQReady = new AutoResetEvent(false);
         private readonly LinkedListNode<LogicWorker> mEntry;
@@ -56,22 +55,12 @@ namespace AKNet.Udp4Tcp.Common
             {
                 v.ThreadUpdate();
             }
-
-            while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
-            {
-                arg.Do();
-            }
         }
 
         public void AddConnectionPeer(Connection peer)
         {
             peer.mLogicWorker = this;
             mConnectionList.AddLast(peer);
-        }
-
-        public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
-        {
-            mSocketAsyncEventArgsQueue.Enqueue(arg);
         }
     }
 }
