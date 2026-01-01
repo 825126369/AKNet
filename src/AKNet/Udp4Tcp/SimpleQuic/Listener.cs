@@ -91,7 +91,7 @@ namespace AKNet.Udp4Tcp.Common
                     mWRAcceptEventArgs.SetTarget(null);
                     arg.LastOperation = ConnectionAsyncOperation.Accept;
                     arg.ConnectionError = ConnectionError.Success;
-                    arg.mConnection = mNewConnectionQueue.Dequeue();
+                    arg.AcceptConnection = mNewConnectionQueue.Dequeue();
                     arg.TriggerEvent();
                 }
             }

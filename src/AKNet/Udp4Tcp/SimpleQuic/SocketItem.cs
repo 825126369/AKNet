@@ -139,7 +139,7 @@ namespace AKNet.Udp4Tcp.Common
             arg.Completed -= OnIOComplete2;
             switch (arg.LastOperation)
             {
-                case SocketAsyncOperation.ReceiveMessageFrom:
+                case SocketAsyncOperation.ReceiveFrom:
                     ProcessReceive(null, arg);
                     break;
 

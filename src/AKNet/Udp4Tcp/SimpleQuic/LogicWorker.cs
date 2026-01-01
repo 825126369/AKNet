@@ -69,14 +69,20 @@ namespace AKNet.Udp4Tcp.Common
 
         public void AddConnection(Connection peer)
         {
-            peer.mLogicWorker = this;
-            mConnectionList.AddLast(peer);
+            if (peer.mLogicWorker == null)
+            {
+                peer.mLogicWorker = this;
+                mConnectionList.AddLast(peer);
+            }
         }
 
         public void RemoveConnection(Connection peer)
         {
-            peer.mLogicWorker = null;
-            mConnectionList.Remove(peer.mEntry);
+            if (peer.mLogicWorker != null)
+            {
+                peer.mLogicWorker = null;
+                mConnectionList.Remove(peer.mEntry);
+            }
         }
 
         private bool WorkerLoop()

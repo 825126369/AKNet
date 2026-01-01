@@ -23,7 +23,6 @@ namespace AKNet.Udp4Tcp.Common
         {
             UdpStatistical.AddReceivePackageCount();
             byte nInnerCommandId = mReceivePackage.GetInnerCommandId();
-            MainThreadCheck.Check();
             if (m_Connected)
             {
                 ReceiveHeartBeat();

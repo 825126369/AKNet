@@ -36,10 +36,11 @@ namespace AKNet.Udp4Tcp.Common
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
+            SocketItem mSocketItem = e.UserToken as SocketItem;
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = mLogicWorker.mThreadWorker.mReceivePackagePool.Pop();
+                var mPackage = mSocketItem.mLogicWorker.mThreadWorker.mReceivePackagePool.Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {

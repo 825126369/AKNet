@@ -53,6 +53,12 @@ namespace AKNet.Udp4Tcp.Common
             UdpStatistical.AddSearchCount(this.nSearchCount);
             UdpStatistical.AddFrameCount();
 
+            lock (mMTSendStreamList)
+            {
+                //mTcpSlidingWindow.WriteFrom(mMTSendStreamList);
+                //ReSendPackageMgr_AddTcpStream()
+            }
+
             ReSendPackageMgr_AddPackage();
             if (mWaitCheckSendQueue.Count == 0) return;
 
