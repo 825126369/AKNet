@@ -7,15 +7,18 @@
 *        ModifyTime:2025/11/30 19:43:17
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Net.Sockets;
 
 namespace AKNet.Common
 {
     internal class SSocketAsyncEventArgs: SocketAsyncEventArgs
     {
+        public event EventHandler<SSocketAsyncEventArgs> Completed2;
+
         public void Do()
         {
-            this.OnCompleted(this);
+            this.Completed2?.Invoke(null, this);
         }
     }
 }

@@ -49,10 +49,16 @@ namespace AKNet.Udp4Tcp.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ThreadCheck(Connection mConnection)
         {
+            ThreadCheck(mConnection.mLogicWorker);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ThreadCheck(LogicWorker mLogicWorker)
+        {
             int nThreadId = Thread.CurrentThread.ManagedThreadId;
-            if (nThreadId != mConnection.mLogicWorker.mThreadWorker.ThreadID)
+            if (nThreadId != mLogicWorker.mThreadWorker.ThreadID)
             {
-                NetLog.LogError($"ThreadCheck: {mConnection.mLogicWorker.mThreadWorker.ThreadID}, {nThreadId}");
+                NetLog.LogError($"ThreadCheck: {mLogicWorker.mThreadWorker.ThreadID}, {nThreadId}");
             }
         }
     }

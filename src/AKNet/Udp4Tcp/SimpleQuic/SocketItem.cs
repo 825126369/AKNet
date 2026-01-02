@@ -30,12 +30,14 @@ namespace AKNet.Udp4Tcp.Common
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-
-            ReceiveArgs.Completed += OnIOComplete1;
+            
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.UserToken = this;
 
-            if(mConfig.bServer)
+            ReceiveArgs.Completed += OnIOComplete1;
+            ReceiveArgs.Completed2 += OnIOComplete2;
+
+            if (mConfig.bServer)
             {
                 ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
             }
@@ -70,6 +72,7 @@ namespace AKNet.Udp4Tcp.Common
                     bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
                     if (!bIOPending)
                     {
+                        SimpleQuicFunc.ThreadCheck(mLogicWorker);
                         ProcessReceive(null, ReceiveArgs);
                     }
                 }
@@ -87,9 +90,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
-                NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
                 mConfig.mReceiveFunc(e);
-                e.RemoteEndPoint = mEndPointEmpty;
             }
             StartReceiveFromAsync();
         }
@@ -118,8 +119,8 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (e.SocketError == SocketError.Success)
             {
-                //var mPackage = e.UserToken as NetUdpSendFixedSizePackage;
-                //mPackage.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
+                var mPackage = e.UserToken as NetUdpSendFixedSizePackage;
+                mPackage.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
             }
             else
             {
@@ -127,16 +128,13 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
-        void OnIOComplete1(object Cqe, SocketAsyncEventArgs arg)
+        void OnIOComplete1(object sender, SocketAsyncEventArgs arg)
         {
-            arg.Completed -= OnIOComplete1;
-            arg.Completed += OnIOComplete2;
             mLogicWorker.mThreadWorker.Add_SocketAsyncEventArgs(arg as SSocketAsyncEventArgs);
         }
         
-        void OnIOComplete2(object Cqe, SocketAsyncEventArgs arg)
+        void OnIOComplete2(object sender, SocketAsyncEventArgs arg)
         {
-            arg.Completed -= OnIOComplete2;
             switch (arg.LastOperation)
             {
                 case SocketAsyncOperation.ReceiveFrom:

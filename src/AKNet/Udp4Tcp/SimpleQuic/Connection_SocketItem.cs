@@ -37,6 +37,8 @@ namespace AKNet.Udp4Tcp.Common
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
             SocketItem mSocketItem = e.UserToken as SocketItem;
+            SimpleQuicFunc.ThreadCheck(mSocketItem.mLogicWorker);
+
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {

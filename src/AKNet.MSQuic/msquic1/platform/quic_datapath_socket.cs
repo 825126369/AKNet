@@ -449,7 +449,6 @@ namespace MSQuic1
                         NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
                     }
                 }
-
             }
         Skip:
 
@@ -629,7 +628,6 @@ namespace MSQuic1
 
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
-            IoBlock.ReceiveArgs.Completed -= DataPathProcessCqe;
             IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
         }
 
@@ -640,7 +638,6 @@ namespace MSQuic1
                 SendData.BufferPool.CxPlatPoolFree(SendData.WsaBuffers[i]);
             }
             SendData.WsaBuffers.Clear();
-            SendData.Sqe.Completed -= DataPathProcessCqe;
             SendData.SendDataPool.CxPlatPoolFree(SendData);
         }
 
@@ -675,7 +672,6 @@ namespace MSQuic1
         static void CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
         {
             SendData.LocalAddress = Route.LocalAddress;
-            SendData.Sqe.Completed += DataPathProcessCqe3;
             CxPlatWorkerAddNetEvent(SendData.SocketProc.DatapathProc.mWorker, SendData.Sqe);
         }
 
@@ -712,9 +708,9 @@ namespace MSQuic1
                 {
                     SendData.Sqe = new SSocketAsyncEventArgs();
                     SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
+                    SendData.Sqe.Completed += DataPathProcessCqe3;
+                    SendData.Sqe.Completed2 += DataPathProcessCqe2;
                 }
-
-                SendData.Sqe.Completed += DataPathProcessCqe;
             }
 
             return SendData;
@@ -738,8 +734,9 @@ namespace MSQuic1
                     IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
                     byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                     IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
+                    IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
+                    IoBlock.ReceiveArgs.Completed2 += DataPathProcessCqe2;
                 }
-                IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
             }
             return IoBlock;
         }
@@ -770,28 +767,23 @@ namespace MSQuic1
             CxPlatDataPathStartReceiveAsync(SocketProc);
         }
 
+        //这是接收
         static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             var mWorker = IoBlock.SocketProc.DatapathProc.mWorker;
-           // NetLog.Log("接收消息 IdealProcessor:" + mWorker.IdealProcessor);
-
-            arg.Completed -= DataPathProcessCqe;
-            arg.Completed += DataPathProcessCqe2;
             CxPlatWorkerAddNetEvent(mWorker, arg as SSocketAsyncEventArgs);
         }
 
+        //这是发送
         static void DataPathProcessCqe3(object Cqe, SocketAsyncEventArgs arg)
         {
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
-            arg.Completed -= DataPathProcessCqe3;
-            arg.Completed += DataPathProcessCqe2;
             CxPlatSocketSendInline(SendData.LocalAddress, SendData);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)
         {
-            arg.Completed -= DataPathProcessCqe2;
             switch (arg.LastOperation)
             {
                 case SocketAsyncOperation.ReceiveMessageFrom:

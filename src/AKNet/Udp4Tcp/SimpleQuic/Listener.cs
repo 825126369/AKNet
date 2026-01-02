@@ -1,10 +1,7 @@
 ﻿
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -14,7 +11,6 @@ namespace AKNet.Udp4Tcp.Common
         private readonly SocketMgr mSocketMgr = new SocketMgr();
         private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = new Dictionary<IPEndPoint, Connection>();
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
-        private readonly ManualResetEventSlim mManualResetEventSlim = new ManualResetEventSlim(false);
         private readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
         private bool bInit = false;
@@ -73,7 +69,6 @@ namespace AKNet.Udp4Tcp.Common
                 else
                 {
                     mWRAcceptEventArgs.SetTarget(arg);
-                    bIOPending = true;
                 }
             }
 
