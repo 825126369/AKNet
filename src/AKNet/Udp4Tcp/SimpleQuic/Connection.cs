@@ -2,35 +2,41 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection : IDisposable, IPoolItemInterface
     {
-        public readonly LinkedListNode<Connection> mEntry;
+        private readonly LinkedListNode<Connection> mEntry;
         private SocketMgr.Config mConfig;
-        private SocketMgr mSocketMgr = new SocketMgr();
+        private SocketMgr mSocketMgr = null;
 
         private int nCurrentCheckPackageCount = 0;
-        public IPEndPoint RemoteEndPoint;
-
-        private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
-        private bool m_Connected;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
         
         private readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
+
+        private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
         private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
+
         private bool bInit = false;
-        public bool HasQueuedWork;
+        private bool m_Connected;
+        private bool m_Disposed;
         public readonly LinkedList<ConnectionOP> mOPList = new LinkedList<ConnectionOP>();
 
         private readonly UdpCheckMgr mUdpCheckMgr;
         public LogicWorker mLogicWorker;
         private ConnectionType mConnectionType;
         public SSocketAsyncEventArgsPool mSendEventArgsPool;
+
+        public LinkedListNode<Connection> GetEntry()
+        {
+            return mEntry;
+        }
 
         public Connection()
         {
@@ -78,24 +84,19 @@ namespace AKNet.Udp4Tcp.Common
             mWRConnectEventArgs.SetTarget(null);
             mWRDisConnectEventArgs.SetTarget(null);
             mWRReceiveEventArgs.SetTarget(null);
+
+            mMTReceiveStreamList.Reset();
             mWRSendEventArgsQueue.Clear();
+
             mOPList.Clear();
             mSendEventArgsPool = null;
             bInit = false;
+            m_Connected = false;
             RemoteEndPoint = null;
             mLogicWorker = null;
         }
 
-        public void Dispose()
-        {
-            mLogicWorker.RemoveConnection(this);
-            if (mConnectionType == ConnectionType.Client)
-            {
-                mLogicWorker.mThreadWorker.RemoveLogicWorker(mLogicWorker);
-                mLogicWorker.mThreadWorker = null;
-            }
-            Reset();
-        }
+        public IPEndPoint RemoteEndPoint { get; set; }
 
         public bool Connected
         {

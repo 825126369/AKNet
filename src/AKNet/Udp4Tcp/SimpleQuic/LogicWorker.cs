@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
@@ -15,7 +16,11 @@ namespace AKNet.Udp4Tcp.Common
     internal class LogicWorker
     {
         private readonly LinkedList<Connection> mConnectionList = new LinkedList<Connection>();
+        private readonly Queue<Connection> mAddConnectionList = new Queue<Connection>();
+        private readonly Queue<Connection> mRemoveConnectionList = new Queue<Connection>();
         private readonly LinkedListNode<LogicWorker> mEntry;
+
+        private readonly ConcurrentQueue<SSocketAsyncEventArgs> mSocketAsyncEventArgsQueue = new ConcurrentQueue<SSocketAsyncEventArgs>();
 
         public ThreadWorker mThreadWorker;
         public SocketItem mSocketItem;
@@ -38,13 +43,6 @@ namespace AKNet.Udp4Tcp.Common
             return mEntry;
         }
 
-        public void Init(int nThreadIndex)
-        {
-            this.mThreadWorker = ThreadWorkerMgr.GetThreadWorker(nThreadIndex);
-            this.mThreadWorker.AddLogicWorker(this);
-            this.mThreadWorker.Init();
-        }
-
         public void Init(ThreadWorker mThreadWorker)
         {
             this.mThreadWorker = mThreadWorker;
@@ -60,9 +58,37 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadUpdate()
         {
+            lock (mAddConnectionList)
+            {
+                if (mAddConnectionList.Count > 0)
+                {
+                    while (mAddConnectionList.TryDequeue(out var v))
+                    {
+                        mConnectionList.AddLast(v.GetEntry());
+                    }
+                }
+            }
+
+            lock (mRemoveConnectionList)
+            {
+                if (mRemoveConnectionList.Count > 0)
+                {
+                    while (mRemoveConnectionList.TryDequeue(out var v))
+                    {
+                        mConnectionList.Remove(v.GetEntry());
+                        mThreadWorker.mConnectionPeerPool.recycle(v);
+                    }
+                }
+            }
+
             foreach (var v in mConnectionList)
             {
                 v.ThreadUpdate();
+            }
+
+            while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
+            {
+                arg.Do();
             }
         }
 
@@ -72,7 +98,10 @@ namespace AKNet.Udp4Tcp.Common
             NetLog.Assert(!mConnectionList.Contains(peer));
 #endif
             peer.mLogicWorker = this;
-            mConnectionList.AddLast(peer);
+            lock (mAddConnectionList)
+            {
+                mAddConnectionList.Enqueue(peer);
+            }
         }
 
         public void RemoveConnection(Connection peer)
@@ -80,8 +109,15 @@ namespace AKNet.Udp4Tcp.Common
 #if DEBUG
             NetLog.Assert(mConnectionList.Contains(peer));
 #endif
-            peer.mLogicWorker = null;
-            mConnectionList.Remove(peer.mEntry);
+            lock (mRemoveConnectionList)
+            {
+                mRemoveConnectionList.Enqueue(peer);
+            }
+        }
+
+        public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
+        {
+            mSocketAsyncEventArgsQueue.Enqueue(arg);
         }
     }
 }

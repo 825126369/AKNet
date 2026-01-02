@@ -46,6 +46,26 @@ namespace AKNet.Udp4Tcp.Common
             int nRandomIndex = RandomTool.RandomArrayIndex(0, mThreadWorkerList.Count);
             return mThreadWorkerList[nRandomIndex];
         }
+
+        public static List<ThreadWorker> GetRandomThreadWorkerList(int nSocketCount)
+        {
+            List<ThreadWorker> mFinalList = new List<ThreadWorker>();
+
+            List<int> mIndexList = new List<int>();
+            for(int i = 0; i < mThreadWorkerList.Count; i++)
+            {
+                mIndexList.Add(i);
+            }
+            
+            while (nSocketCount-- > 0)
+            {
+                int nRandomIndex = RandomTool.RandomArrayIndex(0, mIndexList.Count);
+                ThreadWorker mThreadWorker = mThreadWorkerList[nRandomIndex];
+                mIndexList.RemoveAt(nRandomIndex);
+                mFinalList.Add(mThreadWorker);
+            }
+            return mFinalList;
+        }
     }
 }
 

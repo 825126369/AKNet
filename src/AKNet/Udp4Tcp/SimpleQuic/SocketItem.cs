@@ -127,7 +127,7 @@ namespace AKNet.Udp4Tcp.Common
 
         void OnIOComplete1(object sender, SocketAsyncEventArgs arg)
         {
-            mLogicWorker.mThreadWorker.Add_SocketAsyncEventArgs(arg as SSocketAsyncEventArgs);
+            mLogicWorker.Add_SocketAsyncEventArgs(arg as SSocketAsyncEventArgs);
         }
         
         void OnIOComplete2(object sender, SocketAsyncEventArgs arg)

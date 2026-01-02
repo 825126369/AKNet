@@ -12,7 +12,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = new Dictionary<IPEndPoint, Connection>();
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
         private readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        private readonly LogicWorker[] mLogicWorkerList = new LogicWorker[Config.nSocketCount];
+        private readonly List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
         private bool bInit = false;
 
         private void Init()
@@ -21,10 +21,13 @@ namespace AKNet.Udp4Tcp.Common
             bInit = true;
 
             ThreadWorkerMgr.Init();
-            for (int i = 0; i < mLogicWorkerList.Length; i++)
+
+            List<ThreadWorker> mRandomThreadWorkerList = ThreadWorkerMgr.GetRandomThreadWorkerList(Config.nSocketCount);
+            for (int i = 0; i < Config.nSocketCount; i++)
             {
-                mLogicWorkerList[i] = new LogicWorker();
-                mLogicWorkerList[i].Init(i);
+                var mLogicWorker = new LogicWorker();
+                mLogicWorkerList.Add(mLogicWorker);
+                mLogicWorker.Init(mRandomThreadWorkerList[i]);
             }
         }
 
@@ -38,7 +41,7 @@ namespace AKNet.Udp4Tcp.Common
             mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
             this.mConfig = mConfig;
             mSocketMgr.InitNet(mConfig);
-            for (int i = 0; i < mLogicWorkerList.Length; i++)
+            for (int i = 0; i < mLogicWorkerList.Count; i++)
             {
                 mLogicWorkerList[i].SetSocketItem(mSocketMgr.GetSocketItem(i));
             }
@@ -47,6 +50,12 @@ namespace AKNet.Udp4Tcp.Common
         public void Dispose()
         {
             mSocketMgr.Dispose();
+            foreach(var mLogicWorker in mLogicWorkerList)
+            {
+                mLogicWorker.mThreadWorker.RemoveLogicWorker(mLogicWorker);
+                mLogicWorker.mThreadWorker = null;
+            }
+            mLogicWorkerList.Clear();
         }
 
         public void Update()

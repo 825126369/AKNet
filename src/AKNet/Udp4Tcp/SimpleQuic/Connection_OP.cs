@@ -1,17 +1,38 @@
-﻿namespace AKNet.Udp4Tcp.Common
+﻿using System;
+using System.Threading;
+
+namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection
     {
+        public void Dispose()
+        {
+            Volatile.Write(ref m_Connected, false);
+            mLogicWorker.RemoveConnection(this);
+            if (mConnectionType == ConnectionType.Client)
+            {
+                mSocketMgr.Dispose();
+                mLogicWorker.mThreadWorker.RemoveLogicWorker(mLogicWorker);
+                mLogicWorker.mThreadWorker = null;
+            }
+        }
+
         public bool ConnectAsync(ConnectionEventArgs arg)
         {
-            Init(ConnectionType.Client);
-
             bool bIOPending = true;
             if (m_Connected)
             {
                 bIOPending = false;
-                arg.LastOperation = ConnectionAsyncOperation.Connect;
-                arg.ConnectionError = ConnectionError.Success;
+                if (RemoteEndPoint == arg.RemoteEndPoint)
+                {
+                    arg.LastOperation = ConnectionAsyncOperation.Connect;
+                    arg.ConnectionError = ConnectionError.Success;
+                }
+                else
+                {
+                    arg.LastOperation = ConnectionAsyncOperation.Connect;
+                    arg.ConnectionError = ConnectionError.Error;
+                }
             }
             else
             {
@@ -22,8 +43,16 @@
                 mConfig.mReceiveFunc = WorkerThreadReceiveNetPackage;
                 this.mConfig = mConfig;
 
+                if(mSocketMgr != null)
+                {
+                    mSocketMgr.Dispose();
+                    mSocketMgr = null;
+                }
+
+                mSocketMgr = new SocketMgr();
                 if (SimpleQuicFunc.SUCCESSED(mSocketMgr.InitNet(mConfig)))
                 {
+                    Init(ConnectionType.Client);
                     mLogicWorker.SetSocketItem(mSocketMgr.GetSocketItem(0));
                     mWRConnectEventArgs.SetTarget(arg);
 

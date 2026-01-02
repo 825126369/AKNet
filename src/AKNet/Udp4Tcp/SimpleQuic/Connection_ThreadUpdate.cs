@@ -54,16 +54,19 @@ namespace AKNet.Udp4Tcp.Common
         {
             ProcessConnectionOP();
 
-            lock (mWRSendEventArgsQueue)
+            if (m_Connected)
             {
-                while(mWRSendEventArgsQueue.TryDequeue(out var arg))
+                lock (mWRSendEventArgsQueue)
                 {
-                    mUdpCheckMgr.AddTcpStream(arg.GetCanReadSpan());
-                    arg.LastOperation = ConnectionAsyncOperation.Send;
-                    arg.ConnectionError = ConnectionError.Success;
-                    arg.BytesTransferred = arg.Length;
-                    arg.SetBuffer(0, arg.MemoryBuffer.Length);
-                    arg.TriggerEvent();
+                    while (mWRSendEventArgsQueue.TryDequeue(out var arg))
+                    {
+                        mUdpCheckMgr.AddTcpStream(arg.GetCanReadSpan());
+                        arg.LastOperation = ConnectionAsyncOperation.Send;
+                        arg.ConnectionError = ConnectionError.Success;
+                        arg.BytesTransferred = arg.Length;
+                        arg.SetBuffer(0, arg.MemoryBuffer.Length);
+                        arg.TriggerEvent();
+                    }
                 }
             }
 
@@ -112,7 +115,9 @@ namespace AKNet.Udp4Tcp.Common
                 switch (Oper.nOPType)
                 {
                     case ConnectionOP.E_OP_TYPE.SendConnect:
-                        this.SendConnect();
+                        {
+                            SendConnect();
+                        }
                         break;
 
                     case ConnectionOP.E_OP_TYPE.SendDisConnect:
