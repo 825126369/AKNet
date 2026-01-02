@@ -13,16 +13,17 @@ namespace AKNet.Udp4Tcp.Common
     {
         long fLastTime = 0;
         long fInternalTime = -1;
-        public void SetInternalTime(long fNowTime, long fInternalTime)
+        private LogicWorker mLogicWorker;
+        public void SetInternalTime(long fInternalTime)
         {
-            this.Reset(fNowTime);
+            this.Reset();
             this.fInternalTime = fInternalTime;
         }
 
-        public void Reset(long mNowTime)
+        public void Reset()
         {
             this.fInternalTime = -1;
-            this.fLastTime = mNowTime;
+            this.fLastTime = mLogicWorker.mThreadWorker.TimeNow;
         }
 
         public bool orSetInternalTime()
@@ -30,15 +31,20 @@ namespace AKNet.Udp4Tcp.Common
             return fInternalTime >= 0.0;
         }
 
-        public bool orTimeOut(long fNowTime)
+        public bool orTimeOut()
         {
-            if (fNowTime - fLastTime >= fInternalTime)
+            if (mLogicWorker.mThreadWorker.TimeNow - fLastTime >= fInternalTime)
             {
-                this.Reset(fNowTime);
+                this.Reset();
                 return true;
             }
 
             return false;
+        }
+
+        public void SetLogicWorker(LogicWorker mLogicWorker)
+        {
+            this.mLogicWorker = mLogicWorker;
         }
     }
 }

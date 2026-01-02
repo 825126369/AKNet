@@ -66,6 +66,7 @@ namespace AKNet.Udp4Tcp.Common
                 NetLog.Assert(nOffset >= 0);
 
                 var mPackage = mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
+                mPackage.SetLogicWorker(mConnection.mLogicWorker);
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
                 int nRemainLength = mTcpSlidingWindow.Length - nOffset;
@@ -101,7 +102,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 if (mPackage.nSendCount > 0)
                 {
-                    if (mPackage.mReSendTimeOut.orTimeOut(mConnection.mLogicWorker.mThreadWorker.TimeNow))
+                    if (mPackage.mReSendTimer.orTimeOut())
                     {
                         UdpStatistical.AddReSendCheckPackageCount();
                         SendNetPackage(mPackage);
@@ -133,7 +134,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public void Reset()
         {
-            MainThreadCheck.Check();
+            SimpleQuicFunc.ThreadCheck(mConnection);
             nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
             mTcpSlidingWindow.WindowReset();
 
@@ -148,7 +149,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             long nTimeOutTime = GetRTOTime();
             UdpStatistical.AddRTO(nTimeOutTime);
-            mPackage.mReSendTimeOut.SetInternalTime(mConnection.mLogicWorker.mThreadWorker.TimeNow, nTimeOutTime);
+            mPackage.mReSendTimer.SetInternalTime(nTimeOutTime);
         }
 
         //快速重传
@@ -227,9 +228,6 @@ namespace AKNet.Udp4Tcp.Common
                 {
                     QuickReSend(nRequestOrderId);
                 }
-
-                //DoTcpSlidingWindowForward(nRequestOrderId);
-                //QuickReSend(nRequestOrderId);
             }
         }
 

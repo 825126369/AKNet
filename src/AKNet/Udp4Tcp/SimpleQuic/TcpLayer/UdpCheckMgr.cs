@@ -23,8 +23,8 @@ namespace AKNet.Udp4Tcp.Common
         public UdpCheckMgr(Connection mConnection)
         {
             this.mConnection = mConnection;
-            mReSendPackageMgr = new ReSendPackageMgr(mConnection, this);
-            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+            this.mReSendPackageMgr = new ReSendPackageMgr(mConnection, this);
+            this.nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
         public void AddReceivePackageOrderId(int nLength)

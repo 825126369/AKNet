@@ -15,6 +15,8 @@ namespace AKNet.Udp4Tcp.Common
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();
+        public readonly ReSendPackageTimeOut mReSendTimer = new ReSendPackageTimeOut();
+
         public TcpSlidingWindow mTcpSlidingWindow;
         public readonly SSocketAsyncEventArgs mSendArgs = new SSocketAsyncEventArgs();
         public LogicWorker mLogicWorker;
@@ -23,7 +25,6 @@ namespace AKNet.Udp4Tcp.Common
         public uint nRequestOrderId;
         public ushort nBodyLength;
         public ushort nSendCount;
-        public ReSendPackageTimeOut mReSendTimeOut = new ReSendPackageTimeOut();
 
         public NetUdpSendFixedSizePackage()
         {
@@ -42,14 +43,10 @@ namespace AKNet.Udp4Tcp.Common
             mSendArgs.SetBuffer(0, Config.nUdpPackageFixedSize);
         }
 
-        public bool orTimeOut(long nowTime)
+        public void SetLogicWorker(LogicWorker mLogicWorker)
         {
-            return mReSendTimeOut.orTimeOut(nowTime);
-        }
-
-        public void SetInternalTime(long nowTime, long InternalTime)
-        {
-            mReSendTimeOut.SetInternalTime(nowTime, InternalTime);
+            this.mLogicWorker = mLogicWorker;
+            this.mReSendTimer.SetLogicWorker(mLogicWorker);
         }
 
         public TcpSlidingWindow WindowBuff { 

@@ -19,6 +19,7 @@ namespace AKNet.Udp4Tcp.Server
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private ServerMgr mServerMgr;
+
         private string Name = string.Empty;
         private uint ID = 0;
         private double fReceiveHeartBeatTime = 0.0;

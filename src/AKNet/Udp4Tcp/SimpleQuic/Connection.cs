@@ -50,8 +50,6 @@ namespace AKNet.Udp4Tcp.Common
                 mLogicWorker.Init(ThreadWorkerMgr.GetRandomThreadWorker());
                 mLogicWorker.AddConnection(this);
             }
-
-            mUdpCheckMgr.Reset();
         }
 
         private void OnConnectInit()
