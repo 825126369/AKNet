@@ -17,6 +17,8 @@ namespace AKNet.Udp4Tcp.Common
     {
         private void SendUDPPackage2(NetUdpSendFixedSizePackage mPackage)
         {
+            SimpleQuicFunc.ThreadCheck(this);
+
             SSocketAsyncEventArgs mSendArgs = mSendEventArgsPool.Pop();
             Span<byte> mMemoryBuffer = mSendArgs.MemoryBuffer.Span;
             ReadOnlySpan<byte> mEncodeHead = UdpPackageEncryption.EncodeHead(mPackage);
@@ -25,13 +27,13 @@ namespace AKNet.Udp4Tcp.Common
 
             if (mPackage.WindowBuff != null)
             {
-                mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
+                int nReadLength = mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
+                NetLog.Assert(nReadLength == mPackage.WindowLength, $"{mPackage.WindowLength}, {nReadLength}");
             }
 
             mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
             mSendArgs.UserToken = mSendEventArgsPool;
             mSendArgs.RemoteEndPoint = RemoteEndPoint;
-            mPackage.mLogicWorker = this.mLogicWorker;
             mLogicWorker.mSocketItem.SendToAsync(mSendArgs);
         }
 
@@ -40,18 +42,21 @@ namespace AKNet.Udp4Tcp.Common
             if (mLogicWorker == null) return;
 
             SocketItem mSocketItem = e.UserToken as SocketItem;
-            SimpleQuicFunc.ThreadCheck(mSocketItem.mLogicWorker);
+            SimpleQuicFunc.ThreadCheck(this);
 
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
+
+            NetUdpReceiveFixedSizePackage mPackage = null;
+
             while (true)
             {
-                var mPackage = mSocketItem.mLogicWorker.mThreadWorker.mReceivePackagePool.Pop();
+                mPackage = mSocketItem.mLogicWorker.mThreadWorker.mReceivePackagePool.Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
                     mUdpCheckMgr.ReceiveNetPackage(mPackage);
-                    
+
                     if (!mPackage.orInnerCommandPackage())
                     {
                         nCurrentCheckPackageCount++;
