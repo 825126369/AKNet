@@ -11,7 +11,6 @@ using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
 using System.Net;
-using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Client
 {
@@ -302,6 +301,7 @@ namespace AKNet.Udp4Tcp.Client
 
         public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
+            ResetSendHeartBeatTime();
             lock (mSendStreamList)
             {
                 mSendStreamList.WriteFrom(mBufferSegment);

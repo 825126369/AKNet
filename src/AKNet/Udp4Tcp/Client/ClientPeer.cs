@@ -25,7 +25,7 @@ namespace AKNet.Udp4Tcp.Client
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
         private uint ID = 0;
-        
+               
         private double fReceiveHeartBeatTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
         private double fReConnectServerCdTime = 0.0;
@@ -144,7 +144,8 @@ namespace AKNet.Udp4Tcp.Client
             fReceiveHeartBeatTime = 0f;
         }
 
-        public void SetSocketState(SOCKET_PEER_STATE mState)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSocketState(SOCKET_PEER_STATE mState)
         {
             this.mSocketPeerState = mState;
         }
@@ -161,6 +162,11 @@ namespace AKNet.Udp4Tcp.Client
                 mSendStreamList.Reset();
             }
 
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Reset();
+            }
+
             this.Name = string.Empty;
             this.ID = 0;
             this.fReConnectServerCdTime = 0.0;
@@ -171,12 +177,15 @@ namespace AKNet.Udp4Tcp.Client
         public void Release()
         {
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            DisConnectServer();
             CloseSocket();
-
             lock (mSendStreamList)
             {
-                mSendStreamList.Reset();
+                mSendStreamList.Dispose();
+            }
+
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
             }
         }
 

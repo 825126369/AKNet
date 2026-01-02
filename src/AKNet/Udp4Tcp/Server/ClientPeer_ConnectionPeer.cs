@@ -221,6 +221,7 @@ namespace AKNet.Udp4Tcp.Server
 
         public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
+            ResetSendHeartBeatCdTime();
             lock (mSendStreamList)
             {
                 mSendStreamList.WriteFrom(mBufferSegment);

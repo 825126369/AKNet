@@ -10,6 +10,7 @@
 using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -21,7 +22,7 @@ namespace AKNet.Udp4Tcp.Server
         private string Name = string.Empty;
         private uint ID = 0;
         private double fReceiveHeartBeatTime = 0.0;
-        private double fMySendHeartBeatCdTime = 0.0;
+        private double fSendHeartBeatTime = 0.0;
 
         private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
@@ -30,8 +31,9 @@ namespace AKNet.Udp4Tcp.Server
         private readonly ConnectionEventArgs ReceiveArgs = new ConnectionEventArgs();
         private readonly ConnectionEventArgs SendArgs = new ConnectionEventArgs();
         private readonly ConnectionEventArgs DisConnectArgs = new ConnectionEventArgs();
-        private bool bReceiveIOContexUsed = false;
+
         private bool bSendIOContexUsed = false;
+        private bool bReceiveIOContexUsed = false;
         private bool bDisConnectIOContexUsed = false;
 
         public ClientPeer(ServerMgr mNetServer)
@@ -45,6 +47,8 @@ namespace AKNet.Udp4Tcp.Server
             ReceiveArgs.Completed += OnIOCompleted;
             DisConnectArgs.Completed += OnIOCompleted;
             bSendIOContexUsed = false;
+            bReceiveIOContexUsed = false;
+            bDisConnectIOContexUsed = false;
         }
 
         public void Update(double elapsed)
@@ -53,15 +57,20 @@ namespace AKNet.Udp4Tcp.Server
             {
                 case SOCKET_PEER_STATE.CONNECTED:
                     {
+                        int nPackageCount = 0;
                         while (NetPackageExecute())
                         {
-
+                            nPackageCount++;
+                        }
+                        if (nPackageCount > 0)
+                        {
+                            ReceiveHeartBeat();
                         }
 
-                        fMySendHeartBeatCdTime += elapsed;
-                        if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
+                        fSendHeartBeatTime += elapsed;
+                        if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
                         {
-                            fMySendHeartBeatCdTime = 0.0;
+                            fSendHeartBeatTime = 0.0;
                             SendHeartBeat();
                         }
 
@@ -89,7 +98,8 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        public void SetSocketState(SOCKET_PEER_STATE mState)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSocketState(SOCKET_PEER_STATE mState)
         {
             this.mSocketPeerState = mState;
         }
@@ -99,16 +109,19 @@ namespace AKNet.Udp4Tcp.Server
 			return mSocketPeerState;
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
         {
             SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ResetSendHeartBeatCdTime()
         {
-            fMySendHeartBeatCdTime = 0.0;
+            fSendHeartBeatTime = 0.0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReceiveHeartBeat()
         {
             fReceiveHeartBeatTime = 0.0;
@@ -124,16 +137,32 @@ namespace AKNet.Udp4Tcp.Server
                 mReceiveStreamList.Reset();
             }
 
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Reset();
+            }
+
+            bSendIOContexUsed = false;
+            fSendHeartBeatTime = 0.0;
+            fReceiveHeartBeatTime = 0.0;
             this.Name = string.Empty;
             this.ID = 0;
-            this.fReceiveHeartBeatTime = 0;
-            this.fMySendHeartBeatCdTime = 0;
         }
 
         public void Release()
         {
-            Reset();
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             CloseSocket();
+
+            lock (mReceiveStreamList)
+            {
+                mReceiveStreamList.Dispose();
+            }
+
+            lock (mSendStreamList)
+            {
+                mSendStreamList.Dispose();
+            }
         }
 
         public void NetPackageExecute(NetPackage mPackage)

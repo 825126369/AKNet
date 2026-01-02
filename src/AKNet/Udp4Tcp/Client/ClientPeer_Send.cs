@@ -26,7 +26,7 @@ namespace AKNet.Udp4Tcp.Client
 		{
 			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				ReadOnlySpan<byte> mData = mCryptoMgr.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
+                ReadOnlySpan<byte> mData = mCryptoMgr.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
                 SendNetStream(mData);
 			}
 		}
