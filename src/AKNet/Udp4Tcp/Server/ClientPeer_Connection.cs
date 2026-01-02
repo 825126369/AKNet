@@ -34,6 +34,8 @@ namespace AKNet.Udp4Tcp.Server
             NetLog.Assert(mConnection != null, "mConnectionPeer == null");
             this.mConnection = mConnection;
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+
+            StartReceiveEventArg();
         }
 
         public bool DisConnectServer()

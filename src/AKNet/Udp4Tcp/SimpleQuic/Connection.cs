@@ -32,6 +32,7 @@ namespace AKNet.Udp4Tcp.Common
         public LogicWorker mLogicWorker;
         private ConnectionType mConnectionType;
         public SSocketAsyncEventArgsPool mSendEventArgsPool;
+        public Listener mListener;
 
         public LinkedListNode<Connection> GetEntry()
         {

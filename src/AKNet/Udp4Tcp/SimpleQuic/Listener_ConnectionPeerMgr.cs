@@ -42,7 +42,7 @@ namespace AKNet.Udp4Tcp.Common
                     mConnectionPeer.RemoteEndPoint = nPeerId;
                     mSocketItem.mLogicWorker.AddConnection(mConnectionPeer);
                     mConnectionPeer.Init(ConnectionType.Server);
-
+                    mConnectionPeer.mListener = this;
                     lock (mConnectionPeerDic)
                     {
                         mConnectionPeerDic.Add(nPeerId, mConnectionPeer);

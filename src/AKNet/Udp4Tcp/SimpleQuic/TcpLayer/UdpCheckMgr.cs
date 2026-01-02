@@ -183,10 +183,5 @@ namespace AKNet.Udp4Tcp.Common
 
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
-
-        public void Release()
-        {
-
-        }
     }
 }

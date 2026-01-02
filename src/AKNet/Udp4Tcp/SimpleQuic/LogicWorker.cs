@@ -76,7 +76,6 @@ namespace AKNet.Udp4Tcp.Common
                     while (mRemoveConnectionList.TryDequeue(out var v))
                     {
                         mConnectionList.Remove(v.GetEntry());
-                        mThreadWorker.mConnectionPeerPool.recycle(v);
                     }
                 }
             }

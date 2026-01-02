@@ -7,6 +7,9 @@ namespace AKNet.Udp4Tcp.Common
     {
         public void Dispose()
         {
+            if (m_Disposed) return;
+            m_Disposed = true;
+
             Volatile.Write(ref m_Connected, false);
             mLogicWorker.RemoveConnection(this);
             if (mConnectionType == ConnectionType.Client)
@@ -14,6 +17,11 @@ namespace AKNet.Udp4Tcp.Common
                 mSocketMgr.Dispose();
                 mLogicWorker.mThreadWorker.RemoveLogicWorker(mLogicWorker);
                 mLogicWorker.mThreadWorker = null;
+            }
+            else
+            {
+                mListener.RemoveFakeSocket(this);
+                mListener = null;
             }
         }
 
