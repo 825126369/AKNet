@@ -18,13 +18,9 @@ namespace AKNet.Udp4Tcp.Common
     internal class ThreadWorker:IDisposable
     {
         //每个线程，被多个逻辑Worker使用，比如创建了 N个服务器，那么线程池复用。
-        private readonly static LinkedList<LogicWorker> mLogicWorkerList = new LinkedList<LogicWorker>();
-        private readonly static LinkedList<LogicWorker> mAddLogicWorkerList = new LinkedList<LogicWorker>();
-        private readonly static LinkedList<LogicWorker> mRemoveLogicWorkerList = new LinkedList<LogicWorker>();
+        private readonly LinkedList<LogicWorker> mLogicWorkerList = new LinkedList<LogicWorker>();
+        private readonly Queue<ThreadWorkerOP> mOPList = new Queue<ThreadWorkerOP>();
 
-        private readonly ManualResetEventSlim mWaitHandle = new ManualResetEventSlim(true);
-
-        public readonly ObjectPool<OP> mOPPool = new ObjectPool<OP>();
         public readonly ObjectPool<Connection> mConnectionPeerPool = new ObjectPool<Connection>();
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>();
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
@@ -70,27 +66,21 @@ namespace AKNet.Udp4Tcp.Common
                     v.ThreadUpdate();
                 }
 
-                lock(mRemoveLogicWorkerList)
+                lock (mOPList)
                 {
-                    if (mRemoveLogicWorkerList.Count > 0)
+                    if (mOPList.Count > 0)
                     {
-                        foreach (var v in mRemoveLogicWorkerList)
+                        while(mOPList.TryDequeue(out var mOP))
                         {
-                            mLogicWorkerList.Remove(v.GetEntry());
+                            if (mOP.nOPType == ThreadWorkerOP.E_OP_TYPE.AddLogicWorker)
+                            {
+                                mLogicWorkerList.AddLast(mOP.mTarget.GetEntry());
+                            }
+                            else
+                            {
+                                mLogicWorkerList.Remove(mOP.mTarget.GetEntry());
+                            }
                         }
-                        mRemoveLogicWorkerList.Clear();
-                    }
-                }
-
-                lock (mAddLogicWorkerList)
-                {
-                    if (mAddLogicWorkerList.Count > 0)
-                    {
-                        foreach (var v in mAddLogicWorkerList)
-                        {
-                            mLogicWorkerList.AddLast(v.GetEntry());
-                        }
-                        mAddLogicWorkerList.Clear();
                     }
                 }
 
@@ -105,26 +95,29 @@ namespace AKNet.Udp4Tcp.Common
 
         public void AddLogicWorker(LogicWorker mWorker)
         {
-            lock (mAddLogicWorkerList)
+            lock (mOPList)
             {
-                mAddLogicWorkerList.AddLast(mWorker);
+                var mOP = new ThreadWorkerOP();
+                mOP.nOPType = ThreadWorkerOP.E_OP_TYPE.AddLogicWorker;
+                mOP.mTarget = mWorker;
+                mOPList.Enqueue(mOP);
             }
-            mWaitHandle.Set();
         }
 
         public void RemoveLogicWorker(LogicWorker mWorker)
         {
-            lock (mRemoveLogicWorkerList)
+            lock (mOPList)
             {
-                mRemoveLogicWorkerList.AddLast(mWorker);
+                var mOP = new ThreadWorkerOP();
+                mOP.nOPType = ThreadWorkerOP.E_OP_TYPE.RemoveLogicWorker;
+                mOP.mTarget = mWorker;
+                mOPList.Enqueue(mOP);
             }
-            mWaitHandle.Set();
         }
 
         public void Add_SocketAsyncEventArgs(SSocketAsyncEventArgs arg)
         {
             mSocketAsyncEventArgsQueue.Enqueue(arg);
-            mWaitHandle.Set();
         }
 
     }

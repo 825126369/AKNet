@@ -3,12 +3,6 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal enum E_OP_TYPE
-    {
-        SendConnect,
-        SendDisConnect,
-    }
-
     internal enum E_TIMER_TYPE
     {
         //用于控制数据包的发送速率，避免突发发送导致网络拥塞。Pacing 定时器确保数据包以更平滑、更均匀的间隔发送，有助于提高网络效率和公平性。
@@ -26,17 +20,23 @@ namespace AKNet.Udp4Tcp.Common
         TIMER_COUNT
     }
 
-    internal class OP : IPoolItemInterface
+    internal class ConnectionOP : IPoolItemInterface
     {
-        private readonly LinkedListNode<OP> mEntry;
-        public E_OP_TYPE Type;
-
-        public OP()
+        internal enum E_OP_TYPE
         {
-            mEntry = new LinkedListNode<OP>(this);
+            SendConnect,
+            SendDisConnect,
         }
 
-        public LinkedListNode<OP> GetEntry()
+        private readonly LinkedListNode<ConnectionOP> mEntry;
+        public E_OP_TYPE nOPType;
+
+        public ConnectionOP()
+        {
+            mEntry = new LinkedListNode<ConnectionOP>(this);
+        }
+
+        public LinkedListNode<ConnectionOP> GetEntry()
         {
             return mEntry;
         }
@@ -46,4 +46,32 @@ namespace AKNet.Udp4Tcp.Common
             
         }
     };
+
+    internal class ThreadWorkerOP:IPoolItemInterface
+    {
+        internal enum E_OP_TYPE
+        {
+            AddLogicWorker,
+            RemoveLogicWorker,
+        }
+
+        public E_OP_TYPE nOPType;
+        public LogicWorker mTarget;
+
+        private readonly LinkedListNode<ThreadWorkerOP> mEntry;
+        public ThreadWorkerOP()
+        {
+            mEntry = new LinkedListNode<ThreadWorkerOP>(this);
+        }
+
+        public LinkedListNode<ThreadWorkerOP> GetEntry()
+        {
+            return mEntry;
+        }
+
+        public void Reset()
+        {
+
+        }
+    }
 }

@@ -47,7 +47,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
         private bool bInit = false;
         public bool HasQueuedWork;
-        public readonly LinkedList<OP> mOPList = new LinkedList<OP>();
+        public readonly LinkedList<ConnectionOP> mOPList = new LinkedList<ConnectionOP>();
 
         public Connection()
         {
@@ -65,6 +65,7 @@ namespace AKNet.Udp4Tcp.Common
                 ThreadWorkerMgr.Init();
                 mLogicWorker = new LogicWorker();
                 mLogicWorker.Init(ThreadWorkerMgr.GetRandomThreadWorker());
+                mLogicWorker.AddConnection(this);
             }
 
             this.nSearchCount = nMinSearchCount;
@@ -111,7 +112,7 @@ namespace AKNet.Udp4Tcp.Common
 
                     lock (mOPList)
                     {
-                        mOPList.AddLast(new OP() { Type = E_OP_TYPE.SendConnect });
+                        mOPList.AddLast(new ConnectionOP() { nOPType =  ConnectionOP.E_OP_TYPE.SendConnect });
                     }
                 }
                 else
@@ -133,7 +134,7 @@ namespace AKNet.Udp4Tcp.Common
                 mWRDisConnectEventArgs.SetTarget(arg);
                 lock (mOPList)
                 {
-                    mOPList.AddLast(new OP() { Type = E_OP_TYPE.SendDisConnect });
+                    mOPList.AddLast(new ConnectionOP() { nOPType = ConnectionOP.E_OP_TYPE.SendDisConnect });
                 }
             }
             else

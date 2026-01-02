@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:16
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
@@ -59,7 +60,6 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadUpdate()
         {
-            //WorkerLoop();
             foreach (var v in mConnectionList)
             {
                 v.ThreadUpdate();
@@ -68,20 +68,20 @@ namespace AKNet.Udp4Tcp.Common
 
         public void AddConnection(Connection peer)
         {
-            if (peer.mLogicWorker == null)
-            {
-                peer.mLogicWorker = this;
-                mConnectionList.AddLast(peer);
-            }
+#if DEBUG
+            NetLog.Assert(!mConnectionList.Contains(peer));
+#endif
+            peer.mLogicWorker = this;
+            mConnectionList.AddLast(peer);
         }
 
         public void RemoveConnection(Connection peer)
         {
-            if (peer.mLogicWorker != null)
-            {
-                peer.mLogicWorker = null;
-                mConnectionList.Remove(peer.mEntry);
-            }
+#if DEBUG
+            NetLog.Assert(mConnectionList.Contains(peer));
+#endif
+            peer.mLogicWorker = null;
+            mConnectionList.Remove(peer.mEntry);
         }
     }
 }

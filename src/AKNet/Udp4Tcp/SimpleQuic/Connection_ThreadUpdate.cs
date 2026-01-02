@@ -48,64 +48,63 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadUpdate()
         {
-            if (!m_Connected) return;
-
-            UdpStatistical.AddSearchCount(this.nSearchCount);
-            UdpStatistical.AddFrameCount();
-
             ProcessConnectionOP();
-
-            lock (mWRSendEventArgsQueue)
+            if (m_Connected)
             {
-                while (mWRSendEventArgsQueue.TryDequeue(out ConnectionEventArgs arg))
-                {
-                    ReSendPackageMgr_AddTcpStream(arg.GetCanReadSpan());
-                    arg.LastOperation = ConnectionAsyncOperation.Send;
-                    arg.ConnectionError = ConnectionError.Success;
-                    arg.BytesTransferred = arg.Length;
-                    arg.SetBuffer(0, arg.MemoryBuffer.Length);
-                    arg.TriggerEvent();
-                }
-            }
+                UdpStatistical.AddSearchCount(this.nSearchCount);
+                UdpStatistical.AddFrameCount();
 
-            ReSendPackageMgr_AddPackage();
-            if (mWaitCheckSendQueue.Count == 0) return;
-
-            bool bTimeOut = false;
-            int nSearchCount = this.nSearchCount;
-            foreach (var mPackage in mWaitCheckSendQueue)
-            {
-                if (mPackage.nSendCount > 0)
+                lock (mWRSendEventArgsQueue)
                 {
-                    if (mPackage.orTimeOut())
+                    while (mWRSendEventArgsQueue.TryDequeue(out ConnectionEventArgs arg))
                     {
-                        UdpStatistical.AddReSendCheckPackageCount();
-                        SendUDPPackage(mPackage);
-                        ArrangeReSendTimeOut(mPackage);
-                        mPackage.nSendCount++;
-                        bTimeOut = true;
+                        ReSendPackageMgr_AddTcpStream(arg.GetCanReadSpan());
+                        arg.LastOperation = ConnectionAsyncOperation.Send;
+                        arg.ConnectionError = ConnectionError.Success;
+                        arg.BytesTransferred = arg.Length;
+                        arg.SetBuffer(0, arg.MemoryBuffer.Length);
+                        arg.TriggerEvent();
                     }
                 }
-                else
+
+                ReSendPackageMgr_AddPackage();
+                if (mWaitCheckSendQueue.Count == 0) return;
+
+                bool bTimeOut = false;
+                int nSearchCount = this.nSearchCount;
+                foreach (var mPackage in mWaitCheckSendQueue)
                 {
-                    UdpStatistical.AddFirstSendCheckPackageCount();
-                    SendUDPPackage(mPackage);
-                    ArrangeReSendTimeOut(mPackage);
-                    mPackage.mTcpStanardRTOTimer.BeginRtt();
-                    mPackage.nSendCount++;
+                    if (mPackage.nSendCount > 0)
+                    {
+                        if (mPackage.orTimeOut())
+                        {
+                            UdpStatistical.AddReSendCheckPackageCount();
+                            SendUDPPackage(mPackage);
+                            ArrangeReSendTimeOut(mPackage);
+                            mPackage.nSendCount++;
+                            bTimeOut = true;
+                        }
+                    }
+                    else
+                    {
+                        UdpStatistical.AddFirstSendCheckPackageCount();
+                        SendUDPPackage(mPackage);
+                        ArrangeReSendTimeOut(mPackage);
+                        mPackage.mTcpStanardRTOTimer.BeginRtt();
+                        mPackage.nSendCount++;
+                    }
+
+                    if (--nSearchCount <= 0)
+                    {
+                        break;
+                    }
                 }
 
-                if (--nSearchCount <= 0)
+                if (bTimeOut)
                 {
-                    break;
+                    this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
                 }
             }
-
-            if (bTimeOut)
-            {
-                this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
-            }
-
         }
 
         public void SendInnerNetData(byte id)
@@ -167,18 +166,16 @@ namespace AKNet.Udp4Tcp.Common
 
         void ProcessConnectionOP()
         {
-            OP Oper = GetNextOP();
-            bool FreeOper = false;
+            ConnectionOP Oper = GetNextOP();
             while (Oper != null)
             {
-                FreeOper = true;
-                switch (Oper.Type)
+                switch (Oper.nOPType)
                 {
-                    case E_OP_TYPE.SendConnect:
+                    case ConnectionOP.E_OP_TYPE.SendConnect:
                         this.SendConnect();
                         break;
 
-                    case E_OP_TYPE.SendDisConnect:
+                    case ConnectionOP.E_OP_TYPE.SendDisConnect:
                         this.SendDisConnect();
                         break;
 
@@ -187,16 +184,13 @@ namespace AKNet.Udp4Tcp.Common
                         break;
                 }
 
-                if (FreeOper)
-                {
-                    mLogicWorker.mThreadWorker.mOPPool.recycle(Oper);
-                }
+                Oper = GetNextOP();
             }
         }
 
-        private OP GetNextOP()
+        private ConnectionOP GetNextOP()
         {
-            OP Operation = null;
+            ConnectionOP Operation = null;
             if (mOPList.Count > 0)
             {
                 lock (mOPList)
