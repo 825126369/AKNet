@@ -37,6 +37,8 @@ namespace AKNet.Udp4Tcp.Common
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
+            if (mLogicWorker == null) return;
+
             SocketItem mSocketItem = e.UserToken as SocketItem;
             SimpleQuicFunc.ThreadCheck(mSocketItem.mLogicWorker);
 
