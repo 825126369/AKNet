@@ -14,7 +14,7 @@ namespace AKNet.Udp4Tcp.Common
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
-        private readonly AkCircularManyBuffer mMTSendStreamList = new AkCircularManyBuffer();
+        //private readonly AkCircularManyBuffer mMTSendStreamList = new AkCircularManyBuffer();
         private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
 
         private readonly AkCircularManySpanBuffer mSendUDPPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
@@ -46,10 +46,11 @@ namespace AKNet.Udp4Tcp.Common
         long nSameOrderIdSureCount = 0;
 
         UdpClientPeerCommonBase mClientPeer;
-
+        
         private readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
+        private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
         private bool bInit = false;
         public bool HasQueuedWork;
         public LinkedList<OP> mOPList;
@@ -142,18 +143,11 @@ namespace AKNet.Udp4Tcp.Common
             }
             return bIOPending;
         }
-        
+
         public bool SendAsync(ConnectionEventArgs arg)
         {
-            arg.LastOperation = ConnectionAsyncOperation.Send;
-            arg.ConnectionError = ConnectionError.Success;
-            SendTcpStream(arg.GetCanReadSpan());
+            SendTcpStream(arg);
             return true;
-        }
-
-        public void Send(ReadOnlySpan<byte> buffer)
-        {
-            SendTcpStream(buffer);
         }
 
         public bool ReceiveAsync(ConnectionEventArgs arg)

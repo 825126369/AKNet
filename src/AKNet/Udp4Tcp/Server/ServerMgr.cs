@@ -26,13 +26,7 @@ namespace AKNet.Udp4Tcp.Server
         private int nPort = 0;
         private Listener mListenSocket = null;
         private readonly ConnectionEventArgs mAcceptIOContex;
-        private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
-
-        private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = null;
-        private readonly ConnectionPeerPool mConnectionPeerPool = null;
-
         private readonly Queue<Connection> mConnectSocketQueue = new Queue<Connection>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 

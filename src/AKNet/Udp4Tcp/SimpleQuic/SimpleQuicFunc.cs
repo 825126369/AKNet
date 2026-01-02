@@ -1,4 +1,8 @@
-﻿namespace AKNet.Udp4Tcp.Common
+﻿using AKNet.Common;
+using System.Runtime.CompilerServices;
+using System.Threading;
+
+namespace AKNet.Udp4Tcp.Common
 {
     internal enum ConnectionType
     {
@@ -30,14 +34,26 @@
 
     internal static partial class SimpleQuicFunc
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool FAILED(E_LOGIC_RESULT Status)
         {
             return Status == E_LOGIC_RESULT.Error;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool SUCCESSED(E_LOGIC_RESULT Status)
         {
             return Status == E_LOGIC_RESULT.Success;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ThreadCheck(Connection mConnection)
+        {
+            int nThreadId = Thread.CurrentThread.ManagedThreadId;
+            if (nThreadId != mConnection.mLogicWorker.mThreadWorker.ThreadID)
+            {
+                NetLog.LogError($"ThreadCheck: {mConnection.mLogicWorker.mThreadWorker.ThreadID}, {nThreadId}");
+            }
         }
     }
 }

@@ -22,6 +22,8 @@ namespace AKNet.Udp4Tcp.Server
         private uint ID = 0;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
+
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private Connection mConnection = null;
 

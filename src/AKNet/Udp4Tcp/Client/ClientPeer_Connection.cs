@@ -11,6 +11,7 @@ using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
 using System.Net;
+using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Client
 {
@@ -167,6 +168,31 @@ namespace AKNet.Udp4Tcp.Client
             }
         }
 
+        private void StartSendEventArg()
+        {
+            bool bIOPending = false;
+            if (mConnection != null)
+            {
+                try
+                {
+                    bIOPending = mConnection.SendAsync(SendArgs);
+                    if (!bIOPending)
+                    {
+                        this.ProcessSend(SendArgs);
+                    }
+                }
+                catch (Exception e)
+                {
+                    bSendIOContexUsed = false;
+                    DisConnectedWithException(e);
+                }
+            }
+            else
+            {
+                bSendIOContexUsed = false;
+            } 
+        }
+
         private void OnIOCompleted(object sender, ConnectionEventArgs e)
         {
             switch (e.LastOperation)
@@ -179,6 +205,9 @@ namespace AKNet.Udp4Tcp.Client
                     break;
                 case ConnectionAsyncOperation.Receive:
                     this.ProcessReceive(e);
+                    break;
+                case ConnectionAsyncOperation.Send:
+                    this.ProcessSend(e);
                     break;
                 default:
                     NetLog.LogError("The last operation completed on the socket was not a receive or send");
@@ -250,9 +279,67 @@ namespace AKNet.Udp4Tcp.Client
             }
         }
 
+        private void ProcessSend(ConnectionEventArgs e)
+        {
+            if (e.ConnectionError == ConnectionError.Success)
+            {
+                if (e.BytesTransferred > 0)
+                {
+                    SendNetStream1(e.BytesTransferred);
+                }
+                else
+                {
+                    DisConnectedWithNormal();
+                    bSendIOContexUsed = false;
+                }
+            }
+            else
+            {
+                DisConnectedWithSocketError(e.ConnectionError);
+                bSendIOContexUsed = false;
+            }
+        }
+
         public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
-            mConnection.Send(mBufferSegment);
+            lock (mSendStreamList)
+            {
+                mSendStreamList.WriteFrom(mBufferSegment);
+            }
+
+            if (!bSendIOContexUsed)
+            {
+                bSendIOContexUsed = true;
+                SendNetStream1();
+            }
+        }
+
+        private void SendNetStream1(int BytesTransferred = 0)
+        {
+            if (BytesTransferred > 0)
+            {
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.ClearBuffer(BytesTransferred);
+                }
+            }
+
+            int nLength = mSendStreamList.Length;
+            if (nLength > 0)
+            {
+                nLength = Math.Min(SendArgs.MemoryBuffer.Length, nLength);
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.CopyTo(SendArgs.MemoryBuffer.Span.Slice(0, nLength));
+                }
+
+                SendArgs.SetBuffer(0, nLength);
+                StartSendEventArg();
+            }
+            else
+            {
+                bSendIOContexUsed = false;
+            }
         }
 
         private void DisConnectedWithNormal()
