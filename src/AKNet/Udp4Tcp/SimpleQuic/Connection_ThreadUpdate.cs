@@ -141,6 +141,20 @@ namespace AKNet.Udp4Tcp.Common
             return nCurrentCheckPackageCount;
         }
 
+        private void OnConnectReset()
+        {
+            this.fReceiveHeartBeatTime = 0;
+            this.fMySendHeartBeatCdTime = 0;
+            Reset();
+        }
+
+        private void OnDisConnectReset()
+        {
+            this.fReceiveHeartBeatTime = 0;
+            this.fMySendHeartBeatCdTime = 0;
+            Reset();
+        }
+
         public void Reset()
         {
             SimpleQuicFunc.ThreadCheck(this);

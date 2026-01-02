@@ -68,7 +68,7 @@ namespace AKNet.Udp4Tcp.Server
                         }
 
                         fSendHeartBeatTime += elapsed;
-                        if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+                        if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTime)
                         {
                             fSendHeartBeatTime = 0.0;
                             SendHeartBeat();

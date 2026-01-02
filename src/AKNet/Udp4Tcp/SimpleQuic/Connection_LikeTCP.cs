@@ -66,6 +66,7 @@ namespace AKNet.Udp4Tcp.Common
 				}
 				else
 				{
+					this.OnConnectReset();
                     SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
                 }
 			}
@@ -90,6 +91,7 @@ namespace AKNet.Udp4Tcp.Common
 				}
 				else
 				{
+                    this.OnDisConnectReset();
                     SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
                 }
             }
