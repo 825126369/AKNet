@@ -53,6 +53,8 @@ namespace AKNet.Udp4Tcp.Common
             UdpStatistical.AddSearchCount(this.nSearchCount);
             UdpStatistical.AddFrameCount();
 
+            ProcessConnectionOP();
+
             lock (mWRSendEventArgsQueue)
             {
                 while (mWRSendEventArgsQueue.TryDequeue(out ConnectionEventArgs arg))
@@ -163,22 +165,48 @@ namespace AKNet.Udp4Tcp.Common
             nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
         }
 
-        //private void HandleConnectionEvent(ref QUIC_CONNECTION_EVENT connectionEvent)
-        //{
-        //    NetLog.Log("Connection Event: " + connectionEvent.Type.ToString());
-        //    switch (connectionEvent.Type)
-        //    {
-        //        case E_CONNECTION_EVENT_TYPE.CONNECTED:
-        //            HandleEventConnected(ref connectionEvent.CONNECTED);
-        //            break;
-        //        case E_CONNECTION_EVENT_TYPE.CLOSED:
-        //            HandleEventShutdownInitiatedByTransport(ref connectionEvent.SHUTDOWN_INITIATED_BY_TRANSPORT);
-        //            break;
-        //        case E_CONNECTION_EVENT_TYPE.DATA_RECEIVED:
-        //            HandleEventShutdownInitiatedByPeer(ref connectionEvent.SHUTDOWN_INITIATED_BY_PEER);
-        //            break;
-        //    }
-        //}
+        void ProcessConnectionOP()
+        {
+            OP Oper = GetNextOP();
+            bool FreeOper = false;
+            while (Oper != null)
+            {
+                FreeOper = true;
+                switch (Oper.Type)
+                {
+                    case E_OP_TYPE.SendConnect:
+                        this.SendConnect();
+                        break;
+
+                    case E_OP_TYPE.SendDisConnect:
+                        this.SendDisConnect();
+                        break;
+
+                    default:
+                        NetLog.Assert(false);
+                        break;
+                }
+
+                if (FreeOper)
+                {
+                    mLogicWorker.mThreadWorker.mOPPool.recycle(Oper);
+                }
+            }
+        }
+
+        private OP GetNextOP()
+        {
+            OP Operation = null;
+            if (mOPList.Count > 0)
+            {
+                lock (mOPList)
+                {
+                    Operation = mOPList.First.Value;
+                    mOPList.RemoveFirst();
+                }
+            }
+            return Operation;
+        }
 
     }
 }

@@ -14,11 +14,7 @@ namespace AKNet.Udp4Tcp.Common
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
-        //private readonly AkCircularManyBuffer mMTSendStreamList = new AkCircularManyBuffer();
         private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
-
-        private readonly AkCircularManySpanBuffer mSendUDPPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
-        private readonly AkCircularManySpanBuffer mReceiveUdpPackageList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize, 1);
         private bool m_Connected;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
@@ -44,8 +40,6 @@ namespace AKNet.Udp4Tcp.Common
         readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
         long nLastSendSurePackageTime = 0;
         long nSameOrderIdSureCount = 0;
-
-        UdpClientPeerCommonBase mClientPeer;
         
         private readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
@@ -53,7 +47,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
         private bool bInit = false;
         public bool HasQueuedWork;
-        public LinkedList<OP> mOPList;
+        public readonly LinkedList<OP> mOPList = new LinkedList<OP>();
 
         public Connection()
         {
@@ -114,7 +108,11 @@ namespace AKNet.Udp4Tcp.Common
                 {
                     mLogicWorker.SetSocketItem(mSocketMgr.GetSocketItem(0));
                     mWRConnectEventArgs.SetTarget(arg);
-                    SendConnect();
+
+                    lock (mOPList)
+                    {
+                        mOPList.AddLast(new OP() { Type = E_OP_TYPE.SendConnect });
+                    }
                 }
                 else
                 {
@@ -133,7 +131,10 @@ namespace AKNet.Udp4Tcp.Common
             if (m_Connected)
             {
                 mWRDisConnectEventArgs.SetTarget(arg);
-                SendDisConnect();
+                lock (mOPList)
+                {
+                    mOPList.AddLast(new OP() { Type = E_OP_TYPE.SendDisConnect });
+                }
             }
             else
             {

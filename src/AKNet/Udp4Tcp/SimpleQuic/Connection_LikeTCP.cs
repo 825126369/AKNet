@@ -52,16 +52,22 @@ namespace AKNet.Udp4Tcp.Common
 		{
 			if (!m_Connected)
 			{
-                this.Reset();
                 m_Connected = true;
-
-                if(mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+				if (mConnectionType == ConnectionType.Client)
 				{
-                    mWRConnectEventArgs.SetTarget(null);
-                    arg.LastOperation = ConnectionAsyncOperation.Connect;
-                    arg.ConnectionError = ConnectionError.Success;
-                    arg.TriggerEvent();
-					mLogicWorker.AddConnection(this);
+                    this.Reset();
+                    if (mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+					{
+						mWRConnectEventArgs.SetTarget(null);
+						arg.LastOperation = ConnectionAsyncOperation.Connect;
+						arg.ConnectionError = ConnectionError.Success;
+						arg.TriggerEvent();
+						mLogicWorker.AddConnection(this);
+					}
+				}
+				else
+				{
+                    SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
                 }
 			}
 		}
@@ -70,15 +76,22 @@ namespace AKNet.Udp4Tcp.Common
 		{
 			if (m_Connected)
 			{
-				this.Reset();
                 m_Connected = false;
 
-                if (mWRDisConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
-                {
-                    mWRDisConnectEventArgs.SetTarget(null);
-                    arg.LastOperation = ConnectionAsyncOperation.Disconnect;
-                    arg.ConnectionError = ConnectionError.Success;
-                    arg.TriggerEvent();
+				if (mConnectionType == ConnectionType.Client)
+				{
+					this.Reset();
+					if (mWRDisConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+					{
+						mWRDisConnectEventArgs.SetTarget(null);
+						arg.LastOperation = ConnectionAsyncOperation.Disconnect;
+						arg.ConnectionError = ConnectionError.Success;
+						arg.TriggerEvent();
+					}
+				}
+				else
+				{
+                    SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
                 }
             }
 		}

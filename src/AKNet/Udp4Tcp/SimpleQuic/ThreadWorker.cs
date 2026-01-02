@@ -55,15 +55,14 @@ namespace AKNet.Udp4Tcp.Common
             
         }
 
+        ~ThreadWorker() { IsActive = false; }
+
         public void ThreadFunc()
         {
             ThreadID = Thread.CurrentThread.ManagedThreadId;
             IsActive = true;
             while (IsActive)
             {
-                //mWaitHandle.Wait();
-
-                ++NoWorkCount;
                 TimeNow = SimpleQuicFunc.CxPlatTimeUs();
 
                 foreach (var v in mLogicWorkerList)
@@ -73,20 +72,26 @@ namespace AKNet.Udp4Tcp.Common
 
                 lock (mRemoveLogicWorkerList)
                 {
-                    foreach (var v in mRemoveLogicWorkerList)
+                    if (mRemoveLogicWorkerList.Count > 0)
                     {
-                        mLogicWorkerList.Remove(v.mEntry);
+                        foreach (var v in mRemoveLogicWorkerList)
+                        {
+                            mLogicWorkerList.Remove(v.GetEntry());
+                        }
+                        mRemoveLogicWorkerList.Clear();
                     }
-                    mRemoveLogicWorkerList.Clear();
                 }
 
                 lock (mAddLogicWorkerList)
                 {
-                    foreach (var v in mAddLogicWorkerList)
+                    if (mAddLogicWorkerList.Count > 0)
                     {
-                        mLogicWorkerList.AddLast(v.mEntry);
+                        foreach (var v in mAddLogicWorkerList)
+                        {
+                            mLogicWorkerList.AddLast(v.GetEntry());
+                        }
+                        mAddLogicWorkerList.Clear();
                     }
-                    mAddLogicWorkerList.Clear();
                 }
 
                 while (mSocketAsyncEventArgsQueue.TryDequeue(out SSocketAsyncEventArgs arg))
@@ -95,22 +100,6 @@ namespace AKNet.Udp4Tcp.Common
                 }
 
                 Thread.Sleep(1);
-
-                //if(mSocketAsyncEventArgsQueue.IsEmpty && 
-                //    mAddLogicWorkerList.Count == 0 && 
-                //    mRemoveLogicWorkerList.Count == 0)
-                //{
-                //    NoWorkCount++;
-                //}
-                //else
-                //{
-                //    NoWorkCount = 0;
-                //}
-
-                //if (NoWorkCount >= 2)
-                //{
-                //    mWaitHandle.Reset();
-                //}
             }
         }
 

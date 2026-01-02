@@ -5,9 +5,8 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal enum E_OP_TYPE
     {
-        FLUSH_RECV,          // Process queue of receive packets.
-        FLUSH_SEND,          // Frame packets and send them.
-        TIMER_EXPIRED,       // A timer expired.
+        SendConnect,
+        SendDisConnect,
     }
 
     internal enum E_TIMER_TYPE
@@ -29,11 +28,8 @@ namespace AKNet.Udp4Tcp.Common
 
     internal class OP : IPoolItemInterface
     {
-        public readonly LinkedListNode<OP> mEntry;
+        private readonly LinkedListNode<OP> mEntry;
         public E_OP_TYPE Type;
-        public FLUSH_RECEIVE_DATA FLUSH_RECEIVE;
-        public FLUSH_SEND_DATA FLUSH_SEND;
-        public TIMER_EXPIRED_DATA TIMER_EXPIRED;
 
         public OP()
         {
@@ -47,34 +43,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public void Reset()
         {
-            FLUSH_RECEIVE.Reset();
-            FLUSH_SEND.Reset();
-            TIMER_EXPIRED.Reset();
+            
         }
-        
-        public struct FLUSH_RECEIVE_DATA
-        {
-            public void Reset()
-            {
-
-            }
-        }
-
-        public struct FLUSH_SEND_DATA
-        {
-            public void Reset()
-            {
-
-            }
-        }
-
-        public struct TIMER_EXPIRED_DATA
-        {
-            public E_TIMER_TYPE Type;
-            public void Reset()
-            {
-
-            }
-        }  
     };
 }
