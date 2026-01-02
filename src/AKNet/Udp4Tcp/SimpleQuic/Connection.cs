@@ -30,6 +30,7 @@ namespace AKNet.Udp4Tcp.Common
         private UdpCheckMgr mUdpCheckMgr;
         public LogicWorker mLogicWorker;
         private ConnectionType mConnectionType;
+        public SSocketAsyncEventArgsPool mSendEventArgsPool;
 
         public Connection()
         {
@@ -50,6 +51,8 @@ namespace AKNet.Udp4Tcp.Common
                 mLogicWorker.Init(ThreadWorkerMgr.GetRandomThreadWorker());
                 mLogicWorker.AddConnection(this);
             }
+
+            mSendEventArgsPool = new SSocketAsyncEventArgsPool(mLogicWorker, 0, 1024);
         }
 
         private void OnConnectInit()

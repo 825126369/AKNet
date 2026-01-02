@@ -40,8 +40,8 @@ namespace AKNet.Udp4Tcp.Common
                 {
                     mConnectionPeer = mSocketItem.mLogicWorker.mThreadWorker.mConnectionPeerPool.Pop();
                     mConnectionPeer.RemoteEndPoint = nPeerId;
-                    mConnectionPeer.Init(ConnectionType.Server);
                     mSocketItem.mLogicWorker.AddConnection(mConnectionPeer);
+                    mConnectionPeer.Init(ConnectionType.Server);
 
                     lock (mConnectionPeerDic)
                     {

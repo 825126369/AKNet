@@ -52,11 +52,11 @@ namespace AKNet.Udp4Tcp.Common
 		{
 			if (!m_Connected)
 			{
-                m_Connected = true;
+				m_Connected = true;
 				if (mConnectionType == ConnectionType.Client)
 				{
-                    this.Reset();
-                    if (mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+					this.Reset();
+					if (mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
 					{
 						mWRConnectEventArgs.SetTarget(null);
 						arg.LastOperation = ConnectionAsyncOperation.Connect;
@@ -67,8 +67,8 @@ namespace AKNet.Udp4Tcp.Common
 				else
 				{
 					this.OnConnectReset();
-                    SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
-                }
+					this.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
+				}
 			}
 		}
 

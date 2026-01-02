@@ -30,12 +30,9 @@ namespace AKNet.Udp4Tcp.Common
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-            
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.UserToken = this;
 
-            ReceiveArgs.Completed += OnIOComplete1;
-            ReceiveArgs.Completed2 += OnIOComplete2;
+            ReceiveArgs = AllocSSocketAsyncEventArgs();
+            ReceiveArgs.UserToken = this;
 
             if (mConfig.bServer)
             {
@@ -119,8 +116,8 @@ namespace AKNet.Udp4Tcp.Common
         {
             if (e.SocketError == SocketError.Success)
             {
-                var mPackage = e.UserToken as NetUdpSendFixedSizePackage;
-                mPackage.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
+                var mPool = e.UserToken as SSocketAsyncEventArgsPool;
+                mPool.recycle(e as SSocketAsyncEventArgs);
             }
             else
             {
@@ -149,8 +146,7 @@ namespace AKNet.Udp4Tcp.Common
                     break;
             }
         }
-
-
+        
         public void Dispose()
         {
             if (mSocket != null)
@@ -164,6 +160,15 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 catch (Exception) { }
             }
+        }
+
+        public SSocketAsyncEventArgs AllocSSocketAsyncEventArgs()
+        {
+            SSocketAsyncEventArgs arg = new SSocketAsyncEventArgs();
+            arg.Completed += OnIOComplete1;
+            arg.Completed2 += OnIOComplete2;
+            arg.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            return arg;
         }
     }
 

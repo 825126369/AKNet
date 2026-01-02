@@ -18,7 +18,6 @@ namespace AKNet.Udp4Tcp.Common
         public readonly ReSendPackageTimeOut mReSendTimer = new ReSendPackageTimeOut();
 
         public TcpSlidingWindow mTcpSlidingWindow;
-        public readonly SSocketAsyncEventArgs mSendArgs = new SSocketAsyncEventArgs();
         public LogicWorker mLogicWorker;
 
         public uint nOrderId;
@@ -28,7 +27,6 @@ namespace AKNet.Udp4Tcp.Common
 
         public NetUdpSendFixedSizePackage()
         {
-            mSendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             Reset();
         }
 
@@ -40,7 +38,6 @@ namespace AKNet.Udp4Tcp.Common
             nRequestOrderId = 0;
             nOrderId = 0;
             nBodyLength = 0;
-            mSendArgs.SetBuffer(0, Config.nUdpPackageFixedSize);
         }
 
         public void SetLogicWorker(LogicWorker mLogicWorker)
