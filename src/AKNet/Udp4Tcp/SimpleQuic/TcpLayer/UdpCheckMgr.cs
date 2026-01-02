@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:17
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
@@ -25,6 +26,11 @@ namespace AKNet.Udp4Tcp.Common
             this.mConnection = mConnection;
             this.mReSendPackageMgr = new ReSendPackageMgr(mConnection, this);
             this.nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+        }
+
+        public void AddTcpStream(ReadOnlySpan<byte> buffer)
+        {
+            mReSendPackageMgr.AddTcpStream(buffer);
         }
 
         public void AddReceivePackageOrderId(int nLength)

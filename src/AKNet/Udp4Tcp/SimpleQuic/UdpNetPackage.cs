@@ -44,6 +44,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             this.mLogicWorker = mLogicWorker;
             this.mReSendTimer.SetLogicWorker(mLogicWorker);
+            this.mTcpStanardRTOTimer.SetLogicWorker(mLogicWorker);
         }
 
         public TcpSlidingWindow WindowBuff { 

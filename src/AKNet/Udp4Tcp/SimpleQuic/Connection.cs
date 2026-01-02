@@ -128,8 +128,9 @@ namespace AKNet.Udp4Tcp.Common
 
         public bool SendAsync(ConnectionEventArgs arg)
         {
+            bool bIOPending = true;
             SendTcpStream(arg);
-            return true;
+            return bIOPending;
         }
 
         public bool ReceiveAsync(ConnectionEventArgs arg)

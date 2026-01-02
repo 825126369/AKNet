@@ -49,6 +49,20 @@ namespace AKNet.Udp4Tcp.Common
         public void ThreadUpdate()
         {
             ProcessConnectionOP();
+
+            lock (mWRSendEventArgsQueue)
+            {
+                while(mWRSendEventArgsQueue.TryDequeue(out var arg))
+                {
+                    mUdpCheckMgr.AddTcpStream(arg.GetCanReadSpan());
+                    arg.LastOperation = ConnectionAsyncOperation.Send;
+                    arg.ConnectionError = ConnectionError.Success;
+                    arg.BytesTransferred = arg.Length;
+                    arg.SetBuffer(0, arg.MemoryBuffer.Length);
+                    arg.TriggerEvent();
+                }
+            }
+
             mUdpCheckMgr.ThreadUpdate();
         }
 

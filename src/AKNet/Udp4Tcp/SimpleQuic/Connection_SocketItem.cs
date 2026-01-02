@@ -27,6 +27,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
             }
+
             mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);
             mSendArgs.UserToken = mSendEventArgsPool;
             mSendArgs.RemoteEndPoint = RemoteEndPoint;

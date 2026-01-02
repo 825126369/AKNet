@@ -130,5 +130,10 @@ namespace AKNet.Udp4Tcp.Common
             mReSendPackageMgr.FinishRttSuccess(nRtt);
             UdpStatistical.AddRtt(nRtt);
         }
+
+        public void SetLogicWorker(LogicWorker mLogicWorker)
+        {
+            this.mLogicWorker = mLogicWorker;
+        }
     }
 }
