@@ -25,10 +25,15 @@ namespace AKNet.Udp4Tcp.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long CxPlatTimeUs()
+        public static long GetNowTimeUS()
         {
             //Stopwatch.Frequency = 10000000 // 每秒 1000万个Tick
             return S_TO_US(mStopwatch.ElapsedTicks / (double)Stopwatch.Frequency);
+        }
+
+        public static long GetNowTimeMS()
+        {
+            return mStopwatch.ElapsedMilliseconds;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

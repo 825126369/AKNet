@@ -18,28 +18,6 @@ namespace AKNet.Udp4Tcp.Common
         private bool m_Connected;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
-
-        private const int nDefaultSendPackageCount = 1024;
-        private const int nDefaultCacheReceivePackageCount = 2048;
-        private uint nCurrentWaitReceiveOrderId;
-        private readonly TcpSlidingWindow mTcpSlidingWindow = new TcpSlidingWindow();
-        private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
-        private uint nCurrentWaitSendOrderId;
-        private long nLastRequestOrderIdTime = 0;
-        private uint nLastRequestOrderId = 0;
-        private int nContinueSameRequestOrderIdCount = 0;
-        private double nLastFrameTime = 0;
-        private int nSearchCount = 0;
-        private const int nMinSearchCount = 10;
-        private int nMaxSearchCount = int.MaxValue;
-        private int nRemainNeedSureCount = 0;
-
-        public LogicWorker mLogicWorker = null;
-        private ConnectionType mConnectionType;
-
-        readonly List<NetUdpReceiveFixedSizePackage> mCacheReceivePackageList = new List<NetUdpReceiveFixedSizePackage>(nDefaultCacheReceivePackageCount);
-        long nLastSendSurePackageTime = 0;
-        long nSameOrderIdSureCount = 0;
         
         private readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
@@ -49,9 +27,14 @@ namespace AKNet.Udp4Tcp.Common
         public bool HasQueuedWork;
         public readonly LinkedList<ConnectionOP> mOPList = new LinkedList<ConnectionOP>();
 
+        private UdpCheckMgr mUdpCheckMgr;
+        public LogicWorker mLogicWorker;
+        private ConnectionType mConnectionType;
+
         public Connection()
         {
             mEntry = new LinkedListNode<Connection>(this);
+            mUdpCheckMgr = new UdpCheckMgr(this);
         }
 
         public void Init(ConnectionType nType)
@@ -68,11 +51,7 @@ namespace AKNet.Udp4Tcp.Common
                 mLogicWorker.AddConnection(this);
             }
 
-            this.nSearchCount = nMinSearchCount;
-            this.nMaxSearchCount = this.nSearchCount * 2;
-            this.nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            this.nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
-            InitRTO();
+            mUdpCheckMgr.Reset();
         }
 
         private void OnConnectInit()

@@ -59,7 +59,7 @@ namespace AKNet.Udp4Tcp.Common
             IsActive = true;
             while (IsActive)
             {
-                TimeNow = SimpleQuicFunc.CxPlatTimeUs();
+                TimeNow = SimpleQuicFunc.GetNowTimeMS();
 
                 foreach (var v in mLogicWorkerList)
                 {

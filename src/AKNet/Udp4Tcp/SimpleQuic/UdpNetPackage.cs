@@ -23,8 +23,7 @@ namespace AKNet.Udp4Tcp.Common
         public uint nRequestOrderId;
         public ushort nBodyLength;
         public ushort nSendCount;
-        public long nLastSendTime = 0;
-        public long nInternalTime;
+        public ReSendPackageTimeOut mReSendTimeOut = new ReSendPackageTimeOut();
 
         public NetUdpSendFixedSizePackage()
         {
@@ -43,14 +42,14 @@ namespace AKNet.Udp4Tcp.Common
             mSendArgs.SetBuffer(0, Config.nUdpPackageFixedSize);
         }
 
-        public bool orTimeOut()
+        public bool orTimeOut(long nowTime)
         {
-            return UdpStaticCommon.GetNowTime() - nLastSendTime >= nInternalTime;
+            return mReSendTimeOut.orTimeOut(nowTime);
         }
 
-        public void SetInternalTime(long InternalTime)
+        public void SetInternalTime(long nowTime, long InternalTime)
         {
-            nInternalTime = InternalTime;
+            mReSendTimeOut.SetInternalTime(nowTime, InternalTime);
         }
 
         public TcpSlidingWindow WindowBuff { 

@@ -49,62 +49,7 @@ namespace AKNet.Udp4Tcp.Common
         public void ThreadUpdate()
         {
             ProcessConnectionOP();
-            if (m_Connected)
-            {
-                UdpStatistical.AddSearchCount(this.nSearchCount);
-                UdpStatistical.AddFrameCount();
-
-                lock (mWRSendEventArgsQueue)
-                {
-                    while (mWRSendEventArgsQueue.TryDequeue(out ConnectionEventArgs arg))
-                    {
-                        ReSendPackageMgr_AddTcpStream(arg.GetCanReadSpan());
-                        arg.LastOperation = ConnectionAsyncOperation.Send;
-                        arg.ConnectionError = ConnectionError.Success;
-                        arg.BytesTransferred = arg.Length;
-                        arg.SetBuffer(0, arg.MemoryBuffer.Length);
-                        arg.TriggerEvent();
-                    }
-                }
-
-                ReSendPackageMgr_AddPackage();
-                if (mWaitCheckSendQueue.Count == 0) return;
-
-                bool bTimeOut = false;
-                int nSearchCount = this.nSearchCount;
-                foreach (var mPackage in mWaitCheckSendQueue)
-                {
-                    if (mPackage.nSendCount > 0)
-                    {
-                        if (mPackage.orTimeOut())
-                        {
-                            UdpStatistical.AddReSendCheckPackageCount();
-                            SendUDPPackage(mPackage);
-                            ArrangeReSendTimeOut(mPackage);
-                            mPackage.nSendCount++;
-                            bTimeOut = true;
-                        }
-                    }
-                    else
-                    {
-                        UdpStatistical.AddFirstSendCheckPackageCount();
-                        SendUDPPackage(mPackage);
-                        ArrangeReSendTimeOut(mPackage);
-                        mPackage.mTcpStanardRTOTimer.BeginRtt();
-                        mPackage.nSendCount++;
-                    }
-
-                    if (--nSearchCount <= 0)
-                    {
-                        break;
-                    }
-                }
-
-                if (bTimeOut)
-                {
-                    this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
-                }
-            }
+            mUdpCheckMgr.ThreadUpdate();
         }
 
         public void SendInnerNetData(byte id)
@@ -123,7 +68,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 UdpStatistical.AddSendPackageCount();
                 ResetSendHeartBeatCdTime();
-                SetRequestOrderId(mPackage);
+                mUdpCheckMgr.SetRequestOrderId(mPackage);
                 if (mPackage.orInnerCommandPackage())
                 {
                     this.SendUDPPackage2(mPackage);
@@ -158,24 +103,7 @@ namespace AKNet.Udp4Tcp.Common
         public void Reset()
         {
             SimpleQuicFunc.ThreadCheck(this);
-
-            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
-            mTcpSlidingWindow.WindowReset();
-            foreach (var mRemovePackage in mWaitCheckSendQueue)
-            {
-                mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mRemovePackage);
-            }
-            mWaitCheckSendQueue.Clear();
-
-            while (mCacheReceivePackageList.Count > 0)
-            {
-                int nRemoveIndex = mCacheReceivePackageList.Count - 1;
-                NetUdpReceiveFixedSizePackage mRemovePackage = mCacheReceivePackageList[nRemoveIndex];
-                mCacheReceivePackageList.RemoveAt(nRemoveIndex);
-                mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mRemovePackage);
-            }
-
-            nCurrentWaitReceiveOrderId = Config.nUdpMinOrderId;
+            mUdpCheckMgr.Reset();
         }
                          
         void ProcessConnectionOP()

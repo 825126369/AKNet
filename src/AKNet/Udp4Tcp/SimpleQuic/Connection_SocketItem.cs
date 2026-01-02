@@ -45,7 +45,7 @@ namespace AKNet.Udp4Tcp.Common
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
-                    ReceiveNetPackage(mPackage);
+                    mUdpCheckMgr.ReceiveNetPackage(mPackage);
                     if (!mPackage.orInnerCommandPackage())
                     {
                         nCurrentCheckPackageCount++;

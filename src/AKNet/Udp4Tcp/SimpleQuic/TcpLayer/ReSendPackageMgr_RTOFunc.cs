@@ -11,7 +11,7 @@ using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class Connection
+    internal partial class ReSendPackageMgr
     {
         private const ushort HZ = 1000;
         private const long TCP_RTO_MAX = 120 * HZ;
@@ -112,10 +112,11 @@ namespace AKNet.Udp4Tcp.Common
     internal class TcpStanardRTOTimer
     {
         long nStartTime = 0;
+        public LogicWorker mLogicWorker;
 
         private long GetNowTime()
         {
-            return UdpStaticCommon.GetNowTime();
+            return mLogicWorker.mThreadWorker.TimeNow;
         }
 
         public void BeginRtt()
@@ -123,7 +124,7 @@ namespace AKNet.Udp4Tcp.Common
             nStartTime = GetNowTime();
         }
 
-        public void FinishRtt(Connection mReSendPackageMgr)
+        public void FinishRtt(ReSendPackageMgr mReSendPackageMgr)
         {
             long nRtt = GetNowTime() - nStartTime;
             mReSendPackageMgr.FinishRttSuccess(nRtt);

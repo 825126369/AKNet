@@ -9,35 +9,63 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal partial class Connection
+    internal partial class ReSendPackageMgr
     {
-        public void ReSendPackageMgr_AddTcpStream(ReadOnlySpan<byte> buffer)
+        private Connection mConnection = null;
+        private UdpCheckMgr mUdpCheckMgr;
+
+        private readonly TcpSlidingWindow mTcpSlidingWindow = new TcpSlidingWindow();
+        private readonly Queue<NetUdpSendFixedSizePackage> mWaitCheckSendQueue = new Queue<NetUdpSendFixedSizePackage>();
+        public uint nCurrentWaitSendOrderId;
+
+        private long nLastRequestOrderIdTime = 0;
+        private uint nLastRequestOrderId = 0;
+        private int nContinueSameRequestOrderIdCount = 0;
+        private double nLastFrameTime = 0;
+        private int nSearchCount = 0;
+
+        private const int nMinSearchCount = 10;
+        private int nMaxSearchCount = int.MaxValue;
+        private int nRemainNeedSureCount = 0;
+
+        public ReSendPackageMgr(Connection mConnection, UdpCheckMgr mUdpCheckMgr)
+        {
+            this.mConnection = mConnection;
+            this.mUdpCheckMgr = mUdpCheckMgr;
+            this.nSearchCount = nMinSearchCount;
+            this.nMaxSearchCount = this.nSearchCount * 2;
+            this.nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
+            InitRTO();
+        }
+
+        public void AddTcpStream(ReadOnlySpan<byte> buffer)
         {
             mTcpSlidingWindow.WriteFrom(buffer);
         }
 
-        private void ReSendPackageMgr_AddSendPackageOrderId(int nLength)
+        private void AddSendPackageOrderId(int nLength)
         {
             nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId, nLength);
         }
 
-        void ReSendPackageMgr_DoTcpSlidingWindowForward(uint nRequestOrderId)
+        void DoTcpSlidingWindowForward(uint nRequestOrderId)
         {
             mTcpSlidingWindow.DoWindowForward(nRequestOrderId);
-            ReSendPackageMgr_AddPackage();
+            AddPackage();
         }
 
-        private void ReSendPackageMgr_AddPackage()
+        private void AddPackage()
         {
             int nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
             while (nOffset < mTcpSlidingWindow.Length)
             {
                 NetLog.Assert(nOffset >= 0);
 
-                var mPackage = mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
+                var mPackage = mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
                 int nRemainLength = mTcpSlidingWindow.Length - nOffset;
@@ -53,17 +81,74 @@ namespace AKNet.Udp4Tcp.Common
                 }
 
                 mWaitCheckSendQueue.Enqueue(mPackage);
-                ReSendPackageMgr_AddSendPackageOrderId(mPackage.nBodyLength);
+                AddSendPackageOrderId(mPackage.nBodyLength);
 
                 nOffset = mTcpSlidingWindow.GetWindowOffset(nCurrentWaitSendOrderId);
             }
+        }
+
+        public void ThreadUpdate()
+        {
+            UdpStatistical.AddSearchCount(this.nSearchCount);
+            UdpStatistical.AddFrameCount();
+
+            AddPackage();
+            if (mWaitCheckSendQueue.Count == 0) return;
+
+            bool bTimeOut = false;
+            int nSearchCount = this.nSearchCount;
+            foreach (var mPackage in mWaitCheckSendQueue)
+            {
+                if (mPackage.nSendCount > 0)
+                {
+                    if (mPackage.mReSendTimeOut.orTimeOut(mConnection.mLogicWorker.mThreadWorker.TimeNow))
+                    {
+                        UdpStatistical.AddReSendCheckPackageCount();
+                        SendNetPackage(mPackage);
+                        ArrangeReSendTimeOut(mPackage);
+                        mPackage.nSendCount++;
+                        bTimeOut = true;
+                    }
+                }
+                else
+                {
+                    UdpStatistical.AddFirstSendCheckPackageCount();
+                    SendNetPackage(mPackage);
+                    ArrangeReSendTimeOut(mPackage);
+                    mPackage.mTcpStanardRTOTimer.BeginRtt();
+                    mPackage.nSendCount++;
+                }
+
+                if (--nSearchCount <= 0)
+                {
+                    break;
+                }
+            }
+
+            if (bTimeOut)
+            {
+                this.nSearchCount = Math.Max(this.nSearchCount / 2 + 1, nMinSearchCount);
+            }
+        }
+
+        public void Reset()
+        {
+            MainThreadCheck.Check();
+            nCurrentWaitSendOrderId = Config.nUdpMinOrderId;
+            mTcpSlidingWindow.WindowReset();
+
+            foreach (var mRemovePackage in mWaitCheckSendQueue)
+            {
+                mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mRemovePackage);
+            }
+            mWaitCheckSendQueue.Clear();
         }
 
         private void ArrangeReSendTimeOut(NetUdpSendFixedSizePackage mPackage)
         {
             long nTimeOutTime = GetRTOTime();
             UdpStatistical.AddRTO(nTimeOutTime);
-            mPackage.SetInternalTime(nTimeOutTime);
+            mPackage.mReSendTimeOut.SetInternalTime(mConnection.mLogicWorker.mThreadWorker.TimeNow, nTimeOutTime);
         }
 
         //快速重传
@@ -81,15 +166,16 @@ namespace AKNet.Udp4Tcp.Common
                 nContinueSameRequestOrderIdCount = 0;
                 // if (UdpStaticCommon.GetNowTime() - nLastRequestOrderIdTime > 5)
                 {
-                    nLastRequestOrderIdTime = UdpStaticCommon.GetNowTime();
+                    nLastRequestOrderIdTime = mConnection.mLogicWorker.mThreadWorker.TimeNow;
                     foreach (var mPackage in mWaitCheckSendQueue)
                     {
                         if (mPackage.nOrderId == nRequestOrderId)
                         {
-                            SendUDPPackage(mPackage);
+                            SendNetPackage(mPackage);
                             mPackage.nSendCount++;
                             UdpStatistical.AddQuickReSendCount();
-                            
+
+
                             //this.nMaxSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
                             //this.nSearchCount = this.nMaxSearchCount + 3;
                             //this.nSearchCount = Math.Max(nMinSearchCount, this.nSearchCount / 2);
@@ -102,7 +188,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ReceiveOrderIdRequestPackage(uint nRequestOrderId)
         {
-            ReSendPackageMgr_AddPackage();
+            AddPackage();
 
             bool bHit = false;
             int nRemoveCount = 0;
@@ -129,19 +215,21 @@ namespace AKNet.Udp4Tcp.Common
                     {
                         mPackage.mTcpStanardRTOTimer.FinishRtt(this);
                     }
-
-                    mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
+                    mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
                     Sure();
                 }
 
                 if (bHaveRemove)
                 {
-                    ReSendPackageMgr_DoTcpSlidingWindowForward(nRequestOrderId);
+                    DoTcpSlidingWindowForward(nRequestOrderId);
                 }
                 else
                 {
                     QuickReSend(nRequestOrderId);
                 }
+
+                //DoTcpSlidingWindowForward(nRequestOrderId);
+                //QuickReSend(nRequestOrderId);
             }
         }
 
@@ -160,6 +248,11 @@ namespace AKNet.Udp4Tcp.Common
 
                 this.nRemainNeedSureCount = this.nMaxSearchCount / 3 + 1;
             }
+        }
+
+        private void SendNetPackage(NetUdpSendFixedSizePackage mCheckPackage)
+        {
+            mConnection.SendUDPPackage(mCheckPackage);
         }
     }
 
