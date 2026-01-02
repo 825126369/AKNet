@@ -70,7 +70,7 @@ namespace AKNet.Udp4Tcp.Common
                     v.ThreadUpdate();
                 }
 
-                lock (mRemoveLogicWorkerList)
+                lock(mRemoveLogicWorkerList)
                 {
                     if (mRemoveLogicWorkerList.Count > 0)
                     {
