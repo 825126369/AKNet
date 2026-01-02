@@ -14,7 +14,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp4Tcp.Server
 {
-    internal partial class ClientPeer : UdpClientPeerCommonBase, ClientPeerBase
+    internal partial class ClientPeer : ClientPeerBase
 	{
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
