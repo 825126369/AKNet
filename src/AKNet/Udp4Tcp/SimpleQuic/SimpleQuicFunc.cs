@@ -55,11 +55,13 @@ namespace AKNet.Udp4Tcp.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ThreadCheck(LogicWorker mLogicWorker)
         {
+#if DEBUG
             int nThreadId = Thread.CurrentThread.ManagedThreadId;
             if (nThreadId != mLogicWorker.mThreadWorker.ThreadID)
             {
                 NetLog.LogError($"ThreadCheck: {mLogicWorker.mThreadWorker.ThreadID}, {nThreadId}");
             }
+#endif
         }
     }
 }
