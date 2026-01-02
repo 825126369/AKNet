@@ -38,9 +38,13 @@ namespace AKNet.Udp4Tcp.Common
                 mMTReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
                 if (mWRReceiveEventArgs.TryGetTarget(out ConnectionEventArgs arg)) 
                 {
+                    mWRReceiveEventArgs.SetTarget(null);
+
                     arg.Offset = 0;
                     arg.Length = arg.MemoryBuffer.Length;
                     arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetCanWriteSpan());
+                    arg.ConnectionError = ConnectionError.Success;
+                    arg.LastOperation = ConnectionAsyncOperation.Receive;
                     arg.TriggerEvent();
                 }
             }
@@ -98,26 +102,6 @@ namespace AKNet.Udp4Tcp.Common
         public int GetCurrentFrameRemainPackageCount()
         {
             return nCurrentCheckPackageCount;
-        }
-
-        private void OnConnectReset()
-        {
-            this.fReceiveHeartBeatTime = 0;
-            this.fMySendHeartBeatCdTime = 0;
-            Reset();
-        }
-
-        private void OnDisConnectReset()
-        {
-            this.fReceiveHeartBeatTime = 0;
-            this.fMySendHeartBeatCdTime = 0;
-            Reset();
-        }
-
-        public void Reset()
-        {
-            SimpleQuicFunc.ThreadCheck(this);
-            mUdpCheckMgr.Reset();
         }
                          
         void ProcessConnectionOP()
