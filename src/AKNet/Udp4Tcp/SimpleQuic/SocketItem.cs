@@ -61,12 +61,11 @@ namespace AKNet.Udp4Tcp.Common
 
         public void StartReceiveFromAsync()
         {
-            bool bIOPending = false;
             if (mSocket != null)
             {
                 try
                 {
-                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
+                    bool bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
                     if (!bIOPending)
                     {
                         SimpleQuicFunc.ThreadCheck(mLogicWorker);
@@ -92,15 +91,14 @@ namespace AKNet.Udp4Tcp.Common
             StartReceiveFromAsync();
         }
 
-        public bool SendToAsync(SocketAsyncEventArgs e)
+        public void SendToAsync(SocketAsyncEventArgs e)
         {
-            bool bIOPending = false;
-
             try
             {
-                bIOPending = this.mSocket.SendToAsync(e);
+                bool bIOPending = this.mSocket.SendToAsync(e);
                 if (!bIOPending)
                 {
+                    SimpleQuicFunc.ThreadCheck(mLogicWorker);
                     ProcessSend(null, e);
                 }
             }
@@ -108,8 +106,6 @@ namespace AKNet.Udp4Tcp.Common
             {
                 NetLog.LogException(ex);
             }
-
-            return bIOPending;
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)

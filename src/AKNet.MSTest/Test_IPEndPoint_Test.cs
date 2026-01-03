@@ -12,10 +12,8 @@ namespace MSTest
         {
             IPEndPoint A1 = new IPEndPoint(IPAddress.Any, 10);
             IPEndPoint A2 = new IPEndPoint(IPAddress.Any, 10);
-            if (!A1.Equals(A2))
-            {
-                Assert.Fail($"{A1} {A2}");
-            }
+            Assert.IsTrue(A1 != A2, $"{A1} {A2}");
+            Assert.IsTrue(A1.Equals(A2), $"{A1} {A2}");
         }
     }
 }
