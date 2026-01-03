@@ -19,7 +19,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         public Socket mSocket;
         public readonly SSocketAsyncEventArgs ReceiveArgs = new SSocketAsyncEventArgs();
-        private static readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public IPEndPoint RemoteEndPoint;
         private SocketMgr.Config mConfig;
         public LogicWorker mLogicWorker;

@@ -15,7 +15,6 @@ namespace AKNet.Udp4Tcp.Common
     internal static class UdpPackageEncryption
     {
         private static readonly byte[] mCheck = new byte[2] { (byte)'$', (byte)'$'};
-        private static readonly byte[] mCacheSendHeadBuffer = new byte[Config.nUdpPackageFixedHeadSize];
 
         public static bool Decode(ReadOnlySpan<byte> mBuff, NetUdpReceiveFixedSizePackage mPackage)
         {
@@ -55,18 +54,16 @@ namespace AKNet.Udp4Tcp.Common
             return true;
         }
         
-        public static ReadOnlySpan<byte> EncodeHead(NetUdpSendFixedSizePackage mPackage)
+        public static void EncodeHead(Span<byte> mDestBuffer, NetUdpSendFixedSizePackage mPackage)
         {
             uint nOrderId = mPackage.nOrderId;
             uint nRequestOrderId = mPackage.nRequestOrderId;
             ushort nBodyLength = (ushort)mPackage.nBodyLength;
 
-            Buffer.BlockCopy(mCheck, 0, mCacheSendHeadBuffer, 0, 2);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 2, nOrderId);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 6, nRequestOrderId);
-            EndianBitConverter.SetBytes(mCacheSendHeadBuffer, 10, nBodyLength);
-
-            return mCacheSendHeadBuffer;
+            mCheck.CopyTo(mDestBuffer);
+            EndianBitConverter.SetBytes(mDestBuffer, 2, nOrderId);
+            EndianBitConverter.SetBytes(mDestBuffer, 6, nRequestOrderId);
+            EndianBitConverter.SetBytes(mDestBuffer, 10, nBodyLength);
         }
 
 	}
