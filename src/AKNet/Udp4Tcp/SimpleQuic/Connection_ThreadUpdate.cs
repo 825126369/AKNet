@@ -56,16 +56,19 @@ namespace AKNet.Udp4Tcp.Common
 
             if (m_Connected)
             {
-                lock (mWRSendEventArgsQueue)
+                if (mWRSendEventArgsQueue.Count > 0)
                 {
-                    while (mWRSendEventArgsQueue.TryDequeue(out var arg))
+                    lock (mWRSendEventArgsQueue)
                     {
-                        mUdpCheckMgr.AddTcpStream(arg.GetCanReadSpan());
-                        arg.LastOperation = ConnectionAsyncOperation.Send;
-                        arg.ConnectionError = ConnectionError.Success;
-                        arg.BytesTransferred = arg.Length;
-                        arg.SetBuffer(0, arg.MemoryBuffer.Length);
-                        arg.TriggerEvent();
+                        while (mWRSendEventArgsQueue.TryDequeue(out var arg))
+                        {
+                            mUdpCheckMgr.AddTcpStream(arg.GetCanReadSpan());
+                            arg.LastOperation = ConnectionAsyncOperation.Send;
+                            arg.ConnectionError = ConnectionError.Success;
+                            arg.BytesTransferred = arg.Length;
+                            arg.SetBuffer(0, arg.MemoryBuffer.Length);
+                            arg.TriggerEvent();
+                        }
                     }
                 }
             }
