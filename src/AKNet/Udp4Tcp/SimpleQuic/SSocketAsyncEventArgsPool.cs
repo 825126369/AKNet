@@ -46,7 +46,6 @@ namespace AKNet.Udp4Tcp.Common
 #endif
             t.UserToken = null;
             t.RemoteEndPoint = null;
-            //防止 内存一直增加，合理的GC
             bool bRecycle = nMaxCapacity <= 0 || mObjectPool.Count < nMaxCapacity;
             if (bRecycle)
             {

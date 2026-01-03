@@ -34,10 +34,10 @@ namespace AKNet.Udp4Tcp.Common
         {
             nSendCount = 0;
             mTcpSlidingWindow = null;
-            mLogicWorker = null;
             nRequestOrderId = 0;
             nOrderId = 0;
             nBodyLength = 0;
+            SetLogicWorker(null);
         }
 
         public void SetLogicWorker(LogicWorker mLogicWorker)
@@ -90,7 +90,7 @@ namespace AKNet.Udp4Tcp.Common
 
     internal class NetUdpReceiveFixedSizePackage : IPoolItemInterface
     {
-        public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedSize];
+        public readonly byte[] mBuffer = new byte[Config.nUdpPackageFixedBodySize];
         public uint nOrderId;
         public uint nRequestOrderId;
         public ushort nBodyLength = 0;

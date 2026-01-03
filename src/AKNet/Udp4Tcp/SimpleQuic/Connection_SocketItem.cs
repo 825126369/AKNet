@@ -39,13 +39,11 @@ namespace AKNet.Udp4Tcp.Common
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
-            if (mLogicWorker == null) return;
+            if (e.RemoteEndPoint != RemoteEndPoint) return;
 
             SocketItem mSocketItem = e.UserToken as SocketItem;
             SimpleQuicFunc.ThreadCheck(this);
-
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
-
             NetUdpReceiveFixedSizePackage mPackage = null;
 
             while (true)

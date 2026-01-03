@@ -7,9 +7,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         public void Dispose()
         {
-            if (m_Disposed) return;
-            m_Disposed = true;
-
+            RemoteEndPoint = null;
             Volatile.Write(ref m_Connected, false);
             mLogicWorker.RemoveConnection(this);
             if (mConnectionType == ConnectionType.Client)

@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -25,7 +24,6 @@ namespace AKNet.Udp4Tcp.Common
 
         private bool bInit = false;
         private bool m_Connected;
-        private bool m_Disposed;
         public readonly LinkedList<ConnectionOP> mOPList = new LinkedList<ConnectionOP>();
 
         private readonly UdpCheckMgr mUdpCheckMgr;
@@ -67,7 +65,7 @@ namespace AKNet.Udp4Tcp.Common
             SimpleQuicFunc.ThreadCheck(this);
             this.fReceiveHeartBeatTime = 0;
             this.fMySendHeartBeatCdTime = 0;
-            mUdpCheckMgr.Reset();
+            this.mUdpCheckMgr.Reset();
         }
 
         private void OnDisConnectReset()
@@ -75,7 +73,7 @@ namespace AKNet.Udp4Tcp.Common
             SimpleQuicFunc.ThreadCheck(this);
             this.fReceiveHeartBeatTime = 0;
             this.fMySendHeartBeatCdTime = 0;
-            mUdpCheckMgr.Reset();
+            this.mUdpCheckMgr.Reset();
         }
 
         public void Reset()

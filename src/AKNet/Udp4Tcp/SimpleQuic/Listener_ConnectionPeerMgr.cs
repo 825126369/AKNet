@@ -62,7 +62,6 @@ namespace AKNet.Udp4Tcp.Common
         public void RemoveFakeSocket(Connection mConnectionPeer)
         {
             var peerId = mConnectionPeer.RemoteEndPoint;
-
             lock (mConnectionPeerDic)
             {
                 mConnectionPeerDic.Remove(peerId);
