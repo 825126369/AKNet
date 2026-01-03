@@ -46,32 +46,4 @@ namespace AKNet.Udp4Tcp.Common
             
         }
     };
-
-    internal class ThreadWorkerOP:IPoolItemInterface
-    {
-        internal enum E_OP_TYPE
-        {
-            AddLogicWorker,
-            RemoveLogicWorker,
-        }
-
-        public E_OP_TYPE nOPType;
-        public LogicWorker mTarget;
-
-        private readonly LinkedListNode<ThreadWorkerOP> mEntry;
-        public ThreadWorkerOP()
-        {
-            mEntry = new LinkedListNode<ThreadWorkerOP>(this);
-        }
-
-        public LinkedListNode<ThreadWorkerOP> GetEntry()
-        {
-            return mEntry;
-        }
-
-        public void Reset()
-        {
-
-        }
-    }
 }

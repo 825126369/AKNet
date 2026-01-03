@@ -52,6 +52,10 @@ namespace AKNet.Udp4Tcp.Common
             {
                 mObjectPool.Push(t);
             }
+            else
+            {
+                t.Dispose();
+            }
         }
     }
 }
