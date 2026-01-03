@@ -27,8 +27,7 @@ namespace AKNet.Udp4Tcp.Common
 
             if (mPackage.WindowBuff != null)
             {
-                int nReadLength = mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
-                NetLog.Assert(nReadLength == mPackage.WindowLength, $"{mPackage.WindowBuff.Length}, {mPackage.WindowOffset}, {mPackage.WindowLength} => {nReadLength}");
+                mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
             }
 
             mSendArgs.SetBuffer(0, mPackage.WindowLength + mEncodeHead.Length);

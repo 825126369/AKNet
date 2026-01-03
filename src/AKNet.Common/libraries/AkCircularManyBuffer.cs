@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -18,6 +17,7 @@ using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.WebSocket")]
+[assembly: InternalsVisibleTo("AKNet.MSTest")]
 namespace AKNet.Common
 {
     internal class AkCircularManyBuffer : IDisposable
@@ -221,29 +221,48 @@ namespace AKNet.Common
             return nReadLength;
         }
 
-        public int CopyTo(Span<byte> mTempSpan, int nOffset, int nCount)
+        public void CopyTo(Span<byte> mTempSpan, int nOffset, int nCount)
         {
+#if DEBUG
+            if(nCount > mTempSpan.Length)
+            {
+                throw new Exception();
+            }
+
+            if (nCount + nOffset > Length)
+            {
+                throw new Exception();
+            }
+#endif
             var mNode = nCurrentReadBlock;
-            int nReadLength = 0;
+            int nSumCopyLength = 0;
+            int nRemainCopyLength = nCount;
+
             while (true)
             {
                 ReadOnlySpan<byte> mSpan = mNode.Value.GetCanReadSpan();
                 if (mSpan.Length > 0)
                 {
-                    int nBeginIndex = nOffset - nReadLength;
+                    int nBeginIndex = nOffset;
                     if (nBeginIndex < mSpan.Length)
                     {
-                        int nCopyLength = Math.Min(nCount, mSpan.Length - nBeginIndex);
+                        nOffset = 0;
+
+                        int nCopyLength = Math.Min(nRemainCopyLength, mSpan.Length - nBeginIndex);
+                        nCopyLength = Math.Min(mTempSpan.Length, nCopyLength);
                         mSpan.Slice(nBeginIndex, nCopyLength).CopyTo(mTempSpan);
                         mTempSpan = mTempSpan.Slice(nCopyLength);
-                        nOffset += nCopyLength;
-                        nCount -= nCopyLength;
-                        if (nCount == 0)
+                        nRemainCopyLength -= nCopyLength;
+                        nSumCopyLength += nCopyLength;
+                        if (nRemainCopyLength == 0)
                         {
                             break;
                         }
                     }
-                    nReadLength += mSpan.Length;
+                    else
+                    {
+                        nOffset -= mSpan.Length;
+                    }
                 }
 
                 if (mNode == nCurrentWriteBlock)
@@ -255,7 +274,13 @@ namespace AKNet.Common
                     mNode = mNode.Next;
                 }
             }
-            return nReadLength;
+
+#if DEBUG
+            if (nSumCopyLength != nCount)
+            {
+                throw new Exception($"nSumCopyLength: {nSumCopyLength}, nCount: {nCount}");
+            }
+#endif
         }
 
         public void ClearBuffer(int nLength)

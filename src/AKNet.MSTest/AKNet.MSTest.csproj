@@ -12,4 +12,8 @@
     <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
+  </ItemGroup>
+
 </Project>
