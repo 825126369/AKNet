@@ -111,6 +111,11 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
+        public bool SendToAsync2(SocketAsyncEventArgs e)
+        {
+            return this.mSocket.SendToAsync(e);
+        }
+
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
         {
             if (Config.bUseSocketAsyncEventArgsTwoComplete)

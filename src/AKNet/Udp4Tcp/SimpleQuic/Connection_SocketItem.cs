@@ -19,20 +19,44 @@ namespace AKNet.Udp4Tcp.Common
         {
             SimpleQuicFunc.ThreadCheck(this);
 
-            SSocketAsyncEventArgs mSendArgs = mSendEventArgsPool.Pop();
-            Span<byte> mMemoryBuffer = mSendArgs.MemoryBuffer.Span;
-            UdpPackageEncryption.EncodeHead(mMemoryBuffer, mPackage);
-            mMemoryBuffer = mMemoryBuffer.Slice(Config.nUdpPackageFixedHeadSize);
-
-            if (mPackage.WindowBuff != null)
+            if (Config.bUseSingleSendArgs)
             {
-                mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
-            }
+                lock (mSendStreamList)
+                {
+                    var mBufferItem = mSendStreamList.BeginSpan();
+                    UdpPackageEncryption.EncodeHead(mBufferItem.GetCanWriteSpan(), mPackage);
+                    mBufferItem.nSpanLength += Config.nUdpPackageFixedHeadSize;
+                    if (mPackage.WindowBuff != null)
+                    {
+                        mPackage.WindowBuff.CopyTo(mBufferItem.GetCanWriteSpan(), mPackage.WindowOffset, mPackage.WindowLength);
+                        mBufferItem.nSpanLength += mPackage.WindowLength;
+                    }
+                    mSendStreamList.FinishSpan();
+                }
 
-            mSendArgs.SetBuffer(0, mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize);
-            mSendArgs.UserToken = mSendEventArgsPool;
-            mSendArgs.RemoteEndPoint = RemoteEndPoint;
-            mLogicWorker.mSocketItem.SendToAsync(mSendArgs);
+                if (!bSendIOContexUsed)
+                {
+                    bSendIOContexUsed = true;
+                    SendNetStream2();
+                }
+            }
+            else
+            {
+                SSocketAsyncEventArgs mSendArgs = mLogicWorker.mSendEventArgsPool.Pop();
+                Span<byte> mMemoryBuffer = mSendArgs.MemoryBuffer.Span;
+                UdpPackageEncryption.EncodeHead(mMemoryBuffer, mPackage);
+                mMemoryBuffer = mMemoryBuffer.Slice(Config.nUdpPackageFixedHeadSize);
+
+                if (mPackage.WindowBuff != null)
+                {
+                    mPackage.WindowBuff.CopyTo(mMemoryBuffer, mPackage.WindowOffset, mPackage.WindowLength);
+                }
+
+                mSendArgs.SetBuffer(0, mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize);
+                mSendArgs.UserToken = mLogicWorker.mSendEventArgsPool;
+                mSendArgs.RemoteEndPoint = RemoteEndPoint;
+                mLogicWorker.mSocketItem.SendToAsync(mSendArgs);
+            }
         }
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
@@ -55,7 +79,6 @@ namespace AKNet.Udp4Tcp.Common
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
-                    
                     lock (mReceiveWaitCheckPackageQueue)
                     {
                         mReceiveWaitCheckPackageQueue.Enqueue(mPackage);

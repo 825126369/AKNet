@@ -32,7 +32,6 @@ namespace AKNet.Udp4Tcp.Common
         private readonly UdpCheckMgr mUdpCheckMgr;
         public LogicWorker mLogicWorker;
         private E_CONNECTION_TYPE mConnectionType;
-        public SSocketAsyncEventArgsPool mSendEventArgsPool;
 
         public LinkedListNode<Connection> GetEntry()
         {
@@ -43,6 +42,9 @@ namespace AKNet.Udp4Tcp.Common
         {
             mEntry = new LinkedListNode<Connection>(this);
             mUdpCheckMgr = new UdpCheckMgr(this);
+
+            SendArgs.Completed += ProcessSend;
+            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
         }
 
         public void Init(E_CONNECTION_TYPE nType)
@@ -54,12 +56,15 @@ namespace AKNet.Udp4Tcp.Common
             if (this.mConnectionType == E_CONNECTION_TYPE.Client)
             {
                 ThreadWorkerMgr.Init();
-                mLogicWorker = new LogicWorker();
+                var mLogicWorker = new LogicWorker();
                 mLogicWorker.Init(ThreadWorkerMgr.GetRandomThreadWorker());
                 mLogicWorker.AddConnection(this);
             }
+        }
 
-            mSendEventArgsPool = new SSocketAsyncEventArgsPool(mLogicWorker, 0, 1024);
+        public void SetLogicWorker(LogicWorker mLogicWorker)
+        {
+            this.mLogicWorker = mLogicWorker; 
         }
 
         private void OnConnectReset()
@@ -98,7 +103,6 @@ namespace AKNet.Udp4Tcp.Common
             }
 
             mOPList.Clear();
-            mSendEventArgsPool = null;
             bInit = false;
             m_Connected = false;
             RemoteEndPoint = null;

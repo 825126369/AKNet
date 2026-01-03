@@ -43,6 +43,11 @@ namespace AKNet.Udp4Tcp.Common
             return mEntry;
         }
 
+        public void Reset()
+        {
+            mSendEventArgsPool = null;
+        }
+
         public void Init(ThreadWorker mThreadWorker)
         {
             this.mThreadWorker = mThreadWorker;
@@ -54,6 +59,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             this.mSocketItem = mSocketItem;
             mSocketItem.mLogicWorker = this;
+            this.mSendEventArgsPool = new SSocketAsyncEventArgsPool(this, 0, 1024);
         }
 
         public void ThreadUpdate()
@@ -102,7 +108,7 @@ namespace AKNet.Udp4Tcp.Common
 #if DEBUG
             NetLog.Assert(!mConnectionList.Contains(peer));
 #endif
-            peer.mLogicWorker = this;
+            peer.SetLogicWorker(this);
             lock (mAddConnectionList)
             {
                 mAddConnectionList.Enqueue(peer);
@@ -128,6 +134,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
         private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
         private readonly SafeObjectPool<Connection> mConnectionPool = new SafeObjectPool<Connection>(0, byte.MaxValue);
+        public SSocketAsyncEventArgsPool mSendEventArgsPool;
 
         public NetUdpSendFixedSizePackage UdpSendPackage_Pop()
         {
