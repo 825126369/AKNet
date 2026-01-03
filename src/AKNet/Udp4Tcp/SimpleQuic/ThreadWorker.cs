@@ -43,7 +43,6 @@ namespace AKNet.Udp4Tcp.Common
 
             Thread mThread = new Thread(ThreadFunc);
             mThread.IsBackground = true;
-            mThread.Priority = ThreadPriority.AboveNormal;
             mThread.Start();
         }
 
