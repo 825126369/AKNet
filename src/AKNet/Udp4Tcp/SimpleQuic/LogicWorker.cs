@@ -58,9 +58,9 @@ namespace AKNet.Udp4Tcp.Common
 
         public void ThreadUpdate()
         {
-            lock (mAddConnectionList)
+            if (mAddConnectionList.Count > 0)
             {
-                if (mAddConnectionList.Count > 0)
+                lock (mAddConnectionList)
                 {
                     while (mAddConnectionList.TryDequeue(out var v))
                     {
@@ -69,9 +69,9 @@ namespace AKNet.Udp4Tcp.Common
                 }
             }
 
-            lock (mRemoveConnectionList)
+            if (mRemoveConnectionList.Count > 0)
             {
-                if (mRemoveConnectionList.Count > 0)
+                lock (mRemoveConnectionList)
                 {
                     while (mRemoveConnectionList.TryDequeue(out var v))
                     {
