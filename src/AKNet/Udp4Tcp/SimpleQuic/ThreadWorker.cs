@@ -61,9 +61,9 @@ namespace AKNet.Udp4Tcp.Common
             {
                 TimeNow = SimpleQuicFunc.GetNowTimeMS();
 
-                lock (mAddLogicWorkerQueue)
+                if (mAddLogicWorkerQueue.Count > 0)
                 {
-                    if (mAddLogicWorkerQueue.Count > 0)
+                    lock (mAddLogicWorkerQueue)
                     {
                         while (mAddLogicWorkerQueue.TryDequeue(out var v))
                         {
@@ -72,24 +72,24 @@ namespace AKNet.Udp4Tcp.Common
                     }
                 }
 
-                lock (mRemoveLogicWorkerQueue)
+                if (mRemoveLogicWorkerQueue.Count > 0)
                 {
-                    if (mRemoveLogicWorkerQueue.Count > 0)
+                    lock (mRemoveLogicWorkerQueue)
                     {
                         while (mRemoveLogicWorkerQueue.TryDequeue(out var v))
                         {
                             mLogicWorkerList.Remove(v.GetEntry());
                         }
+
                     }
                 }
-
-
+                
                 foreach (var v in mLogicWorkerList)
                 {
                     v.ThreadUpdate();
                 }
 
-                Thread.Sleep(1);
+                Thread.Sleep(30);
             }
         }
 
