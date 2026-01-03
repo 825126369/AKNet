@@ -4,12 +4,6 @@ using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
-    internal enum ConnectionType
-    {
-        Client,
-        Server,
-    }
-
     internal enum ConnectionAsyncOperation
     {
         None = 0,
@@ -30,6 +24,12 @@ namespace AKNet.Udp4Tcp.Common
     {
         Success = 0,
         Error = 1,
+    }
+
+    internal enum E_CONNECTION_TYPE
+    {
+        Client,
+        Server,
     }
 
     internal static partial class SimpleQuicFunc

@@ -76,6 +76,12 @@ namespace AKNet.Udp4Tcp.Common
                     while (mRemoveConnectionList.TryDequeue(out var v))
                     {
                         mConnectionList.Remove(v.GetEntry());
+                        if (v.ConnectionType == E_CONNECTION_TYPE.Server)
+                        {
+                            v.OwnerListener.RemoveFakeSocket(v);
+                            v.mLogicWorker = null;
+                            v.OwnerListener = null;
+                        }
                     }
                 }
             }

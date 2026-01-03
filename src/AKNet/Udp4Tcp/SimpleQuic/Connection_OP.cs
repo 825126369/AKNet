@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -7,19 +6,20 @@ namespace AKNet.Udp4Tcp.Common
     {
         public void Dispose()
         {
-            RemoteEndPoint = null;
+            Volatile.Write(ref m_OnDestroyDontReceiveData, true);
             Volatile.Write(ref m_Connected, false);
-            mLogicWorker.RemoveConnection(this);
-            if (mConnectionType == ConnectionType.Client)
+            if (mConnectionType == E_CONNECTION_TYPE.Client)
             {
+                RemoteEndPoint = null;
                 mSocketMgr.Dispose();
+                mLogicWorker.RemoveConnection(this);
                 mLogicWorker.mThreadWorker.RemoveLogicWorker(mLogicWorker);
                 mLogicWorker.mThreadWorker = null;
+                mLogicWorker = null;
             }
             else
             {
-                mListener.RemoveFakeSocket(this);
-                mListener = null;
+                mLogicWorker.RemoveConnection(this);
             }
         }
 
@@ -58,7 +58,7 @@ namespace AKNet.Udp4Tcp.Common
                 mSocketMgr = new SocketMgr();
                 if (SimpleQuicFunc.SUCCESSED(mSocketMgr.InitNet(mConfig)))
                 {
-                    Init(ConnectionType.Client);
+                    Init(E_CONNECTION_TYPE.Client);
                     mLogicWorker.SetSocketItem(mSocketMgr.GetSocketItem(0));
                     mWRConnectEventArgs.SetTarget(arg);
 

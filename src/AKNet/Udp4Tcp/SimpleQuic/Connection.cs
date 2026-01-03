@@ -24,13 +24,13 @@ namespace AKNet.Udp4Tcp.Common
 
         private bool bInit = false;
         private bool m_Connected;
+        private bool m_OnDestroyDontReceiveData;
         public readonly LinkedList<ConnectionOP> mOPList = new LinkedList<ConnectionOP>();
 
         private readonly UdpCheckMgr mUdpCheckMgr;
         public LogicWorker mLogicWorker;
-        private ConnectionType mConnectionType;
+        private E_CONNECTION_TYPE mConnectionType;
         public SSocketAsyncEventArgsPool mSendEventArgsPool;
-        public Listener mListener;
 
         public LinkedListNode<Connection> GetEntry()
         {
@@ -43,13 +43,13 @@ namespace AKNet.Udp4Tcp.Common
             mUdpCheckMgr = new UdpCheckMgr(this);
         }
 
-        public void Init(ConnectionType nType)
+        public void Init(E_CONNECTION_TYPE nType)
         {
             if (bInit) return;
             bInit = true;
-
+            m_OnDestroyDontReceiveData = false;
             this.mConnectionType = nType;
-            if (this.mConnectionType == ConnectionType.Client)
+            if (this.mConnectionType == E_CONNECTION_TYPE.Client)
             {
                 ThreadWorkerMgr.Init();
                 mLogicWorker = new LogicWorker();
@@ -104,5 +104,15 @@ namespace AKNet.Udp4Tcp.Common
                 return m_Connected;
             }
         }
+
+        public E_CONNECTION_TYPE ConnectionType
+        {
+            get
+            {
+                return mConnectionType;
+            }
+        }
+
+        public Listener OwnerListener { get; set; }
     }
 }

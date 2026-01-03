@@ -38,7 +38,7 @@ namespace AKNet.Udp4Tcp.Common
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
             SimpleQuicFunc.ThreadCheck(this);
-            if (!e.RemoteEndPoint.Equals(RemoteEndPoint)) return;
+            if (m_OnDestroyDontReceiveData) return;
             
             SocketItem mSocketItem = e.UserToken as SocketItem;
             ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);

@@ -124,9 +124,10 @@ namespace AKNet.Udp4Tcp.Common
                         break;
 
                     case ConnectionOP.E_OP_TYPE.SendDisConnect:
-                        this.SendDisConnect();
+                        {
+                            this.SendDisConnect();
+                        }
                         break;
-
                     default:
                         NetLog.Assert(false);
                         break;

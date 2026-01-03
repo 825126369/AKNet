@@ -22,9 +22,9 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<LogicWorker> mAddLogicWorkerQueue = new Queue<LogicWorker>();
         private readonly Queue<LogicWorker> mRemoveLogicWorkerQueue = new Queue<LogicWorker>();
 
-        public readonly ObjectPool<Connection> mConnectionPeerPool = new ObjectPool<Connection>();
-        public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>();
-        public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>();
+        public readonly ObjectPool<Connection> mConnectionPool = new ObjectPool<Connection>(0, byte.MaxValue);
+        public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
+        public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
 
         public bool IsActive;
         public long TimeNow;
@@ -43,6 +43,7 @@ namespace AKNet.Udp4Tcp.Common
 
             Thread mThread = new Thread(ThreadFunc);
             mThread.IsBackground = true;
+            mThread.Priority = ThreadPriority.AboveNormal;
             mThread.Start();
         }
 
@@ -89,7 +90,7 @@ namespace AKNet.Udp4Tcp.Common
                     v.ThreadUpdate();
                 }
 
-                Thread.Sleep(30);
+                Thread.Sleep(1);
             }
         }
 

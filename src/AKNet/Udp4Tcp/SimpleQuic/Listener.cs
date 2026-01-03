@@ -58,11 +58,6 @@ namespace AKNet.Udp4Tcp.Common
             mLogicWorkerList.Clear();
         }
 
-        public void Update()
-        {
-
-        }
-
         public bool AcceptAsync(ConnectionEventArgs arg)
         {
             bool bIOPending = true;

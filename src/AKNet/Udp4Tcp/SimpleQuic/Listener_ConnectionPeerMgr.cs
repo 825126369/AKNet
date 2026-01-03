@@ -38,11 +38,11 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else
                 {
-                    mConnectionPeer = mSocketItem.mLogicWorker.mThreadWorker.mConnectionPeerPool.Pop();
+                    mConnectionPeer = mSocketItem.mLogicWorker.mThreadWorker.mConnectionPool.Pop();
                     mConnectionPeer.RemoteEndPoint = nPeerId;
                     mSocketItem.mLogicWorker.AddConnection(mConnectionPeer);
-                    mConnectionPeer.Init(ConnectionType.Server);
-                    mConnectionPeer.mListener = this;
+                    mConnectionPeer.Init(E_CONNECTION_TYPE.Server);
+                    mConnectionPeer.OwnerListener = this;
                     lock (mConnectionPeerDic)
                     {
                         mConnectionPeerDic.Add(nPeerId, mConnectionPeer);
@@ -61,13 +61,14 @@ namespace AKNet.Udp4Tcp.Common
 
         public void RemoveFakeSocket(Connection mConnectionPeer)
         {
+            SimpleQuicFunc.ThreadCheck(mConnectionPeer);
             var peerId = mConnectionPeer.RemoteEndPoint;
             lock (mConnectionPeerDic)
             {
                 mConnectionPeerDic.Remove(peerId);
             }
-
-            mConnectionPeer.mLogicWorker.mThreadWorker.mConnectionPeerPool.recycle(mConnectionPeer);
+            
+            mConnectionPeer.mLogicWorker.mThreadWorker.mConnectionPool.recycle(mConnectionPeer);
             PrintRemoveFakeSocketMsg(mConnectionPeer);
         }
 

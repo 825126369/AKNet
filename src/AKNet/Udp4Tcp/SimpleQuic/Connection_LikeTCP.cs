@@ -30,7 +30,7 @@ namespace AKNet.Udp4Tcp.Common
 
 		public void SendConnect()
 		{
-			if (mConnectionType == ConnectionType.Client)
+			if (mConnectionType == E_CONNECTION_TYPE.Client)
 			{
 				this.OnConnectReset();
 				NetLog.Log("Client: Udp 正在连接服务器: " + RemoteEndPoint);
@@ -40,7 +40,7 @@ namespace AKNet.Udp4Tcp.Common
 
 		public void SendDisConnect()
 		{
-			if (mConnectionType == ConnectionType.Client)
+			if (mConnectionType == E_CONNECTION_TYPE.Client)
 			{
 				this.OnDisConnectReset();
 				NetLog.Log("Client: Udp 正在 断开服务器: " + RemoteEndPoint);
@@ -54,7 +54,7 @@ namespace AKNet.Udp4Tcp.Common
 			{
 				m_Connected = true;
                 this.OnConnectReset();
-                if (mConnectionType == ConnectionType.Client)
+                if (mConnectionType == E_CONNECTION_TYPE.Client)
 				{
 					if (mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
 					{
@@ -77,7 +77,7 @@ namespace AKNet.Udp4Tcp.Common
 			{
                 m_Connected = false;
                 this.OnDisConnectReset();
-                if (mConnectionType == ConnectionType.Client)
+                if (mConnectionType == E_CONNECTION_TYPE.Client)
 				{
 					if (mWRDisConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
 					{
