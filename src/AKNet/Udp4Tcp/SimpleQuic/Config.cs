@@ -12,6 +12,8 @@ namespace AKNet.Udp4Tcp.Common
     internal static class Config
 	{
         public static readonly int nSocketCount = 1;
+        public const bool bUseSocketAsyncEventArgsTwoComplete = false;
+
         public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 12;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;

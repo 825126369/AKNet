@@ -68,7 +68,6 @@ namespace AKNet.Udp4Tcp.Common
                     bool bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
                     if (!bIOPending)
                     {
-                        SimpleQuicFunc.ThreadCheck(mLogicWorker);
                         ProcessReceive(null, ReceiveArgs);
                     }
                 }
@@ -84,6 +83,11 @@ namespace AKNet.Udp4Tcp.Common
 
         private void ProcessReceive(object sender, SocketAsyncEventArgs e)
         {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                SimpleQuicFunc.ThreadCheck(mLogicWorker);
+            }
+
             if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
             {
                 mConfig.mReceiveFunc(e);
@@ -98,7 +102,6 @@ namespace AKNet.Udp4Tcp.Common
                 bool bIOPending = this.mSocket.SendToAsync(e);
                 if (!bIOPending)
                 {
-                    SimpleQuicFunc.ThreadCheck(mLogicWorker);
                     ProcessSend(null, e);
                 }
             }
@@ -110,6 +113,11 @@ namespace AKNet.Udp4Tcp.Common
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
         {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                SimpleQuicFunc.ThreadCheck(mLogicWorker);
+            }
+
             if (e.SocketError == SocketError.Success)
             {
                 var mPool = e.UserToken as SSocketAsyncEventArgsPool;
@@ -161,8 +169,15 @@ namespace AKNet.Udp4Tcp.Common
         public SSocketAsyncEventArgs AllocSSocketAsyncEventArgs()
         {
             SSocketAsyncEventArgs arg = new SSocketAsyncEventArgs();
-            arg.Completed += OnIOComplete1;
-            arg.Completed2 += OnIOComplete2;
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                arg.Completed += OnIOComplete1;
+                arg.Completed2 += OnIOComplete2;
+            }
+            else
+            {
+                arg.Completed += OnIOComplete2;
+            }
             arg.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             return arg;
         }

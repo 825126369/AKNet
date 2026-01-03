@@ -22,6 +22,8 @@ namespace AKNet.Udp4Tcp.Common
         private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
         private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
 
+        private readonly Queue<NetUdpReceiveFixedSizePackage> mReceiveWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
+
         private bool bInit = false;
         private bool m_Connected;
         private bool m_OnDestroyDontReceiveData;
@@ -86,6 +88,14 @@ namespace AKNet.Udp4Tcp.Common
 
             mMTReceiveStreamList.Reset();
             mWRSendEventArgsQueue.Clear();
+
+            lock (mReceiveWaitCheckPackageQueue)
+            {
+                while (mReceiveWaitCheckPackageQueue.TryDequeue(out var v))
+                {
+                    mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(v);
+                }
+            }
 
             mOPList.Clear();
             mSendEventArgsPool = null;

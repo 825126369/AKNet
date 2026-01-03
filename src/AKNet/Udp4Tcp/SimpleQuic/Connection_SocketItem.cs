@@ -37,7 +37,11 @@ namespace AKNet.Udp4Tcp.Common
 
         public void WorkerThreadReceiveNetPackage(SocketAsyncEventArgs e)
         {
-            SimpleQuicFunc.ThreadCheck(this);
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                SimpleQuicFunc.ThreadCheck(this);
+            }
+
             if (m_OnDestroyDontReceiveData) return;
             
             SocketItem mSocketItem = e.UserToken as SocketItem;
@@ -51,7 +55,11 @@ namespace AKNet.Udp4Tcp.Common
                 if (bSucccess)
                 {
                     int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
-                    mUdpCheckMgr.ReceiveNetPackage(mPackage);
+                    
+                    lock (mReceiveWaitCheckPackageQueue)
+                    {
+                        mReceiveWaitCheckPackageQueue.Enqueue(mPackage);
+                    }
 
                     if (!mPackage.orInnerCommandPackage())
                     {
@@ -75,6 +83,7 @@ namespace AKNet.Udp4Tcp.Common
                     break;
                 }
             }
+
         }
     }
 }

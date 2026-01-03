@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -53,6 +52,7 @@ namespace AKNet.Udp4Tcp.Common
         public void ThreadUpdate()
         {
             ProcessConnectionOP();
+            NetCheckPackageExecute();
 
             if (m_Connected)
             {
@@ -149,6 +149,30 @@ namespace AKNet.Udp4Tcp.Common
                 }
             }
             return Operation;
+        }
+
+        private bool NetCheckPackageExecute()
+        {
+            NetUdpReceiveFixedSizePackage mPackage = null;
+            lock (mReceiveWaitCheckPackageQueue)
+            {
+                if (mReceiveWaitCheckPackageQueue.TryDequeue(out mPackage))
+                {
+                    if (!mPackage.orInnerCommandPackage())
+                    {
+                        nCurrentCheckPackageCount--;
+                    }
+                }
+            }
+
+            if (mPackage != null)
+            {
+                UdpStatistical.AddReceivePackageCount();
+                mUdpCheckMgr.ReceiveNetPackage(mPackage);
+                return true;
+            }
+
+            return false;
         }
 
     }

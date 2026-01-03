@@ -1,0 +1,6 @@
+﻿UDP4TCP:框架设计 渐进思考 完整过程:
+
+1: 我首先利用 Socket的 SocketAsyncEventArgs 把 SocketAsyncEventArgs这个事件路由到 SocketItem 的指定线程上。
+2：我直接在这个线程上处理丢包逻辑：报错了: System.StackOverflowException
+3: 由于报错了:而我又想到 MSQUIC也是 先把收到的数据包 存到一个 链表里。所以我先存数据包到队列里,然后我发现 报错好了。
+4: 以上操作，使得100万个包 都完整接收了。但效率太慢: 100万个包, 总共花费时间: 147.4561764,平均1秒发送：6781.675703373873。
