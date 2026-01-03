@@ -65,7 +65,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 NetLog.Assert(nOffset >= 0);
 
-                var mPackage = mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
+                var mPackage = mConnection.mLogicWorker.UdpSendPackage_Pop();
                 mPackage.SetLogicWorker(mConnection.mLogicWorker);
                 mPackage.mTcpSlidingWindow = this.mTcpSlidingWindow;
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
@@ -140,7 +140,7 @@ namespace AKNet.Udp4Tcp.Common
 
             foreach (var mRemovePackage in mWaitCheckSendQueue)
             {
-                mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mRemovePackage);
+                mConnection.mLogicWorker.UdpSendPackage_Recycle(mRemovePackage);
             }
             mWaitCheckSendQueue.Clear();
         }
@@ -216,7 +216,7 @@ namespace AKNet.Udp4Tcp.Common
                     {
                         mPackage.mTcpStanardRTOTimer.FinishRtt(this);
                     }
-                    mConnection.mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
+                    mConnection.mLogicWorker.UdpSendPackage_Recycle(mPackage);
                     Sure();
                 }
 

@@ -50,7 +50,7 @@ namespace AKNet.Udp4Tcp.Common
 
             while (true)
             {
-                mPackage = mSocketItem.mLogicWorker.mThreadWorker.mReceivePackagePool.Pop();
+                mPackage = mSocketItem.mLogicWorker.UdpReceivePackage_Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
@@ -78,7 +78,7 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else
                 {
-                    mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(mPackage);
+                    mLogicWorker.UdpReceivePackage_Recycle(mPackage);
                     NetLog.LogError("解码失败 !!!");
                     break;
                 }

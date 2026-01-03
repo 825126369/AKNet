@@ -124,6 +124,82 @@ namespace AKNet.Udp4Tcp.Common
         {
             mSocketAsyncEventArgsQueue.Enqueue(arg);
         }
+        
+        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
+        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
+        private readonly SafeObjectPool<Connection> mConnectionPool = new SafeObjectPool<Connection>(0, byte.MaxValue);
+
+        public NetUdpSendFixedSizePackage UdpSendPackage_Pop()
+        {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                return mThreadWorker.mSendPackagePool.Pop();
+            }
+            else
+            {
+                return mSendPackagePool.Pop();
+            }
+        }
+
+        public void UdpSendPackage_Recycle(NetUdpSendFixedSizePackage mPackage)
+        {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                mThreadWorker.mSendPackagePool.recycle(mPackage);
+            }
+            else
+            {
+                mSendPackagePool.recycle(mPackage);
+            }
+        }
+
+        public NetUdpReceiveFixedSizePackage UdpReceivePackage_Pop()
+        {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                return mThreadWorker.mReceivePackagePool.Pop();
+            }
+            else
+            {
+                return mReceivePackagePool.Pop();
+            }
+        }
+
+        public void UdpReceivePackage_Recycle(NetUdpReceiveFixedSizePackage mPackage)
+        {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                mThreadWorker.mReceivePackagePool.recycle(mPackage);
+            }
+            else
+            {
+                mReceivePackagePool.recycle(mPackage);
+            }
+        }
+
+        public Connection Connection_Pop()
+        {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                return mThreadWorker.mConnectionPool.Pop();
+            }
+            else
+            {
+                return mConnectionPool.Pop();
+            }
+        }
+
+        public void Connection_Recycle(Connection mPackage)
+        {
+            if (Config.bUseSocketAsyncEventArgsTwoComplete)
+            {
+                mThreadWorker.mConnectionPool.recycle(mPackage);
+            }
+            else
+            {
+                mConnectionPool.recycle(mPackage);
+            }
+        }
     }
 }
 

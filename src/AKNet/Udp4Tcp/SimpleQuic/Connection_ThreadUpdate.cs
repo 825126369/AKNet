@@ -79,10 +79,10 @@ namespace AKNet.Udp4Tcp.Common
         public void SendInnerNetData(byte id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpSendFixedSizePackage mPackage = mLogicWorker.mThreadWorker.mSendPackagePool.Pop();
+            NetUdpSendFixedSizePackage mPackage = mLogicWorker.UdpSendPackage_Pop();
             mPackage.SetInnerCommandId(id);
             SendUDPPackage(mPackage);
-            mLogicWorker.mThreadWorker.mSendPackagePool.recycle(mPackage);
+            mLogicWorker.UdpSendPackage_Recycle(mPackage);
         }
 
         public void SendUDPPackage(NetUdpSendFixedSizePackage mPackage)

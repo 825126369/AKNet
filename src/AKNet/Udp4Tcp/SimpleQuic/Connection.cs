@@ -93,7 +93,7 @@ namespace AKNet.Udp4Tcp.Common
             {
                 while (mReceiveWaitCheckPackageQueue.TryDequeue(out var v))
                 {
-                    mLogicWorker.mThreadWorker.mReceivePackagePool.recycle(v);
+                    mLogicWorker.UdpReceivePackage_Recycle(v);
                 }
             }
 

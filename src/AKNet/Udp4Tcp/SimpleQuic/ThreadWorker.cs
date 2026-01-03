@@ -22,9 +22,9 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<LogicWorker> mAddLogicWorkerQueue = new Queue<LogicWorker>();
         private readonly Queue<LogicWorker> mRemoveLogicWorkerQueue = new Queue<LogicWorker>();
 
-        public readonly SafeObjectPool<Connection> mConnectionPool = new SafeObjectPool<Connection>(0, byte.MaxValue);
-        public readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
-        public readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
+        public readonly ObjectPool<Connection> mConnectionPool = new ObjectPool<Connection>(0, byte.MaxValue);
+        public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
+        public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
 
         public bool IsActive;
         public long TimeNow;
