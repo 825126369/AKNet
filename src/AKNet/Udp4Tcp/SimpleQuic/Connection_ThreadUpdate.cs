@@ -35,17 +35,6 @@ namespace AKNet.Udp4Tcp.Common
             lock (mMTReceiveStreamList)
             {
                 mMTReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
-                if (mWRReceiveEventArgs.TryGetTarget(out ConnectionEventArgs arg)) 
-                {
-                    mWRReceiveEventArgs.SetTarget(null);
-
-                    arg.Offset = 0;
-                    arg.Length = arg.MemoryBuffer.Length;
-                    arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetCanWriteSpan());
-                    arg.ConnectionError = ConnectionError.Success;
-                    arg.LastOperation = ConnectionAsyncOperation.Receive;
-                    arg.TriggerEvent();
-                }
             }
         }
 
@@ -71,6 +60,25 @@ namespace AKNet.Udp4Tcp.Common
                         }
                     }
                 }
+
+                if (mMTReceiveStreamList.Length > 0)
+                {
+                    lock (mMTReceiveStreamList)
+                    {
+                        if (mWRReceiveEventArgs.TryGetTarget(out ConnectionEventArgs arg))
+                        {
+                            mWRReceiveEventArgs.SetTarget(null);
+
+                            arg.Offset = 0;
+                            arg.Length = arg.MemoryBuffer.Length;
+                            arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetCanWriteSpan());
+                            arg.ConnectionError = ConnectionError.Success;
+                            arg.LastOperation = ConnectionAsyncOperation.Receive;
+                            arg.TriggerEvent();
+                        }
+                    }
+                }
+
             }
 
             mUdpCheckMgr.ThreadUpdate();
