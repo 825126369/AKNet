@@ -113,22 +113,23 @@ namespace AKNet.Udp4Tcp.Common
                 throw new ObjectDisposedException(this.GetType().Name);
             }
 
-            if (_sendTcs.IsCompleted && cancellationToken.IsCancellationRequested)
-            {
-                throw new TaskCanceledException(this.GetType().Name);
-            }
-             
-            if (!_sendTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
-            {
-                throw new InvalidOperationException(this.GetType().Name);
-            }
+            //if (_sendTcs.IsCompleted && cancellationToken.IsCancellationRequested)
+            //{
+            //    throw new TaskCanceledException(this.GetType().Name);
+            //}
             
-            if (buffer.IsEmpty)
-            {
-                _sendTcs.TrySetResult();
-                return buffer.Length;
-            }
+            //if (!_sendTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
+            //{
+            //    throw new InvalidOperationException(this.GetType().Name);
+            //}
             
+            //if (buffer.IsEmpty)
+            //{
+            //    _sendTcs.TrySetResult();
+            //    return buffer.Length;
+            //}
+            
+            await Task.Delay(1).ConfigureAwait(false);
             SendTcpStream(buffer.Span);
             _sendTcs.TrySetResult();
             return buffer.Length;
@@ -145,31 +146,33 @@ namespace AKNet.Udp4Tcp.Common
             {
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            
+
             int totalCopied = 0;
-            do
+
+            if (!_receiveTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
             {
-                if (!_receiveTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
-                {
-                    throw new InvalidOperationException("_receiveTcs.TryGetValueTask");
-                }
-                
-                int copied = 0;
-                lock(mMTReceiveStreamList)
-                {
-                    copied = mMTReceiveStreamList.WriteTo(buffer.Span);
-                }
+                throw new InvalidOperationException("_receiveTcs.TryGetValueTask");
+            }
+            
+            lock (mMTReceiveStreamList)
+            {
+                totalCopied += mMTReceiveStreamList.WriteTo(buffer.Span);
+            }
 
-                buffer = buffer.Slice(copied);
-                totalCopied += copied;
+            if (totalCopied > 0)
+            {
+                buffer = buffer.Slice(totalCopied);
+                _receiveTcs.TrySetResult();
+            }
 
-                if (totalCopied > 0)
+            await valueTask.ConfigureAwait(false);
+            if (totalCopied == 0)
+            {
+                lock (mMTReceiveStreamList)
                 {
-                    _receiveTcs.TrySetResult();
+                    totalCopied += mMTReceiveStreamList.WriteTo(buffer.Span);
                 }
-                
-                await valueTask.ConfigureAwait(false);
-            } while (!buffer.IsEmpty && totalCopied == 0);
+            }
 
             return totalCopied;
         }

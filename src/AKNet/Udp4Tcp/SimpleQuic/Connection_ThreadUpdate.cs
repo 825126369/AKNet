@@ -37,6 +37,8 @@ namespace AKNet.Udp4Tcp.Common
             {
                 mMTReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
             }
+
+            _receiveTcs.TrySetResult();
         }
 
         public void ThreadUpdate()

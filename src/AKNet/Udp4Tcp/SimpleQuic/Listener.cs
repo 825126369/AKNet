@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Common
@@ -16,7 +17,8 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
         private readonly List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
         private bool bInit = false;
-        private readonly KKValueTaskSource _acceptTcs = new KKValueTaskSource();
+        private readonly KKResettableValueTaskSource _acceptTcs = new KKResettableValueTaskSource();
+
         private void Init()
         {
             if (bInit) return;
@@ -60,23 +62,32 @@ namespace AKNet.Udp4Tcp.Common
             mLogicWorkerList.Clear();
         }
 
-        public async ValueTask<Connection> AcceptAsync()
+        public async ValueTask<Connection> AcceptAsync(CancellationToken cancellationToken = default)
         {
             Connection mConnection = null;
-            do
-            {
-                if (_acceptTcs.TryInitialize(out ValueTask valueTask, this))
-                {
 
+            if (!_acceptTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
+            {
+                throw new InvalidOperationException();
+            }
+
+            lock (mNewConnectionQueue)
+            {
+                if (mNewConnectionQueue.TryDequeue(out mConnection))
+                {
+                    _acceptTcs.TrySetResult();
                 }
-                
+            }
+
+            await valueTask.ConfigureAwait(false);
+
+            if (mConnection == null)
+            {
                 lock (mNewConnectionQueue)
                 {
                     mNewConnectionQueue.TryDequeue(out mConnection);
                 }
-
-                await valueTask.ConfigureAwait(false);
-            } while (mConnection == null);
+            }
 
             return mConnection;
         }
@@ -86,8 +97,9 @@ namespace AKNet.Udp4Tcp.Common
             lock (mNewConnectionQueue)
             {
                 mNewConnectionQueue.Enqueue(peer);
-                _acceptTcs.TrySetResult();
             }
+
+            _acceptTcs.TrySetResult();
         }
 
     }
