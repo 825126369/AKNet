@@ -34,7 +34,7 @@ namespace AKNet.Common
         private ManualResetValueTaskSourceCore<bool> _valueTaskSource;
         private CancellationTokenRegistration _cancellationRegistration;
         private CancellationToken _cancelledToken;
-        private Action<object?>? _cancellationAction;
+        private Action<object> _cancellationAction;
         private FinalTaskSource _finalTaskSource;
         private GCHandle _keepAlive;
         private readonly object lock_obj = new object();
@@ -50,7 +50,7 @@ namespace AKNet.Common
             _keepAlive = default;
         }
         
-        public Action<object?> CancellationAction { set{ _cancellationAction = value; } }
+        public Action<object> CancellationAction { set{ _cancellationAction = value; } }
         public bool IsCompleted
         {
             get 
@@ -59,7 +59,7 @@ namespace AKNet.Common
             }
         }
 
-        public bool TryGetValueTask(out ValueTask valueTask, object? keepAlive = null, CancellationToken cancellationToken = default)
+        public bool TryGetValueTask(out ValueTask valueTask, object keepAlive = null, CancellationToken cancellationToken = default)
         {
             lock (lock_obj)
             {
