@@ -1,7 +1,9 @@
 ﻿
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -11,10 +13,9 @@ namespace AKNet.Udp4Tcp.Common
         private readonly SocketMgr mSocketMgr = new SocketMgr();
         private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = new Dictionary<IPEndPoint, Connection>();
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
-        private readonly WeakReference<ConnectionEventArgs> mWRAcceptEventArgs = new WeakReference<ConnectionEventArgs>(null);
         private readonly List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
         private bool bInit = false;
-
+        private readonly ValueTaskSource _acceptTcs = new ValueTaskSource();
         private void Init()
         {
             if (bInit) return;
@@ -58,25 +59,28 @@ namespace AKNet.Udp4Tcp.Common
             mLogicWorkerList.Clear();
         }
 
-        public bool AcceptAsync(ConnectionEventArgs arg)
+        public async ValueTask<Connection> AcceptAsync()
         {
-            bool bIOPending = true;
-            arg.LastOperation = ConnectionAsyncOperation.Accept;
-            arg.ConnectionError = ConnectionError.Success;
-
-            lock (mNewConnectionQueue)
+            if (_acceptTcs.TryInitialize(out ValueTask valueTask, this))
             {
-                if (mNewConnectionQueue.TryDequeue(out arg.mConnection))
-                {
-                    bIOPending = false;
-                }
-                else
-                {
-                    mWRAcceptEventArgs.SetTarget(arg);
-                }
+
             }
 
-            return bIOPending;
+            Connection mConnection = null;
+            lock (mNewConnectionQueue)
+            {
+                mNewConnectionQueue.TryDequeue(out mConnection);
+            }
+
+            if (mConnection == null)
+            {
+                await valueTask;
+                return await AcceptAsync();
+            }
+            else
+            {
+                return mConnection;
+            }
         }
 
         private void HandleNewConntion(Connection peer)
@@ -84,15 +88,7 @@ namespace AKNet.Udp4Tcp.Common
             lock (mNewConnectionQueue)
             {
                 mNewConnectionQueue.Enqueue(peer);
-
-                if (mWRAcceptEventArgs.TryGetTarget(out ConnectionEventArgs arg))
-                {
-                    mWRAcceptEventArgs.SetTarget(null);
-                    arg.LastOperation = ConnectionAsyncOperation.Accept;
-                    arg.ConnectionError = ConnectionError.Success;
-                    arg.AcceptConnection = mNewConnectionQueue.Dequeue();
-                    arg.TriggerEvent();
-                }
+                _acceptTcs.TrySetResult();
             }
         }
 

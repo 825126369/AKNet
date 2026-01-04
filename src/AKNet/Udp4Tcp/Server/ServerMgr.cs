@@ -39,9 +39,7 @@ namespace AKNet.Udp4Tcp.Server
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
 
-            mListenSocket = new Listener();
-            mAcceptIOContex = new  ConnectionEventArgs();
-            mAcceptIOContex.Completed += OnIOCompleted;
+            mListener = new Listener();
         }
 
         public NetStreamPackage GetNetStreamPackage()

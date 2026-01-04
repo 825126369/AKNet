@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -61,7 +62,7 @@ namespace AKNet.Udp4Tcp.Server
                 this.nPort = nPort;
 
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
-                mListenSocket.Bind(bindEndPoint);
+                mListener.Bind(bindEndPoint);
 
                 NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
                 StartAcceptEventArg();
@@ -90,61 +91,26 @@ namespace AKNet.Udp4Tcp.Server
             return mState;
         }
 
-        private void StartAcceptEventArg()
+        private async void StartAcceptEventArg()
         {
-            bool bIOSyncCompleted = false;
-            mAcceptIOContex.AcceptConnection = null;
-            if (mListenSocket != null)
+            while (mListener != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
+                    var mAcceptConnection = await mListener.AcceptAsync();
+                    if (!MultiThreadingHandleConnectedSocket(mAcceptConnection))
+                    {
+                        HandleConnectFull(mAcceptConnection);
+                    }
                 }
                 catch (Exception e)
                 {
-                    if (mListenSocket != null)
+                    if (mListener != null)
                     {
                         NetLog.LogException(e);
                     }
                 }
             }
-            
-            if (bIOSyncCompleted)
-            {
-                this.ProcessAccept(mAcceptIOContex);
-            }
-        }
-
-        private void OnIOCompleted(object sender, ConnectionEventArgs e)
-        {
-            switch (e.LastOperation)
-            {
-                case ConnectionAsyncOperation.Accept:
-                    this.ProcessAccept(e);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private void ProcessAccept(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                Connection mClientSocket = e.AcceptConnection;
-#if DEBUG
-                NetLog.Assert(mClientSocket != null);
-#endif
-                if (!MultiThreadingHandleConnectedSocket(mClientSocket))
-                {
-                    HandleConnectFull(mClientSocket);
-                }
-            }
-            else
-            {
-                NetLog.LogError("ProcessAccept: " + e.ConnectionError);
-            }
-            StartAcceptEventArg();
         }
 
         private void HandleConnectFull(Connection mClientSocket)
@@ -161,10 +127,10 @@ namespace AKNet.Udp4Tcp.Server
 
         public void CloseSocket()
 		{
-			if (mListenSocket != null)
+			if (mListener != null)
 			{
-				Listener mSocket2 = mListenSocket;
-                mListenSocket = null;
+				Listener mSocket2 = mListener;
+                mListener = null;
 
 				try
 				{
