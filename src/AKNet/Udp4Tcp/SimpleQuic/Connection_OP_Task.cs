@@ -10,8 +10,8 @@ namespace AKNet.Udp4Tcp.Common
     internal partial class Connection
     {
         private bool _disposed;
-        private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource();
-        private readonly ResettableValueTaskSource _sendTcs = new ResettableValueTaskSource();
+        private readonly KKResettableValueTaskSource _receiveTcs = new KKResettableValueTaskSource();
+        private readonly KKResettableValueTaskSource _sendTcs = new KKResettableValueTaskSource();
 
         private readonly KKValueTaskSource _connectedTcs = new KKValueTaskSource();
         private readonly KKValueTaskSource _disConnectedTcs = new KKValueTaskSource();

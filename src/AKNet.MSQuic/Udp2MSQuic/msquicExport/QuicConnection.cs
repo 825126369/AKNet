@@ -38,7 +38,7 @@ namespace AKNet.Udp2MSQuic.Common
         private int _disposed;
 
         private readonly KKValueTaskSource _connectedTcs = new KKValueTaskSource();
-        private readonly ResettableValueTaskSource _shutdownTcs = new ResettableValueTaskSource()
+        private readonly KKResettableValueTaskSource _shutdownTcs = new KKResettableValueTaskSource()
         {
             CancellationAction = target =>
             {

@@ -34,7 +34,7 @@ namespace AKNet.Udp2MSQuic.Common
         private readonly ConcurrentQueue<QuicConnection> _acceptQueue = new ConcurrentQueue<QuicConnection>();
         private int currentConnectionsCount;
 
-        private readonly ResettableValueTaskSource newConnectionTcs = new ResettableValueTaskSource();
+        private readonly KKResettableValueTaskSource newConnectionTcs = new KKResettableValueTaskSource();
 
         private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)
         {

@@ -52,7 +52,7 @@ namespace AKNet.Udp2MSQuic.Common
         private readonly KKValueTaskSource _startedTcs = new KKValueTaskSource();
         private readonly KKValueTaskSource _shutdownTcs = new KKValueTaskSource();
 
-        private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource()
+        private readonly KKResettableValueTaskSource _receiveTcs = new KKResettableValueTaskSource()
         {
             CancellationAction = target =>
             {
@@ -70,7 +70,7 @@ namespace AKNet.Udp2MSQuic.Common
             }
         };
 
-        private readonly ResettableValueTaskSource _sendTcs = new ResettableValueTaskSource()
+        private readonly KKResettableValueTaskSource _sendTcs = new KKResettableValueTaskSource()
         {
             CancellationAction = target =>
             {

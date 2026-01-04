@@ -19,7 +19,7 @@ using System.Threading.Tasks.Sources;
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 namespace AKNet.Common
 {
-    internal sealed class ResettableValueTaskSource : IValueTaskSource
+    internal sealed class KKResettableValueTaskSource : IValueTaskSource
     {
         // None -> [TryGetValueTask] -> Awaiting -> [TrySetResult|TrySetException(final: false)] -> Ready -> [GetResult] -> None
         // None -> [TrySetResult|TrySetException(final: false)] -> Ready -> [TryGetValueTask] -> [GetResult] -> None
@@ -43,7 +43,7 @@ namespace AKNet.Common
         private GCHandle _keepAlive;
         private readonly object lock_obj = new object();
 
-        public ResettableValueTaskSource()
+        public KKResettableValueTaskSource()
         {
             _state = State.None;
             _hasWaiter = false;
@@ -74,7 +74,7 @@ namespace AKNet.Common
                     {
                         _cancellationRegistration = cancellationToken.Register((obj) =>
                         {
-                            (ResettableValueTaskSource thisRef, object target) = ((ResettableValueTaskSource, object))obj;
+                            (KKResettableValueTaskSource thisRef, object target) = ((KKResettableValueTaskSource, object))obj;
                             lock (thisRef)
                             {
                                 thisRef._cancelledToken = cancellationToken;
