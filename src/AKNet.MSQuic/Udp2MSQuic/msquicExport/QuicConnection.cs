@@ -37,7 +37,7 @@ namespace AKNet.Udp2MSQuic.Common
         private readonly AKNetChannel<QuicStream> _acceptQueue = new AKNetChannel<QuicStream>(true);
         private int _disposed;
 
-        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
+        private readonly KKValueTaskSource _connectedTcs = new KKValueTaskSource();
         private readonly ResettableValueTaskSource _shutdownTcs = new ResettableValueTaskSource()
         {
             CancellationAction = target =>
@@ -57,7 +57,7 @@ namespace AKNet.Udp2MSQuic.Common
 
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         internal CancellationToken ConnectionShutdownToken => _shutdownTokenSource.Token;
-        private readonly ValueTaskSource _connectionCloseTcs = new ValueTaskSource();
+        private readonly KKValueTaskSource _connectionCloseTcs = new KKValueTaskSource();
         public QuicConnection(QuicConnectionOptions mOption)
         {
             this.mOption = mOption;

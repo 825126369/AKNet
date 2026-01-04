@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Buffers;
 
 namespace AKNet.Udp4Tcp.Common
 {

@@ -19,7 +19,7 @@ using System.Threading.Tasks.Sources;
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 namespace AKNet.Common
 {
-    internal sealed class ValueTaskSource : IValueTaskSource
+    internal sealed class KKValueTaskSource : IValueTaskSource
     {
         private const int State_None = 1; //初始化一个ValueTask
         private const int State_Awaiting = 2; //等待设置结果
@@ -31,7 +31,7 @@ namespace AKNet.Common
         private readonly object lock_obj = new object();
         private int _state;
 
-        public ValueTaskSource()
+        public KKValueTaskSource()
         {
             _state = State_None;
             _valueTaskSource = new ManualResetValueTaskSourceCore<bool>() { RunContinuationsAsynchronously = true };
@@ -67,7 +67,7 @@ namespace AKNet.Common
                         _cancellationRegistration = cancellationToken.Register((obj) =>
                         {
                             //这个!的意思: 我知道这个表达式可能为 null，但我现在向你保证它不会为 null，请不要再给我 CS8600/CS8602 等 nullable警告。
-                            ValueTaskSource thisRef = (ValueTaskSource)obj!;
+                            KKValueTaskSource thisRef = (KKValueTaskSource)obj!;
                             thisRef.TrySetException(new OperationCanceledException(cancellationToken));
                         }, this);
                     }

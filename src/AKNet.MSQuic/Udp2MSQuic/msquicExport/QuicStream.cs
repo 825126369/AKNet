@@ -49,8 +49,8 @@ namespace AKNet.Udp2MSQuic.Common
         public QuicStreamType nType;
         private Action<QuicStreamType>? _decrementStreamCapacity;
         private int _disposed = 0;
-        private readonly ValueTaskSource _startedTcs = new ValueTaskSource();
-        private readonly ValueTaskSource _shutdownTcs = new ValueTaskSource();
+        private readonly KKValueTaskSource _startedTcs = new KKValueTaskSource();
+        private readonly KKValueTaskSource _shutdownTcs = new KKValueTaskSource();
 
         private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource()
         {

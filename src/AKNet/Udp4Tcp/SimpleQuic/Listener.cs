@@ -2,6 +2,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
         private readonly List<LogicWorker> mLogicWorkerList = new List<LogicWorker>();
         private bool bInit = false;
-        private readonly ValueTaskSource _acceptTcs = new ValueTaskSource();
+        private readonly KKValueTaskSource _acceptTcs = new KKValueTaskSource();
         private void Init()
         {
             if (bInit) return;
@@ -61,26 +62,23 @@ namespace AKNet.Udp4Tcp.Common
 
         public async ValueTask<Connection> AcceptAsync()
         {
-            if (_acceptTcs.TryInitialize(out ValueTask valueTask, this))
-            {
-
-            }
-
             Connection mConnection = null;
-            lock (mNewConnectionQueue)
+            do
             {
-                mNewConnectionQueue.TryDequeue(out mConnection);
-            }
+                if (_acceptTcs.TryInitialize(out ValueTask valueTask, this))
+                {
 
-            if (mConnection == null)
-            {
-                await valueTask;
-                return await AcceptAsync();
-            }
-            else
-            {
-                return mConnection;
-            }
+                }
+                
+                lock (mNewConnectionQueue)
+                {
+                    mNewConnectionQueue.TryDequeue(out mConnection);
+                }
+
+                await valueTask.ConfigureAwait(false);
+            } while (mConnection == null);
+
+            return mConnection;
         }
 
         private void HandleNewConntion(Connection peer)

@@ -13,8 +13,8 @@ namespace AKNet.Udp4Tcp.Common
         private readonly ResettableValueTaskSource _receiveTcs = new ResettableValueTaskSource();
         private readonly ResettableValueTaskSource _sendTcs = new ResettableValueTaskSource();
 
-        private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
-        private readonly ValueTaskSource _disConnectedTcs = new ValueTaskSource();
+        private readonly KKValueTaskSource _connectedTcs = new KKValueTaskSource();
+        private readonly KKValueTaskSource _disConnectedTcs = new KKValueTaskSource();
 
         public void Dispose()
         {
