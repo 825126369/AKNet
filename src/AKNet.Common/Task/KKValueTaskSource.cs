@@ -16,7 +16,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
+[assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
     internal sealed class KKValueTaskSource : IValueTaskSource
