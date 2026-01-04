@@ -24,8 +24,7 @@ namespace AKNet.Udp4Tcp.Server
         private readonly CryptoMgr mCryptoMgr;
 
         private int nPort = 0;
-        private Listener mListenSocket = null;
-        private readonly ConnectionEventArgs mAcceptIOContex;
+        private Listener mListener = null;
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly Queue<Connection> mConnectSocketQueue = new Queue<Connection>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
