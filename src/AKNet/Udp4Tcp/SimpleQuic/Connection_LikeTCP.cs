@@ -63,7 +63,10 @@ namespace AKNet.Udp4Tcp.Common
 						arg.ConnectionError = ConnectionError.Success;
 						arg.TriggerEvent();
 					}
-				}
+
+					_connectedTcs.TrySetResult();
+
+                }
 				else
 				{
 					this.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);

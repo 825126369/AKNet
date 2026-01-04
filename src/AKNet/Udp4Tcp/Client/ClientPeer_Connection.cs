@@ -11,6 +11,7 @@ using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Client
 {
@@ -35,16 +36,12 @@ namespace AKNet.Udp4Tcp.Client
             }
         }
 
-        public void ConnectServer(string ServerAddr, int ServerPort)
+        public async void ConnectServer(string ServerAddr, int ServerPort)
         {
             this.ServerIp = ServerAddr;
             this.nServerPort = ServerPort;
 
-            SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
-
             Reset();
-
             mConnection = new Connection();
             if (mIPEndPoint == null)
             {
@@ -52,250 +49,71 @@ namespace AKNet.Udp4Tcp.Client
                 mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
             }
 
-            if (!bConnectIOContexUsed)
+            SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+            try
             {
-                bConnectIOContexUsed = true;
-                ConnectArgs.RemoteEndPoint = mIPEndPoint;
-                StartConnectEventArg();
+                await mConnection.ConnectAsync(mIPEndPoint);
+
+                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
+
+                StartReceiveEventArg();
+            }
+            catch
+            {
+                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 
         public bool DisConnectServer()
         {
+            DisConnectServer2();
+            return true;
+        }
+
+        private async ValueTask<bool> DisConnectServer2()
+        {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
-
             MainThreadCheck.Check();
-            if (!bDisConnectIOContexUsed)
+
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+            try
             {
-                bDisConnectIOContexUsed = true;
-
-                bool Connected = false;
-                try
-                {
-                    Connected = mConnection != null && mConnection.Connected;
-                }
-                catch { }
-
-                if (Connected)
-                {
-                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-                    DisConnectArgs.RemoteEndPoint = mIPEndPoint;
-                    StartDisconnectEventArg();
-                }
-                else
-                {
-                    NetLog.Log("客户端 主动 断开服务器 Finish......");
-                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-                    bDisConnectIOContexUsed = false;
-
-                }
+                await mConnection.DisconnectAsync();
             }
+            catch { }
 
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             return GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED;
         }
 
-        private void StartConnectEventArg()
+
+        public void HandleConnectedSocket(Connection mConnection)
         {
-            if (mConnection != null)
+            MainThreadCheck.Check();
+            NetLog.Assert(mConnection != null, "mConnectionPeer == null");
+            this.mConnection = mConnection;
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+
+            StartReceiveEventArg();
+        }
+        
+        private async void StartReceiveEventArg()
+        {
+            while (true)
             {
+                int nReadLength = 0;
                 try
                 {
-                    bool bIOPending = mConnection.ConnectAsync(ConnectArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessConnect(ConnectArgs);
-                    }
+                    nReadLength = await mConnection.ReceiveAsync(ReceiveArgs);
                 }
-                catch (Exception e)
-                {
-                    bConnectIOContexUsed = false;
-                    DisConnectedWithException(e);
+                catch 
+                { 
+                    DisConnectedWithException(null); 
+                    break; 
                 }
-            }
-            else
-            {
-                bConnectIOContexUsed = false;
-            }
-        }
-
-        private void StartDisconnectEventArg()
-        {
-            if (mConnection != null)
-            {
-                try
-                {
-                    bool bIOPending = mConnection.DisconnectAsync(DisConnectArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessDisconnect(DisConnectArgs);
-                    }
-                }
-                catch (Exception e)
-                {
-                    bDisConnectIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bDisConnectIOContexUsed = false;
-            } 
-        }
-
-
-        private void StartReceiveEventArg()
-        {
-            if (mConnection != null)
-            {
-                try
-                {
-                    bool bIOPending = mConnection.ReceiveAsync(ReceiveArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessReceive(ReceiveArgs);
-                    }
-                }
-                catch (Exception e)
-                {
-                    bReceiveIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bReceiveIOContexUsed = false;
-            }
-        }
-
-        private void StartSendEventArg()
-        {
-            bool bIOPending = false;
-            if (mConnection != null)
-            {
-                try
-                {
-                    bIOPending = mConnection.SendAsync(SendArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessSend(SendArgs);
-                    }
-                }
-                catch (Exception e)
-                {
-                    bSendIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            } 
-        }
-
-        private void OnIOCompleted(object sender, ConnectionEventArgs e)
-        {
-            switch (e.LastOperation)
-            {
-                case ConnectionAsyncOperation.Connect:
-                    ProcessConnect(e);
-                    break;
-                case ConnectionAsyncOperation.Disconnect:
-                    ProcessDisconnect(e);
-                    break;
-                case ConnectionAsyncOperation.Receive:
-                    this.ProcessReceive(e);
-                    break;
-                case ConnectionAsyncOperation.Send:
-                    this.ProcessSend(e);
-                    break;
-                default:
-                    NetLog.LogError("The last operation completed on the socket was not a receive or send");
-                    break;
-            }
-        }
-
-        private void ProcessConnect(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
-                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-
-                if (!bReceiveIOContexUsed)
-                {
-                    bReceiveIOContexUsed = true;
-                    StartReceiveEventArg();
-                }
-            }
-            else
-            {
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 失败：{2}", this.ServerIp, this.nServerPort, e.ConnectionError));
-                if (GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
-                {
-                    SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-                }
-            }
-
-            e.RemoteEndPoint = null;
-            bConnectIOContexUsed = false;
-        }
-
-        private void ProcessDisconnect(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-                NetLog.Log("客户端 主动 断开服务器 Finish");
-            }
-            else
-            {
-                DisConnectedWithSocketError(e.ConnectionError);
-            }
-
-            e.RemoteEndPoint = null;
-            bDisConnectIOContexUsed = false;
-        }
-
-        private void ProcessReceive(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                if (e.BytesTransferred > 0)
-                {
-                    MultiThreadingReceiveStream(e);
-                    StartReceiveEventArg();
-                }
-                else
-                {
-                    bReceiveIOContexUsed = false;
-                    DisConnectedWithNormal();
-                }
-            }
-            else
-            {
-                bReceiveIOContexUsed = false;
-                DisConnectedWithSocketError(e.ConnectionError);
-            }
-        }
-
-        private void ProcessSend(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                if (e.BytesTransferred > 0)
-                {
-                    SendNetStream1(e.BytesTransferred);
-                }
-                else
-                {
-                    DisConnectedWithNormal();
-                    bSendIOContexUsed = false;
-                }
-            }
-            else
-            {
-                DisConnectedWithSocketError(e.ConnectionError);
-                bSendIOContexUsed = false;
+                MultiThreadingReceiveStream(ReceiveArgs.Span.Slice(0, nReadLength));
             }
         }
 
@@ -314,27 +132,29 @@ namespace AKNet.Udp4Tcp.Client
             }
         }
 
-        private void SendNetStream1(int BytesTransferred = 0)
+        private async void SendNetStream1()
         {
-            if (BytesTransferred > 0)
-            {
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.ClearBuffer(BytesTransferred);
-                }
-            }
-
             int nLength = mSendStreamList.Length;
             if (nLength > 0)
             {
-                nLength = Math.Min(SendArgs.MemoryBuffer.Length, nLength);
+                nLength = Math.Min(SendArgs.Length, nLength);
+
+                var mMemory = SendArgs.Slice(0, nLength);
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.CopyTo(SendArgs.MemoryBuffer.Span.Slice(0, nLength));
+                    mSendStreamList.CopyTo(mMemory.Span);
+                }
+                
+                int BytesTransferred = await mConnection.SendAsync(mMemory);
+                if (BytesTransferred > 0)
+                {
+                    lock (mSendStreamList)
+                    {
+                        mSendStreamList.ClearBuffer(BytesTransferred);
+                    }
                 }
 
-                SendArgs.SetBuffer(0, nLength);
-                StartSendEventArg();
+                SendNetStream1();
             }
             else
             {
@@ -384,17 +204,12 @@ namespace AKNet.Udp4Tcp.Client
 
         public IPEndPoint GetIPEndPoint()
         {
-            IPEndPoint mRemoteEndPoint = null;
-            try
+            if (mConnection != null)
             {
-                if (mConnection != null)
-                {
-                    mRemoteEndPoint = mConnection.RemoteEndPoint;
-                }
+                return mConnection.RemoteEndPoint;
             }
-            catch { }
 
-            return mRemoteEndPoint;
+            return null;
         }
 
         private void CloseSocket()

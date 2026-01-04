@@ -34,15 +34,9 @@ namespace AKNet.Udp4Tcp.Client
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
 
-        private readonly ConnectionEventArgs ReceiveArgs = new ConnectionEventArgs();
-        private readonly ConnectionEventArgs SendArgs = new ConnectionEventArgs();
-        private readonly ConnectionEventArgs ConnectArgs = new ConnectionEventArgs();
-        private readonly ConnectionEventArgs DisConnectArgs = new ConnectionEventArgs();
-
-        private bool bConnectIOContexUsed = false;
-        private bool bReceiveIOContexUsed = false;
+        private readonly Memory<byte> ReceiveArgs = new byte[Config.nUdpPackageFixedSize];
+        private readonly Memory<byte> SendArgs = new byte[Config.nUdpPackageFixedSize];
         private bool bSendIOContexUsed = false;
-        private bool bDisConnectIOContexUsed = false;
         
         private Connection mConnection = new Connection();
         private IPEndPoint mIPEndPoint = null;
@@ -53,13 +47,6 @@ namespace AKNet.Udp4Tcp.Client
         {
             MainThreadCheck.Check();
             SetSocketState(SOCKET_PEER_STATE.NONE);
-
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.Completed += OnIOCompleted;
-            ReceiveArgs.Completed += OnIOCompleted;
-            ConnectArgs.Completed += OnIOCompleted;
-            DisConnectArgs.Completed += OnIOCompleted;
         }
 
         public void Update(double elapsed)

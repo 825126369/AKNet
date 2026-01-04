@@ -11,6 +11,7 @@ using AKNet.Common;
 using AKNet.Udp4Tcp.Common;
 using System;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Server
 {
@@ -40,184 +41,44 @@ namespace AKNet.Udp4Tcp.Server
 
         public bool DisConnectServer()
         {
+            DisConnectServer2();
+            return true;
+        }
+
+        private async ValueTask<bool> DisConnectServer2()
+        {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
-
             MainThreadCheck.Check();
-            if (!bDisConnectIOContexUsed)
+
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
+            try
             {
-                bDisConnectIOContexUsed = true;
-
-                bool Connected = false;
-                try
-                {
-                    Connected = mConnection != null && mConnection.Connected;
-                }
-                catch { }
-
-                if (Connected)
-                {
-                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-                    StartDisconnectEventArg();
-                }
-                else
-                {
-                    NetLog.Log("客户端 主动 断开服务器 Finish......");
-                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-                    bDisConnectIOContexUsed = false;
-
-                }
+                await mConnection.DisconnectAsync();
             }
+            catch (Exception e)
+            {
 
+            }
+            
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             return GetSocketState() == SOCKET_PEER_STATE.DISCONNECTED;
         }
-
-        private void StartDisconnectEventArg()
+        
+        private async void StartReceiveEventArg()
         {
-            if (mConnection != null)
+            while (true)
             {
+                int nReadLength = 0;
                 try
                 {
-                    bool bIOPending = mConnection.DisconnectAsync(DisConnectArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessDisconnect(DisConnectArgs);
-                    }
+                    nReadLength = await mConnection.ReceiveAsync(ReceiveArgs);
                 }
-                catch (Exception e)
+                catch(Exception e)
                 {
-                    bDisConnectIOContexUsed = false;
                     DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bDisConnectIOContexUsed = false;
-            }
-        }
-
-
-        private void StartReceiveEventArg()
-        {
-            if (mConnection != null)
-            {
-                try
-                {
-                    bool bIOPending = mConnection.ReceiveAsync(ReceiveArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessReceive(ReceiveArgs);
-                    }
-                }
-                catch (Exception e)
-                {
-                    bReceiveIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bReceiveIOContexUsed = false;
-            }
-        }
-
-        private void StartSendEventArg()
-        {
-            if (mConnection != null)
-            {
-                try
-                {
-                    bool bIOPending = mConnection.SendAsync(SendArgs);
-                    if (!bIOPending)
-                    {
-                        this.ProcessSend(SendArgs);
-                    }
-                }
-                catch (Exception e)
-                {
-                    bSendIOContexUsed = false;
-                    DisConnectedWithException(e);
-                }
-            }
-            else
-            {
-                bSendIOContexUsed = false;
-            }
-        }
-
-        private void OnIOCompleted(object sender, ConnectionEventArgs e)
-        {
-            switch (e.LastOperation)
-            {
-                case ConnectionAsyncOperation.Disconnect:
-                    ProcessDisconnect(e);
                     break;
-                case ConnectionAsyncOperation.Receive:
-                    this.ProcessReceive(e);
-                    break;
-                case ConnectionAsyncOperation.Send:
-                    this.ProcessSend(e);
-                    break;
-                default:
-                    NetLog.LogError("The last operation completed on the socket was not a receive or send");
-                    break;
-            }
-        }
-
-        private void ProcessDisconnect(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-                NetLog.Log("客户端 主动 断开服务器 Finish");
-            }
-            else
-            {
-                DisConnectedWithSocketError(e.ConnectionError);
-            }
-
-            bDisConnectIOContexUsed = false;
-        }
-
-        private void ProcessReceive(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                if (e.BytesTransferred > 0)
-                {
-                    MultiThreadingReceiveStream(e);
-                    StartReceiveEventArg();
                 }
-                else
-                {
-                    bReceiveIOContexUsed = false;
-                    DisConnectedWithNormal();
-                }
-            }
-            else
-            {
-                bReceiveIOContexUsed = false;
-                DisConnectedWithSocketError(e.ConnectionError);
-            }
-        }
-
-        private void ProcessSend(ConnectionEventArgs e)
-        {
-            if (e.ConnectionError == ConnectionError.Success)
-            {
-                if (e.BytesTransferred > 0)
-                {
-                    SendNetStream1(e.BytesTransferred);
-                }
-                else
-                {
-                    DisConnectedWithNormal();
-                    bSendIOContexUsed = false;
-                }
-            }
-            else
-            {
-                DisConnectedWithSocketError(e.ConnectionError);
-                bSendIOContexUsed = false;
+                MultiThreadingReceiveStream(ReceiveArgs.Span.Slice(0, nReadLength));
             }
         }
 
@@ -236,27 +97,28 @@ namespace AKNet.Udp4Tcp.Server
             }
         }
 
-        private void SendNetStream1(int BytesTransferred = 0)
+        private async void SendNetStream1()
         {
-            if (BytesTransferred > 0)
-            {
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.ClearBuffer(BytesTransferred);
-                }
-            }
-
             int nLength = mSendStreamList.Length;
             if (nLength > 0)
             {
-                nLength = Math.Min(SendArgs.MemoryBuffer.Length, nLength);
+                nLength = Math.Min(SendArgs.Length, nLength);
+                Memory<byte> mMemory = SendArgs.Slice(0, nLength);
                 lock (mSendStreamList)
                 {
-                    mSendStreamList.CopyTo(SendArgs.MemoryBuffer.Span.Slice(0, nLength));
+                    mSendStreamList.CopyTo(mMemory.Span);
                 }
 
-                SendArgs.SetBuffer(0, nLength);
-                StartSendEventArg();
+                int BytesTransferred = await mConnection.SendAsync(mMemory);
+                if (BytesTransferred > 0)
+                {
+                    lock (mSendStreamList)
+                    {
+                        mSendStreamList.ClearBuffer(BytesTransferred);
+                    }
+                }
+
+                SendNetStream1();
             }
             else
             {

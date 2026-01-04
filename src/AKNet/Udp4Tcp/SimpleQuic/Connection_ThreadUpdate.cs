@@ -8,6 +8,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
+using System.Buffers;
 
 namespace AKNet.Udp4Tcp.Common
 {
@@ -25,6 +27,21 @@ namespace AKNet.Udp4Tcp.Common
             lock (mWRSendEventArgsQueue)
             {
                 mWRSendEventArgsQueue.Enqueue(arg);
+            }
+        }
+        
+        public void SendTcpStream(ReadOnlySpan<byte> arg)
+        {
+            if (!m_Connected) return;
+#if DEBUG
+            if (arg.Length > Config.nMaxDataLength)
+            {
+                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
+            }
+#endif
+            lock (mMTSendStreamList)
+            {
+                mMTSendStreamList.WriteFrom(arg);
             }
         }
 

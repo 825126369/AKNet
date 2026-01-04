@@ -20,6 +20,7 @@ namespace AKNet.Udp4Tcp.Common
         private readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
 
         private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
+        private readonly AkCircularManyBuffer mMTSendStreamList = new AkCircularManyBuffer();
         private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
 
         private readonly Queue<NetUdpReceiveFixedSizePackage> mReceiveWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();

@@ -29,27 +29,16 @@ namespace AKNet.Udp4Tcp.Server
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private Connection mConnection = null;
 
-        private readonly ConnectionEventArgs ReceiveArgs = new ConnectionEventArgs();
-        private readonly ConnectionEventArgs SendArgs = new ConnectionEventArgs();
-        private readonly ConnectionEventArgs DisConnectArgs = new ConnectionEventArgs();
-
+        private readonly Memory<byte> ReceiveArgs = new byte[Config.nUdpPackageFixedSize];
+        private readonly Memory<byte> SendArgs = new byte[Config.nUdpPackageFixedSize];
         private bool bSendIOContexUsed = false;
-        private bool bReceiveIOContexUsed = false;
-        private bool bDisConnectIOContexUsed = false;
 
         public ClientPeer(ServerMgr mNetServer)
         {
             this.mServerMgr = mNetServer;
             SetSocketState(SOCKET_PEER_STATE.NONE);
-
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            SendArgs.Completed += OnIOCompleted;
-            ReceiveArgs.Completed += OnIOCompleted;
-            DisConnectArgs.Completed += OnIOCompleted;
+            
             bSendIOContexUsed = false;
-            bReceiveIOContexUsed = false;
-            bDisConnectIOContexUsed = false;
         }
 
         public void Update(double elapsed)
