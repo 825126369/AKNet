@@ -130,9 +130,9 @@ namespace AKNet.Udp4Tcp.Common
             //    return buffer.Length;
             //}
             
-            await Task.Delay(1).ConfigureAwait(false);
+            //await Task.Delay(1).ConfigureAwait(false);
             SendTcpStream(buffer.Span);
-            _sendTcs.TrySetResult();
+            //_sendTcs.TrySetResult();
             return buffer.Length;
         }
 
