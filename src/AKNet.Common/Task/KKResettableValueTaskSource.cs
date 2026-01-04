@@ -16,24 +16,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
+[assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
+[assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
+[assembly: InternalsVisibleTo("AKNet.WebSocket")]
 namespace AKNet.Common
 {
     internal sealed class KKResettableValueTaskSource : IValueTaskSource
     {
-        // None -> [TryGetValueTask] -> Awaiting -> [TrySetResult|TrySetException(final: false)] -> Ready -> [GetResult] -> None
-        // None -> [TrySetResult|TrySetException(final: false)] -> Ready -> [TryGetValueTask] -> [GetResult] -> None
-        // None|Awaiting -> [TrySetResult|TrySetException(final: true)] -> Completed(never leaves this state)
-        // Ready -> [GetResult: TrySet*(final: true) was called] -> Completed(never leaves this state)
-        private enum State:byte
-        {
-            None,
-            Awaiting,
-            Ready,
-            Completed
-        }
+        public const int State_None = 1;
+        public const int State_Awaiting = 2;
+        public const int State_Ready = 3;
+        public const int State_Completed = 4;
 
-        private State _state;
+        private int _state;
         private bool _hasWaiter;
         private ManualResetValueTaskSourceCore<bool> _valueTaskSource;
         private CancellationTokenRegistration _cancellationRegistration;
@@ -45,7 +41,7 @@ namespace AKNet.Common
 
         public KKResettableValueTaskSource()
         {
-            _state = State.None;
+            _state = State_None;
             _hasWaiter = false;
             _valueTaskSource = new ManualResetValueTaskSourceCore<bool>() { RunContinuationsAsynchronously = true };
             _cancellationRegistration = default;
@@ -59,8 +55,7 @@ namespace AKNet.Common
         {
             get 
             {
-                return (State)Volatile.Read(
-                    ref MemoryMarshal.GetReference(MemoryMarshal.Cast<State, byte>(MemoryMarshal.CreateSpan(ref _state, 1)))) == State.Completed; 
+                return Volatile.Read(ref _state) == State_Completed; 
             }
         }
 
@@ -68,7 +63,7 @@ namespace AKNet.Common
         {
             lock (lock_obj)
             {
-                if (_state == State.None)
+                if (_state == State_None)
                 {
                     if (cancellationToken.CanBeCanceled)
                     {
@@ -84,18 +79,18 @@ namespace AKNet.Common
                     }
                 }
 
-                State state = _state;
-                if (_state == State.None)
+                int state = _state;
+                if (_state == State_None)
                 {
                     if (keepAlive != null)
                     {
                         Debug.Assert(!_keepAlive.IsAllocated);
                         _keepAlive = GCHandle.Alloc(keepAlive);
                     }
-                    _state = State.Awaiting;
+                    _state = State_Awaiting;
                 }
 
-                if (state == State.None || state == State.Ready || state == State.Completed)
+                if (state == State_None || state == State_Ready || state == State_Completed)
                 {
                     _hasWaiter = true;
                     valueTask = new ValueTask(this, _valueTaskSource.Version);
@@ -129,34 +124,34 @@ namespace AKNet.Common
             {
                 try
                 {
-                    State state = _state;
-                    if (state == State.Completed)
+                    int state = _state;
+                    if (state == State_Completed)
                     {
                         return false;
                     }
 
-                    if (state == State.Ready && !_hasWaiter && final)
+                    if (state == State_Ready && !_hasWaiter && final)
                     {
                         _valueTaskSource.Reset();
-                        state = State.None;
+                        state = State_None;
                     }
 
-                    if (state == State.None || state == State.Awaiting)
+                    if (state == State_None || state == State_Awaiting)
                     {
-                        _state = final ? State.Completed : State.Ready;
+                        _state = final ? State_Completed : State_Ready;
                     }
 
                     if (exception != null)
                     {
                         exception = exception.StackTrace == null ? ExceptionDispatchInfo.Capture(exception).SourceException : exception;
-                        if (state == State.None || state == State.Awaiting)
+                        if (state == State_None || state == State_Awaiting)
                         {
                             _valueTaskSource.SetException(exception);
                         }
                     }
                     else
                     {
-                        if (state == State.None || state == State.Awaiting)
+                        if (state == State_None || state == State_Awaiting)
                         {
                             _valueTaskSource.SetResult(final);
                         }
@@ -165,7 +160,7 @@ namespace AKNet.Common
                     {
                         if (_finalTaskSource.TryComplete(exception))
                         {
-                            if (state != State.Ready)
+                            if (state != State_Ready)
                             {
                                 _finalTaskSource.TrySignal(out _);
                             }
@@ -173,7 +168,7 @@ namespace AKNet.Common
                         }
                         return false;
                     }
-                    return state != State.Ready;
+                    return state != State_Ready;
                 }
                 finally
                 {
@@ -205,7 +200,6 @@ namespace AKNet.Common
             _valueTaskSource.OnCompleted(continuation, state, token, flags);
         }
 
-        //�޷���ֵ�� await �����ȡ�� ʵ��
         void IValueTaskSource.GetResult(short token)
         {
             try
@@ -217,18 +211,18 @@ namespace AKNet.Common
             {
                 lock (lock_obj)
                 {
-                    State state = _state;
+                    int state = _state;
 
                     _hasWaiter = false;
                     _cancelledToken = default;
 
-                    if (state == State.Ready)
+                    if (state == State_Ready)
                     {
-                        _valueTaskSource.Reset(); //Reset()���ؼ��� ���� IValueTaskSource��ʹ��ɱ��ػ����á�
-                        _state = State.None;
+                        _valueTaskSource.Reset();
+                        _state = State_None;
                         if (_finalTaskSource.TrySignal(out Exception exception))
                         {
-                            _state = State.Completed;
+                            _state = State_Completed;
                             if (exception != null)
                             {
                                 _valueTaskSource.SetException(exception);
@@ -240,7 +234,7 @@ namespace AKNet.Common
                         }
                         else
                         {
-                            _state = State.None;
+                            _state = State_None;
                         }
                     }
                 }
