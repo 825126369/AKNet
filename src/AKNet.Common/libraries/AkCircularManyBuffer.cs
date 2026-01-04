@@ -147,6 +147,25 @@ namespace AKNet.Common
             }
         }
 
+        public void WriteTo(AkCircularManyBuffer other)
+        {
+            while (true)
+            {
+                BufferItem mBufferItem = nCurrentReadBlock.Value;
+                ReadOnlySpan<byte> mBufferSpan = mBufferItem.GetCanReadSpan();
+                other.WriteFrom(mBufferSpan);
+                int nCopyLength = mBufferSpan.Length;
+                mBufferItem.nOffset += nCopyLength;
+                mBufferItem.nLength -= nCopyLength;
+                if (nCurrentReadBlock == nCurrentWriteBlock)
+                {
+                    break;
+                }
+                RemoveFirstNodeToLast();
+            }
+        }
+
+
         public int WriteTo(Span<byte> buffer)
         {
             int nReadLength = 0;

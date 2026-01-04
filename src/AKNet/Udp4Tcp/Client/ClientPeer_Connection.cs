@@ -53,7 +53,7 @@ namespace AKNet.Udp4Tcp.Client
             NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
             try
             {
-                await mConnection.ConnectAsync(mIPEndPoint);
+                await mConnection.ConnectAsync(mIPEndPoint).ConfigureAwait(false);
 
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
@@ -80,7 +80,7 @@ namespace AKNet.Udp4Tcp.Client
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
             try
             {
-                await mConnection.DisconnectAsync();
+                await mConnection.DisconnectAsync().ConfigureAwait(false);
             }
             catch { }
 
@@ -101,12 +101,13 @@ namespace AKNet.Udp4Tcp.Client
         
         private async void StartReceiveEventArg()
         {
+            await Task.Delay(1).ConfigureAwait(false); //这里主要是 不要在主线程中循环
             while (true)
             {
                 int nReadLength = 0;
                 try
                 {
-                    nReadLength = await mConnection.ReceiveAsync(ReceiveArgs);
+                    nReadLength = await mConnection.ReceiveAsync(ReceiveArgs).ConfigureAwait(false);
                 }
                 catch 
                 { 
@@ -145,7 +146,7 @@ namespace AKNet.Udp4Tcp.Client
                     mSendStreamList.CopyTo(mMemory.Span);
                 }
                 
-                int BytesTransferred = await mConnection.SendAsync(mMemory);
+                int BytesTransferred = await mConnection.SendAsync(mMemory).ConfigureAwait(false);
                 if (BytesTransferred > 0)
                 {
                     lock (mSendStreamList)

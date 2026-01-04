@@ -53,7 +53,7 @@ namespace AKNet.Udp4Tcp.Server
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
             try
             {
-                await mConnection.DisconnectAsync();
+                await mConnection.DisconnectAsync().ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -66,12 +66,13 @@ namespace AKNet.Udp4Tcp.Server
         
         private async void StartReceiveEventArg()
         {
+            await Task.Delay(1).ConfigureAwait(false); //这里主要是 不要在主线程中循环
             while (true)
             {
                 int nReadLength = 0;
                 try
                 {
-                    nReadLength = await mConnection.ReceiveAsync(ReceiveArgs);
+                    nReadLength = await mConnection.ReceiveAsync(ReceiveArgs).ConfigureAwait(false);
                 }
                 catch(Exception e)
                 {
@@ -109,7 +110,7 @@ namespace AKNet.Udp4Tcp.Server
                     mSendStreamList.CopyTo(mMemory.Span);
                 }
 
-                int BytesTransferred = await mConnection.SendAsync(mMemory);
+                int BytesTransferred = await mConnection.SendAsync(mMemory).ConfigureAwait(false);
                 if (BytesTransferred > 0)
                 {
                     lock (mSendStreamList)

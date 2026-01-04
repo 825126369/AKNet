@@ -50,6 +50,7 @@ namespace AKNet.Udp4Tcp.Common
             }
             else
             {
+                await Task.Delay(1).ConfigureAwait(false); //不要在主线程中做这个
                 RemoteEndPoint = targetEndPoint;
                 SocketMgr.Config mConfig = new SocketMgr.Config();
                 mConfig.bServer = false;

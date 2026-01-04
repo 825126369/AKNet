@@ -45,6 +45,15 @@ namespace AKNet.Udp4Tcp.Common
         {
             ProcessConnectionOP();
             NetCheckPackageExecute();
+
+            if (m_Connected)
+            {
+                lock (mMTSendStreamList)
+                {
+                    mUdpCheckMgr.AddTcpStream(mMTSendStreamList);
+                }
+            }
+
             mUdpCheckMgr.ThreadUpdate();
         }
 

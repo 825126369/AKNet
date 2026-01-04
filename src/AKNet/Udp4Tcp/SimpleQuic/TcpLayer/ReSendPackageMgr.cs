@@ -47,6 +47,11 @@ namespace AKNet.Udp4Tcp.Common
             mTcpSlidingWindow.WriteFrom(buffer);
         }
 
+        public void AddTcpStream(AkCircularManyBuffer buffer)
+        {
+            buffer.WriteTo(mTcpSlidingWindow);
+        }
+
         private void AddSendPackageOrderId(int nLength)
         {
             nCurrentWaitSendOrderId = OrderIdHelper.AddOrderId(nCurrentWaitSendOrderId, nLength);
