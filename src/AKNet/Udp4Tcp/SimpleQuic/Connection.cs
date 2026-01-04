@@ -14,14 +14,9 @@ namespace AKNet.Udp4Tcp.Common
         private int nCurrentCheckPackageCount = 0;
         private double fReceiveHeartBeatTime = 0.0;
         private double fMySendHeartBeatCdTime = 0.0;
-        
-        private readonly WeakReference<ConnectionEventArgs> mWRConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        private readonly WeakReference<ConnectionEventArgs> mWRDisConnectEventArgs = new WeakReference<ConnectionEventArgs>(null);
-        private readonly WeakReference<ConnectionEventArgs> mWRReceiveEventArgs = new WeakReference<ConnectionEventArgs>(null);
 
         private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
         private readonly AkCircularManyBuffer mMTSendStreamList = new AkCircularManyBuffer();
-        private readonly Queue<ConnectionEventArgs> mWRSendEventArgsQueue = new Queue<ConnectionEventArgs>();
 
         private readonly Queue<NetUdpReceiveFixedSizePackage> mReceiveWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
 
@@ -88,12 +83,8 @@ namespace AKNet.Udp4Tcp.Common
         {
             SimpleQuicFunc.ThreadCheck(this);
             mUdpCheckMgr.Reset();
-            mWRConnectEventArgs.SetTarget(null);
-            mWRDisConnectEventArgs.SetTarget(null);
-            mWRReceiveEventArgs.SetTarget(null);
-
             mMTReceiveStreamList.Reset();
-            mWRSendEventArgsQueue.Clear();
+            mMTSendStreamList.Reset();
 
             lock (mReceiveWaitCheckPackageQueue)
             {

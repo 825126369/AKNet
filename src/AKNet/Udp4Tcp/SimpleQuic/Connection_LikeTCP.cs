@@ -54,20 +54,8 @@ namespace AKNet.Udp4Tcp.Common
 			{
 				m_Connected = true;
                 this.OnConnectReset();
-                if (mConnectionType == E_CONNECTION_TYPE.Client)
-				{
-					if (mWRConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
-					{
-						mWRConnectEventArgs.SetTarget(null);
-						arg.LastOperation = ConnectionAsyncOperation.Connect;
-						arg.ConnectionError = ConnectionError.Success;
-						arg.TriggerEvent();
-					}
-
-					_connectedTcs.TrySetResult();
-
-                }
-				else
+                _connectedTcs.TrySetResult();
+                if (mConnectionType == E_CONNECTION_TYPE.Server)
 				{
 					this.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 				}
@@ -80,17 +68,8 @@ namespace AKNet.Udp4Tcp.Common
 			{
                 m_Connected = false;
                 this.OnDisConnectReset();
-                if (mConnectionType == E_CONNECTION_TYPE.Client)
-				{
-					if (mWRDisConnectEventArgs.TryGetTarget(out ConnectionEventArgs arg))
-					{
-						mWRDisConnectEventArgs.SetTarget(null);
-						arg.LastOperation = ConnectionAsyncOperation.Disconnect;
-						arg.ConnectionError = ConnectionError.Success;
-						arg.TriggerEvent();
-					}
-				}
-				else
+                _disConnectedTcs.TrySetResult();
+                if (mConnectionType == E_CONNECTION_TYPE.Server)
 				{
                     SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
                 }

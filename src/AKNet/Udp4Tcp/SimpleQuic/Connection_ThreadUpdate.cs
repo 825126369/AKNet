@@ -15,21 +15,6 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection
     {
-        public void SendTcpStream(ConnectionEventArgs arg)
-        {
-            if (!m_Connected) return;
-#if DEBUG
-            if (arg.Length > Config.nMaxDataLength)
-            {
-                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
-            }
-#endif
-            lock (mWRSendEventArgsQueue)
-            {
-                mWRSendEventArgsQueue.Enqueue(arg);
-            }
-        }
-        
         public void SendTcpStream(ReadOnlySpan<byte> arg)
         {
             if (!m_Connected) return;
@@ -59,45 +44,6 @@ namespace AKNet.Udp4Tcp.Common
         {
             ProcessConnectionOP();
             NetCheckPackageExecute();
-
-            if (m_Connected)
-            {
-                if (mWRSendEventArgsQueue.Count > 0)
-                {
-                    lock (mWRSendEventArgsQueue)
-                    {
-                        while (mWRSendEventArgsQueue.TryDequeue(out var arg))
-                        {
-                            mUdpCheckMgr.AddTcpStream(arg.GetCanReadSpan());
-                            arg.LastOperation = ConnectionAsyncOperation.Send;
-                            arg.ConnectionError = ConnectionError.Success;
-                            arg.BytesTransferred = arg.Length;
-                            arg.SetBuffer(0, arg.MemoryBuffer.Length);
-                            arg.TriggerEvent();
-                        }
-                    }
-                }
-
-                if (mMTReceiveStreamList.Length > 0)
-                {
-                    lock (mMTReceiveStreamList)
-                    {
-                        if (mWRReceiveEventArgs.TryGetTarget(out ConnectionEventArgs arg))
-                        {
-                            mWRReceiveEventArgs.SetTarget(null);
-
-                            arg.Offset = 0;
-                            arg.Length = arg.MemoryBuffer.Length;
-                            arg.BytesTransferred = mMTReceiveStreamList.WriteTo(arg.GetCanWriteSpan());
-                            arg.ConnectionError = ConnectionError.Success;
-                            arg.LastOperation = ConnectionAsyncOperation.Receive;
-                            arg.TriggerEvent();
-                        }
-                    }
-                }
-
-            }
-
             mUdpCheckMgr.ThreadUpdate();
         }
 

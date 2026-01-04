@@ -16,6 +16,25 @@ namespace AKNet.Udp4Tcp.Common
         private readonly ValueTaskSource _connectedTcs = new ValueTaskSource();
         private readonly ValueTaskSource _disConnectedTcs = new ValueTaskSource();
 
+        public void Dispose()
+        {
+            Volatile.Write(ref m_OnDestroyDontReceiveData, true);
+            Volatile.Write(ref m_Connected, false);
+            if (mConnectionType == E_CONNECTION_TYPE.Client)
+            {
+                RemoteEndPoint = null;
+                mSocketMgr.Dispose();
+                mLogicWorker.RemoveConnection(this);
+                mLogicWorker.mThreadWorker.RemoveLogicWorker(mLogicWorker);
+                mLogicWorker.mThreadWorker = null;
+                mLogicWorker = null;
+            }
+            else
+            {
+                mLogicWorker.RemoveConnection(this);
+            }
+        }
+
         public async ValueTask ConnectAsync(IPEndPoint targetEndPoint)
         {
             if (m_Connected)
