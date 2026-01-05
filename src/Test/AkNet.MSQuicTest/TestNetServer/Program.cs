@@ -6,7 +6,7 @@ namespace TestNetServer
     {
         public override NetServerMainBase Create()
         {
-            return new NetServerMain(NetType.Udp1MSQuic);
+            return new NetServerMain(NetType.Udp2MSQuic);
         }
     }
 

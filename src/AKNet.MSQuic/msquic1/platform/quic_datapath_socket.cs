@@ -779,7 +779,8 @@ namespace MSQuic1
         static void DataPathProcessCqe3(object Cqe, SocketAsyncEventArgs arg)
         {
             CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
-            CxPlatSocketSendInline(SendData.LocalAddress, SendData);
+            var mWorker = SendData.SocketProc.DatapathProc.mWorker;
+            CxPlatWorkerAddNetEvent(mWorker, arg as SSocketAsyncEventArgs);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)
@@ -787,6 +788,7 @@ namespace MSQuic1
             switch (arg.LastOperation)
             {
                 case SocketAsyncOperation.ReceiveMessageFrom:
+                case SocketAsyncOperation.ReceiveFrom:
                     CxPlatDataPathSocketProcessReceive(arg);
                     break;
 

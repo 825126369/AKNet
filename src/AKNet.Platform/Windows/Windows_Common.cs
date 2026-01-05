@@ -25,22 +25,9 @@ namespace AKNet.Platform
         public ulong ullAvailVirtual;
         public ulong ullAvailExtendedVirtual;
     }
-        
-
+    
     public static unsafe partial class OSPlatformFunc
     {
-        public static int CxPlatRandom(int BufferLen, void* Buffer)
-        {
-            const int BCRYPT_RNG_USE_ENTROPY_IN_BUFFER = 0x00000001;
-            const int BCRYPT_USE_SYSTEM_PREFERRED_RNG = 0x00000002;
-
-            return (int)Interop.BCrypt.BCryptGenRandom(
-                    IntPtr.Zero,
-                    (byte*)Buffer,
-                    BufferLen,
-                    BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-        }
-
         //得到内存状态
         public static MEMORYSTATUSEX GlobalMemoryStatusEx()
         {
