@@ -16,8 +16,8 @@ namespace AKNet.Platform
     {
         private static readonly Guid WSASendMsgGuid = new Guid(0xa441e712, 0x754f, 0x43ca, 0x84, 0xa7, 0x0d, 0xee, 0x44, 0xcf, 0x60, 0x6d);
         private static readonly Guid WSARecvMsgGuid = new Guid(0xf689d7c8, 0x6f1f, 0x436b, 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22);
-        static WSARecvMsg _recvMsg;
-        static WSASendMsg _sendMsg;
+        private static WSARecvMsg _recvMsg;
+        private static WSASendMsg _sendMsg;
 
         private static T CreateDelegate<T>(SafeHandle socketHandle, Guid guid) where T : Delegate
         {
@@ -39,7 +39,7 @@ namespace AKNet.Platform
                 return null;
             }
 
-            return Marshal.GetDelegateForFunctionPointer<T>((IntPtr)ptr);
+            return Marshal.GetDelegateForFunctionPointer<T>(ptr);
         }
 
         public static unsafe WSARecvMsg GetWSARecvMsgDelegate(SafeHandle socketHandle)
