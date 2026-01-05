@@ -29,7 +29,6 @@ namespace MSQuic1
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
         public CXPLAT_WORKER_POOL WorkerPool;
         public uint Features;
-        public CXPLAT_DATAPATH_RAW RawDataPath;
     }
 
     internal class CXPLAT_DATAPATH_PROC
@@ -82,24 +81,7 @@ namespace MSQuic1
         public int RioSendCount;
     }
 
-    internal class CXPLAT_SOCKET_RAW
-    {
-        //public Dictionary<ushort, > Entry;
-        public CXPLAT_RUNDOWN_REF Rundown;
-        public CXPLAT_DATAPATH_RAW RawDatapath;
-        public Socket AuxSocket;
-        public bool Wildcard;                // Using a wildcard local address. Optimization
-                                             // to avoid always reading LocalAddress.
-        public byte CibirIdLength;           // CIBIR ID length. Value of 0 indicates CIBIR isn't used
-        public byte CibirIdOffsetSrc;        // CIBIR ID offset in source CID
-        public byte CibirIdOffsetDst;        // CIBIR ID offset in destination CID
-        public byte[] CibirId = new byte[6];              // CIBIR ID data
-
-        public CXPLAT_SEND_DATA PausedTcpSend; // Paused TCP send data *before* framing
-        public CXPLAT_SEND_DATA CachedRstSend; // Cached TCP RST send data *after* framing
-    }
-
-    internal class CXPLAT_SOCKET_COMMON: CXPLAT_SOCKET_RAW
+    internal class CXPLAT_SOCKET_COMMON
     {
         public QUIC_ADDR LocalAddress = new QUIC_ADDR();
         public QUIC_ADDR RemoteAddress = new QUIC_ADDR();

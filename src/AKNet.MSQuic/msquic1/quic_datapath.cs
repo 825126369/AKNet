@@ -8,32 +8,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Platform;
-using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
 namespace MSQuic1
 {
-    internal delegate void CXPLAT_DATAPATH_ACCEPT_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
-    internal delegate void CXPLAT_DATAPATH_CONNECT_CALLBACK(CXPLAT_SOCKET Socket, QUIC_BINDING Context, CXPLAT_RECV_DATA RecvDataChain);
     internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
-    internal delegate void CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
     internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, object Context, QUIC_ADDR RemoteAddress);
 
     internal class CXPLAT_UDP_DATAPATH_CALLBACKS
     {
         public CXPLAT_DATAPATH_RECEIVE_CALLBACK Receive;
         public CXPLAT_DATAPATH_UNREACHABLE_CALLBACK Unreachable;
-    }
-
-    internal class CXPLAT_TCP_DATAPATH_CALLBACKS
-    {
-        CXPLAT_DATAPATH_ACCEPT_CALLBACK Accept;
-        CXPLAT_DATAPATH_CONNECT_CALLBACK Connect;
-        CXPLAT_DATAPATH_RECEIVE_CALLBACK Receive;
-        CXPLAT_DATAPATH_SEND_COMPLETE_CALLBACK SendComplete;
     }
 
     internal enum CXPLAT_ROUTE_STATE
@@ -76,13 +63,6 @@ namespace MSQuic1
         CXPLAT_SEND_FLAGS_MAX_THROUGHPUT = 1,
     }
 
-    internal class CXPLAT_RAW_TCP_STATE
-    {
-        public bool Syncd;
-        public uint AckNumber;
-        public uint SequenceNumber;
-    }
-
     internal class CXPLAT_SOCKET_POOL
     {
         public readonly object Lock = new object();
@@ -97,17 +77,6 @@ namespace MSQuic1
         public CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> OperationPool;
         public readonly object Lock = new object();
         public CXPLAT_LIST_ENTRY Operations;
-    }
-
-    internal class CXPLAT_DATAPATH_RAW
-    {
-        public CXPLAT_DATAPATH ParentDataPath;
-        public CXPLAT_WORKER_POOL WorkerPool;
-        public CXPLAT_SOCKET_POOL SocketPool;
-        public CXPLAT_ROUTE_RESOLUTION_WORKER RouteResolutionWorker;
-
-        public CXPLAT_LIST_ENTRY Interfaces;
-        public bool UseTcp;
     }
 
     internal class CXPLAT_ROUTE
