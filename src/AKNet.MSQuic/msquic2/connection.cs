@@ -4599,6 +4599,7 @@ namespace MSQuic2
                 CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Connection.ReceiveQueue);
                 Connection.ReceiveQueue = null;
             }
+
             QUIC_PATH Path = Connection.Paths[0];
             if (Path.Binding != null)
             {

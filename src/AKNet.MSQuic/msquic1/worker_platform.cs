@@ -228,9 +228,9 @@ namespace MSQuic1
             Worker.WakeSqe.UserToken = Worker;
             Worker.UpdatePollSqe.UserToken = Worker;
 
-            Worker.ShutdownSqe.Completed += ShutdownCompletion;
-            Worker.WakeSqe.Completed += WakeCompletion;
-            Worker.UpdatePollSqe.Completed += UpdatePollCompletion;
+            Worker.ShutdownSqe.Completed2 += ShutdownCompletion;
+            Worker.WakeSqe.Completed2 += WakeCompletion;
+            Worker.UpdatePollSqe.Completed2 += UpdatePollCompletion;
 
             Worker.InitializedEventQ = true;
             Worker.InitializedShutdownSqe = true;
