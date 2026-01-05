@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -21,10 +20,9 @@ namespace AKNet.Udp4Tcp.Common
         private readonly LinkedList<LogicWorker> mLogicWorkerList = new LinkedList<LogicWorker>();
         private readonly Queue<LogicWorker> mAddLogicWorkerQueue = new Queue<LogicWorker>();
         private readonly Queue<LogicWorker> mRemoveLogicWorkerQueue = new Queue<LogicWorker>();
-
-        public readonly ObjectPool<Connection> mConnectionPool = new ObjectPool<Connection>(0, byte.MaxValue);
-        public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
-        public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
+        
+        public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>(1024);
+        public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>(1024);
         
         public bool IsActive;
         public long TimeNow;

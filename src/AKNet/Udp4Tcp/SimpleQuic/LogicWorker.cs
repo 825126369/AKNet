@@ -59,7 +59,7 @@ namespace AKNet.Udp4Tcp.Common
         {
             this.mSocketItem = mSocketItem;
             mSocketItem.mLogicWorker = this;
-            this.mSendEventArgsPool = new SSocketAsyncEventArgsPool(this, 0, 1024);
+            this.mSendEventArgsPool = new SSocketAsyncEventArgsPool(this, 1024);
         }
 
         public void ThreadUpdate()
@@ -131,10 +131,10 @@ namespace AKNet.Udp4Tcp.Common
             mSocketAsyncEventArgsQueue.Enqueue(arg);
         }
         
-        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
-        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
+        private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(1024);
+        private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(1024);
         public SSocketAsyncEventArgsPool mSendEventArgsPool;
-        private readonly SafeObjectPool<NetStreamSendPackage> mNetStreamSendPackagePool = new SafeObjectPool<NetStreamSendPackage>(0, byte.MaxValue);
+        private readonly SafeObjectPool<NetStreamSendPackage> mNetStreamSendPackagePool = new SafeObjectPool<NetStreamSendPackage>(1024);
 
         public NetUdpSendFixedSizePackage UdpSendPackage_Pop()
         {

@@ -69,8 +69,7 @@ namespace AKNet.Udp4Tcp.Client
                         {
                             ReceiveHeartBeat();
                         }
-
-
+                        
                         fSendHeartBeatTime += elapsed;
                         if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTime)
                         {
@@ -86,7 +85,7 @@ namespace AKNet.Udp4Tcp.Client
                             fReConnectServerCdTime = 0.0;
                             mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
 #if DEBUG
-                            NetLog.Log("心跳超时");
+                            NetLog.Log($"{GetName()} 心跳超时");
 #endif
                         }
                     }
