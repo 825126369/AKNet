@@ -24,7 +24,7 @@ namespace AKNet.Udp4Tcp.Server
 
         private bool NetPackageExecute()
         {
-            NetStreamPackage mNetStreamPackage = mServerMgr.GetNetStreamPackage();
+            NetStreamReceivePackage mNetStreamPackage = mServerMgr.GetNetStreamPackage();
             bool bSuccess = false;
             lock (mReceiveStreamList)
             {

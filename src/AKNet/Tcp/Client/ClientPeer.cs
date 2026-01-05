@@ -33,7 +33,7 @@ namespace AKNet.Tcp.Client
 
         //Receive
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
 
         //Socket
         private Socket mSocket = null;

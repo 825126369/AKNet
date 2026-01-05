@@ -38,7 +38,7 @@ namespace AKNet.Udp3Tcp.Client
         private double fReConnectServerCdTime = 0.0;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
 

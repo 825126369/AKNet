@@ -32,7 +32,7 @@ namespace AKNet.Udp4Tcp.Client
 
         private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
 
         private readonly Memory<byte> ReceiveArgs = new byte[Config.nUdpPackageFixedSize];
         private readonly Memory<byte> SendArgs = new byte[Config.nUdpPackageFixedSize];

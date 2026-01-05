@@ -11,7 +11,7 @@ namespace TestNetClient
 
         public override void OnTestFinish()
         {
-            
+            AKNet.Udp4Tcp.Common.UdpStatistical.PrintLog();
         }
     }
 

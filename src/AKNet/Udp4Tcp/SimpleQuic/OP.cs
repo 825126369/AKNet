@@ -1,4 +1,5 @@
 ﻿using AKNet.Common;
+using System;
 using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
@@ -20,28 +21,43 @@ namespace AKNet.Udp4Tcp.Common
         TIMER_COUNT
     }
 
-    internal class ConnectionOP : IPoolItemInterface
+    internal enum E_OP_TYPE
     {
-        internal enum E_OP_TYPE
-        {
-            SendConnect,
-            SendDisConnect,
-        }
+        SendConnect,
+        SendDisConnect,
+        SendData,
+    }
 
-        private readonly LinkedListNode<ConnectionOP> mEntry;
+    internal class OPBase<T> : IPoolItemInterface where T : class
+    {
+        private readonly LinkedListNode<T> mEntry;
         public E_OP_TYPE nOPType;
 
-        public ConnectionOP()
+        public OPBase()
         {
-            mEntry = new LinkedListNode<ConnectionOP>(this);
+            mEntry = new LinkedListNode<T>(this as T);
         }
 
-        public LinkedListNode<ConnectionOP> GetEntry()
+        public LinkedListNode<T> GetEntry()
         {
             return mEntry;
         }
 
-        public void Reset()
+        public virtual void Reset()
+        {
+
+        }
+    }
+
+    internal class ConnectionOP : OPBase<ConnectionOP>
+    {
+       
+    };
+
+    internal class SendDataOP : OPBase<SendDataOP>
+    {
+        public Memory<byte> mSendBuffer;
+        public override void Reset()
         {
             
         }

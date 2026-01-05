@@ -77,7 +77,7 @@ namespace AKNet.Udp4Tcp.Common
 
                     lock (mOPList)
                     {
-                        mOPList.AddLast(new ConnectionOP() { nOPType =  ConnectionOP.E_OP_TYPE.SendConnect });
+                        mOPList.AddLast(new ConnectionOP() { nOPType =  E_OP_TYPE.SendConnect });
                     }
 
                     await valueTask;
@@ -100,7 +100,7 @@ namespace AKNet.Udp4Tcp.Common
 
                 lock (mOPList)
                 {
-                    mOPList.AddLast(new ConnectionOP() { nOPType = ConnectionOP.E_OP_TYPE.SendDisConnect });
+                    mOPList.AddLast(new ConnectionOP() { nOPType = E_OP_TYPE.SendDisConnect });
                 }
 
                 await valueTask;

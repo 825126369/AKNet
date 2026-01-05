@@ -15,7 +15,7 @@ namespace AKNet.LinuxTcp.Server
 {
     internal class UdpServer:NetServerInterface
 	{
-        private readonly NetStreamPackage mLikeTcpNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mLikeTcpNetPackage = new NetStreamReceivePackage();
 
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
@@ -49,7 +49,7 @@ namespace AKNet.LinuxTcp.Server
             mClientPeerMgr.Update(elapsed);
         }
 
-        public NetStreamPackage GetLikeTcpNetPackage()
+        public NetStreamReceivePackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
         }

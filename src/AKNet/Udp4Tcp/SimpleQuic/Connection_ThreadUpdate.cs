@@ -23,9 +23,12 @@ namespace AKNet.Udp4Tcp.Common
                 NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
             }
 #endif
+            var mPackage = mLogicWorker.NetStreamSendPackage_Pop();
+            mPackage.Create(arg);
+
             lock (mMTSendStreamList)
             {
-                mMTSendStreamList.WriteFrom(arg);
+                mMTSendStreamList.AddLast(mPackage.GetEntry());
             }
         }
 
@@ -48,9 +51,23 @@ namespace AKNet.Udp4Tcp.Common
 
             if (m_Connected)
             {
-                lock (mMTSendStreamList)
+                while (mMTSendStreamList.Count > 0)
                 {
-                    mUdpCheckMgr.AddTcpStream(mMTSendStreamList);
+                    NetStreamSendPackage mPackage = null;
+                    lock (mMTSendStreamList)
+                    {
+                        if (mMTSendStreamList.Count > 0)
+                        {
+                            mPackage = mMTSendStreamList.First.Value;
+                            mMTSendStreamList.RemoveFirst();
+                        }
+                    }
+
+                    if (mPackage != null)
+                    {
+                        mUdpCheckMgr.AddTcpStream(mPackage.GetCanReadSpan());
+                        mLogicWorker.NetStreamSendPackage_Recycle(mPackage);
+                    }
                 }
             }
 
@@ -98,13 +115,13 @@ namespace AKNet.Udp4Tcp.Common
             {
                 switch (Oper.nOPType)
                 {
-                    case ConnectionOP.E_OP_TYPE.SendConnect:
+                    case E_OP_TYPE.SendConnect:
                         {
                             SendConnect();
                         }
                         break;
 
-                    case ConnectionOP.E_OP_TYPE.SendDisConnect:
+                    case E_OP_TYPE.SendDisConnect:
                         {
                             this.SendDisConnect();
                         }

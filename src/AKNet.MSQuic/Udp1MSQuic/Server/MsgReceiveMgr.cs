@@ -66,7 +66,7 @@ namespace AKNet.Udp1MSQuic.Server
 
 		private bool NetPackageExecute()
 		{
-			NetStreamPackage mNetPackage = mTcpServer.mNetPackage;
+			NetStreamReceivePackage mNetPackage = mTcpServer.mNetPackage;
 			bool bSuccess = false;
 			lock (lock_mReceiveStreamList_object)
 			{

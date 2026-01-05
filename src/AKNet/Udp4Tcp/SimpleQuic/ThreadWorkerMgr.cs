@@ -57,13 +57,15 @@ namespace AKNet.Udp4Tcp.Common
                 mIndexList.Add(i);
             }
             
-            while (nSocketCount-- > 0)
+            while (mFinalList.Count < nSocketCount)
             {
                 int nRandomIndex = RandomTool.RandomArrayIndex(0, mIndexList.Count);
                 ThreadWorker mThreadWorker = mThreadWorkerList[nRandomIndex];
                 mIndexList.RemoveAt(nRandomIndex);
                 mFinalList.Add(mThreadWorker);
             }
+
+            NetLog.Assert(mFinalList.Count == nSocketCount);
             return mFinalList;
         }
     }

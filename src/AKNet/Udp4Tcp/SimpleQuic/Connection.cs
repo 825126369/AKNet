@@ -16,7 +16,7 @@ namespace AKNet.Udp4Tcp.Common
         private double fMySendHeartBeatCdTime = 0.0;
 
         private readonly AkCircularManyBuffer mMTReceiveStreamList = new AkCircularManyBuffer();
-        private readonly AkCircularManyBuffer mMTSendStreamList = new AkCircularManyBuffer();
+        private readonly LinkedList<NetStreamSendPackage> mMTSendStreamList = new LinkedList<NetStreamSendPackage>();
 
         private readonly Queue<NetUdpReceiveFixedSizePackage> mReceiveWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
 
@@ -84,7 +84,7 @@ namespace AKNet.Udp4Tcp.Common
             SimpleQuicFunc.ThreadCheck(this);
             mUdpCheckMgr.Reset();
             mMTReceiveStreamList.Reset();
-            mMTSendStreamList.Reset();
+            mMTSendStreamList.Clear();
 
             lock (mReceiveWaitCheckPackageQueue)
             {

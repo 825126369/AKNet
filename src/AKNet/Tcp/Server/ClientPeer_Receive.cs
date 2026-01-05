@@ -26,7 +26,7 @@ namespace AKNet.Tcp.Server
 
 		private bool NetPackageExecute()
 		{
-			NetStreamPackage mNetPackage = mNetServer.mNetPackage;
+			NetStreamReceivePackage mNetPackage = mNetServer.mNetPackage;
 			bool bSuccess = false;
 			lock (mReceiveStreamList)
 			{

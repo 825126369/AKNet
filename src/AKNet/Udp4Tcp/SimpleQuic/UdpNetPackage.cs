@@ -9,9 +9,42 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Collections.Generic;
 
 namespace AKNet.Udp4Tcp.Common
-{ 
+{
+    internal class NetStreamSendPackage : IPoolItemInterface
+    {
+        private readonly LinkedListNode<NetStreamSendPackage> mEntry;
+        public readonly Memory<byte> mBuffer = new byte[Config.nUdpPackageFixedSize];
+        public int nLength;
+        public NetStreamSendPackage()
+        {
+            mEntry = new LinkedListNode<NetStreamSendPackage>(this);
+        }
+
+        public LinkedListNode<NetStreamSendPackage> GetEntry()
+        {
+            return mEntry;
+        }
+
+        public void Create(ReadOnlySpan<byte> other)
+        {
+            other.CopyTo(mBuffer.Span);
+            nLength = other.Length;
+        }
+
+        public void Reset()
+        {
+            nLength = 0;
+        }
+
+        public ReadOnlySpan<byte> GetCanReadSpan()
+        {
+            return mBuffer.Span.Slice(0, nLength);
+        }
+    }
+
     internal class NetUdpSendFixedSizePackage : IPoolItemInterface
     {
         public readonly TcpStanardRTOTimer mTcpStanardRTOTimer = new TcpStanardRTOTimer();

@@ -19,7 +19,7 @@ namespace AKNet.Tcp.Server
     {
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
         internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
-        internal readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        internal readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
         internal readonly CryptoMgr mCryptoMgr = new CryptoMgr();
         
         internal readonly ClientPeerPool mClientPeerPool = null;

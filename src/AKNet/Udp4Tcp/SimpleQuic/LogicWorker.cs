@@ -133,8 +133,8 @@ namespace AKNet.Udp4Tcp.Common
         
         private readonly SafeObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new SafeObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
         private readonly SafeObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new SafeObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
-        private readonly SafeObjectPool<Connection> mConnectionPool = new SafeObjectPool<Connection>(0, byte.MaxValue);
         public SSocketAsyncEventArgsPool mSendEventArgsPool;
+        private readonly SafeObjectPool<NetStreamSendPackage> mNetStreamSendPackagePool = new SafeObjectPool<NetStreamSendPackage>(0, byte.MaxValue);
 
         public NetUdpSendFixedSizePackage UdpSendPackage_Pop()
         {
@@ -184,28 +184,14 @@ namespace AKNet.Udp4Tcp.Common
             }
         }
 
-        public Connection Connection_Pop()
+        public NetStreamSendPackage NetStreamSendPackage_Pop()
         {
-            if (Config.bUseSocketAsyncEventArgsTwoComplete)
-            {
-                return mThreadWorker.mConnectionPool.Pop();
-            }
-            else
-            {
-                return mConnectionPool.Pop();
-            }
+            return mNetStreamSendPackagePool.Pop();
         }
 
-        public void Connection_Recycle(Connection mPackage)
+        public void NetStreamSendPackage_Recycle(NetStreamSendPackage mPackage)
         {
-            if (Config.bUseSocketAsyncEventArgsTwoComplete)
-            {
-                mThreadWorker.mConnectionPool.recycle(mPackage);
-            }
-            else
-            {
-                mConnectionPool.recycle(mPackage);
-            }
+            mNetStreamSendPackagePool.recycle(mPackage);
         }
     }
 }

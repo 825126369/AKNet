@@ -18,7 +18,7 @@ namespace AKNet.Udp2Tcp.Server
 {
     internal partial class ServerMgr : NetServerInterface
 	{
-        private readonly NetStreamPackage mLikeTcpNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mLikeTcpNetPackage = new NetStreamReceivePackage();
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
         private readonly ClientPeerPool mClientPeerPool = null;
@@ -83,7 +83,7 @@ namespace AKNet.Udp2Tcp.Server
             }
         }
 
-        public NetStreamPackage GetLikeTcpNetPackage()
+        public NetStreamReceivePackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
         }

@@ -18,7 +18,7 @@ namespace AKNet.Udp3Tcp.Server
 {
     internal partial class ServerMgr : NetServerInterface
 	{
-        private readonly NetStreamPackage mLikeTcpNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mLikeTcpNetPackage = new NetStreamReceivePackage();
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
         private readonly ClientPeerPool mClientPeerPool = null;
@@ -60,7 +60,7 @@ namespace AKNet.Udp3Tcp.Server
             mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
         }
 
-        public NetStreamPackage GetLikeTcpNetPackage()
+        public NetStreamReceivePackage GetLikeTcpNetPackage()
         {
             return mLikeTcpNetPackage;
         }

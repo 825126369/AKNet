@@ -38,7 +38,7 @@ namespace AKNet.Udp4Tcp.Common
                 }
                 else
                 {
-                    mConnectionPeer = mSocketItem.mLogicWorker.Connection_Pop();
+                    mConnectionPeer = new Connection();
                     mConnectionPeer.RemoteEndPoint = nPeerId;
                     mSocketItem.mLogicWorker.AddConnection(mConnectionPeer);
                     mConnectionPeer.Init(E_CONNECTION_TYPE.Server);
@@ -68,7 +68,6 @@ namespace AKNet.Udp4Tcp.Common
                 mConnectionPeerDic.Remove(peerId);
             }
             
-            mConnectionPeer.mLogicWorker.Connection_Recycle(mConnectionPeer);
             PrintRemoveFakeSocketMsg(mConnectionPeer);
         }
 

@@ -40,7 +40,7 @@ namespace AKNet.Udp2Tcp.Client
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
-        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
 
         private readonly UdpCheckMgr mUdpCheckPool = null;
         private int nCurrentCheckPackageCount = 0;

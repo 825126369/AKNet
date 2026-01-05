@@ -17,7 +17,7 @@ namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ServerMgr : NetServerInterface
 	{
-        private readonly NetStreamPackage mNetStreamPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mNetStreamPackage = new NetStreamReceivePackage();
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
         private readonly ClientPeerPool mClientPeerPool = null;
@@ -41,7 +41,7 @@ namespace AKNet.Udp4Tcp.Server
             mListener = new Listener();
         }
 
-        public NetStreamPackage GetNetStreamPackage()
+        public NetStreamReceivePackage GetNetStreamPackage()
         {
             return mNetStreamPackage;
         }

@@ -25,7 +25,7 @@ namespace AKNet.Udp4Tcp.Common
         public readonly ObjectPool<Connection> mConnectionPool = new ObjectPool<Connection>(0, byte.MaxValue);
         public readonly ObjectPool<NetUdpSendFixedSizePackage> mSendPackagePool = new ObjectPool<NetUdpSendFixedSizePackage>(0, byte.MaxValue);
         public readonly ObjectPool<NetUdpReceiveFixedSizePackage> mReceivePackagePool = new ObjectPool<NetUdpReceiveFixedSizePackage>(0, byte.MaxValue);
-
+        
         public bool IsActive;
         public long TimeNow;
         public long LastWorkTime;

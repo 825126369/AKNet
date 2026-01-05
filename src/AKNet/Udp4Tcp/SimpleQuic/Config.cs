@@ -13,7 +13,7 @@ namespace AKNet.Udp4Tcp.Common
 	{
         public static readonly int nSocketCount = 1;
         public const bool bUseSocketAsyncEventArgsTwoComplete = true;
-        public const bool bUseSingleSendArgs = true;
+        public const bool bUseSingleSendArgs = false;
 
         public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 12;
