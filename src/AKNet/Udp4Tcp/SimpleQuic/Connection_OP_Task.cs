@@ -9,7 +9,6 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Connection
     {
-        private bool _disposed;
         private readonly KKResettableValueTaskSource _receiveTcs = new KKResettableValueTaskSource();
         private readonly KKResettableValueTaskSource _sendTcs = new KKResettableValueTaskSource();
 
@@ -18,6 +17,9 @@ namespace AKNet.Udp4Tcp.Common
 
         public void Dispose()
         {
+            if(m_Disposed) return;
+            m_Disposed = true;
+
             Volatile.Write(ref m_OnDestroyDontReceiveData, true);
             Volatile.Write(ref m_Connected, false);
             if (mConnectionType == E_CONNECTION_TYPE.Client)
@@ -109,7 +111,7 @@ namespace AKNet.Udp4Tcp.Common
 
         public async ValueTask<int> SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (_disposed)
+            if (m_Disposed)
             {
                 throw new ObjectDisposedException(this.GetType().Name);
             }
@@ -138,18 +140,17 @@ namespace AKNet.Udp4Tcp.Common
 
         public async ValueTask<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (_disposed)
+            if (m_Disposed)
             {
                 throw new ObjectDisposedException(this.GetType().Name);
             }
 
-            if (_receiveTcs.IsCompleted)
+            if (_receiveTcs.IsCompleted) //Ready才可以重置
             {
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             int totalCopied = 0;
-
             if (!_receiveTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
             {
                 throw new InvalidOperationException("_receiveTcs.TryGetValueTask");

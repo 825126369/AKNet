@@ -22,6 +22,7 @@ namespace AKNet.Udp4Tcp.Common
 
         private bool bInit = false;
         private bool m_Connected;
+        private bool m_Disposed;
         private bool m_OnDestroyDontReceiveData;
         public readonly LinkedList<ConnectionOP> mOPList = new LinkedList<ConnectionOP>();
 

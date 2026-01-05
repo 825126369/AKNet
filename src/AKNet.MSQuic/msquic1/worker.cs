@@ -16,7 +16,7 @@ namespace MSQuic1
     internal class QUIC_WORKER_POOL
     {
         public ushort LastWorker;
-        public List<QUIC_WORKER> Workers = new List<QUIC_WORKER>();
+        public readonly List<QUIC_WORKER> Workers = new List<QUIC_WORKER>();
     }
 
     internal class QUIC_WORKER
@@ -37,10 +37,9 @@ namespace MSQuic1
 
         public readonly object Lock = new object();
         public readonly QUIC_TIMER_WHEEL TimerWheel = new QUIC_TIMER_WHEEL();
-
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> Connections = new CXPLAT_LIST_ENTRY<QUIC_CONNECTION>(null);
-        public CXPLAT_LIST_ENTRY PriorityConnectionsTail;
         public readonly CXPLAT_LIST_ENTRY<QUIC_OPERATION> Operations = new CXPLAT_LIST_ENTRY<QUIC_OPERATION>(null);
+        public CXPLAT_LIST_ENTRY PriorityConnectionsTail;
     }
 
     internal static partial class MSQuicFunc
