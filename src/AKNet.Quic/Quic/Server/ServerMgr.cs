@@ -7,12 +7,9 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-#if NET9_0_OR_GREATER
 
 using AKNet.Common;
 using AKNet.Quic.Common;
-using System;
-using System.Collections.Generic;
 using System.Net.Quic;
 
 namespace AKNet.Quic.Server
@@ -21,9 +18,9 @@ namespace AKNet.Quic.Server
     {
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
-        internal readonly NetStreamPackage mNetPackage = null;
+        internal readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal readonly ClientPeerPool mClientPeerPool = null;
+        internal readonly ClientPeerPool mClientPeerPool;
         internal readonly CryptoMgr mCryptoMgr = null;
 
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
@@ -39,7 +36,6 @@ namespace AKNet.Quic.Server
             mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
-            mNetPackage = new NetStreamPackage();
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
@@ -94,5 +90,3 @@ namespace AKNet.Quic.Server
         }
     }
 }
-
-#endif

@@ -7,14 +7,11 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-#if NET9_0_OR_GREATER
+
 using AKNet.Common;
 using AKNet.Quic.Common;
-using System;
-using System.Net;
 using System.Net.Quic;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace AKNet.Quic.Server
 {
@@ -181,5 +178,3 @@ namespace AKNet.Quic.Server
 
     }
 }
-
-#endif

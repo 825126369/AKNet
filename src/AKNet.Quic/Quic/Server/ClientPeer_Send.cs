@@ -7,11 +7,9 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-
-#if NET9_0_OR_GREATER
-using System;
 using AKNet.Common;
-namespace AKNet.Quic.Client
+
+namespace AKNet.Quic.Server
 {
     internal partial class ClientPeer
     {
@@ -20,12 +18,8 @@ namespace AKNet.Quic.Client
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                var mBufferSegment = mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
                 SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 
@@ -34,12 +28,8 @@ namespace AKNet.Quic.Client
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                var mBufferSegment = mCryptoMgr.Encode(nPackageId, data);
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, data);
                 SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 
@@ -48,12 +38,8 @@ namespace AKNet.Quic.Client
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                var mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
                 SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 
@@ -62,15 +48,9 @@ namespace AKNet.Quic.Client
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                var mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, buffer);
                 SendNetStream(mBufferSegment);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
     }
 }
-
-#endif

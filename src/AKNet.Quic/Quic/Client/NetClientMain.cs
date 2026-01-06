@@ -7,20 +7,12 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-#if NET9_0_OR_GREATER
 using AKNet.Common;
 
-namespace AKNet.Quic.Common
+namespace AKNet.Quic.Client
 {
-    public static class Config
+    internal class NetClientMain : ClientPeer, NetClientInterface
     {
-        //Common
-        public const int nIOContexBufferLength = 1024;
-        public const int nDataMaxLength = ushort.MaxValue;
-        public const double fReceiveHeartBeatTimeOut = 5.0;
-        public const double fMySendHeartBeatMaxTime = 2.0;
-        public const double fReConnectMaxCdTime = 3.0;
-        public const int MaxPlayerCount = 10000;
+        
     }
 }
-#endif

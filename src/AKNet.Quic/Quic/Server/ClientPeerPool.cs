@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 
-#if NET9_0_OR_GREATER
 using AKNet.Common;
 using System.Collections.Generic;
 
@@ -77,5 +76,3 @@ namespace AKNet.Quic.Server
         }
     }
 }
-
-#endif

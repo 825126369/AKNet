@@ -7,11 +7,8 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-
-#if NET9_0_OR_GREATER
 using AKNet.Common;
 using AKNet.Quic.Common;
-using System;
 using System.Net;
 using System.Net.Quic;
 using System.Runtime.CompilerServices;
@@ -34,7 +31,7 @@ namespace AKNet.Quic.Client
         private uint ID = 0;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly NetStreamPackage mNetPackage = new NetStreamPackage();
+        private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
 
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];
         private readonly byte[] mSendBuffer = new byte[1024];
@@ -225,6 +222,5 @@ namespace AKNet.Quic.Client
         }
     }
 }
-#endif
 
 
