@@ -14,9 +14,6 @@ namespace AKNet.Common
     public enum NetType
     {
         TCP,
-#if NET9_0_OR_GREATER
-        MSQuic,
-#endif
         [Obsolete] Udp1Tcp,
         Udp2Tcp,
         Udp3Tcp,
