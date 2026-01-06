@@ -22,18 +22,6 @@ namespace MSQuic1
         public int Offset; // Base process index offset this group starts at
     }
 
-    internal class CXPLAT_THREAD
-    {
-        public IntPtr mThreadPtr;
-        public LPTHREAD_START_ROUTINE mFunc;
-        public CXPLAT_THREAD_CONFIG mConfig;
-        public int ThreadFunc(IntPtr parm)
-        {
-             mConfig.Callback(mConfig.Context);
-            return 0;
-        }
-    }
-
     internal static unsafe partial class MSQuicFunc
     {
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
