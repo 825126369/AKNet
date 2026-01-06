@@ -11,9 +11,10 @@ namespace MSTest
         {
             ulong A = 0;
             ulong B = 0;
+
+            //并发逻辑
             Parallel.For(0, 10000, i =>
             {
-                // 计算密集型工作
                 InterlockedEx.Increment(ref A);
                 B++;
             });
