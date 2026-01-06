@@ -32,7 +32,7 @@ namespace AKNet.Common
         {
             Init();
 
-            Action<string> LogFunc = (string message)=>
+            Action<string> LogFunc = (string message) =>
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine(message);
@@ -90,21 +90,8 @@ namespace AKNet.Common
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)
         {
-            bool IsFromMyAssembly(Exception ex)
-            {
-                // 取最顶层栈帧
-                var frame = new StackTrace(ex, fNeedFileInfo: false).GetFrame(0);
-                if (frame == null) return false;
-                var method = frame.GetMethod();
-                var asm = method?.DeclaringType?.Assembly;
-                return asm == Assembly.GetExecutingAssembly();
-            }
-
             Exception exception = args.ExceptionObject as Exception;
-           // if (IsFromMyAssembly(exception))
-            {
-                LogUncaughtException(exception);
-            }
+            LogUncaughtException(exception);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
