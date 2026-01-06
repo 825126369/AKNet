@@ -24,10 +24,10 @@ namespace AKNet.Common
 {
     internal sealed class KKResettableValueTaskSource : IValueTaskSource
     {
-        public const int State_None = 1;
-        public const int State_Awaiting = 2;
-        public const int State_Ready = 3;
-        public const int State_Completed = 4;
+        private const int State_None = 1;
+        private const int State_Awaiting = 2;
+        private const int State_Ready = 3; //表示设置结果完了,可以Reset
+        private const int State_Completed = 4; //一旦设置，表示这个操作是最终操作。
 
         private int _state;
         private bool _hasWaiter;
