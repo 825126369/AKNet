@@ -14,6 +14,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
+    <ProjectReference Include="..\AKNet.Extentions.Protobuf\AKNet.Extentions.Protobuf.csproj" />
+    <ProjectReference Include="..\AKNet.LinuxTcp\AKNet.LinuxTcp.csproj" />
+    <ProjectReference Include="..\AKNet.MSQuic\AKNet.MSQuic.csproj" />
+    <ProjectReference Include="..\AKNet.Platform\AKNet.Platform.csproj" />
+    <ProjectReference Include="..\AKNet.WebSocket\AKNet.WebSocket.csproj" />
+    <ProjectReference Include="..\AKNet\AKNet.csproj" />
   </ItemGroup>
 
 </Project>

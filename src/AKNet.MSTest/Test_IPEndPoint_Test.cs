@@ -1,6 +1,4 @@
-﻿using AKNet.Common;
-using System;
-using System.Net;
+﻿using System.Net;
 
 namespace MSTest
 {

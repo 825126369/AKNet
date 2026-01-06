@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
+[assembly: InternalsVisibleTo("AKNet.MSTest")]
 namespace AKNet.Common
 {
     //这个类需要测试，现在不能保证操作原子性的，也就是100个线程都执行 Increment（）操作：不能保证结果等于100
