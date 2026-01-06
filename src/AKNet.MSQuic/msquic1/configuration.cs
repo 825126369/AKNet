@@ -55,7 +55,7 @@ namespace MSQuic1
         QUIC_ALLOWED_CIPHER_SUITE_CHACHA20_POLY1305_SHA256 = 0x4,
     }
 
-    internal delegate void QUIC_CREDENTIAL_LOAD_COMPLETE(QUIC_CONFIGURATION Configuration,object Context, int Status);
+    internal delegate void QUIC_CREDENTIAL_LOAD_COMPLETE(QUIC_CONFIGURATION Configuration, object Context, int Status);
 
     internal class QUIC_CREDENTIAL_CONFIG
     {

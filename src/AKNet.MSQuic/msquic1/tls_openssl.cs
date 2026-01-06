@@ -442,7 +442,6 @@ namespace MSQuic1
                 BoringSSLFunc.SSL_CTX_set_client_hello_cb(SecurityConfig.SSLCtx, CxPlatTlsClientHelloCallback, null);
             }
 
-
             CompletionHandler(CredConfig, Context, Status, SecurityConfig);
             if (CredConfigFlags.HasFlag(QUIC_CREDENTIAL_FLAGS.QUIC_CREDENTIAL_FLAG_LOAD_ASYNCHRONOUS))
             {

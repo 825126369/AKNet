@@ -1620,7 +1620,7 @@ namespace MSQuic1
                 PacketsTail = (QUIC_RX_PACKET)PacketsTail.Next;
             }
             //上面是计算出最后一个尾包
-            
+
             int QueueLimit = Math.Max(10, (int)Connection.Settings.ConnFlowControlWindow >> 10);
             bool QueueOperation;
             CxPlatDispatchLockAcquire(Connection.ReceiveQueueLock);

@@ -1,5 +1,8 @@
 ﻿UDP4TCP:框架设计 渐进思考 完整过程:
 
+CPU核心数 => N个Thread Worker
+每个 Thread Worker => 包含N个 Logic Worker(这种做法 和 MSQUIC 不一致)
+
 1: 我首先利用 Socket的 SocketAsyncEventArgs 把 SocketAsyncEventArgs这个事件路由到 SocketItem 的指定线程上。
 2：我直接在这个线程上处理丢包逻辑：报错了: System.StackOverflowException
 3: 由于报错了:而我又想到 MSQUIC也是 先把收到的数据包 存到一个 链表里。所以我先存数据包到队列里, 报错好了。
