@@ -17,9 +17,12 @@ namespace AKNet.Quic.Client
 {
     internal partial class ClientPeer : NetClientInterface, ClientPeerBase, QuicClientPeerBase
     {
-        private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
-        private readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
+        internal readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
+        internal readonly CryptoMgr mCryptoMgr = new CryptoMgr();
+        internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
+
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
+        private readonly List<ClientPeerQuicStream> mStreamList = new List<ClientPeerQuicStream>();
 
         private double fReConnectServerCdTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
@@ -35,7 +38,6 @@ namespace AKNet.Quic.Client
         private int nServerPort = 0;
         private IPEndPoint mIPEndPoint = null;
         private ClientPeer mClientPeer;
-        private readonly List<ClientPeerQuicStream> mStreamList = new List<ClientPeerQuicStream>();
 
         public ClientPeer()
         {

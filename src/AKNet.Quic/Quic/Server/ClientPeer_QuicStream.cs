@@ -10,7 +10,7 @@
 using AKNet.Common;
 using System.Net.Quic;
 
-namespace AKNet.Quic.Client
+namespace AKNet.Quic.Server
 {
     internal class ClientPeerQuicStream:IDisposable
     {
@@ -20,11 +20,13 @@ namespace AKNet.Quic.Client
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private bool bSendIOContextUsed = false;
 
+        private ServerMgr mServerMgr;
         private QuicStream mQuicStream;
         private ClientPeer mClientPeer;
 
-        public ClientPeerQuicStream(ClientPeer mClientPeer, QuicStream mStream)
+        public ClientPeerQuicStream(ServerMgr mServerMgr, ClientPeer mClientPeer, QuicStream mStream)
         {
+            this.mServerMgr = mServerMgr;
             this.mClientPeer = mClientPeer;
             this.mQuicStream = mStream;
         }
@@ -52,12 +54,12 @@ namespace AKNet.Quic.Client
             bool bSuccess = false;
             lock (mReceiveStreamList)
             {
-                bSuccess = mClientPeer.mCryptoMgr.Decode(mReceiveStreamList, mClientPeer.mNetPackage);
+                bSuccess = mServerMgr.mCryptoMgr.Decode(mReceiveStreamList, mServerMgr.mNetPackage);
             }
 
             if (bSuccess)
             {
-                mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mClientPeer.mNetPackage);
+                mServerMgr.mPackageManager.NetPackageExecute(this.mClientPeer, mServerMgr.mNetPackage);
             }
 
             return bSuccess;

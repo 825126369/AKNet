@@ -27,16 +27,9 @@ namespace AKNet.Quic.Server
 		private string Name = string.Empty;
         private uint ID = 0;
 
-        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly object lock_mReceiveStreamList_object = new object();
-
-        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly Memory<byte> mSendBuffer = new byte[1024];
         CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
-        private bool bSendIOContextUsed = false;
-        private QuicStream mSendQuicStream;
         private QuicConnection mQuicConnection;
+        private readonly List<ClientPeerQuicStream> mStreamList = new List<ClientPeerQuicStream>();
 
         public ClientPeer(ServerMgr mNetServer)
 		{
@@ -50,10 +43,14 @@ namespace AKNet.Quic.Server
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
                     int nPackageCount = 0;
-                    while (NetPackageExecute())
+                    foreach (var mStream in mQuicStreamDic)
                     {
-                        nPackageCount++;
+                        while (mStream.Value.NetPackageExecute())
+                        {
+                            nPackageCount++;
+                        }
                     }
+
                     if (nPackageCount > 0)
                     {
                         ReceiveHeartBeat();
@@ -113,7 +110,7 @@ namespace AKNet.Quic.Server
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
         {
             this.mSocketPeerState = mSocketPeerState;
         }
@@ -127,15 +124,6 @@ namespace AKNet.Quic.Server
 		{
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             CloseSocket();
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Reset();
-            }
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Reset();
-            }
-            
 			this.Name = string.Empty;
 			this.ID = 0;
             fSendHeartBeatTime = 0.0;
@@ -144,16 +132,7 @@ namespace AKNet.Quic.Server
 
         public void Release()
         {
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            CloseSocket();
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Dispose();
-            }
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Dispose();
-            }
+            Reset();
         }
 
         public void SetName(string name)
