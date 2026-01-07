@@ -2,9 +2,9 @@
 
 namespace TestNetServer
 {
-    public class NetHandler : NetTestServerBase
+    public class NetHandler : QuicTestServerBase
     {
-        public override NetServerMainBase Create()
+        public override QuicServerMainBase Create()
         {
             return new NetServerMain(NetType.Quic);
         }

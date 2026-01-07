@@ -15,7 +15,7 @@ namespace TestNetClient
             UpdateMgr.Do(Update);
         }
 
-        public abstract NetClientMainBase Create();
+        public abstract QuicClientMainBase Create();
         public abstract void OnTestFinish();
 
         public const int nClientCount = 100;
@@ -25,7 +25,7 @@ namespace TestNetClient
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
         int nReceivePackageCount = 0;
         int nSendPackageCount = 0;
-        List<NetClientMainBase> mClientList = new List<NetClientMainBase>();
+        List<QuicClientMainBase> mClientList = new List<QuicClientMainBase>();
         Stopwatch mStopWatch = new Stopwatch();
         readonly uint[] mClientSendIdArray = new uint[nClientCount];
         readonly int[] mClientSendPackageCount = new int[nClientCount];
@@ -59,7 +59,7 @@ namespace TestNetClient
         {
             for (int i = 0; i < nClientCount; i++)
             {
-                NetClientMainBase mNetClient = Create();
+                QuicClientMainBase mNetClient = Create();
                 mClientList.Add(mNetClient);
                 mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveMessage);
                 mNetClient.ConnectServer("127.0.0.1", 6000);
@@ -143,7 +143,7 @@ namespace TestNetClient
 
         }
 
-        void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
+        void ReceiveMessage(QuicClientPeerBase peer, QuicStreamBase mStream, QuicNetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
 

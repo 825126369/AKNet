@@ -2,16 +2,16 @@
 
 namespace TestNetClient
 {
-    public class NetHandler : NetTestClientBase
+    public class NetHandler : QuicTestClientBase
     {
-        public override NetClientMainBase Create()
+        public override QuicClientMainBase Create()
         {
             return new NetClientMain(NetType.Quic);
         }
 
         public override void OnTestFinish()
         {
-            udp_statistic.PrintInfo();
+            //udp_statistic.PrintInfo();
         }
     }
 

@@ -7,10 +7,10 @@ namespace TestNetServer
 {
     public abstract class QuicTestServerBase
     {
-        NetServerMainBase mNetServer = null;
+        QuicServerMainBase mNetServer = null;
         const int NetCommand_COMMAND_TESTCHAT = 1000;
 
-        public abstract NetServerMainBase Create();
+        public abstract QuicServerMainBase Create();
 
         public void Start()
         {
@@ -31,10 +31,10 @@ namespace TestNetServer
             mNetServer.Update(fElapsedTime);
         }
 
-        private void ReceiveMessage(ClientPeerBase peer, NetPackage mPackage)
+        private void ReceiveMessage(QuicClientPeerBase peer, QuicStreamBase mStream, QuicNetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
-            peer.SendNetData(NetCommand_COMMAND_TESTCHAT, mdata);
+            peer.SendNetData(1, NetCommand_COMMAND_TESTCHAT, mdata);
             IMessagePool<TESTChatMessage>.recycle(mdata);
         }
     }

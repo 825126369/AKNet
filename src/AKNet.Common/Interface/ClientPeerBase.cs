@@ -25,12 +25,4 @@ namespace AKNet.Common
         void SetID(uint id);
         uint GetID();
     }
-
-    public interface QuicClientPeerBase
-    {
-        void SendNetData(int nStreamIndex, ushort nPackageId);
-        void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data);
-        void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
-        void SendNetData(int nStreamIndex, NetPackage mNetPackage);
-    }
 }

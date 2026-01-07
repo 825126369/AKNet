@@ -9,7 +9,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Common
 {
-    public interface QuicNetPackage
+    public interface QuicNetPackage:NetPackage
     {
         byte GetStreamEnumIndex();
         ushort GetPackageId();
