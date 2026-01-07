@@ -7,10 +7,17 @@
 *        ModifyTime:2025/11/30 19:43:20
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.MSQuic.Client
+using AKNet.MSQuic.Common;
+using System.Net;
+
+namespace AKNet.MSQuic.Server
 {
-    internal class NetClientMain : ClientPeer
+    internal interface TcpClientPeerBase
     {
-       
+        void SetName(string Name);
+        void HandleConnectedSocket(QuicConnection mQuicConnection);
+        void Update(double elapsed);
+        void Reset();
+        IPEndPoint GetIPEndPoint();
     }
 }

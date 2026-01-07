@@ -4,44 +4,71 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:15
+*        ModifyTime:2025/11/30 19:43:20
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-
 using AKNet.Common;
-using AKNet.Quic.Common;
-using System.Net.Quic;
+using AKNet.MSQuic.Common;
+using AKNet.MSQuic.Common;
+using System;
 
-namespace AKNet.Quic.Server
+namespace AKNet.MSQuic.Server
 {
-    internal partial class ServerMgr : NetServerInterface
+    internal class QuicServer : NetServerInterface
     {
+        private readonly QuicListenerMgr mSocketMgr = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         internal readonly ListenNetPackageMgr mPackageManager = null;
-        internal readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
+        internal readonly NetStreamReceivePackage mNetPackage = null;
+        internal readonly ClientPeerManager mClientPeerManager = null;
         internal event Action<ClientPeerBase> mListenSocketStateFunc = null;
-        internal readonly ClientPeerPool mClientPeerPool;
+        internal readonly ClientPeerPool mClientPeerPool = null;
         internal readonly CryptoMgr mCryptoMgr = null;
 
-        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>(0);
-        private readonly Queue<QuicConnection> mConnectSocketQueue = new Queue<QuicConnection>();
-
-        QuicListener mQuicListener = null;
-        private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private int nPort;
-
-        public ServerMgr()
+        public QuicServer()
         {
-            NetLog.Init();
             mCryptoMgr = new CryptoMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mPackageManager = new ListenNetPackageMgr();
+            mNetPackage = new NetStreamReceivePackage();
+
+            mSocketMgr = new QuicListenerMgr(this);
+            mClientPeerManager = new ClientPeerManager(this);
             mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
         }
 
-        public void Release()
+        public SOCKET_SERVER_STATE GetServerState()
         {
-            CloseNet();
+            return mSocketMgr.GetServerState();
+        }
+
+        public int GetPort()
+        {
+            return mSocketMgr.GetPort();
+        }
+
+        public void InitNet()
+        {
+            mSocketMgr.InitNet();
+        }
+
+        public void InitNet(int nPort)
+        {
+            mSocketMgr.InitNet(nPort);
+        }
+
+        public void InitNet(string Ip, int nPort)
+        {
+            mSocketMgr.InitNet(Ip, nPort);
+        }
+
+        public void Update(double elapsed)
+        {
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("帧 时间 太长: " + elapsed);
+            }
+            mClientPeerManager.Update(elapsed);
         }
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)
@@ -67,6 +94,11 @@ namespace AKNet.Quic.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
+        }
+
+        public void Release()
+        {
+            mSocketMgr.CloseNet();
         }
 
         public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)

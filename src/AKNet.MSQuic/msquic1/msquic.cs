@@ -11,7 +11,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("AKNet.Quic2Tcp")]
 namespace MSQuic1
 {
     internal delegate int QUIC_LISTENER_CALLBACK(QUIC_LISTENER Listener, object Context, ref QUIC_LISTENER_EVENT Info);

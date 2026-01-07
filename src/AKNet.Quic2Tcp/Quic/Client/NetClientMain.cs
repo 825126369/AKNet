@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Quic.Client
 {
-    internal class NetClientMain : ClientPeer, QuicClientInterface
+    internal class NetClientMain : ClientPeer, NetClientInterface
     {
         
     }

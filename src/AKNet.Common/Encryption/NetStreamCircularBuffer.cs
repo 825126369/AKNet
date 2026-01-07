@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
 [assembly: InternalsVisibleTo("AKNet.WebSocket")]
 [assembly: InternalsVisibleTo("AKNet.Quic")]
+[assembly: InternalsVisibleTo("AKNet.Quic2Tcp")]
 namespace AKNet.Common
 {
     internal class NetStreamCircularBuffer:AkCircularManyBuffer

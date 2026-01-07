@@ -7,10 +7,14 @@
 *        ModifyTime:2025/11/30 19:43:20
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-namespace AKNet.MSQuic.Client
+using System;
+using System.Net.Sockets;
+
+namespace AKNet.MSQuic.Common
 {
-    internal class NetClientMain : ClientPeer
+    internal sealed class QuicStreamOptions
     {
-       
+        public QuicStreamType nType;
+        public Action<SocketAsyncEventArgs> ReceiveBufferFunc { get; set; } = null!;
     }
 }

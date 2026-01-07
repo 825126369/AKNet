@@ -4,31 +4,30 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:15
+*        ModifyTime:2025/11/30 19:43:20
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-
 using AKNet.Common;
+using AKNet.MSQuic.Common;
+using System;
 using System.Net;
-using System.Net.Quic;
 
-namespace AKNet.Quic.Server
+namespace AKNet.MSQuic.Server
 {
-    internal class ClientPeerWrap : ClientPeerBase
+    internal class ClientPeer : ClientPeerBase
 	{
-        private ClientPeer mInstance = null;
-        private ServerMgr mServerMgr;
-
-        public ClientPeerWrap(ServerMgr mNetServer)
+        private ClientPeerPrivate mInstance = null;
+        private QuicServer mNetServer;
+        public ClientPeer(QuicServer mNetServer)
 		{
-            this.mServerMgr = mNetServer;
+            this.mNetServer = mNetServer;
             this.mInstance = mNetServer.mClientPeerPool.Pop();
         }
 
         public void Reset()
         {
-            mServerMgr.mClientPeerPool.recycle(mInstance);
-            mServerMgr = null;
+            mNetServer.mClientPeerPool.recycle(mInstance);
+            mNetServer = null;
             mInstance = null;
         }
 
@@ -121,4 +120,5 @@ namespace AKNet.Quic.Server
             return mInstance.GetID();
         }
     }
+
 }

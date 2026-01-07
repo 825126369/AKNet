@@ -4,77 +4,76 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:15
+*        ModifyTime:2025/11/30 19:43:20
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.MSQuic.Common;
+using System;
 using System.Net;
-using System.Net.Quic;
 using System.Net.Security;
+using System.Threading.Tasks;
 
-namespace AKNet.Quic.Client
+namespace AKNet.MSQuic.Client
 {
-    internal partial class ClientPeer
-    {
+    internal class QuicConnectionMgr
+	{
+        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
+        private readonly Memory<byte> mSendBuffer = new byte[1024];
+
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+        private bool bSendIOContextUsed = false;
+
+        private QuicConnection mQuicConnection = null;
+		private string ServerIp = "";
+		private int nServerPort = 0;
+		private IPEndPoint mIPEndPoint = null;
+        private ClientPeer mClientPeer;
+        private QuicStream mSendQuicStream;
+
+        public QuicConnectionMgr(ClientPeer mClientPeer)
+		{
+			this.mClientPeer = mClientPeer;
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
+        }
+
 		public void ReConnectServer()
 		{
             ConnectServer(this.ServerIp, this.nServerPort);
         }
 
-		public async void ConnectServer(string ServerAddr, int ServerPort)
-		{
-			this.ServerIp = ServerAddr;
-			this.nServerPort = ServerPort;
+        public async void ConnectServer(string ServerAddr, int ServerPort)
+        {
+            this.ServerIp = ServerAddr;
+            this.nServerPort = ServerPort;
 
-			SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
-            CloseSocket();
+            Reset();
 
-            if (!QuicConnection.IsSupported)
-			{
-				NetLog.LogError("QUIC is not supported.");
-				return;
-			}
-
-			if (mIPEndPoint == null)
-			{
-				IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
-				mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
-			}
+            IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
+            mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
 
             try
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
-                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-
+                //mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
                 StartProcessReceive();
             }
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
-                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
-		}
+        }
 
-        private QuicClientConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
+        private QuicConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {
-            string hash = "5f375c6c1f53f9b0e669462d4f4d41cf592caed1";
-            var mCert = X509CertTool.GetCert();
-            NetLog.Assert(mCert != null, "GetCert() == null");
-
-            var ApplicationProtocols = new List<SslApplicationProtocol>();
-            ApplicationProtocols.Add(SslApplicationProtocol.Http3);
-
-            QuicClientConnectionOptions mOption = new QuicClientConnectionOptions();
+            QuicConnectionOptions mOption = new QuicConnectionOptions();
             mOption.RemoteEndPoint = mIPEndPoint;
-            mOption.DefaultCloseErrorCode = 0;
-            mOption.DefaultStreamErrorCode = 0;
-            mOption.MaxInboundBidirectionalStreams = 1;
-            mOption.MaxInboundUnidirectionalStreams = 1;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
-            mOption.ClientAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             return mOption;
         }
@@ -86,7 +85,7 @@ namespace AKNet.Quic.Client
             return true;
 		}
 
-        private async void DisConnectServer2()
+        private async Task DisConnectServer2()
         {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
             await mQuicConnection.CloseAsync(0);
@@ -95,12 +94,14 @@ namespace AKNet.Quic.Client
 
         private async void StartProcessReceive()
         {
-            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional).ConfigureAwait(false);
+            mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+
             try
             {
                 while (mQuicConnection != null)
                 {
-                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync().ConfigureAwait(false);
                     StartProcessStreamReceive(mQuicStream);
                 }
             }
@@ -119,14 +120,14 @@ namespace AKNet.Quic.Client
                 {
                     while (true)
                     {
-                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer).ConfigureAwait(false);
                         if (nLength > 0)
                         {
-                            MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                            mClientPeer.mMsgReceiveMgr.MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
                         }
                         else
                         {
-                            NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
+                            NetLog.LogError($"mQuicStream.ReadAsync Length: {nLength}");
                             break;
                         }
                     }
@@ -153,18 +154,18 @@ namespace AKNet.Quic.Client
             }
         }
 
-        private async void SendNetStream2()
+        private async Task SendNetStream2()
         {
             try
             {
-                while(mSendStreamList.Length > 0)
+                while (mSendStreamList.Length > 0)
                 {
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    await mSendQuicStream.WriteAsync(mSendBuffer, 0, nLength);
+                    await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength)).ConfigureAwait(false);
                 }
                 bSendIOContextUsed = false;
             }
@@ -172,19 +173,6 @@ namespace AKNet.Quic.Client
             {
                 NetLog.LogError(e.ToString());
                 mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-        }
-
-        private void DisConnectedWithError()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
             }
         }
 
@@ -211,6 +199,16 @@ namespace AKNet.Quic.Client
                 mQuicConnection = null;
 				await mQuicConnection2.CloseAsync(0);
             }
+        }
+
+		public void Reset()
+		{
+            CloseSocket();
+        }
+
+		public void Release()
+		{
+            CloseSocket();
         }
     }
 }

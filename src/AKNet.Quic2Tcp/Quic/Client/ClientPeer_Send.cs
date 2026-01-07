@@ -12,72 +12,55 @@ namespace AKNet.Quic.Client
 {
     internal partial class ClientPeer
     {
-        const int nDefaultStreamId = 0;
         public void SendNetData(ushort nPackageId)
         {
-            SendNetData(nDefaultStreamId, nPackageId);
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+                SendNetStream(mBufferSegment);
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
+            }
         }
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            SendNetData(nDefaultStreamId, nPackageId, data);
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mCryptoMgr.Encode(nPackageId, data);
+                SendNetStream(mBufferSegment);
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
+            }
         }
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            SendNetData(nDefaultStreamId, mNetPackage);
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+                SendNetStream(mBufferSegment);
+            }
+            else
+            {
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
+            }
         }
 
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
-            SendNetData(nDefaultStreamId, nPackageId, buffer);
-        }
-
-        public void SendNetData(int nStreamIndex, ushort nPackageId)
-        {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(nPackageId);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
-        }
-
-        public void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(nPackageId, data);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
-        }
-
-        public void SendNetData(int nStreamIndex, NetPackage mNetPackage)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(mNetPackage);
-            }
-            else
-            {
-                NetLog.LogError("SendNetData Failed: " + GetSocketState());
-            }
-        }
-
-        public void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
-        {
-            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
-            {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(nPackageId, buffer);
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
+                SendNetStream(mBufferSegment);
             }
             else
             {

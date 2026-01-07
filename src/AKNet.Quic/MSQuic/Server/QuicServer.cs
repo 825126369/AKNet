@@ -9,8 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.MSQuic.Common;
-using AKNet.MSQuic.Common;
-using System;
 
 namespace AKNet.MSQuic.Server
 {
