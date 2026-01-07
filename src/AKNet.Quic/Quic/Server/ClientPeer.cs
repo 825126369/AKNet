@@ -43,9 +43,9 @@ namespace AKNet.Quic.Server
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
                     int nPackageCount = 0;
-                    foreach (var mStream in mQuicStreamDic)
+                    foreach (var mStream in mStreamList)
                     {
-                        while (mStream.Value.NetPackageExecute())
+                        while (mStream.NetPackageExecute())
                         {
                             nPackageCount++;
                         }

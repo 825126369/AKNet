@@ -97,6 +97,7 @@ namespace AKNet.Quic.Client
             {
                 var mStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional);
                 ClientPeerQuicStream mStreamObj = new ClientPeerQuicStream(this, mStream);
+                mStreamObj.Init();
                 mStreamList.Add(mStreamObj);
             }
 

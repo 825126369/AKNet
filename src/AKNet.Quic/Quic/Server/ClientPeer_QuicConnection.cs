@@ -39,7 +39,7 @@ namespace AKNet.Quic.Server
             for (int i = 0; i < 1; i++)
             {
                 var mStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
-                ClientPeerQuicStream mStreamObj = new ClientPeerQuicStream(this, mStream);
+                ClientPeerQuicStream mStreamObj = new ClientPeerQuicStream(this.mServerMgr, this, mStream);
                 mStreamList.Add(mStreamObj);
             }
 
