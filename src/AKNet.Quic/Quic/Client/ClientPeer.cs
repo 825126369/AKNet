@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Quic.Client
 {
-    internal partial class ClientPeer : NetClientInterface, ClientPeerBase
+    internal partial class ClientPeer : NetClientInterface, ClientPeerBase, QuicClientPeerBase
     {
         private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
         private readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
@@ -30,21 +30,12 @@ namespace AKNet.Quic.Client
         private string Name = string.Empty;
         private uint ID = 0;
 
-        private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
-        private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
-
-        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly byte[] mSendBuffer = new byte[1024];
-
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
-        private bool bSendIOContextUsed = false;
-
         private QuicConnection mQuicConnection = null;
         private string ServerIp = "";
         private int nServerPort = 0;
         private IPEndPoint mIPEndPoint = null;
         private ClientPeer mClientPeer;
-        private QuicStream mSendQuicStream;
+        private readonly List<ClientPeerQuicStream> mStreamList = new List<ClientPeerQuicStream>();
 
         public ClientPeer()
         {
@@ -61,11 +52,16 @@ namespace AKNet.Quic.Client
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
+
                     int nPackageCount = 0;
-                    while (NetPackageExecute())
+                    foreach (var mStream in mStreamList)
                     {
-                        nPackageCount++;
+                        while (mStream.NetPackageExecute())
+                        {
+                            nPackageCount++;
+                        }
                     }
+
                     if (nPackageCount > 0)
                     {
                         ReceiveHeartBeat();
@@ -135,7 +131,7 @@ namespace AKNet.Quic.Client
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
         {
             this.mSocketPeerState = mSocketPeerState;
         }
@@ -150,15 +146,11 @@ namespace AKNet.Quic.Client
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             CloseSocket();
 
-            lock (mReceiveStreamList)
+            foreach (var v in mStreamList)
             {
-                mReceiveStreamList.Dispose();
+                v.Dispose();
             }
-
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Dispose();
-            }
+            mStreamList.Clear();
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)

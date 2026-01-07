@@ -9,8 +9,10 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
+[assembly: InternalsVisibleTo("AKNet.Quic")]
 namespace MSQuic1
 {
     internal class QUIC_LISTENER : QUIC_HANDLE

@@ -12,13 +12,34 @@ namespace AKNet.Quic.Client
 {
     internal partial class ClientPeer
     {
+        const int nDefaultStreamId = 0;
         public void SendNetData(ushort nPackageId)
+        {
+            SendNetData(nDefaultStreamId, nPackageId);
+        }
+
+        public void SendNetData(ushort nPackageId, byte[] data)
+        {
+            SendNetData(nDefaultStreamId, nPackageId, data);
+        }
+
+        public void SendNetData(NetPackage mNetPackage)
+        {
+            SendNetData(nDefaultStreamId, mNetPackage);
+        }
+
+        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        {
+            SendNetData(nDefaultStreamId, nPackageId, buffer);
+        }
+
+        public void SendNetData(int nStreamIndex, ushort nPackageId)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
                 var mBufferSegment = mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
-                SendNetStream(mBufferSegment);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {
@@ -26,13 +47,13 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetData(ushort nPackageId, byte[] data)
+        public void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
                 var mBufferSegment = mCryptoMgr.Encode(nPackageId, data);
-                SendNetStream(mBufferSegment);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {
@@ -40,13 +61,13 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetData(NetPackage mNetPackage)
+        public void SendNetData(int nStreamIndex, NetPackage mNetPackage)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
                 var mBufferSegment = mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
-                SendNetStream(mBufferSegment);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {
@@ -54,13 +75,13 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
+        public void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
                 var mBufferSegment = mCryptoMgr.Encode(nPackageId, buffer);
-                SendNetStream(mBufferSegment);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {

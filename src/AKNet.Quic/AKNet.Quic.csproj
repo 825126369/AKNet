@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AKNet.Common\AKNet.Common.csproj" />
+    <ProjectReference Include="..\AKNet.MSQuic\AKNet.MSQuic.csproj" />
   </ItemGroup>
 
 </Project>

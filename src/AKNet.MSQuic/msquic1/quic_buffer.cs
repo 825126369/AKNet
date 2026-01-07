@@ -9,8 +9,10 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
+[assembly: InternalsVisibleTo("AKNet.Quic")]
 namespace MSQuic1
 {
     internal class QUIC_ALPN_BUFFER : QUIC_BUFFER

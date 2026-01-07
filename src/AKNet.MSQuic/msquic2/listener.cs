@@ -11,8 +11,10 @@ using AKNet.Common;
 using AKNet.Platform;
 using System;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
+[assembly: InternalsVisibleTo("AKNet.Quic")]
 namespace MSQuic2
 {
     internal class QUIC_LISTENER : QUIC_HANDLE

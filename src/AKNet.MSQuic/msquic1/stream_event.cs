@@ -7,6 +7,9 @@
 *        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("AKNet.Quic")]
 namespace MSQuic1
 {
     internal struct QUIC_STREAM_EVENT

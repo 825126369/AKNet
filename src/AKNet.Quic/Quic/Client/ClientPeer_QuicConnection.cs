@@ -49,7 +49,6 @@ namespace AKNet.Quic.Client
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
-                StartProcessReceive();
             }
             catch (Exception e)
             {
@@ -60,7 +59,6 @@ namespace AKNet.Quic.Client
 
         private QuicClientConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {
-            string hash = "5f375c6c1f53f9b0e669462d4f4d41cf592caed1";
             var mCert = X509CertTool.GetCert();
             NetLog.Assert(mCert != null, "GetCert() == null");
 
@@ -93,15 +91,22 @@ namespace AKNet.Quic.Client
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
-        private async void StartProcessReceive()
+        public async void StartManyStream(int nStreamCount)
         {
-            mSendQuicStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+            for (int i = 0; i < nStreamCount; i++)
+            {
+                var mStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional);
+                ClientPeerQuicStream mStreamObj = new ClientPeerQuicStream(this, mStream);
+                mStreamList.Add(mStreamObj);
+            }
+
             try
             {
                 while (mQuicConnection != null)
                 {
                     QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    StartProcessStreamReceive(mQuicStream);
+                    var mStreamObj = FindStreamObj(mQuicStream);
+                    await mStreamObj.StartProcessStreamReceive();
                 }
             }
             catch (Exception e)
@@ -111,81 +116,24 @@ namespace AKNet.Quic.Client
             }
         }
 
-        private async void StartProcessStreamReceive(QuicStream mQuicStream)
+        public ClientPeerQuicStream FindStreamObj(QuicStream mQuicStream)
         {
-            try
+            for (int i = 0; i < mStreamList.Count; i++)
             {
-                if (mQuicStream != null)
+                var mStream = mStreamList[i];
+                if(mStream.GetStreamId() == mQuicStream.Id)
                 {
-                    while (true)
-                    {
-                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
-                        if (nLength > 0)
-                        {
-                            MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                        }
-                        else
-                        {
-                            NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
-                            break;
-                        }
-                    }
+                    return mStream;
                 }
             }
-            catch (Exception e)
-            {
-                NetLog.LogError(e.ToString());
-                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
+
+            return null;
         }
 
-        public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
+        public void SendNetStream(int nStreamIndex, ReadOnlySpan<byte> mBufferSegment)
         {
-            lock (mSendStreamList)
-            {
-                mSendStreamList.WriteFrom(mBufferSegment);
-            }
-
-            if (!bSendIOContextUsed)
-            {
-                bSendIOContextUsed = true;
-                SendNetStream2();
-            }
-        }
-
-        private async void SendNetStream2()
-        {
-            try
-            {
-                while(mSendStreamList.Length > 0)
-                {
-                    int nLength = 0;
-                    lock (mSendStreamList)
-                    {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
-                    }
-                    await mSendQuicStream.WriteAsync(mSendBuffer, 0, nLength);
-                }
-                bSendIOContextUsed = false;
-            }
-            catch (Exception e)
-            {
-                NetLog.LogError(e.ToString());
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-        }
-
-        private void DisConnectedWithError()
-        {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-            }
+            var mStreamObj = mStreamList[nStreamIndex];
+            mStreamObj.SendNetStream(mBufferSegment);
         }
 
 		public IPEndPoint GetIPEndPoint()
