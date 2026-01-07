@@ -15,7 +15,7 @@ using System.Net;
 
 namespace AKNet.MSQuic.Server
 {
-    internal class ClientPeerPrivate :TcpClientPeerBase, ClientPeerBase, IPoolItemInterface
+    internal class ClientPeerPrivate :TcpClientPeerBase, QuicClientPeerBase, IPoolItemInterface
 	{
 		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
 

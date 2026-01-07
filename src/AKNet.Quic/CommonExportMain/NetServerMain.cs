@@ -9,7 +9,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Common
 {
-    public class NetServerMain : NetServerMainBase
+    public class NetServerMain : QuicServerMainBase
     {
         public NetServerMain(NetType nNetType)
         {
@@ -17,10 +17,10 @@ namespace AKNet.Common
             {
                 mInterface = new AKNet.Quic.Server.NetServerMain();
             }
-            else if (nNetType == NetType.MSQuic)
-            {
-                mInterface = new AKNet.MSQuic.Server.NetServerMain();
-            }
+            //else if (nNetType == NetType.MSQuic)
+            //{
+            //    mInterface = new AKNet.MSQuic.Server.NetServerMain();
+            //}
             else
             {
                 NetLog.LogError("Unsupported network type: " + nNetType);

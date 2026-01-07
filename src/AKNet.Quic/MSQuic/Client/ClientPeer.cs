@@ -13,12 +13,12 @@ using System.Net;
 
 namespace AKNet.MSQuic.Client
 {
-    internal class ClientPeer : QuicClientPeerBase, ClientPeerBase
+    internal class ClientPeer : QuicClientInterface, QuicClientPeerBase
     {
         internal readonly QuicConnectionMgr mSocketMgr;
         internal readonly MsgReceiveMgr mMsgReceiveMgr;
         internal readonly CryptoMgr mCryptoMgr;
-        internal readonly ListenNetPackageMgr mPackageManager = null;
+        internal readonly QuicListenNetPackageMgr mPackageManager = null;
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
 
         private double fReConnectServerCdTime = 0.0;
@@ -32,7 +32,7 @@ namespace AKNet.MSQuic.Client
         public ClientPeer()
         {
             mCryptoMgr = new CryptoMgr();
-            mPackageManager = new ListenNetPackageMgr();
+            mPackageManager = new QuicListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mSocketMgr = new QuicConnectionMgr(this);
             mMsgReceiveMgr = new MsgReceiveMgr(this);
@@ -223,42 +223,42 @@ namespace AKNet.MSQuic.Client
             return mSocketMgr.GetIPEndPoint();
         }
 
-        public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
+        public void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> fun)
         {
             mPackageManager.addNetListenFunc(nPackageId, fun);
         }
 
-        public void removeNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
+        public void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> fun)
         {
             mPackageManager.removeNetListenFunc(nPackageId, fun);
         }
 
-        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        public void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
         {
             mPackageManager.addNetListenFunc(func);
         }
 
-        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
         {
             mPackageManager.removeNetListenFunc(func);
         }
 
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        public void addListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);
         }
 
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        public void removeListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        public void addListenClientPeerStateFunc(Action<QuicClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.addListenClientPeerStateFunc(mFunc);
         }
 
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        public void removeListenClientPeerStateFunc(Action<QuicClientPeerBase> mFunc)
         {
             mListenClientPeerStateMgr.removeListenClientPeerStateFunc(mFunc);
         }

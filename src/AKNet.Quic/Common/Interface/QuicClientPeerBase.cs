@@ -1,0 +1,37 @@
+﻿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#游戏网络库
+*        Author:许珂
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2025/11/30 19:43:14
+*        Copyright:MIT软件许可证
+************************************Copyright*****************************************/
+using System;
+using System.Net;
+
+namespace AKNet.Common
+{
+    public interface QuicClientPeerBase
+    {
+        IPEndPoint GetIPEndPoint();
+        SOCKET_PEER_STATE GetSocketState();
+        void SetName(string name);
+        string GetName();
+        void SetID(uint id);
+        uint GetID();
+
+        void SendNetData(int nStreamIndex, ushort nPackageId);
+        void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data);
+        void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
+        void SendNetData(int nStreamIndex, NetPackage mNetPackage);
+    }
+
+    public interface QuicStreamBase
+    {
+        void SendNetData(ushort nPackageId);
+        void SendNetData(ushort nPackageId, byte[] data);
+        void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer);
+        void SendNetData(NetPackage mNetPackage);
+    }
+}

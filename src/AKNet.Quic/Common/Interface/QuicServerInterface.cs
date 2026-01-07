@@ -4,26 +4,25 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:20
+*        ModifyTime:2025/11/30 19:43:14
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using AKNet.Common;
-namespace AKNet.MSQuic.Client
+namespace AKNet.Common
 {
-    public interface QuicClientPeerBase
+    public interface QuicServerInterface
     {
-        void ConnectServer(string Ip, int nPort);
-        bool DisConnectServer();
-        void ReConnectServer();
+        void InitNet();
+        void InitNet(int nPort);
+        void InitNet(string Ip, int nPort);
+        int GetPort();
+        SOCKET_SERVER_STATE GetServerState();
         void Update(double elapsed);
-        void Reset();
         void Release();
-
-        void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, NetPackage> fun);
-        void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, NetPackage> fun);
-        void addNetListenFunc(Action<QuicClientPeerBase, NetPackage> func);
-        void removeNetListenFunc(Action<QuicClientPeerBase, NetPackage> func);
+        
+        void addNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
+        void removeNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
+        void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
+        void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
 
         void addListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc);
         void removeListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc);

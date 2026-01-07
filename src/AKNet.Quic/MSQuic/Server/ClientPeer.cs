@@ -14,7 +14,7 @@ using System.Net;
 
 namespace AKNet.MSQuic.Server
 {
-    internal class ClientPeer : ClientPeerBase
+    internal class ClientPeer : QuicClientPeerBase
 	{
         private ClientPeerPrivate mInstance = null;
         private QuicServer mNetServer;

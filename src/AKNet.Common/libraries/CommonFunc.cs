@@ -1,17 +1,17 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace AKNet.Common.libraries
+namespace AKNet.Common
 {
     internal static class CommonFunc
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool BoolOk(long q)
+        public static bool BoolOk(long q)
         {
             return q != 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool BoolOk(ulong q)
+        public static bool BoolOk(ulong q)
         {
             return q != 0;
         }

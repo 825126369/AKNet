@@ -4,14 +4,16 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:15
+*        ModifyTime:2025/11/30 19:43:14
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-
-namespace AKNet.Quic.Server
+namespace AKNet.Common
 {
-    internal class NetServerMain : ServerMgr
+    public interface QuicNetPackage
     {
-        
+        byte GetStreamEnumIndex();
+        ushort GetPackageId();
+        ReadOnlySpan<byte> GetData();
     }
 }
+

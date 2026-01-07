@@ -8,7 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-namespace AKNet.Quic.Client
+namespace AKNet.Quic.Server
 {
     internal partial class ClientPeer
     {
@@ -37,8 +37,9 @@ namespace AKNet.Quic.Client
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(nPackageId);
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {
@@ -50,8 +51,9 @@ namespace AKNet.Quic.Client
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(nPackageId, data);
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, data);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {
@@ -63,8 +65,9 @@ namespace AKNet.Quic.Client
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(mNetPackage);
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {
@@ -76,8 +79,9 @@ namespace AKNet.Quic.Client
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
-                mStreamObj.SendNetData(nPackageId, buffer);
+                ResetSendHeartBeatTime();
+                var mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, buffer);
+                SendNetStream(nStreamIndex, mBufferSegment);
             }
             else
             {

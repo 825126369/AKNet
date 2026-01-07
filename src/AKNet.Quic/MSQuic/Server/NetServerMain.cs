@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.MSQuic.Server
 {
-    public class NetServerMain : NetServerInterface
+    public class NetServerMain : QuicServerInterface
     {
         QuicServer mServer = null;
 
@@ -56,42 +56,42 @@ namespace AKNet.MSQuic.Server
             mServer.Release();
         }
 
-        public void addNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)
+        public void addNetListenFunc(ushort id, Action<QuicClientPeerBase, NetPackage> func)
         {
             mServer.addNetListenFunc(id, func);
         }
 
-        public void removeNetListenFunc(ushort id, Action<ClientPeerBase, NetPackage> func)
+        public void removeNetListenFunc(ushort id, Action<QuicClientPeerBase, NetPackage> func)
         {
             mServer.removeNetListenFunc(id, func);
         }
 
-        public void addNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        public void addNetListenFunc(Action<QuicClientPeerBase, NetPackage> func)
         {
             mServer.addNetListenFunc(func);
         }
 
-        public void removeNetListenFunc(Action<ClientPeerBase, NetPackage> func)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, NetPackage> func)
         {
             mServer.removeNetListenFunc(func);
         }
 
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        public void addListenClientPeerStateFunc(Action<QuicClientPeerBase> mFunc)
         {
             mServer.addListenClientPeerStateFunc(mFunc);
         }
 
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
+        public void removeListenClientPeerStateFunc(Action<QuicClientPeerBase> mFunc)
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public void addListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        public void addListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mServer.addListenClientPeerStateFunc(mFunc);
         }
 
-        public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
+        public void removeListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mServer.removeListenClientPeerStateFunc(mFunc);
         }
