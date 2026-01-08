@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Quic.Server;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
