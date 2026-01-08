@@ -99,8 +99,8 @@ namespace AKNet.Quic.Client
                 while (mQuicConnection != null)
                 {
                     QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    var mStreamObj = FindAcceptStreamHandle(mQuicStream);
-                    await mStreamObj.StartProcessStreamReceive();
+                    var mStreamHandle = FindAcceptStreamHandle(mQuicStream);
+                    await mStreamHandle.StartProcessStreamReceive();
                 }
             }
             catch (Exception e)

@@ -14,6 +14,7 @@ namespace AKNet.Quic.Client
 {
     internal class ClientPeerQuicStream : QuicStreamBase, IDisposable
     {
+        private bool _disposed;
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];
         private readonly Memory<byte> mSendBuffer = new byte[1024];
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
@@ -120,7 +121,7 @@ namespace AKNet.Quic.Client
         {
             try
             {
-                while(mSendStreamList.Length > 0)
+                while (!_disposed && mSendStreamList.Length > 0)
                 {
                     int nLength = 0;
                     lock (mSendStreamList)
@@ -128,7 +129,7 @@ namespace AKNet.Quic.Client
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
 
-                    if(mQuicStream == null)
+                    if (mQuicStream == null)
                     {
                         this.mQuicStream = await mClientPeer.mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
                     }
@@ -159,6 +160,11 @@ namespace AKNet.Quic.Client
         
         public void Dispose()
         {
+            if (_disposed) return;
+            _disposed = true;
+
+            mClientPeer = null;
+
             if (mQuicStream != null)
             {
                 mQuicStream.Dispose();
