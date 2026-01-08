@@ -1,4 +1,6 @@
 ﻿using AKNet.Common;
+using AKNet.Extentions.Protobuf;
+using Google.Protobuf;
 
 namespace TestNetClient
 {
@@ -12,6 +14,18 @@ namespace TestNetClient
         public override void OnTestFinish()
         {
             //udp_statistic.PrintInfo();
+        }
+    }
+
+    public static class ClientPeerBaseExtentions
+    {
+        public static void SendNetData(this QuicClientPeerBase mInterface, int nStreamIndex, ushort nPackageId, IMessage data)
+        {
+            if (mInterface.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            {
+                ReadOnlySpan<byte> stream = Proto3Tool.SerializePackage(data);
+                mInterface.SendNetData(nStreamIndex, nPackageId, stream);
+            }
         }
     }
 
