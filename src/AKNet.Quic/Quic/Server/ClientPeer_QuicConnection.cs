@@ -63,7 +63,7 @@ namespace AKNet.Quic.Server
             return mStreamHandle;
         }
 
-        public QuicStreamBase GetOrCreateSendStreamHandle(byte nStreamIndex)
+        public ClientPeerQuicStream GetOrCreateSendStreamHandle(byte nStreamIndex)
         {
             ClientPeerQuicStream mStreamHandle = null;
             if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))

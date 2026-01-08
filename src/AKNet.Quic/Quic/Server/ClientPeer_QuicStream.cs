@@ -12,7 +12,7 @@ using System.Net.Quic;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeerQuicStream : IDisposable, QuicStreamBase
+    internal class ClientPeerQuicStream : IDisposable
     {
         private bool _disposed;
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];

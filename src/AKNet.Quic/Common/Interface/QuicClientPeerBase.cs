@@ -26,12 +26,4 @@ namespace AKNet.Common
         void SendNetData(byte nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
         void SendNetData(byte nStreamIndex, NetPackage mNetPackage);
     }
-
-    public interface QuicStreamBase
-    {
-        void SendNetData(ushort nPackageId);
-        void SendNetData(ushort nPackageId, byte[] data);
-        void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer);
-        void SendNetData(NetPackage mNetPackage);
-    }
 }
