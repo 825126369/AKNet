@@ -18,10 +18,10 @@ namespace AKNet.Common
         void Update(double elapsed);
         void Release();
         
-        void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
-        void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
-        void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
-        void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc);
+        void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicNetPackage> mFunc);
+        void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicNetPackage> mFunc);
+        void addNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> mFunc);
+        void removeNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> mFunc);
 
         void addListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc);
         void removeListenClientPeerStateFunc(Action<QuicClientPeerBase, SOCKET_PEER_STATE> mFunc);
@@ -29,11 +29,11 @@ namespace AKNet.Common
         void removeListenClientPeerStateFunc(Action<QuicClientPeerBase> mFunc);
         IPEndPoint GetIPEndPoint();
         SOCKET_PEER_STATE GetSocketState();
-
-        void SendNetData(int nStreamIndex, ushort nPackageId);
-        void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data);
-        void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
-        void SendNetData(int nStreamIndex, NetPackage mNetPackage);
+        
+        void SendNetData(byte nStreamIndex, ushort nPackageId);
+        void SendNetData(byte nStreamIndex, ushort nPackageId, byte[] data);
+        void SendNetData(byte nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
+        void SendNetData(byte nStreamIndex, NetPackage mNetPackage);
 
         void SetName(string name);
         string GetName();

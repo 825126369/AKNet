@@ -20,9 +20,12 @@ namespace AKNet.Quic.Client
         internal readonly QuicStreamReceivePackage mNetPackage = new QuicStreamReceivePackage();
         internal readonly QuicListenNetPackageMgr mPackageManager = new QuicListenNetPackageMgr();
         internal QuicStreamEncryption mCryptoMgr = new QuicStreamEncryption();
+        internal QuicConnection mQuicConnection = null;
 
         private readonly QuicListenClientPeerStateMgr mListenClientPeerStateMgr = new QuicListenClientPeerStateMgr();
-        private readonly List<ClientPeerQuicStream> mStreamList = new List<ClientPeerQuicStream>();
+        private readonly Dictionary<byte, ClientPeerQuicStream> mSendStreamEnumDic = new Dictionary<byte, ClientPeerQuicStream>();
+        private readonly Dictionary<long, ClientPeerQuicStream> mAcceptStreamDic = new Dictionary<long, ClientPeerQuicStream>();
+
         private double fReConnectServerCdTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
         private double fReceiveHeartBeatTime = 0.0;
@@ -32,7 +35,6 @@ namespace AKNet.Quic.Client
         private string Name = string.Empty;
         private uint ID = 0;
 
-        private QuicConnection mQuicConnection = null;
         private string ServerIp = "";
         private int nServerPort = 0;
         private IPEndPoint mIPEndPoint = null;
@@ -55,9 +57,9 @@ namespace AKNet.Quic.Client
 				case SOCKET_PEER_STATE.CONNECTED:
 
                     int nPackageCount = 0;
-                    foreach (var mStream in mStreamList)
+                    foreach (var mStream in mAcceptStreamDic)
                     {
-                        while (mStream.NetPackageExecute())
+                        while (mStream.Value.NetPackageExecute())
                         {
                             nPackageCount++;
                         }
@@ -116,7 +118,7 @@ namespace AKNet.Quic.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
         {
-            SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+            SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -146,30 +148,24 @@ namespace AKNet.Quic.Client
 		{
             SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             CloseSocket();
-
-            foreach (var v in mStreamList)
-            {
-                v.Dispose();
-            }
-            mStreamList.Clear();
         }
 
-        public void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> fun)
+        public void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicNetPackage> fun)
         {
             mPackageManager.addNetListenFunc(nPackageId, fun);
         }
 
-        public void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> fun)
+        public void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicNetPackage> fun)
         {
             mPackageManager.removeNetListenFunc(nPackageId, fun);
         }
 
-        public void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void addNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> func)
         {
             mPackageManager.addNetListenFunc(func);
         }
 
-        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> func)
         {
             mPackageManager.removeNetListenFunc(func);
         }

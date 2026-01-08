@@ -28,8 +28,9 @@ namespace AKNet.Quic.Server
         private uint ID = 0;
 
         CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
-        private QuicConnection mQuicConnection;
-        private readonly List<ClientPeerQuicStream> mStreamList = new List<ClientPeerQuicStream>();
+        internal QuicConnection mQuicConnection;
+        private readonly Dictionary<byte, ClientPeerQuicStream> mSendStreamEnumDic = new Dictionary<byte, ClientPeerQuicStream>();
+        private readonly Dictionary<long, ClientPeerQuicStream> mAcceptStreamDic = new Dictionary<long, ClientPeerQuicStream>();
 
         public ClientPeer(ServerMgr mNetServer)
 		{
@@ -43,9 +44,9 @@ namespace AKNet.Quic.Server
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
                     int nPackageCount = 0;
-                    foreach (var mStream in mStreamList)
+                    foreach (var mStream in mAcceptStreamDic)
                     {
-                        while (mStream.NetPackageExecute())
+                        while (mStream.Value.NetPackageExecute())
                         {
                             nPackageCount++;
                         }
@@ -94,7 +95,7 @@ namespace AKNet.Quic.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
 		{
-			SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+			SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

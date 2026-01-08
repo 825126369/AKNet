@@ -89,22 +89,22 @@ namespace AKNet.Quic.Server
             return mInstance.GetID();
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId)
         {
             mInstance.SendNetData(nStreamIndex, nPackageId);
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId, byte[] data)
         {
             mInstance.SendNetData(nStreamIndex, nPackageId, data);
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mInstance.SendNetData(nStreamIndex, nPackageId, buffer);
         }
 
-        public void SendNetData(int nStreamIndex, NetPackage mNetPackage)
+        public void SendNetData(byte nStreamIndex, NetPackage mNetPackage)
         {
             mInstance.SendNetData(nStreamIndex, mNetPackage);
         }

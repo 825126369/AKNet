@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Quic.Server;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -47,7 +48,7 @@ namespace AKNet.Quic.Client
             {
                 mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-
+                StartProcessReceive();
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
             }
             catch (Exception e)
@@ -91,22 +92,14 @@ namespace AKNet.Quic.Client
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
-        public async void StartManyStream(int nStreamCount)
+        public async void StartProcessReceive()
         {
-            for (int i = 0; i < nStreamCount; i++)
-            {
-                var mStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional);
-                ClientPeerQuicStream mStreamObj = new ClientPeerQuicStream(this, mStream);
-                mStreamObj.Init();
-                mStreamList.Add(mStreamObj);
-            }
-
             try
             {
                 while (mQuicConnection != null)
                 {
                     QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    var mStreamObj = FindStreamObj(mQuicStream);
+                    var mStreamObj = FindAcceptStreamHandle(mQuicStream);
                     await mStreamObj.StartProcessStreamReceive();
                 }
             }
@@ -117,26 +110,30 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public ClientPeerQuicStream FindStreamObj(QuicStream mQuicStream)
+        private ClientPeerQuicStream FindAcceptStreamHandle(QuicStream mQuicStream)
         {
-            for (int i = 0; i < mStreamList.Count; i++)
+            ClientPeerQuicStream mStreamHandle = null;
+            if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
             {
-                var mStream = mStreamList[i];
-                if(mStream.GetStreamId() == mQuicStream.Id)
-                {
-                    return mStream;
-                }
+                mStreamHandle = new ClientPeerQuicStream(this, mQuicStream);
+                mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
+            }
+            return mStreamHandle;
+        }
+
+        private QuicStreamBase GetOrCreateSendStreamHandle(byte nStreamIndex)
+        {
+            ClientPeerQuicStream mStreamHandle = null;
+            if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))
+            {
+                mStreamHandle = new ClientPeerQuicStream(this, nStreamIndex);
+                mSendStreamEnumDic.Add(nStreamIndex, mStreamHandle);
             }
 
-            return null;
+            return mStreamHandle;
         }
 
-        public ClientPeerQuicStream GetStream(int nStreamIndex)
-        {
-            return mStreamList[nStreamIndex];
-        }
-
-		public IPEndPoint GetIPEndPoint()
+        public IPEndPoint GetIPEndPoint()
 		{
             IPEndPoint mRemoteEndPoint = null;
             try
@@ -155,6 +152,18 @@ namespace AKNet.Quic.Client
 		{
             if (mQuicConnection != null)
             {
+                foreach (var v in mSendStreamEnumDic)
+                {
+                    v.Value.Dispose();
+                }
+                mSendStreamEnumDic.Clear();
+
+                foreach (var v in mAcceptStreamDic)
+                {
+                    v.Value.Dispose();
+                }
+                mAcceptStreamDic.Clear();
+                
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
 				await mQuicConnection2.CloseAsync(0);

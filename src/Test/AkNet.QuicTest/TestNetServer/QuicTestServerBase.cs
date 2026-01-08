@@ -22,7 +22,7 @@ namespace TestNetServer
         public void Init()
         {
             mNetServer = Create();
-            mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveMessage);
+            mNetServer.addNetListenFunc(NetCommand_COMMAND_TESTCHAT, ReceiveChatMessage);
             mNetServer.InitNet(6000);
         }
 
@@ -31,10 +31,15 @@ namespace TestNetServer
             mNetServer.Update(fElapsedTime);
         }
 
-        private void ReceiveMessage(QuicClientPeerBase peer, QuicStreamBase mStream, QuicNetPackage mPackage)
+        private void ReceiveChatMessage(QuicClientPeerBase peer, QuicNetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
             peer.SendNetData(1, NetCommand_COMMAND_TESTCHAT, mdata);
+            peer.SendNetData(2, NetCommand_COMMAND_TESTCHAT, mdata);
+            peer.SendNetData(3, NetCommand_COMMAND_TESTCHAT, mdata);
+            peer.SendNetData(4, NetCommand_COMMAND_TESTCHAT, mdata);
+            peer.SendNetData(5, NetCommand_COMMAND_TESTCHAT, mdata);
+            peer.SendNetData(6, NetCommand_COMMAND_TESTCHAT, mdata);
             IMessagePool<TESTChatMessage>.recycle(mdata);
         }
     }

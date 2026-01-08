@@ -79,22 +79,22 @@ namespace AKNet.Common
             mInterface.Update(elapsed);
         }
 
-        public void addNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void addNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mInterface.addNetListenFunc(id, mFunc);
         }
 
-        public void removeNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void removeNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mInterface.removeNetListenFunc(id, mFunc);
         }
 
-        public void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void addNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mInterface.addNetListenFunc(mFunc);
         }
 
-        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mInterface.removeNetListenFunc(mFunc);
         }

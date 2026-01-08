@@ -21,10 +21,10 @@ namespace AKNet.Common
         void SetID(uint id);
         uint GetID();
 
-        void SendNetData(int nStreamIndex, ushort nPackageId);
-        void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data);
-        void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
-        void SendNetData(int nStreamIndex, NetPackage mNetPackage);
+        void SendNetData(byte nStreamIndex, ushort nPackageId);
+        void SendNetData(byte nStreamIndex, ushort nPackageId, byte[] data);
+        void SendNetData(byte nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer);
+        void SendNetData(byte nStreamIndex, NetPackage mNetPackage);
     }
 
     public interface QuicStreamBase

@@ -14,13 +14,19 @@ namespace TestNetServer
 
     public static class ClientPeerBaseExtentions
     {
-        public static void SendNetData(this QuicClientPeerBase mInterface, int nStreamIndex, ushort nPackageId, IMessage data)
+        public static void SendNetData(this QuicClientPeerBase mInterface, byte nStreamIndex, ushort nPackageId, IMessage data)
         {
             if (mInterface.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ReadOnlySpan<byte> stream = Proto3Tool.SerializePackage(data);
                 mInterface.SendNetData(nStreamIndex, nPackageId, stream);
             }
+        }
+
+        public static void SendNetData(this QuicStreamBase mInterface, ushort nPackageId, IMessage data)
+        {
+            ReadOnlySpan<byte> stream = Proto3Tool.SerializePackage(data);
+            mInterface.SendNetData(nPackageId, stream);
         }
     }
 

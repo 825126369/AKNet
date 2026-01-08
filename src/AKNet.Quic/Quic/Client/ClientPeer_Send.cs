@@ -12,32 +12,11 @@ namespace AKNet.Quic.Client
 {
     internal partial class ClientPeer
     {
-        const int nDefaultStreamId = 0;
-        public void SendNetData(ushort nPackageId)
-        {
-            SendNetData(nDefaultStreamId, nPackageId);
-        }
-
-        public void SendNetData(ushort nPackageId, byte[] data)
-        {
-            SendNetData(nDefaultStreamId, nPackageId, data);
-        }
-
-        public void SendNetData(NetPackage mNetPackage)
-        {
-            SendNetData(nDefaultStreamId, mNetPackage);
-        }
-
-        public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
-        {
-            SendNetData(nDefaultStreamId, nPackageId, buffer);
-        }
-
-        public void SendNetData(int nStreamIndex, ushort nPackageId)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
+                var mStreamObj = GetOrCreateSendStreamHandle(nStreamIndex);
                 mStreamObj.SendNetData(nPackageId);
             }
             else
@@ -46,11 +25,11 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId, byte[] data)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
+                var mStreamObj = GetOrCreateSendStreamHandle(nStreamIndex);
                 mStreamObj.SendNetData(nPackageId, data);
             }
             else
@@ -59,11 +38,11 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetData(int nStreamIndex, NetPackage mNetPackage)
+        public void SendNetData(byte nStreamIndex, NetPackage mNetPackage)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
+                var mStreamObj = GetOrCreateSendStreamHandle(nStreamIndex);
                 mStreamObj.SendNetData(mNetPackage);
             }
             else
@@ -72,11 +51,11 @@ namespace AKNet.Quic.Client
             }
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                var mStreamObj = mStreamList[nStreamIndex];
+                var mStreamObj = GetOrCreateSendStreamHandle(nStreamIndex);
                 mStreamObj.SendNetData(nPackageId, buffer);
             }
             else

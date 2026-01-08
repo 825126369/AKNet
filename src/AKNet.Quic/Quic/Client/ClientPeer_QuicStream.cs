@@ -22,16 +22,20 @@ namespace AKNet.Quic.Client
 
         private QuicStream mQuicStream;
         private ClientPeer mClientPeer;
+        private readonly byte nStreamEnumIndex;
 
-        public ClientPeerQuicStream(ClientPeer mClientPeer, QuicStream mStream)
+        public ClientPeerQuicStream(ClientPeer mClientPeer, QuicStream mStream) //接收流
         {
             this.mClientPeer = mClientPeer;
             this.mQuicStream = mStream;
+            this.nStreamEnumIndex = 0;
         }
 
-        public void Init()
+        public ClientPeerQuicStream(ClientPeer mClientPeer, byte nStreamEnumIndex) //发送流
         {
-            StartProcessStreamReceive();
+            this.mClientPeer = mClientPeer;
+            this.nStreamEnumIndex = nStreamEnumIndex;
+            this.mQuicStream = null;
         }
 
         public long GetStreamId()
@@ -57,7 +61,14 @@ namespace AKNet.Quic.Client
 
             if (bSuccess)
             {
-                mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, this, mClientPeer.mNetPackage);
+                if (TcpNetCommand.orInnerCommand(mClientPeer.mNetPackage.nPackageId))
+                {
+
+                }
+                else
+                {
+                    mClientPeer.mPackageManager.NetPackageExecute(this.mClientPeer, mClientPeer.mNetPackage);
+                }
             }
 
             return bSuccess;
@@ -116,6 +127,12 @@ namespace AKNet.Quic.Client
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
+
+                    if(mQuicStream == null)
+                    {
+                        this.mQuicStream = await mClientPeer.mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+                    }
+
                     await mQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
@@ -160,10 +177,10 @@ namespace AKNet.Quic.Client
 
         public void SendNetData(ushort nPackageId)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED && mQuicStream.CanWrite)
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 mClientPeer.ResetSendHeartBeatTime();
-                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nStreamEnumIndex, nPackageId, ReadOnlySpan<byte>.Empty);
                 SendNetStream(mBufferSegment);
             }
             else
@@ -174,10 +191,10 @@ namespace AKNet.Quic.Client
 
         public void SendNetData(ushort nPackageId, byte[] data)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED && mQuicStream.CanWrite)
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 mClientPeer.ResetSendHeartBeatTime();
-                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nPackageId, data);
+                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nStreamEnumIndex, nPackageId, data);
                 SendNetStream(mBufferSegment);
             }
             else
@@ -188,10 +205,10 @@ namespace AKNet.Quic.Client
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED && mQuicStream.CanWrite)
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 mClientPeer.ResetSendHeartBeatTime();
-                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nStreamEnumIndex, mNetPackage.GetPackageId(), mNetPackage.GetData());
                 SendNetStream(mBufferSegment);
             }
             else
@@ -202,10 +219,10 @@ namespace AKNet.Quic.Client
 
         public void SendNetData(ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED && mQuicStream.CanWrite)
+            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 mClientPeer.ResetSendHeartBeatTime();
-                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nPackageId, buffer);
+                var mBufferSegment = mClientPeer.mCryptoMgr.Encode(nStreamEnumIndex, nPackageId, buffer);
                 SendNetStream(mBufferSegment);
             }
             else

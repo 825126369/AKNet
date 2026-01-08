@@ -36,20 +36,13 @@ namespace AKNet.Quic.Server
 
         private async void StartProcessReceive()
 		{
-            for (int i = 0; i < 1; i++)
-            {
-                var mStream = await mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
-                ClientPeerQuicStream mStreamObj = new ClientPeerQuicStream(this.mServerMgr, this, mStream);
-                mStreamList.Add(mStreamObj);
-            }
-
             try
 			{
 				while (mQuicConnection != null)
 				{
 					QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
-                    var mStreamObj = FindStreamObj(mQuicStream);
-                    await mStreamObj.StartProcessStreamReceive();
+                    var mStreamHandle = FindAcceptStreamHandle(mQuicStream);
+                    await mStreamHandle.StartProcessStreamReceive();
                 }
 			}
 			catch (Exception e)
@@ -59,35 +52,43 @@ namespace AKNet.Quic.Server
 			}
         }
 
-        public ClientPeerQuicStream FindStreamObj(QuicStream mQuicStream)
+        private ClientPeerQuicStream FindAcceptStreamHandle(QuicStream mQuicStream)
         {
-            for (int i = 0; i < mStreamList.Count; i++)
+            ClientPeerQuicStream mStreamHandle = null;
+            if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
             {
-                var mStream = mStreamList[i];
-                if (mStream.GetStreamId() == mQuicStream.Id)
-                {
-                    return mStream;
-                }
+                mStreamHandle = new ClientPeerQuicStream(mServerMgr, this, mQuicStream);
+                mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
             }
-
-            return null;
+            return mStreamHandle;
         }
 
-        public void SendNetStream(int nStreamIndex, ReadOnlySpan<byte> mBufferSegment)
+        public QuicStreamBase GetOrCreateSendStreamHandle(byte nStreamIndex)
         {
-            var mStreamObj = mStreamList[nStreamIndex];
-            mStreamObj.SendNetStream(mBufferSegment);
+            ClientPeerQuicStream mStreamHandle = null;
+            if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))
+            {
+                mStreamHandle = new ClientPeerQuicStream(mServerMgr, this, nStreamIndex);
+                mSendStreamEnumDic.Add(nStreamIndex, mStreamHandle);
+            }
+            return mStreamHandle;
         }
 
         private async void CloseSocket()
 		{
 			if (mQuicConnection != null)
 			{
-                foreach (var v in mStreamList)
+                foreach (var v in mSendStreamEnumDic)
                 {
-                    v.Dispose();
+                    v.Value.Dispose();
                 }
-                mStreamList.Clear();
+                mSendStreamEnumDic.Clear();
+
+                foreach (var v in mAcceptStreamDic)
+                {
+                    v.Value.Dispose();
+                }
+                mAcceptStreamDic.Clear();
 
                 var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;

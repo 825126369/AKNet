@@ -68,7 +68,6 @@ namespace AKNet.Quic.Server
                 mQuicListener = await QuicListener.ListenAsync(options);
                 NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
                 StartProcessAccept();
-                NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
             }
             catch (Exception e)
             {

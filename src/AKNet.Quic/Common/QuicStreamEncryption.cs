@@ -55,7 +55,8 @@ namespace AKNet.Common
 			}
 
             ushort nPackageId = EndianBitConverter.ToUInt16(mCacheHead, 6);
-            int nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 8);
+            ushort nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 8);
+            byte nStreamIndex = mCacheHead[10];
             NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
@@ -73,11 +74,12 @@ namespace AKNet.Common
 			}
 
 			mPackage.nPackageId = nPackageId;
-			mPackage.SetData(new Memory<byte>(mCacheReceiveBuffer, 0, nBodyLength));
+			mPackage.nStreamIndex = nStreamIndex;
+            mPackage.SetData(new Memory<byte>(mCacheReceiveBuffer, 0, nBodyLength));
 			return true;
 		}
 
-		public ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
+		public ReadOnlySpan<byte> Encode(byte nSendStreamIndex, ushort nPackageId, ReadOnlySpan<byte> mBufferSegment)
 		{
 			int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
@@ -91,8 +93,9 @@ namespace AKNet.Common
 
 			EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)nPackageId);
 			EndianBitConverter.SetBytes(mCacheSendBuffer, 8, (ushort)mBufferSegment.Length);
+            mCacheSendBuffer[10] = nSendStreamIndex;
 
-			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
+            Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
 			if (mBufferSegment.Length > 0)
 			{
 				mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));

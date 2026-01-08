@@ -11,26 +11,26 @@ namespace AKNet.Common
 {
     internal class QuicListenNetPackageMgr
 	{
-		private readonly Dictionary<ushort, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage>> mNetEventDic = null;
-		private event Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mCommonListenFunc = null;
+		private readonly Dictionary<ushort, Action<QuicClientPeerBase, QuicNetPackage>> mNetEventDic = null;
+		private event Action<QuicClientPeerBase, QuicNetPackage> mCommonListenFunc = null;
 
 		public QuicListenNetPackageMgr()
 		{
-			mNetEventDic = new Dictionary<ushort, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage>>();
+			mNetEventDic = new Dictionary<ushort, Action<QuicClientPeerBase, QuicNetPackage>>();
 		}
 
-		public void NetPackageExecute(QuicClientPeerBase peer, QuicStreamBase streamBase, QuicNetPackage mPackage)
+		public void NetPackageExecute(QuicClientPeerBase peer, QuicNetPackage mPackage)
 		{
 			if (mCommonListenFunc != null)
 			{
-				mCommonListenFunc(peer, streamBase, mPackage);
+				mCommonListenFunc(peer, mPackage);
 			}
 			else
 			{
 				ushort nPackageId = mPackage.GetPackageId();
 				if (mNetEventDic.ContainsKey(nPackageId) && mNetEventDic[nPackageId] != null)
 				{
-					mNetEventDic[nPackageId](peer, streamBase, mPackage);
+					mNetEventDic[nPackageId](peer, mPackage);
 				}
 				else
 				{
@@ -39,17 +39,17 @@ namespace AKNet.Common
 			}
 		}
 		
-        public void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void addNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> func)
         {
 			mCommonListenFunc += func;
         }
 
-        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> func)
         {
             mCommonListenFunc -= func;
         }
 
-        public void addNetListenFunc(UInt16 id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void addNetListenFunc(UInt16 id, Action<QuicClientPeerBase, QuicNetPackage> func)
 		{
 			NetLog.Assert(func != null);
 			if (!mNetEventDic.ContainsKey(id))
@@ -62,7 +62,7 @@ namespace AKNet.Common
 			}
 		}
 
-		public void removeNetListenFunc(UInt16 id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+		public void removeNetListenFunc(UInt16 id, Action<QuicClientPeerBase, QuicNetPackage> func)
 		{
 			if (mNetEventDic.ContainsKey(id))
 			{

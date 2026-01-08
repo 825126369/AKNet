@@ -73,22 +73,22 @@ namespace AKNet.Quic.Server
 
 
 
-        public void addNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void addNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mPackageManager.addNetListenFunc(id, mFunc);
         }
 
-        public void removeNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void removeNetListenFunc(ushort id, Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mPackageManager.removeNetListenFunc(id, mFunc);
         }
 
-        public void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void addNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mPackageManager.addNetListenFunc(mFunc);
         }
 
-        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> mFunc)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> mFunc)
         {
             mPackageManager.removeNetListenFunc(mFunc);
         }

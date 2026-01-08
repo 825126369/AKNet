@@ -74,42 +74,42 @@ namespace AKNet.Common
             mInterface.removeListenClientPeerStateFunc(mFunc);
         }
 
-        public void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> fun)
+        public void addNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicNetPackage> fun)
         {
             mInterface.addNetListenFunc(nPackageId, fun);
         }
 
-        public void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> fun)
+        public void removeNetListenFunc(ushort nPackageId, Action<QuicClientPeerBase, QuicNetPackage> fun)
         {
             mInterface.removeNetListenFunc(nPackageId, fun);
         }
 
-        public void addNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void addNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> func)
         {
             mInterface.addNetListenFunc(func);
         }
 
-        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicStreamBase, QuicNetPackage> func)
+        public void removeNetListenFunc(Action<QuicClientPeerBase, QuicNetPackage> func)
         {
             mInterface.removeNetListenFunc(func);
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId)
         {
             mInterface.SendNetData(nStreamIndex, nPackageId);
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId, byte[] data)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId, byte[] data)
         {
             mInterface.SendNetData(nStreamIndex, nPackageId, data);
         }
 
-        public void SendNetData(int nStreamIndex, NetPackage mNetPackage)
+        public void SendNetData(byte nStreamIndex, NetPackage mNetPackage)
         {
             mInterface.SendNetData(nStreamIndex, mNetPackage);
         }
 
-        public void SendNetData(int nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
+        public void SendNetData(byte nStreamIndex, ushort nPackageId, ReadOnlySpan<byte> buffer)
         {
             mInterface.SendNetData(nStreamIndex, nPackageId, buffer);
         }
