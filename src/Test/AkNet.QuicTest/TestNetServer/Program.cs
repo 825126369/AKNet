@@ -22,12 +22,6 @@ namespace TestNetServer
                 mInterface.SendNetData(nStreamIndex, nPackageId, stream);
             }
         }
-
-        public static void SendNetData(this QuicStreamBase mInterface, ushort nPackageId, IMessage data)
-        {
-            ReadOnlySpan<byte> stream = Proto3Tool.SerializePackage(data);
-            mInterface.SendNetData(nPackageId, stream);
-        }
     }
 
     internal class Program
