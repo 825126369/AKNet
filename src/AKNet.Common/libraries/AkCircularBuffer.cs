@@ -8,10 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
