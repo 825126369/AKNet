@@ -12,7 +12,7 @@ using System.Net.Quic;
 
 namespace AKNet.Quic.Client
 {
-    internal class ClientPeerQuicStream : QuicStreamBase
+    internal class ClientPeerQuicStream : QuicStreamBase, IDisposable
     {
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];
         private readonly Memory<byte> mSendBuffer = new byte[1024];
@@ -159,7 +159,10 @@ namespace AKNet.Quic.Client
         
         public void Dispose()
         {
-            mQuicStream.Dispose();
+            if (mQuicStream != null)
+            {
+                mQuicStream.Dispose();
+            }
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Dispose();
@@ -171,10 +174,7 @@ namespace AKNet.Quic.Client
             }
         }
 
-
-
         //发送----------------------------------------------------------------------------------------
-
         public void SendNetData(ushort nPackageId)
         {
             if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)

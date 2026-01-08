@@ -167,7 +167,11 @@ namespace AKNet.Quic.Server
         
         public void Dispose()
         {
-            mQuicStream.Dispose();
+            if (mQuicStream != null)
+            {
+                mQuicStream.Dispose();
+            }
+
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Dispose();
