@@ -124,7 +124,7 @@ namespace AKNet.Common
 				}
 
 				byte[] newBuffer = new byte[newSize];
-				CopyTo(0, newBuffer, 0, nOriLength);
+				CopyTo(newBuffer);
 				this.mBuffer = newBuffer;
 				this.MemoryBuffer = this.mBuffer;
                 this.nBeginReadIndex = 0;
@@ -152,7 +152,7 @@ namespace AKNet.Common
 					if (newSize != Capacity)
 					{
 						byte[] newBuffer = new byte[newSize];
-						CopyTo(0, newBuffer, 0, nOriLength);
+						CopyTo(newBuffer);
 						this.mBuffer = newBuffer;
                         this.MemoryBuffer = this.mBuffer;
                         this.nBeginReadIndex = 0;
@@ -203,76 +203,6 @@ namespace AKNet.Common
 			return readOnlySpan.Length;
 		}
 
-        public int WriteFrom(byte[] writeBuffer, int offset, int count)
-		{
-			if (writeBuffer.Length < count)
-			{
-                NetLog.LogError($"WriteFrom Error： {writeBuffer.Length}-{count}");
-				return 0;
-            }
-			else if (count <= 0)
-			{
-				return 0;
-			}
-
-            EnSureCapacityOk(count);
-            if (isCanWriteFrom(count))
-			{
-				if (nBeginWriteIndex + count <= this.Capacity)
-				{
-                    Buffer.BlockCopy(writeBuffer, offset, this.mBuffer, nBeginWriteIndex, count);
-				}
-				else
-				{
-					int Length1 = this.mBuffer.Length - nBeginWriteIndex;
-					int Length2 = count - Length1;
-					Buffer.BlockCopy(writeBuffer, offset, this.mBuffer, nBeginWriteIndex, Length1);
-                    Buffer.BlockCopy(writeBuffer, offset + Length1, this.mBuffer, 0, Length2);
-				}
-
-				dataLength += count;
-				nBeginWriteIndex += count;
-				if (nBeginWriteIndex >= this.Capacity)
-				{
-					nBeginWriteIndex -= this.Capacity;
-				}
-			}
-			else
-			{
-				NetLog.LogError("环形缓冲区 写 溢出 " + this.Capacity + " | " + this.Length + " | " + count);
-				return -1;
-			}
-
-			return count;
-		}
-
-        public void WriteTo(int index, Span<byte> readBuffer)
-		{
-			int count = readBuffer.Length;
-			if (isCanWriteTo(count))
-			{
-				CopyTo(index, readBuffer);
-				this.ClearBuffer(index + count);
-			}
-			else
-			{
-				NetLog.LogError("WriteTo Failed : " + count);
-			}
-		}
-
-        public void WriteTo(int index, byte[] readBuffer, int offset, int count)
-        {
-            if (isCanWriteTo(count))
-            {
-                CopyTo(index, readBuffer, offset, count);
-                this.ClearBuffer(index + count);
-            }
-            else
-            {
-                NetLog.LogError("WriteTo Failed : " + count);
-            }
-        }
-
         public int WriteToMax(int index, Span<byte> readBuffer)
 		{
 			int nReadLength = CopyToMax(index, readBuffer);
@@ -280,55 +210,35 @@ namespace AKNet.Common
 			return nReadLength;
 		}
 
-        public int WriteToMax(int index, byte[] readBuffer, int offset, int count)
-		{
-			int nReadLength = CopyToMax(index, readBuffer, offset, count);
-			this.ClearBuffer(index + nReadLength);
-			return nReadLength;
-		}
-
 		public int CopyToMax(int index, Span<byte> readBuffer)
 		{
-			int copyLength = readBuffer.Length;
-			if (index + copyLength > dataLength)
-			{
-                copyLength = dataLength - index;
-			}
-			return CopyTo(index, readBuffer, copyLength);
+			return CopyTo(index, readBuffer);
 		}
-
-        public int CopyToMax(int index, byte[] readBuffer, int offset, int count)
-        {
-            if (index + count > dataLength)
-            {
-                count = dataLength - index;
-            }
-            return CopyTo(index, readBuffer, offset, count);
-        }
 
         public int CopyTo(Span<byte> readBuffer)
 		{
 			return CopyTo(0, readBuffer);
 		}
 
-        public int CopyTo(int index, Span<byte> readBuffer, int copyLength = 0)
+        public int CopyTo(int index, Span<byte> readBuffer)
 		{
-            if (copyLength == 0)
+            if (index < 0)
             {
-                copyLength = readBuffer.Length;
+                throw new ArgumentException();
             }
 
-			if (copyLength <= 0 || dataLength <= 0)
+            if (readBuffer.Length == 0 || dataLength == 0)
 			{
-				return 0;
-			}
-			else if (copyLength > dataLength)
-			{
-				NetLog.LogError($"CopyTo Error: {copyLength}-{Length}");
 				return 0;
 			}
 
-			int tempBeginIndex = nBeginReadIndex + index;
+            int copyLength = readBuffer.Length;
+            if (index + copyLength > dataLength)
+            {
+                copyLength = dataLength - index;
+            }
+
+            int tempBeginIndex = nBeginReadIndex + index;
 			if (tempBeginIndex >= Capacity)
 			{
 				tempBeginIndex = tempBeginIndex - Capacity;
@@ -348,39 +258,6 @@ namespace AKNet.Common
 			return copyLength;
 		}
 
-		public int CopyTo(int index, byte[] readBuffer, int offset, int copyLength)
-		{
-			if (copyLength <= 0)
-			{
-				return 0;
-			}
-            else if (copyLength > Length)
-            {
-                NetLog.LogError($"CopyTo Error: {copyLength}-{Length}");
-                return 0;
-            }
-
-            int tempBeginIndex = nBeginReadIndex + index;
-			if (tempBeginIndex >= Capacity)
-			{
-				tempBeginIndex = tempBeginIndex - Capacity;
-			}
-
-			if (tempBeginIndex + copyLength <= this.Capacity)
-			{
-				Buffer.BlockCopy(this.mBuffer, tempBeginIndex, readBuffer, offset, copyLength);
-			}
-			else
-			{
-				int Length1 = this.Capacity - tempBeginIndex;
-				int Length2 = copyLength - Length1;
-				Buffer.BlockCopy(this.mBuffer, tempBeginIndex, readBuffer, offset, Length1);
-				Buffer.BlockCopy(this.mBuffer, 0, readBuffer, offset + Length1, Length2);
-			}
-
-			return copyLength;
-		}
-
 		public void ClearBuffer(int readLength)
 		{
 			if (readLength >= this.Length) 
@@ -396,31 +273,6 @@ namespace AKNet.Common
 				}
 			}
 		}
-
-        private static void Test()
-        {
-            AkCircularBuffer mAkCircularManyBuffer = new AkCircularBuffer();
-
-            var mTimer = Stopwatch.StartNew();
-            for (int i = 0; i < 1000; i++)
-            {
-                int nLength = 1000000;
-                Span<byte> mArray = new byte[nLength];
-                RandomNumberGenerator.Fill(mArray);
-                mAkCircularManyBuffer.WriteFrom(mArray);
-                NetLog.Assert(mAkCircularManyBuffer.Length == nLength);
-
-                Span<byte> mArray2 = new byte[nLength];
-                NetLog.Assert(mAkCircularManyBuffer.CopyTo(0, mArray2) == nLength);
-
-                mAkCircularManyBuffer.ClearBuffer(nLength);
-                NetLog.Assert(mAkCircularManyBuffer.Length == 0);
-
-                NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray2));
-                //NetLog.Assert(BufferTool.orBufferEqual(mArray, mArray3));
-            }
-            NetLog.Log($"花费时间: {mTimer.ElapsedMilliseconds}");
-        }
     }
 }
 

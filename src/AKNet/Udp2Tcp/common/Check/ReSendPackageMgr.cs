@@ -49,7 +49,7 @@ namespace AKNet.Udp2Tcp.Common
             {
                 NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
                 mPackage.nOrderId = nCurrentWaitSendOrderId;
-                int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
+                int nLength = mUdpCheckMgr.GetSendStreamList().WriteToMax(0, mPackage.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
                 mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
                 mWaitCheckSendQueue.AddLast(mPackage.mEntry);
                 mPackage.mTimeOutGenerator_ReSend.Reset();

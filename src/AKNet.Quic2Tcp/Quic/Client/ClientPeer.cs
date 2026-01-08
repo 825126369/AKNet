@@ -34,7 +34,7 @@ namespace AKNet.Quic.Client
         private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
 
         private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly byte[] mSendBuffer = new byte[1024];
+        private readonly Memory<byte> mSendBuffer = new byte[1024];
 
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private bool bSendIOContextUsed = false;

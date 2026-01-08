@@ -162,9 +162,9 @@ namespace AKNet.Quic.Client
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer, 0, mSendBuffer.Length);
+                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
                     }
-                    await mSendQuicStream.WriteAsync(mSendBuffer, 0, nLength);
+                    await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
                 bSendIOContextUsed = false;
             }

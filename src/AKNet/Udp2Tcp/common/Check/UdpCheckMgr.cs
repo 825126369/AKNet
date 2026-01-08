@@ -53,7 +53,7 @@ namespace AKNet.Udp2Tcp.Common
             if (!Config.bUdpCheck)
             {
                 NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                int nLength = GetSendStreamList().WriteToMax(0, mPackage.buffer, Config.nUdpPackageFixedHeadSize, Config.nUdpPackageFixedBodySize);
+                int nLength = GetSendStreamList().WriteToMax(0, mPackage.buffer.AsSpan().Slice(Config.nUdpPackageFixedHeadSize));
                 mPackage.Length = Config.nUdpPackageFixedHeadSize + nLength;
                 mClientPeer.SendNetPackage(mPackage);
             }

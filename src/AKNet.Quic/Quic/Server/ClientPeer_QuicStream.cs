@@ -113,15 +113,27 @@ namespace AKNet.Quic.Server
 
         public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
+            bool bSend = false;
             lock (mSendStreamList)
             {
                 mSendStreamList.WriteFrom(mBufferSegment);
+                if (!bSendIOContextUsed)
+                {
+                    bSendIOContextUsed = true;
+                    bSend = true;
+                }
             }
-
-            if (!Volatile.Read(ref bSendIOContextUsed))
+            
+            if (bSend)
             {
-                bSendIOContextUsed = true;
                 SendNetStream2();
+            }
+            else
+            {
+                if (!bSendIOContextUsed && mSendStreamList.Length > 0)
+                {
+                    throw new Exception("SendNetStream 有数据, 但发送不了啊");
+                }
             }
         }
 
@@ -129,22 +141,25 @@ namespace AKNet.Quic.Server
         {
             try
             {
-                while (!_disposed && mSendStreamList.Length > 0)
+                while (!_disposed)
                 {
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
                         nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+                        if (nLength == 0)
+                        {
+                            bSendIOContextUsed = false;
+                            break;
+                        }
                     }
-
-                    if (mQuicStream == null)
+                    
+                    if (this.mQuicStream == null)
                     {
                         this.mQuicStream = await mClientPeer.mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
                     }
-
-                    await mQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
+                    await this.mQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }
-                bSendIOContextUsed = false;
             }
             catch (QuicException e)
             {
