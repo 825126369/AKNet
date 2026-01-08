@@ -106,7 +106,7 @@ namespace AKNet.Quic.Server
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+                        nLength = mSendStreamList.WriteTo(mSendBuffer.Span);
                     }
                     await mSendQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
                 }

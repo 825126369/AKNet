@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
@@ -169,9 +170,9 @@ namespace AKNet.Common
 
 		public int WriteFrom(ReadOnlySpan<byte> readOnlySpan)
 		{
-			if (readOnlySpan.Length <= 0)
+			if (readOnlySpan.Length == 0)
 			{
-				return readOnlySpan.Length;
+				return 0;
 			}
 
 			EnSureCapacityOk(readOnlySpan.Length);
@@ -203,16 +204,16 @@ namespace AKNet.Common
 			return readOnlySpan.Length;
 		}
 
-        public int WriteToMax(int index, Span<byte> readBuffer)
+        public int WriteTo(Span<byte> readBuffer)
+        {
+			return WriteTo(0, readBuffer);
+        }
+
+        public int WriteTo(int index, Span<byte> readBuffer)
 		{
-			int nReadLength = CopyToMax(index, readBuffer);
+			int nReadLength = CopyTo(index, readBuffer);
 			this.ClearBuffer(index + nReadLength);
 			return nReadLength;
-		}
-
-		public int CopyToMax(int index, Span<byte> readBuffer)
-		{
-			return CopyTo(index, readBuffer);
 		}
 
         public int CopyTo(Span<byte> readBuffer)
@@ -222,12 +223,14 @@ namespace AKNet.Common
 
         public int CopyTo(int index, Span<byte> readBuffer)
 		{
-            if (index < 0)
+#if DEBUG
+			if (index < 0)
             {
                 throw new ArgumentException();
             }
+#endif
 
-            if (readBuffer.Length == 0 || dataLength == 0)
+			if (readBuffer.Length == 0 || dataLength == 0)
 			{
 				return 0;
 			}
@@ -260,7 +263,15 @@ namespace AKNet.Common
 
 		public void ClearBuffer(int readLength)
 		{
-			if (readLength >= this.Length) 
+#if DEBUG
+            if (readLength < 0 || readLength > this.Length)
+            {
+                throw new ArgumentException();
+            }
+#endif
+            if (readLength == 0) return;
+
+			if (readLength == this.Length) 
 			{
 				this.Reset();
 			}

@@ -139,7 +139,7 @@ namespace AKNet.Quic.Client
                     int nLength = 0;
                     lock (mSendStreamList)
                     {
-                        nLength = mSendStreamList.WriteToMax(0, mSendBuffer.Span);
+                        nLength = mSendStreamList.WriteTo(mSendBuffer.Span);
                         if (nLength == 0)
                         {
                             bSendIOContextUsed = false;
