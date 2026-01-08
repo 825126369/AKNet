@@ -26,12 +26,11 @@ namespace AKNet.Quic.Server
 
         public IPEndPoint GetIPEndPoint()
         {
-			IPEndPoint mRemoteEndPoint = null;
             if (mQuicConnection != null)
             {
-                mRemoteEndPoint = mQuicConnection.RemoteEndPoint as IPEndPoint;
+                return mQuicConnection.RemoteEndPoint;
             }
-            return mRemoteEndPoint;
+            return null;
         }
 
         private async void StartProcessReceive()
@@ -40,9 +39,9 @@ namespace AKNet.Quic.Server
 			{
 				while (mQuicConnection != null)
 				{
-					QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+					QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync().ConfigureAwait(false);
                     var mStreamHandle = FindAcceptStreamHandle(mQuicStream);
-                    await mStreamHandle.StartProcessStreamReceive();
+                    mStreamHandle.StartProcessStreamReceive();
                 }
 			}
 			catch (Exception e)
@@ -92,7 +91,7 @@ namespace AKNet.Quic.Server
 
                 var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0);
+				await mQuicConnection2.CloseAsync(0).ConfigureAwait(false);
 			}
 		}
     }

@@ -83,7 +83,7 @@ namespace AKNet.Quic.Server
             return bSuccess;
         }
 
-        public async Task StartProcessStreamReceive()
+        public async void StartProcessStreamReceive()
         {
             try
             {
@@ -91,7 +91,7 @@ namespace AKNet.Quic.Server
                 {
                     while (true)
                     {
-                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer).ConfigureAwait(false);
                         if (nLength > 0)
                         {
                             MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));

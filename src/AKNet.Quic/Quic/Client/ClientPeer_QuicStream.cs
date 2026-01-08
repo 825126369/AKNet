@@ -75,7 +75,7 @@ namespace AKNet.Quic.Client
             return bSuccess;
         }
 
-        public async Task StartProcessStreamReceive()
+        public async void StartProcessStreamReceive()
         {
             try
             {
@@ -83,7 +83,7 @@ namespace AKNet.Quic.Client
                 {
                     while (true)
                     {
-                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer);
+                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer).ConfigureAwait(false);
                         if (nLength > 0)
                         {
                             MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
@@ -131,10 +131,10 @@ namespace AKNet.Quic.Client
 
                     if (mQuicStream == null)
                     {
-                        this.mQuicStream = await mClientPeer.mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional);
+                        this.mQuicStream = await mClientPeer.mQuicConnection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional).ConfigureAwait(false);
                     }
 
-                    await mQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength));
+                    await mQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength)).ConfigureAwait(false);
                 }
                 bSendIOContextUsed = false;
             }

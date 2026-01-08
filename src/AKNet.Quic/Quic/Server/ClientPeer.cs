@@ -26,8 +26,7 @@ namespace AKNet.Quic.Server
 		private readonly ServerMgr mServerMgr;
 		private string Name = string.Empty;
         private uint ID = 0;
-
-        CancellationTokenSource mCancellationTokenSource = new CancellationTokenSource();
+        
         internal QuicConnection mQuicConnection;
         private readonly Dictionary<byte, ClientPeerQuicStream> mSendStreamEnumDic = new Dictionary<byte, ClientPeerQuicStream>();
         private readonly Dictionary<long, ClientPeerQuicStream> mAcceptStreamDic = new Dictionary<long, ClientPeerQuicStream>();

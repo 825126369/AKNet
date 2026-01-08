@@ -45,7 +45,7 @@ namespace AKNet.Quic.Client
 
             try
             {
-                mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint));
+                mQuicConnection = await QuicConnection.ConnectAsync(GetQuicClientConnectionOptions(mIPEndPoint)).ConfigureAwait(false);
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
                 StartProcessReceive();
                 NetLog.Log("Client 连接服务器成功: " + this.ServerIp + " | " + this.nServerPort);
@@ -97,9 +97,9 @@ namespace AKNet.Quic.Client
             {
                 while (mQuicConnection != null)
                 {
-                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync();
+                    QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync().ConfigureAwait(false);
                     var mStreamHandle = FindAcceptStreamHandle(mQuicStream);
-                    await mStreamHandle.StartProcessStreamReceive();
+                    mStreamHandle.StartProcessStreamReceive();
                 }
             }
             catch (Exception e)
@@ -133,18 +133,13 @@ namespace AKNet.Quic.Client
         }
 
         public IPEndPoint GetIPEndPoint()
-		{
-            IPEndPoint mRemoteEndPoint = null;
-            try
+        {
+            if (mQuicConnection != null)
             {
-                if (mQuicConnection != null && mQuicConnection.RemoteEndPoint != null)
-                {
-                    mRemoteEndPoint = mQuicConnection.RemoteEndPoint as IPEndPoint;
-                }
+                return mQuicConnection.RemoteEndPoint;
             }
-            catch { }
 
-            return mRemoteEndPoint;
+            return null;
         }
 
 		private async void CloseSocket()
@@ -165,7 +160,7 @@ namespace AKNet.Quic.Client
                 
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0);
+				await mQuicConnection2.CloseAsync(0).ConfigureAwait(false);
             }
         }
     }

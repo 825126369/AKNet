@@ -19,7 +19,7 @@ namespace TestNetClient
         public abstract void OnTestFinish();
 
         public const int nClientCount = 100;
-        public const int nSingleSendPackageCount = 100;
+        public const int nSingleSendPackageCount = 0;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
