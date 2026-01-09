@@ -17,10 +17,10 @@ namespace AKNet.Common
             {
                 mInterface = new AKNet.Quic.Client.NetClientMain();
             }
-            //else if (nNetType == NetType.MSQuic)
-            //{
-            //    mInterface = new AKNet.MSQuic.Client.NetClientMain();
-            //}
+            else if (nNetType == NetType.MSQuic)
+            {
+                mInterface = new AKNet.MSQuic.Client.NetClientMain();
+            }
             else
             {
                 NetLog.LogError("Unsupported network type: " + nNetType);
