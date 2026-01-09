@@ -4,30 +4,25 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:20
+*        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+
 using AKNet.Common;
 using AKNet.MSQuic.Common;
-using AKNet.MSQuic.Common;
-using System.Collections.Generic;
 
 namespace AKNet.MSQuic.Server
 {
-    internal class ClientPeerManager
-	{
-		private readonly List<ClientPeer> mClientList = new List<ClientPeer>(0);
-		private readonly Queue<QuicConnection> mConnectSocketQueue = new Queue<QuicConnection>();
-		private QuicServer mNetServer;
-
-		public ClientPeerManager(QuicServer mNetServer)
-		{
-			this.mNetServer = mNetServer;
-		}
-
+    internal partial class ServerMgr
+    {
 		public void Update(double elapsed)
 		{
-			while (CreateClientPeer())
+            if (elapsed >= 0.3)
+            {
+                NetLog.LogWarning("帧 时间 太长: " + elapsed);
+            }
+
+            while (CreateClientPeer())
 			{
 				
 			}
@@ -44,7 +39,6 @@ namespace AKNet.MSQuic.Server
 					mClientList.RemoveAt(i);
                     PrintRemoveClientMsg(mClientPeer);
                     mClientPeer.Reset();
-
                 }
 			}
 		}
@@ -79,7 +73,7 @@ namespace AKNet.MSQuic.Server
 
 			if (connection != null)
 			{
-				ClientPeer clientPeer = new ClientPeer(mNetServer);
+				var clientPeer = new ClientPeer(this);
 				clientPeer.HandleConnectedSocket(connection);
 				mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);

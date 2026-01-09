@@ -4,30 +4,19 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:20
+*        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+
 using AKNet.Common;
 using AKNet.MSQuic.Common;
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
 
 namespace AKNet.MSQuic.Server
 {
-    internal class QuicListenerMgr
+    internal partial class ServerMgr
     {
-        QuicListener mQuicListener = null;
-        QuicServer mQuicServer = null;
-        private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private int nPort;
-
-        public QuicListenerMgr(QuicServer mQuicServer)
-        {
-            this.mQuicServer = mQuicServer;
-        }
-
         public void InitNet()
         {
             List<int> mPortList = IPAddressHelper.GetAvailableTcpPortList();
@@ -54,7 +43,7 @@ namespace AKNet.MSQuic.Server
 
         public void InitNet(int nPort)
         {
-            InitNet(IPAddress.IPv6Any, nPort);
+            InitNet(IPAddress.Any, nPort);
         }
 
         public void InitNet(string Ip, int nPort)
@@ -71,37 +60,40 @@ namespace AKNet.MSQuic.Server
             {
                 var options = GetQuicListenerOptions(mIPAddress, nPort);
                 mQuicListener = QuicListener.StartListen(options);
-                if (mQuicListener != null)
-                {
-                    NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
-                    StartProcessAccept();
-                }
+                NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
+                StartProcessAccept();
             }
             catch (Exception e)
             {
                 this.mState = SOCKET_SERVER_STATE.EXCEPTION;
                 NetLog.LogError(e.ToString());
             }
-
         }
 
         private QuicListenerOptions GetQuicListenerOptions(IPAddress mIPAddress, int nPort)
         {
             QuicListenerOptions mOption = new QuicListenerOptions();
             mOption.ListenEndPoint = new IPEndPoint(mIPAddress, nPort);
-            mOption.GetConnectionOptionFunc = GetConnectionOptionFunc;
+            mOption.GetConnectionOptionFunc = ConnectionOptionsCallback;
             return mOption;
         }
 
-        private QuicConnectionOptions GetConnectionOptionFunc()
+        private QuicConnectionOptions ConnectionOptionsCallback()
         {
-            var mCert = X509CertTool.GetPfxCert();
-            //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
+            var mCert = X509CertTool.GetCert();
 
+            //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
             NetLog.Assert(mCert != null, "GetCert() == null");
+
+            var ApplicationProtocols = new List<SslApplicationProtocol>();
+            ApplicationProtocols.Add(SslApplicationProtocol.Http11);
+            ApplicationProtocols.Add(SslApplicationProtocol.Http2);
+            ApplicationProtocols.Add(SslApplicationProtocol.Http3);
+
             var ServerAuthenticationOptions = new SslServerAuthenticationOptions();
+            ServerAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
             ServerAuthenticationOptions.ServerCertificate = mCert;
-            
+
             QuicConnectionOptions mOption = new QuicConnectionOptions();
             mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
             return mOption;
@@ -114,7 +106,7 @@ namespace AKNet.MSQuic.Server
                 try
                 {
                     QuicConnection connection = await mQuicListener.AcceptConnectionAsync();
-                    mQuicServer.mClientPeerManager.MultiThreadingHandleConnectedSocket(connection);
+                    MultiThreadingHandleConnectedSocket(connection);
                 }
                 catch (Exception e)
                 {
@@ -145,5 +137,4 @@ namespace AKNet.MSQuic.Server
         }
 
     }
-
 }
