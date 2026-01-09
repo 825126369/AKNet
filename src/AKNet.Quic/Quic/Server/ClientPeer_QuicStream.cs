@@ -9,12 +9,11 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Quic.Common;
-using System.IO;
 using System.Net.Quic;
 
 namespace AKNet.Quic.Server
 {
-    internal class ClientPeerQuicStream : IDisposable
+    internal class ClientPeerQuicStream
     {
         private bool _disposed;
         private readonly Memory<byte> mReceiveBuffer = new byte[Config.nIOContexBufferLength];
@@ -110,7 +109,7 @@ namespace AKNet.Quic.Server
             }
             catch (Exception e)
             {
-                NetLog.LogError(e.ToString());
+                //NetLog.LogError(e.ToString());
                 DisConnectedWithError();
             }
         }
@@ -190,32 +189,6 @@ namespace AKNet.Quic.Server
                 {
                     mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
-            }
-        }
-        
-        public async void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            mClientPeer = null;
-            mServerMgr = null;
-
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Dispose();
-            }
-
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Dispose();
-            }
-
-            if (mQuicStream != null)
-            {
-                var mQuicStream2 = mQuicStream;
-                mQuicStream = null;
-                await mQuicStream2.DisposeAsync();
             }
         }
 

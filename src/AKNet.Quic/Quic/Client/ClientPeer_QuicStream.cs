@@ -13,7 +13,7 @@ using System.Net.Quic;
 
 namespace AKNet.Quic.Client
 {
-    internal class ClientPeerQuicStream :IDisposable
+    internal class ClientPeerQuicStream
     {
         private bool _disposed;
         private readonly Memory<byte> mReceiveBuffer = new byte[Config.nIOContexBufferLength];
@@ -93,7 +93,7 @@ namespace AKNet.Quic.Client
                     }
                     else
                     {
-                        NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
+                        //NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
                         DisConnectedWithError();
                         break;
                     }
@@ -101,7 +101,7 @@ namespace AKNet.Quic.Client
             }
             catch (Exception e)
             {
-                NetLog.LogError(e.ToString());
+                //NetLog.LogError(e.ToString());
                 DisConnectedWithError();
             }
         }
@@ -165,7 +165,7 @@ namespace AKNet.Quic.Client
             }
             catch (QuicException e)
             {
-                NetLog.LogError(e.ToString());
+                //NetLog.LogError(e.ToString());
                 DisConnectedWithError();
             }
         }
@@ -183,31 +183,6 @@ namespace AKNet.Quic.Client
                 {
                     mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
-            }
-        }
-        
-        public async void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            mClientPeer = null;
-
-            lock (mReceiveStreamList)
-            {
-                mReceiveStreamList.Dispose();
-            }
-
-            lock (mSendStreamList)
-            {
-                mSendStreamList.Dispose();
-            }
-
-            if (mQuicStream != null)
-            {
-                var mQuicStream2 = mQuicStream;
-                mQuicStream = null;
-                await mQuicStream2.DisposeAsync();
             }
         }
 

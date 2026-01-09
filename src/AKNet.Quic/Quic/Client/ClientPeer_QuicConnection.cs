@@ -97,8 +97,12 @@ namespace AKNet.Quic.Client
                 while (mQuicConnection != null)
                 {
                     QuicStream mQuicStream = await mQuicConnection.AcceptInboundStreamAsync().ConfigureAwait(false);
-                    var mStreamHandle = FindAcceptStreamHandle(mQuicStream);
+                    var mStreamHandle = new ClientPeerQuicStream(this, mQuicStream);
                     mStreamHandle.StartProcessStreamReceive();
+                    lock (mPendingAcceptStreamQueue)
+                    {
+                        mPendingAcceptStreamQueue.Enqueue(mStreamHandle);
+                    }
                 }
             }
             catch (Exception e)
@@ -106,20 +110,6 @@ namespace AKNet.Quic.Client
                 NetLog.LogError(e.ToString());
                 SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
-        }
-
-        private ClientPeerQuicStream FindAcceptStreamHandle(QuicStream mQuicStream)
-        {
-            ClientPeerQuicStream mStreamHandle = null;
-            lock (mAcceptStreamDic)
-            {
-                if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
-                {
-                    mStreamHandle = new ClientPeerQuicStream(this, mQuicStream);
-                    mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
-                }
-            }
-            return mStreamHandle;
         }
 
         private ClientPeerQuicStream GetOrCreateSendStreamHandle(byte nStreamIndex)
@@ -152,21 +142,18 @@ namespace AKNet.Quic.Client
             {
                 lock (mSendStreamEnumDic)
                 {
-                    foreach (var v in mSendStreamEnumDic)
-                    {
-                        v.Value.Dispose();
-                    }
                     mSendStreamEnumDic.Clear();
                 }
 
-                lock (mAcceptStreamDic)
+                lock (mPendingAcceptStreamQueue)
                 {
-                    foreach (var v in mAcceptStreamDic)
+                    while(mPendingAcceptStreamQueue.TryDequeue(out var v))
                     {
-                        v.Value.Dispose();
+                       
                     }
-                    mAcceptStreamDic.Clear();
                 }
+
+                mAcceptStreamDic.Clear();
                 
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;

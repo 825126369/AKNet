@@ -9,7 +9,7 @@ namespace TestNetServer
     {
         QuicServerMainBase mNetServer = null;
         const int NetCommand_COMMAND_TESTCHAT = 1000;
-        public const int nSingleClientStreamCount = 3;
+        public const int nSingleClientStreamCount = 6;
         public abstract QuicServerMainBase Create();
 
         public void Start()
@@ -34,12 +34,10 @@ namespace TestNetServer
         private void ReceiveChatMessage(QuicClientPeerBase peer, QuicNetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
-            peer.SendNetData(1, NetCommand_COMMAND_TESTCHAT, mdata);
-            peer.SendNetData(2, NetCommand_COMMAND_TESTCHAT, mdata);
-            peer.SendNetData(3, NetCommand_COMMAND_TESTCHAT, mdata);
-            peer.SendNetData(4, NetCommand_COMMAND_TESTCHAT, mdata);
-            peer.SendNetData(5, NetCommand_COMMAND_TESTCHAT, mdata);
-            peer.SendNetData(6, NetCommand_COMMAND_TESTCHAT, mdata);
+            for (byte i = 1; i <= nSingleClientStreamCount; i++)
+            {
+                peer.SendNetData(i, NetCommand_COMMAND_TESTCHAT, mdata);
+            }
             IMessagePool<TESTChatMessage>.recycle(mdata);
         }
     }

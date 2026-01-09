@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Quic.Common;
+using System.Collections;
 using System.Net;
 using System.Net.Quic;
 using System.Runtime.CompilerServices;
@@ -25,6 +26,7 @@ namespace AKNet.Quic.Client
         private readonly QuicListenClientPeerStateMgr mListenClientPeerStateMgr = new QuicListenClientPeerStateMgr();
         private readonly Dictionary<byte, ClientPeerQuicStream> mSendStreamEnumDic = new Dictionary<byte, ClientPeerQuicStream>();
         private readonly Dictionary<long, ClientPeerQuicStream> mAcceptStreamDic = new Dictionary<long, ClientPeerQuicStream>();
+        private readonly Queue<ClientPeerQuicStream> mPendingAcceptStreamQueue = new Queue<ClientPeerQuicStream>();
 
         private double fReConnectServerCdTime = 0.0;
         private double fSendHeartBeatTime = 0.0;
@@ -54,16 +56,23 @@ namespace AKNet.Quic.Client
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
+                    if (mPendingAcceptStreamQueue.Count > 0)
+                    {
+                        lock (mPendingAcceptStreamQueue)
+                        {
+                            while (mPendingAcceptStreamQueue.TryDequeue(out var v))
+                            {
+                                mAcceptStreamDic.Add(v.GetStreamId(), v);
+                            }
+                        }
+                    }
 
                     int nPackageCount = 0;
-                    lock (mAcceptStreamDic)
+                    foreach (var mStream in mAcceptStreamDic)
                     {
-                        foreach (var mStream in mAcceptStreamDic)
+                        while (mStream.Value.NetPackageExecute())
                         {
-                            while (mStream.Value.NetPackageExecute())
-                            {
-                                nPackageCount++;
-                            }
+                            nPackageCount++;
                         }
                     }
 

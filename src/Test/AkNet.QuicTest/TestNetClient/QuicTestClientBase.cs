@@ -23,7 +23,7 @@ namespace TestNetClient
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
-        public const int nSingleClientStreamCount = 3;
+        public const int nSingleClientStreamCount = 6;
         int nReceivePackageCount = 0;
         int nSendPackageCount = 0;
         List<QuicClientMainBase> mClientList = new List<QuicClientMainBase>();

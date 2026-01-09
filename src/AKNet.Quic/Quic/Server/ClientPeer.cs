@@ -30,6 +30,7 @@ namespace AKNet.Quic.Server
         internal QuicConnection mQuicConnection;
         private readonly Dictionary<byte, ClientPeerQuicStream> mSendStreamEnumDic = new Dictionary<byte, ClientPeerQuicStream>();
         private readonly Dictionary<long, ClientPeerQuicStream> mAcceptStreamDic = new Dictionary<long, ClientPeerQuicStream>();
+        private readonly Queue<ClientPeerQuicStream> mPendingAcceptStreamQueue = new Queue<ClientPeerQuicStream>();
 
         public ClientPeer(ServerMgr mNetServer)
 		{
@@ -42,19 +43,26 @@ namespace AKNet.Quic.Server
 			switch (mSocketPeerState)
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
-                    int nPackageCount = 0;
 
-                    lock (mAcceptStreamDic)
+                    if (mPendingAcceptStreamQueue.Count > 0)
                     {
-                        foreach (var mStream in mAcceptStreamDic)
+                        lock (mPendingAcceptStreamQueue)
                         {
-                            while (mStream.Value.NetPackageExecute())
+                            while (mPendingAcceptStreamQueue.TryDequeue(out var v))
                             {
-                                nPackageCount++;
+                                mAcceptStreamDic.Add(v.GetStreamId(), v);
                             }
                         }
                     }
 
+                    int nPackageCount = 0;
+                    foreach (var mStream in mAcceptStreamDic)
+                    {
+                        while (mStream.Value.NetPackageExecute())
+                        {
+                            nPackageCount++;
+                        }
+                    }
                     if (nPackageCount > 0)
                     {
                         ReceiveHeartBeat();
