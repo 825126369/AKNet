@@ -8,7 +8,7 @@ namespace TestNetServer
     {
         public override QuicServerMainBase Create()
         {
-            return new NetServerMain(NetType.Quic);
+            return new NetServerMain(NetType.MSQuic);
         }
     }
 

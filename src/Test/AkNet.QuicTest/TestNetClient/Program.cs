@@ -8,7 +8,7 @@ namespace TestNetClient
     {
         public override QuicClientMainBase Create()
         {
-            return new NetClientMain(NetType.Quic);
+            return new NetClientMain(NetType.MSQuic);
         }
 
         public override void OnTestFinish()
