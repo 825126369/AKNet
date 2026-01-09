@@ -188,7 +188,7 @@ namespace AKNet.MSQuic.Common
 
         public async ValueTask<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
         {
-            if (_disposed > 0)
+            if (CommonFunc.BoolOk(_disposed))
             {
                 throw new ObjectDisposedException(this.ToString());
             }
@@ -206,7 +206,7 @@ namespace AKNet.MSQuic.Common
 
         public ValueTask CloseAsync(int errorCode, CancellationToken cancellationToken = default)
         {
-            if (_disposed > 0)
+            if (CommonFunc.BoolOk(_disposed))
             {
                 throw new ObjectDisposedException(this.ToString());
             }

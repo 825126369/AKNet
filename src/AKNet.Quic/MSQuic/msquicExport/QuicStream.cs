@@ -102,6 +102,7 @@ namespace AKNet.MSQuic.Common
 
         public QuicStream(QuicConnection mConnection, QUIC_STREAM mStreamHandle, QUIC_STREAM_OPEN_FLAGS flags)
         {
+            _id = mStreamHandle.ID;
             this._handle = mStreamHandle;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(mStreamHandle, NativeCallback, this);
             _canRead = true;
