@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System.Net;
 using System.Net.Quic;
 
@@ -54,21 +55,27 @@ namespace AKNet.Quic.Server
         private ClientPeerQuicStream FindAcceptStreamHandle(QuicStream mQuicStream)
         {
             ClientPeerQuicStream mStreamHandle = null;
-            if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
+            lock (mAcceptStreamDic)
             {
-                mStreamHandle = new ClientPeerQuicStream(mServerMgr, this, mQuicStream);
-                mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
+                if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
+                {
+                    mStreamHandle = new ClientPeerQuicStream(this.mServerMgr, this, mQuicStream);
+                    mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
+                }
             }
             return mStreamHandle;
         }
 
-        public ClientPeerQuicStream GetOrCreateSendStreamHandle(byte nStreamIndex)
+        private ClientPeerQuicStream GetOrCreateSendStreamHandle(byte nStreamIndex)
         {
             ClientPeerQuicStream mStreamHandle = null;
-            if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))
+            lock (mSendStreamEnumDic)
             {
-                mStreamHandle = new ClientPeerQuicStream(mServerMgr, this, nStreamIndex);
-                mSendStreamEnumDic.Add(nStreamIndex, mStreamHandle);
+                if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))
+                {
+                    mStreamHandle = new ClientPeerQuicStream(this.mServerMgr, this, nStreamIndex);
+                    mSendStreamEnumDic.Add(nStreamIndex, mStreamHandle);
+                }
             }
             return mStreamHandle;
         }
@@ -77,21 +84,27 @@ namespace AKNet.Quic.Server
 		{
 			if (mQuicConnection != null)
 			{
-                foreach (var v in mSendStreamEnumDic)
+                lock (mSendStreamEnumDic)
                 {
-                    v.Value.Dispose();
+                    foreach (var v in mSendStreamEnumDic)
+                    {
+                        v.Value.Dispose();
+                    }
+                    mSendStreamEnumDic.Clear();
                 }
-                mSendStreamEnumDic.Clear();
 
-                foreach (var v in mAcceptStreamDic)
+                lock (mAcceptStreamDic)
                 {
-                    v.Value.Dispose();
+                    foreach (var v in mAcceptStreamDic)
+                    {
+                        v.Value.Dispose();
+                    }
+                    mAcceptStreamDic.Clear();
                 }
-                mAcceptStreamDic.Clear();
 
                 var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0).ConfigureAwait(false);
+				await mQuicConnection2.CloseAsync(Config.DefaultCloseErrorCode).ConfigureAwait(false);
 			}
 		}
     }

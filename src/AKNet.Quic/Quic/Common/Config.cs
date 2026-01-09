@@ -19,5 +19,8 @@ namespace AKNet.Quic.Common
         public const double fMySendHeartBeatMaxTime = 2.0;
         public const double fReConnectMaxCdTime = 3.0;
         public const int MaxPlayerCount = 10000;
+
+        public const long DefaultCloseErrorCode = byte.MaxValue;
+        public const long DefaultStreamErrorCode = ushort.MaxValue;
     }
 }

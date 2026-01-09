@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System.Net.Quic;
 
 namespace AKNet.Quic.Client
@@ -15,8 +16,8 @@ namespace AKNet.Quic.Client
     internal class ClientPeerQuicStream :IDisposable
     {
         private bool _disposed;
-        private readonly Memory<byte> mReceiveBuffer = new byte[1024];
-        private readonly Memory<byte> mSendBuffer = new byte[1024];
+        private readonly Memory<byte> mReceiveBuffer = new byte[Config.nIOContexBufferLength];
+        private readonly Memory<byte> mSendBuffer = new byte[Config.nIOContexBufferLength];
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private bool bSendIOContextUsed = false;
@@ -30,6 +31,8 @@ namespace AKNet.Quic.Client
             this.mClientPeer = mClientPeer;
             this.mQuicStream = mStream;
             this.nStreamEnumIndex = 0;
+
+            NetLog.Log($"New Accetp Stream: {mStream.Id}");
         }
 
         public ClientPeerQuicStream(ClientPeer mClientPeer, byte nStreamEnumIndex) //发送流
@@ -37,6 +40,8 @@ namespace AKNet.Quic.Client
             this.mClientPeer = mClientPeer;
             this.nStreamEnumIndex = nStreamEnumIndex;
             this.mQuicStream = null;
+
+            NetLog.Log($"New Send Stream: {nStreamEnumIndex}");
         }
 
         public long GetStreamId()
@@ -79,20 +84,18 @@ namespace AKNet.Quic.Client
         {
             try
             {
-                if (mQuicStream != null)
+                while (mQuicStream != null)
                 {
-                    while (true)
+                    int nLength = await mQuicStream.ReadAsync(mReceiveBuffer).ConfigureAwait(false);
+                    if (nLength > 0)
                     {
-                        int nLength = await mQuicStream.ReadAsync(mReceiveBuffer).ConfigureAwait(false);
-                        if (nLength > 0)
-                        {
-                            MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
-                        }
-                        else
-                        {
-                            NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
-                            break;
-                        }
+                        MultiThreadingReceiveSocketStream(mReceiveBuffer.Span.Slice(0, nLength));
+                    }
+                    else
+                    {
+                        NetLog.Log($"mQuicStream.ReadAsync Length: {nLength}");
+                        DisConnectedWithError();
+                        break;
                     }
                 }
             }
@@ -105,6 +108,11 @@ namespace AKNet.Quic.Client
 
         public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
         {
+            if (mBufferSegment.Length > Config.nDataMaxLength)
+            {
+                throw new Exception($"mBufferSegment.Length: {mBufferSegment.Length}");
+            }
+
             bool bSend = false;
             lock (mSendStreamList)
             {
@@ -164,28 +172,27 @@ namespace AKNet.Quic.Client
 
         private void DisConnectedWithError()
         {
-            var mSocketPeerState = mClientPeer.GetSocketState();
-            if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
+            if (mClientPeer != null)
             {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            }
-            else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
-            {
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                var mSocketPeerState = mClientPeer.GetSocketState();
+                if (mSocketPeerState == SOCKET_PEER_STATE.DISCONNECTING)
+                {
+                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                }
+                else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
+                {
+                    mClientPeer.SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                }
             }
         }
         
-        public void Dispose()
+        public async void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
 
             mClientPeer = null;
 
-            if (mQuicStream != null)
-            {
-                mQuicStream.Dispose();
-            }
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Dispose();
@@ -194,6 +201,13 @@ namespace AKNet.Quic.Client
             lock (mSendStreamList)
             {
                 mSendStreamList.Dispose();
+            }
+
+            if (mQuicStream != null)
+            {
+                var mQuicStream2 = mQuicStream;
+                mQuicStream = null;
+                await mQuicStream2.DisposeAsync();
             }
         }
 

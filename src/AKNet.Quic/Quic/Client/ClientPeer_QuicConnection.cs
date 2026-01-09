@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -23,21 +24,19 @@ namespace AKNet.Quic.Client
 
 		public async void ConnectServer(string ServerAddr, int ServerPort)
 		{
-			this.ServerIp = ServerAddr;
-			this.nServerPort = ServerPort;
+            if (!QuicConnection.IsSupported)
+            {
+                throw new NotSupportedException("QUIC is not supported.");
+            }
 
-			SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+            this.ServerIp = ServerAddr;
+            this.nServerPort = ServerPort;
 
             CloseSocket();
+            SetSocketState(SOCKET_PEER_STATE.CONNECTING);
+            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
 
-            if (!QuicConnection.IsSupported)
-			{
-				NetLog.LogError("QUIC is not supported.");
-				return;
-			}
-
-			if (mIPEndPoint == null)
+            if (mIPEndPoint == null)
 			{
 				IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
 				mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
@@ -67,10 +66,10 @@ namespace AKNet.Quic.Client
 
             QuicClientConnectionOptions mOption = new QuicClientConnectionOptions();
             mOption.RemoteEndPoint = mIPEndPoint;
-            mOption.DefaultCloseErrorCode = 0;
-            mOption.DefaultStreamErrorCode = 0;
-            mOption.MaxInboundBidirectionalStreams = 1;
-            mOption.MaxInboundUnidirectionalStreams = 1;
+            mOption.DefaultCloseErrorCode = Config.DefaultCloseErrorCode;
+            mOption.DefaultStreamErrorCode = Config.DefaultStreamErrorCode;
+            mOption.MaxInboundBidirectionalStreams = byte.MaxValue;
+            mOption.MaxInboundUnidirectionalStreams = byte.MaxValue;
             mOption.ClientAuthenticationOptions = new SslClientAuthenticationOptions();
             mOption.ClientAuthenticationOptions.ApplicationProtocols = ApplicationProtocols;
             mOption.ClientAuthenticationOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
@@ -105,17 +104,20 @@ namespace AKNet.Quic.Client
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
-                this.mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
             }
         }
 
         private ClientPeerQuicStream FindAcceptStreamHandle(QuicStream mQuicStream)
         {
             ClientPeerQuicStream mStreamHandle = null;
-            if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
+            lock (mAcceptStreamDic)
             {
-                mStreamHandle = new ClientPeerQuicStream(this, mQuicStream);
-                mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
+                if (!mAcceptStreamDic.TryGetValue(mQuicStream.Id, out mStreamHandle))
+                {
+                    mStreamHandle = new ClientPeerQuicStream(this, mQuicStream);
+                    mAcceptStreamDic.Add(mQuicStream.Id, mStreamHandle);
+                }
             }
             return mStreamHandle;
         }
@@ -123,12 +125,14 @@ namespace AKNet.Quic.Client
         private ClientPeerQuicStream GetOrCreateSendStreamHandle(byte nStreamIndex)
         {
             ClientPeerQuicStream mStreamHandle = null;
-            if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))
+            lock (mSendStreamEnumDic)
             {
-                mStreamHandle = new ClientPeerQuicStream(this, nStreamIndex);
-                mSendStreamEnumDic.Add(nStreamIndex, mStreamHandle);
+                if (!mSendStreamEnumDic.TryGetValue(nStreamIndex, out mStreamHandle))
+                {
+                    mStreamHandle = new ClientPeerQuicStream(this, nStreamIndex);
+                    mSendStreamEnumDic.Add(nStreamIndex, mStreamHandle);
+                }
             }
-
             return mStreamHandle;
         }
 
@@ -146,21 +150,27 @@ namespace AKNet.Quic.Client
 		{
             if (mQuicConnection != null)
             {
-                foreach (var v in mSendStreamEnumDic)
+                lock (mSendStreamEnumDic)
                 {
-                    v.Value.Dispose();
+                    foreach (var v in mSendStreamEnumDic)
+                    {
+                        v.Value.Dispose();
+                    }
+                    mSendStreamEnumDic.Clear();
                 }
-                mSendStreamEnumDic.Clear();
 
-                foreach (var v in mAcceptStreamDic)
+                lock (mAcceptStreamDic)
                 {
-                    v.Value.Dispose();
+                    foreach (var v in mAcceptStreamDic)
+                    {
+                        v.Value.Dispose();
+                    }
+                    mAcceptStreamDic.Clear();
                 }
-                mAcceptStreamDic.Clear();
                 
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0).ConfigureAwait(false);
+				await mQuicConnection2.CloseAsync(Config.DefaultCloseErrorCode).ConfigureAwait(false);
             }
         }
     }

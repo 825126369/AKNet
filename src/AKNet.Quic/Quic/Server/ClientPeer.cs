@@ -43,11 +43,15 @@ namespace AKNet.Quic.Server
 			{
 				case SOCKET_PEER_STATE.CONNECTED:
                     int nPackageCount = 0;
-                    foreach (var mStream in mAcceptStreamDic)
+
+                    lock (mAcceptStreamDic)
                     {
-                        while (mStream.Value.NetPackageExecute())
+                        foreach (var mStream in mAcceptStreamDic)
                         {
-                            nPackageCount++;
+                            while (mStream.Value.NetPackageExecute())
+                            {
+                                nPackageCount++;
+                            }
                         }
                     }
 
@@ -75,9 +79,9 @@ namespace AKNet.Quic.Server
 						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
 #if DEBUG
-						NetLog.Log("心跳超时");
+                        NetLog.Log($"{GetName()} 心跳超时");
 #endif
-					}
+                    }
 
 					break;
 				default:
@@ -95,7 +99,8 @@ namespace AKNet.Quic.Server
         private void SendHeartBeat()
 		{
 			SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
-		}
+            //NetLog.Log("发送心跳");
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ResetSendHeartBeatTime()
@@ -107,7 +112,8 @@ namespace AKNet.Quic.Server
         private void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
-		}
+            //NetLog.Log("接收心跳");
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)

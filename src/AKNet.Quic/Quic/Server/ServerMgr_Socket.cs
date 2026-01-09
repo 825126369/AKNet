@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 
 using AKNet.Common;
+using AKNet.Quic.Common;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -106,10 +107,10 @@ namespace AKNet.Quic.Server
             
             QuicServerConnectionOptions mOption = new QuicServerConnectionOptions();
             mOption.ServerAuthenticationOptions = ServerAuthenticationOptions;
-            mOption.DefaultCloseErrorCode = 0;
-            mOption.DefaultStreamErrorCode = 0;
-            mOption.MaxInboundBidirectionalStreams = 1;
-            mOption.MaxInboundUnidirectionalStreams = 1;
+            mOption.DefaultCloseErrorCode = Config.DefaultCloseErrorCode;
+            mOption.DefaultStreamErrorCode = Config.DefaultStreamErrorCode;
+            mOption.MaxInboundBidirectionalStreams = byte.MaxValue;
+            mOption.MaxInboundUnidirectionalStreams = byte.MaxValue;
             return ValueTask.FromResult(mOption);
         }
 
