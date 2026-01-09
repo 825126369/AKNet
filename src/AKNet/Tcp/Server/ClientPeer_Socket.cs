@@ -204,6 +204,13 @@ namespace AKNet.Tcp.Server
 				bSendIOContextUsed = true;
 				SendNetStream1();
 			}
+			else
+			{
+                if (!bSendIOContextUsed && mSendStreamList.Length > 0)
+                {
+                    throw new Exception("SendNetStream 有数据, 但发送不了啊");
+                }
+            }
 		}
 
 		private void SendNetStream1(int BytesTransferred = 0)
