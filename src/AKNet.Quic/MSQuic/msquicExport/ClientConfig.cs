@@ -26,15 +26,18 @@ namespace AKNet.MSQuic.Common
         private static QUIC_SETTINGS GetSetting()
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
+
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerUnidiStreamCount, true);
-            settings.PeerUnidiStreamCount = 10;
+            settings.PeerUnidiStreamCount = byte.MaxValue;
+
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerBidiStreamCount, true);
-            settings.PeerBidiStreamCount = 10;
+            settings.PeerBidiStreamCount = byte.MaxValue;
 
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_IdleTimeoutMs, true);
             settings.IdleTimeoutMs = 0;
+
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_KeepAliveIntervalMs, true);
-            settings.KeepAliveIntervalMs = 0; // 0 disables the keepalive
+            settings.KeepAliveIntervalMs = 0;
             
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_HandshakeIdleTimeoutMs, true);
             settings.HandshakeIdleTimeoutMs = 0;
@@ -45,7 +48,7 @@ namespace AKNet.MSQuic.Common
         public static QUIC_CONFIGURATION Create(bool Unsecure)
         {
             List<QUIC_BUFFER> mAlpnList = new List<QUIC_BUFFER>();
-            foreach (var v in ServerConfig.ApplicationProtocols)
+            foreach (var v in ApplicationProtocols)
             {
                 mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes(v)));
             }

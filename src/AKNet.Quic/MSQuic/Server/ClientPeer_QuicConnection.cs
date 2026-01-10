@@ -90,7 +90,7 @@ namespace AKNet.MSQuic.Server
                 
                 var mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
-                await mQuicConnection2.CloseAsync(Config.DefaultCloseErrorCode).ConfigureAwait(false);
+                await mQuicConnection2.CloseAsync().ConfigureAwait(false);
             }
 		}
     }

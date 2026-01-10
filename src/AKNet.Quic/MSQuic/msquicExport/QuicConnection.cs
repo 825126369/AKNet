@@ -9,14 +9,11 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Common.Channel;
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 #if USE_MSQUIC_2 
 using MSQuic2;
@@ -35,7 +32,7 @@ namespace AKNet.MSQuic.Common
         public readonly ConcurrentQueue<QuicStream> mReceiveStreamDataQueue = new ConcurrentQueue<QuicStream>();
         public readonly IPEndPoint RemoteEndPoint;
         private readonly AKNetChannel<QuicStream> _acceptQueue = new AKNetChannel<QuicStream>(true);
-        private int _disposed;
+        private bool _disposed;
 
         private readonly KKValueTaskSource _connectedTcs = new KKValueTaskSource();
         private readonly KKResettableValueTaskSource _shutdownTcs = new KKResettableValueTaskSource()
@@ -136,23 +133,18 @@ namespace AKNet.MSQuic.Common
             return valueTask;
         }
 
-        private void OnStreamCapacityIncreased(int bidirectionalIncrement, int unidirectionalIncrement)
-        {
-
-        }
-
         public async ValueTask<QuicStream> OpenOutboundStreamAsync(QuicStreamType type, CancellationToken cancellationToken = default)
         {
-            if (_disposed > 0)
+            if (_disposed)
             {
                 throw new ObjectDisposedException(this.ToString());
             }
             
-            QuicStream? stream = null;
+            QuicStream stream = null;
             try
             {
                 stream = new QuicStream(this, type);
-                await stream.StartAsync(DecrementStreamCapacity, cancellationToken).ConfigureAwait(false);
+                await stream.StartAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -162,7 +154,7 @@ namespace AKNet.MSQuic.Common
                     await stream.DisposeAsync().ConfigureAwait(false);
                 }
 
-                if (_disposed > 0)
+                if (_disposed)
                 {
                     throw new ObjectDisposedException(this.ToString());
                 }
@@ -172,23 +164,9 @@ namespace AKNet.MSQuic.Common
             return stream;
         }
 
-        private int _bidirectionalStreamCapacity;
-        private int _unidirectionalStreamCapacity;
-        private void DecrementStreamCapacity(QuicStreamType streamType)
-        {
-            if (streamType == QuicStreamType.Unidirectional)
-            {
-                --_unidirectionalStreamCapacity;
-            }
-            if (streamType == QuicStreamType.Bidirectional)
-            {
-                --_bidirectionalStreamCapacity;
-            }
-        }
-
         public async ValueTask<QuicStream> AcceptInboundStreamAsync(CancellationToken cancellationToken = default)
         {
-            if (CommonFunc.BoolOk(_disposed))
+            if (_disposed)
             {
                 throw new ObjectDisposedException(this.ToString());
             }
@@ -202,21 +180,6 @@ namespace AKNet.MSQuic.Common
                 ExceptionDispatchInfo.Throw(ex.InnerException);
                 throw;
             }
-        }
-
-        public ValueTask CloseAsync(int errorCode, CancellationToken cancellationToken = default)
-        {
-            if (CommonFunc.BoolOk(_disposed))
-            {
-                throw new ObjectDisposedException(this.ToString());
-            }
-
-            if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
-            {
-                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, errorCode);
-            }
-
-            return valueTask;
         }
 
         private int HandleEventConnected(ref QUIC_CONNECTION_EVENT.CONNECTED_DATA data)
@@ -238,7 +201,7 @@ namespace AKNet.MSQuic.Common
         private int HandleEventShutdownComplete()
         {
             Exception exception = null;
-            if (_disposed > 0)
+            if (_disposed)
             {
                 exception = new ObjectDisposedException(GetType().FullName).GetBaseException();
             }
@@ -246,10 +209,12 @@ namespace AKNet.MSQuic.Common
             {
                 exception = new Exception();
             }
-            _connectionCloseTcs.TrySetException(exception);
-            _acceptQueue.Writer.TryComplete(exception);
-            _connectedTcs.TrySetException(exception);
-            _shutdownTokenSource.Cancel();
+
+            _connectionCloseTcs.TrySetException(exception);// 处于连接，就报异常
+            _acceptQueue.Writer.TryComplete(exception); // 处于接收流，就报异常
+            _connectedTcs.TrySetException(exception); //处于连接，就报异常
+
+            _shutdownTokenSource.Cancel();//不要再 ShutDown了
             _shutdownTcs.TrySetResult(final: true);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
@@ -278,19 +243,6 @@ namespace AKNet.MSQuic.Common
 
         private int HandleEventStreamsAvailable(ref QUIC_CONNECTION_EVENT.STREAMS_AVAILABLE_DATA data)
         {
-            int bidirectionalIncrement = 0;
-            int unidirectionalIncrement = 0;
-            if (data.BidirectionalCount > 0)
-            {
-                bidirectionalIncrement = data.BidirectionalCount - _bidirectionalStreamCapacity;
-                _bidirectionalStreamCapacity = data.BidirectionalCount;
-            }
-            if (data.UnidirectionalCount > 0)
-            {
-                unidirectionalIncrement = data.UnidirectionalCount - _unidirectionalStreamCapacity;
-                _unidirectionalStreamCapacity = data.UnidirectionalCount;
-            }
-            OnStreamCapacityIncreased(bidirectionalIncrement, unidirectionalIncrement);
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
@@ -347,20 +299,36 @@ namespace AKNet.MSQuic.Common
             return _handle.HandleConnectionEvent(ref connectionEvent);
         }
 
+        public ValueTask CloseAsync(CancellationToken cancellationToken = default)
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(this.ToString());
+            }
+
+            if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
+            {
+                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, Config.DefaultCloseErrorCode);
+            }
+
+            return valueTask;
+        }
+
         public async ValueTask DisposeAsync()
         {
-            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            if (_disposed)
             {
                 return;
             }
+            _disposed = true;
 
             if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this))
             {
-                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, 1);
+                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_NONE, Config.DefaultCloseErrorCode);
             }
             else if (!valueTask.IsCompletedSuccessfully)
             {
-                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT, 1);
+                MSQuicFunc.MsQuicConnectionShutdown(_handle, QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT, Config.DefaultCloseErrorCode);
             }
             
             await _shutdownTcs.GetFinalTask(this).ConfigureAwait(false);

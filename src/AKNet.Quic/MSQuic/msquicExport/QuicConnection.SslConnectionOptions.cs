@@ -119,7 +119,7 @@ namespace AKNet.MSQuic.Common
                 catch (Exception ex)
                 {
                     certificate?.Dispose();
-                    await _connection.CloseAsync(0);
+                    await _connection.CloseAsync();
                     result = QUIC_TLS_ALERT_CODES.QUIC_TLS_ALERT_CODE_USER_CANCELED;
                 }
                 finally

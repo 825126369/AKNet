@@ -28,10 +28,10 @@ namespace AKNet.MSQuic.Common
         {
             QUIC_SETTINGS settings = new QUIC_SETTINGS();
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerUnidiStreamCount, true);
-            settings.PeerUnidiStreamCount = 10;
+            settings.PeerUnidiStreamCount = byte.MaxValue;
 
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_PeerBidiStreamCount, true);
-            settings.PeerBidiStreamCount = 10;
+            settings.PeerBidiStreamCount = byte.MaxValue;
             
             MSQuicFunc.SetFlag(ref settings.IsSetFlags, MSQuicFunc.E_SETTING_FLAG_IdleTimeoutMs, true);
             settings.IdleTimeoutMs = 0;

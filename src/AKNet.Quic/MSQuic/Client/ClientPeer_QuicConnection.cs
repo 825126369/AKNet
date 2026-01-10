@@ -78,7 +78,7 @@ namespace AKNet.MSQuic.Client
         private async void DisConnectServer2()
         {
             NetLog.Log("客户端 主动 断开服务器 Begin......");
-            await mQuicConnection.CloseAsync(0);
+            await mQuicConnection.CloseAsync();
             NetLog.Log("客户端 主动 断开服务器 Finish......");
         }
 
@@ -149,7 +149,7 @@ namespace AKNet.MSQuic.Client
                 
                 QuicConnection mQuicConnection2 = mQuicConnection;
                 mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(Config.DefaultCloseErrorCode).ConfigureAwait(false);
+				await mQuicConnection2.CloseAsync().ConfigureAwait(false);
             }
         }
     }
