@@ -160,10 +160,12 @@ namespace AKNet.MSQuic.Common
                 return MSQuicFunc.QUIC_STATUS_SUCCESS;
             }
         }
-        
+
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
+            Volatile.Write(ref _sendLocked, 0);
+
             Exception? exception = Volatile.Read(ref _sendException);
             if (exception != null)
             {
@@ -172,7 +174,9 @@ namespace AKNet.MSQuic.Common
 
             if (data.Canceled)
             {
-                NetLog.LogError("HandleEventSendComplete Canceled");
+                // If Canceled == true, we either aborted write,
+                // received PEER_RECEIVE_ABORTED or will receive SHUTDOWN_COMPLETE(ConnectionClose) later,
+                // all of which completes the _sendTcs.
             }
             else
             {
@@ -392,17 +396,23 @@ namespace AKNet.MSQuic.Common
                 return valueTask;
             }
 
-            _sendBuffers.Initialize(buffer);
-            int status = MSQuicFunc.MsQuicStreamSend(
-                _handle,
-                _sendBuffers.Buffers,
-                _sendBuffers.Count,
-                completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE,
-                null);
-
-            if (MSQuicFunc.QUIC_FAILED(status))
+            if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
             {
-                _sendTcs.TrySetException(new Exception($"MSQuicFunc.MsQuicStreamSend: {status}"));
+                _sendBuffers.Initialize(buffer);
+                int status = MSQuicFunc.MsQuicStreamSend(
+                    _handle,
+                    _sendBuffers.Buffers,
+                    _sendBuffers.Count,
+                    completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE,
+                    null);
+
+                if (MSQuicFunc.QUIC_FAILED(status))
+                {
+                    _sendBuffers.Reset();
+                    Volatile.Write(ref _sendLocked, 0);
+                    Interlocked.CompareExchange(ref _sendException, new Exception($"MSQuicFunc.MsQuicStreamSend: {status}"), null);
+                    _sendTcs.TrySetException(_sendException);
+                }
             }
 
             return valueTask;
