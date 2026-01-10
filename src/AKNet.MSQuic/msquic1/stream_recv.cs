@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace MSQuic1
@@ -111,7 +112,7 @@ namespace MSQuic1
                 return false;
             }
 
-            NetLog.Assert(BufferLength <= Stream.RecvPendingLength, "App overflowed read buffer!");
+            Debug.Assert(BufferLength <= Stream.RecvPendingLength, "App overflowed read buffer!");
             if (Stream.RecvPendingLength == 0 || QuicRecvBufferDrain(Stream.RecvBuffer, BufferLength))
             {
                 Stream.Flags.ReceiveDataPending = false; // No more pending data to deliver.
@@ -269,7 +270,7 @@ namespace MSQuic1
                     {
                         Event.RECEIVE.TotalBufferLength += Event.RECEIVE.Buffers[i].Length;
                     }
-                    NetLog.Assert(Event.RECEIVE.TotalBufferLength != 0);
+                    Debug.Assert(Event.RECEIVE.TotalBufferLength != 0);
 
                     if (Event.RECEIVE.AbsoluteOffset < Stream.RecvMax0RttLength)
                     {
@@ -290,14 +291,13 @@ namespace MSQuic1
 
                 Stream.Flags.ReceiveEnabled = Stream.Flags.ReceiveMultiple;
                 Stream.RecvPendingLength += Event.RECEIVE.TotalBufferLength;
-                NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
+                Debug.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
                 int Status = QuicStreamIndicateEvent(Stream, ref Event);
-
                 RecvCompletionLength = Interlocked.Exchange(ref Stream.RecvCompletionLength, 0);
                 if (Status == QUIC_STATUS_CONTINUE)
                 {
-                    NetLog.Assert(!Stream.Flags.SentStopSending);
+                    Debug.Assert(!Stream.Flags.SentStopSending);
                     RecvCompletionLength += Event.RECEIVE.TotalBufferLength;
                     FlushRecv = true;
                     Stream.Flags.ReceiveEnabled = true;
@@ -308,7 +308,7 @@ namespace MSQuic1
                 }
                 else
                 {
-                    NetLog.Assert(QUIC_SUCCEEDED(Status), "App failed recv callback");
+                    Debug.Assert(QUIC_SUCCEEDED(Status), "App failed recv callback");
                     RecvCompletionLength += Event.RECEIVE.TotalBufferLength;
                     FlushRecv = true;
                 }

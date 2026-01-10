@@ -10,7 +10,7 @@ namespace TestNetServer
     {
         QuicServerMainBase mNetServer = null;
         const int NetCommand_COMMAND_TESTCHAT = 1000;
-        public const int nSingleClientStreamCount = 2;
+        public const int nSingleClientStreamCount = 1;
         public abstract QuicServerMainBase Create();
         int nReceivePackageCount;
 

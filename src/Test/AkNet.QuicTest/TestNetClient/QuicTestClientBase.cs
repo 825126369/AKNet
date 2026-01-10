@@ -18,7 +18,7 @@ namespace TestNetClient
         public abstract QuicClientMainBase Create();
         public abstract void OnTestFinish();
 
-        public const int nClientCount = 1;
+        public const int nClientCount = 10;
         public const int nSingleSendPackageCount = 100;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
@@ -75,6 +75,7 @@ namespace TestNetClient
             mStopWatch.Start();
             nReceivePackageCount = 0;
             nSendPackageCount = 0;
+            nLastReceiveTime = mStopWatch.ElapsedMilliseconds;
         }
 
         double fSumTime = 0;
@@ -105,7 +106,7 @@ namespace TestNetClient
                                     TESTChatMessage mdata = IMessagePool<TESTChatMessage>.Pop();
                                     mdata.NSortId = ++mClientSendIdArray[i];
                                     mdata.NClientId = (uint)i;
-                                    if (RandomTool.Random(1, 2) == 1)
+                                    if (RandomTool.Random(2, 2) == 1)
                                     {
                                         mdata.TalkMsg = TalkMsg1;
                                     }
@@ -144,8 +145,22 @@ namespace TestNetClient
                 }
             }
 
+            if (nSendPackageCount >= nSumSendPackageCount)
+            {
+                if (mStopWatch.ElapsedMilliseconds - nLastReceiveTime > 1000)
+                {
+                    if (!bCallOnTestFinish)
+                    {
+                        bCallOnTestFinish = true;
+                        OnTestFinish();
+                    }
+                }
+            }
         }
 
+
+        long nLastReceiveTime = 0;
+        bool bCallOnTestFinish = false;
         void ReceiveChatMessage(QuicClientPeerBase peer, QuicNetPackage mPackage)
         {
             TESTChatMessage mdata = Proto3Tool.GetData<TESTChatMessage>(mPackage);
@@ -159,19 +174,21 @@ namespace TestNetClient
                 NetLog.Log(msg);
             }
 
-            if (mClientReceivePackageCount[peer.GetID()] == nSingleCleintSendMaxPackageCount)
+            if (mClientReceivePackageCount[peer.GetID()] == nSingleCleintSendMaxPackageCount * nSingleClientStreamCount)
             {
                 NetLog.Log($"客户端{peer.GetName()} 全部 接收 完成");
             }
 
-            if (nReceivePackageCount == nSumSendPackageCount)
+            if (nReceivePackageCount == nSumSendPackageCount * nSingleClientStreamCount)
             {
                 string msg = $"全部 接收完成!!!!!!";
                 NetLog.Log(msg);
                 OnTestFinish();
+                bCallOnTestFinish = true;
             }
 
             IMessagePool<TESTChatMessage>.recycle(mdata);
+            nLastReceiveTime = mStopWatch.ElapsedMilliseconds;
         }
     }
 }

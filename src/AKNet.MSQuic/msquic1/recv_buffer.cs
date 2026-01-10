@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic1
 {
@@ -249,9 +250,9 @@ namespace MSQuic1
 
         static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
         {
-            NetLog.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
-            NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
-            NetLog.Assert(RecvBuffer.ReadPendingLength == 0 || RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
+            Debug.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
+            Debug.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
+            Debug.Assert(RecvBuffer.ReadPendingLength == 0 || RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
 
             QUIC_SUBRANGE FirstRange = QuicRangeGet(RecvBuffer.WrittenRanges, 0);
             NetLog.Assert(FirstRange.Low == 0 || (int)FirstRange.Count > RecvBuffer.BaseOffset);

@@ -195,12 +195,14 @@ namespace AKNet.Common
             }
         }
 
+        [Conditional("DEBUG")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Assert(bool bTrue, object message = null)
         {
             if (!bTrue)
             {
                 string msg = GetAssertMsg(message, GetStackTraceInfo());
+                Debug.Assert(bTrue, msg);
                 if (LogErrorFunc != null)
                 {
                     LogErrorFunc(msg);

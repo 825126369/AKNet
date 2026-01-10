@@ -13,7 +13,7 @@ namespace TestNetClient
 
         public override void OnTestFinish()
         {
-            //udp_statistic.PrintInfo();
+           udp_statistic.PrintInfo();
         }
     }
 
