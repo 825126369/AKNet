@@ -9,6 +9,8 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using System;
 
 #if USE_MSQUIC_2 
 using MSQuic2;
@@ -109,24 +111,6 @@ namespace AKNet.MSQuic.Common
             this._canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             this.nType = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(mStreamHandle, NativeCallback, this);
-        }
-
-        public void CompleteWrites()
-        {
-            if (_disposed > 0)
-            {
-                throw new ObjectDisposedException(this.ToString());
-            }
-
-            if (_sendTcs.IsCompleted)
-            {
-                return;
-            }
-
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
-            {
-                NetLog.LogError("StreamShutdown failed");
-            }
         }
 
         private int HandleEventStartComplete(ref QUIC_STREAM_EVENT.START_COMPLETE_DATA data)
@@ -349,14 +333,11 @@ namespace AKNet.MSQuic.Common
                 nLoopCount++;
             } while (!buffer.IsEmpty && totalCopied == 0);
 
-            //NetLog.Log("nLoopCount: " + nLoopCount);
-            //NetLog.Log("Thread.CurrentThread.ManagedThreadId: " + Thread.CurrentThread.ManagedThreadId);
-
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {
-                    NetLog.LogError("StreamReceivedSetEnabled failed");
+                    throw new Exception("MsQuicStreamReceiveSetEnabled failed");
                 }
             }
 
@@ -380,24 +361,47 @@ namespace AKNet.MSQuic.Common
                 throw new InvalidOperationException();
             }
 
-            _sendBuffers.Initialize(buffer);
-            int status = MSQuicFunc.MsQuicStreamSend(
-                _handle,
-                _sendBuffers.Buffers,
-                (int)_sendBuffers.Count,
-                QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE,
-                null);
-
-            if (MSQuicFunc.QUIC_FAILED(status))
+            if (_sendTcs.IsCompleted && cancellationToken.IsCancellationRequested)
             {
-                NetLog.LogError("MsQuicStreamSend Error: " + status);
-                return new ValueTask(Task.FromException(new Exception()));
+                return ValueTask.FromCanceled(cancellationToken);
             }
 
             if (!_sendTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
             {
-                return new ValueTask(Task.FromException(new InvalidOperationException()));
+                return ValueTask.FromException(ExceptionDispatchInfo.SetCurrentStackTrace(new InvalidOperationException()));
             }
+
+            if (valueTask.IsCompleted)
+            {
+                return valueTask;
+            }
+
+            if (buffer.IsEmpty) //一个元素个数为0的空Buffer, 立刻返回结果
+            {
+                _sendTcs.TrySetResult();
+                if (completeWrites)
+                {
+                    if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
+                    {
+                        throw new Exception("MsQuicStreamShutdown failed");
+                    }
+                }
+                return valueTask;
+            }
+
+            _sendBuffers.Initialize(buffer);
+            int status = MSQuicFunc.MsQuicStreamSend(
+                _handle,
+                _sendBuffers.Buffers,
+                _sendBuffers.Count,
+                completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE,
+                null);
+
+            if (MSQuicFunc.QUIC_FAILED(status))
+            {
+                _sendTcs.TrySetException(new Exception($"MSQuicFunc.MsQuicStreamSend: {status}"));
+            }
+
             return valueTask;
         }
 
