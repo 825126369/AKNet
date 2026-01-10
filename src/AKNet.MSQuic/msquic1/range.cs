@@ -125,7 +125,7 @@ namespace MSQuic1
 
         static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
-            return Sub.Low + (ulong)(Sub.Count - 1);
+            return Sub.High;
         }
 
         static ulong QuicRangeGetMax(QUIC_RANGE Range)
