@@ -40,7 +40,7 @@ namespace AKNet.MSQuic.Common
             }
         }
 
-        public int WriteFrom(ReadOnlySpan<QUIC_BUFFER> quicBuffers, int totalLength, bool final)
+        public int WriteFrom(ReadOnlySpan<QUIC_BUFFER> mBufferList, int totalLength, bool final)
         {
             lock (_syncRoot)
             {
@@ -53,7 +53,7 @@ namespace AKNet.MSQuic.Common
                 _final = final;
 
                 int totalCopied = 0;
-                foreach (var v in quicBuffers)
+                foreach (var v in mBufferList)
                 {
                     Span<byte> quicBuffer = v.GetSpan();
                     if (totalLength < quicBuffer.Length)
