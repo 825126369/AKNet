@@ -70,19 +70,18 @@ namespace AKNet.MSQuic.Common
 
         public int WriteTo(Memory<byte> buffer, out bool completed, out bool empty)
         {
-            completed = false;
-            empty = false;
-            int nWriteLength = 0;
             lock (_syncRoot)
             {
+                int nWriteLength = 0;
                 if (!_buffer.IsEmpty)
                 {
                     nWriteLength = _buffer.WriteTo(buffer.Span);
-                    completed = _buffer.IsEmpty && _final;
-                    empty = _buffer.IsEmpty;
                 }
+
+                completed = _buffer.IsEmpty && _final;
+                empty = _buffer.IsEmpty;
+                return nWriteLength;
             }
-            return nWriteLength;
         }
 
     }

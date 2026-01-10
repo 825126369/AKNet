@@ -316,11 +316,10 @@ namespace AKNet.MSQuic.Common
 
         public async ValueTask DisposeAsync()
         {
-            if (_disposed)
+            if (Interlocked.Exchange(ref _disposed, true))
             {
                 return;
             }
-            _disposed = true;
 
             if (_shutdownTcs.TryGetValueTask(out ValueTask valueTask, this))
             {
