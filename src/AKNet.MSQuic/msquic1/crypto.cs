@@ -142,7 +142,29 @@ namespace MSQuic1
             NetLog.Assert(Crypto.TlsState.ReadKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
             NetLog.Assert(Crypto.TlsState.WriteKeys[(int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL] != null);
             Crypto.Initialized = true;
+            QuicCryptoValidate(Crypto);
         Exit:
+            if (QUIC_FAILED(Status))
+            {
+                for (int i = 0; i < (int)QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_COUNT; ++i)
+                {
+                    QuicPacketKeyFree(Crypto.TlsState.ReadKeys[i]);
+                    Crypto.TlsState.ReadKeys[i] = null;
+                    QuicPacketKeyFree(Crypto.TlsState.WriteKeys[i]);
+                    Crypto.TlsState.WriteKeys[i] = null;
+                }
+
+                if (RecvBufferInitialized)
+                {
+                    QuicRecvBufferUninitialize(Crypto.RecvBuffer);
+                }
+
+                if (Crypto.TlsState.Buffer != null)
+                {
+                    Crypto.TlsState.Buffer = null;
+                }
+            }
+
             return Status;
         }
 
