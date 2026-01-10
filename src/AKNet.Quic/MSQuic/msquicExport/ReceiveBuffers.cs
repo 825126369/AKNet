@@ -44,7 +44,7 @@ namespace AKNet.MSQuic.Common
         {
             lock (_syncRoot)
             {
-                if (_buffer.Length > MaxBufferedBytes - totalLength)
+                if (_buffer.Length + totalLength > MaxBufferedBytes)
                 {
                     totalLength = MaxBufferedBytes - _buffer.Length;
                     final = false;

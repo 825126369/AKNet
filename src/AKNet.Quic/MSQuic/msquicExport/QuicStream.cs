@@ -144,11 +144,13 @@ namespace AKNet.MSQuic.Common
             NetLog.Assert(totalCopied >= 0);
             if (totalCopied < data.TotalBufferLength)
             {
-                Volatile.Write(ref _receivedNeedsEnable, 1);
+                Volatile.Write(ref _receivedNeedsEnable, 1); //设置为需要接收
             }
-            _receiveTcs.TrySetResult();
 
+            _receiveTcs.TrySetResult();
             data.TotalBufferLength = totalCopied;
+
+            //如果先前处于需要接收状态
             if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;
@@ -333,6 +335,7 @@ namespace AKNet.MSQuic.Common
                 nLoopCount++;
             } while (!buffer.IsEmpty && totalCopied == 0);
 
+            //如果需要设置 需要接收
             if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))

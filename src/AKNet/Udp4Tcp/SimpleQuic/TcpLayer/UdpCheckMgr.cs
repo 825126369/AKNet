@@ -34,11 +34,6 @@ namespace AKNet.Udp4Tcp.Common
             mReSendPackageMgr.AddTcpStream(buffer);
         }
 
-        public void AddTcpStream(AkCircularManyBuffer buffer)
-        {
-            mReSendPackageMgr.AddTcpStream(buffer);
-        }
-
         public void AddReceivePackageOrderId(int nLength)
         {
             nCurrentWaitReceiveOrderId = OrderIdHelper.AddOrderId(nCurrentWaitReceiveOrderId, nLength);
