@@ -1066,8 +1066,7 @@ namespace MSQuic1
 
             if (Result)
             {
-                ulong Largest = 0;
-                if (!QuicRangeGetMaxSafe(Connection.DecodedAckRanges, ref Largest) || LossDetection.LargestSentPacketNumber < Largest) 
+                if (!QuicRangeGetMaxSafe(Connection.DecodedAckRanges, out ulong Largest) || LossDetection.LargestSentPacketNumber < Largest) 
                 {
                     InvalidFrame = true;
                     Result = false;

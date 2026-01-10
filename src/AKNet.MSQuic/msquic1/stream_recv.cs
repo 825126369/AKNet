@@ -194,7 +194,6 @@ namespace MSQuic1
 
                 Stream.RecvWindowLastUpdate = TimeNow;
                 Stream.RecvWindowBytesDelivered = 0;
-
             }
             else if (!BoolOk(Stream.Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
             {

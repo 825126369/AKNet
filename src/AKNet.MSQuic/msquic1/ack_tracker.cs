@@ -147,8 +147,7 @@ namespace MSQuic1
             NetLog.Assert(Connection != null);
             NetLog.Assert(PacketNumber <= QUIC_VAR_INT_MAX);
 
-            ulong CurLargestPacketNumber = 0;
-            if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, ref CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
+            if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, out ulong CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
             {
                 Connection.Stats.Recv.ReorderedPackets++;//乱序包
             }

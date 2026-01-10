@@ -57,9 +57,10 @@ namespace MSQuic1
     {
         public QUIC_SUBRANGE[] SubRanges;
         public int UsedLength;
-        public int AllocLength;
         public int MaxAllocSize;
         public readonly QUIC_SUBRANGE[] PreAllocSubRanges = new QUIC_SUBRANGE[MSQuicFunc.QUIC_RANGE_INITIAL_SUB_COUNT];
+
+        public int AllocLength => SubRanges.Length;
     }
 
     internal static partial class MSQuicFunc
@@ -104,7 +105,6 @@ namespace MSQuic1
         static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
         {
             Range.UsedLength = 0;
-            Range.AllocLength = QUIC_RANGE_INITIAL_SUB_COUNT;
             Range.MaxAllocSize = MaxAllocSize;
             NetLog.Assert(sizeof_QUIC_SUBRANGE * QUIC_RANGE_INITIAL_SUB_COUNT <= MaxAllocSize);
             Range.SubRanges = Range.PreAllocSubRanges;
@@ -112,7 +112,10 @@ namespace MSQuic1
 
         static void QuicRangeUninitialize(QUIC_RANGE Range)
         {
-           
+            if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
+            {
+                Range.SubRanges = null;
+            }
         }
 
         static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
@@ -135,8 +138,9 @@ namespace MSQuic1
             Range.UsedLength = 0;
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, ref ulong Value)
+        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out ulong Value)
         {
+            Value = 0;
             if (Range.UsedLength > 0)
             {
                 Value = QuicRangeGetMax(Range);
@@ -196,7 +200,6 @@ namespace MSQuic1
             }
 
             Range.SubRanges = NewSubRanges;
-            Range.AllocLength = NewAllocLength;
             Range.UsedLength++;
             return true;
         }
@@ -379,7 +382,6 @@ namespace MSQuic1
                 }
 
                 Range.SubRanges = NewSubRanges;
-                Range.AllocLength = NewAllocLength;
                 return true;
             }
             return false;
