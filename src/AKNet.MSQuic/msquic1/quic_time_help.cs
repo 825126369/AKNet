@@ -17,7 +17,6 @@ namespace MSQuic1
 {
     internal static partial class MSQuicFunc
     {
-        //LInux TCP 我们用毫秒
         readonly static Stopwatch mStopwatch = Stopwatch.StartNew();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

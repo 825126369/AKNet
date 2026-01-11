@@ -24,6 +24,7 @@ namespace MSQuic1
 
     internal static unsafe partial class MSQuicFunc
     {
+        internal delegate void QUIC_TRACE_RUNDOWN_CALLBACK();
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
         static CX_PLATFORM CxPlatform = new CX_PLATFORM();
         static int CxPlatProcessorCount;
