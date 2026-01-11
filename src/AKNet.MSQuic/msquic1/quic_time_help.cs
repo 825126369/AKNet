@@ -77,5 +77,11 @@ namespace MSQuic1
         {
             return us / 1000;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static double US_TO_S(long us)
+        {
+            return us / 1000000.0;
+        }
     }
 }

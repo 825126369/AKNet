@@ -651,7 +651,7 @@ namespace MSQuic1
                 }
             }
 
-            NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, Delay);
+            NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, US_TO_S(Delay));
 
             if (Delay == 0 && ExecuteImmediatelyIfNecessary)
             {
@@ -1320,6 +1320,10 @@ namespace MSQuic1
                     MinRtt,
                     NewLargestAckTimestamp - Connection.Stats.Timing.Start,
                     Packet.SendTimestamp);
+
+                NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.SmoothedRtt, US_TO_S(Path.SmoothedRtt));
+                NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.MinRtt, US_TO_S(Path.MinRtt));
+                NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.MaxRtt, US_TO_S(Path.MaxRtt));
             }
 
             if (NewLargestAck)
