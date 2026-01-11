@@ -105,7 +105,7 @@ namespace MSQuic1
             }
         }
 
-        static bool QuicStreamReceiveComplete(QUIC_STREAM Stream, int BufferLength)
+        static bool QuicStreamReceiveComplete(QUIC_STREAM Stream, long BufferLength)
         {
             if (Stream.Flags.SentStopSending || Stream.Flags.RemoteCloseFin)
             {
@@ -165,7 +165,7 @@ namespace MSQuic1
             return false;
         }
 
-        static void QuicStreamOnBytesDelivered(QUIC_STREAM Stream, int BytesDelivered)
+        static void QuicStreamOnBytesDelivered(QUIC_STREAM Stream, long BytesDelivered)
         {
             int RecvBufferDrainThreshold = Stream.RecvBuffer.VirtualBufferLength / QUIC_RECV_BUFFER_DRAIN_RATIO;
 
