@@ -219,7 +219,7 @@ namespace MSQuic1
             {
                 return;
             }
-
+            
             QUIC_BUFFER[] StackRecvBuffers = Stream.StackRecvBuffers;
             for (int i = 0; i < StackRecvBuffers.Length; i++)
             {
@@ -243,7 +243,7 @@ namespace MSQuic1
                     int NumBuffersNeeded = QuicRecvBufferReadBufferNeededCount(Stream.RecvBuffer);
                     if (NumBuffersNeeded > StackRecvBuffers.Length)
                     {
-                        QUIC_BUFFER[] NewRecvBuffers = new QUIC_BUFFER[NumBuffersNeeded];
+                        var NewRecvBuffers = new QUIC_BUFFER[NumBuffersNeeded];
                         if (NewRecvBuffers != null)
                         {
                             StackRecvBuffers = NewRecvBuffers;

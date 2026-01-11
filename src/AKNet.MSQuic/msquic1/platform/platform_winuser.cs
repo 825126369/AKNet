@@ -15,13 +15,6 @@ using System.Threading;
 
 namespace MSQuic1
 {
-    internal struct CXPLAT_PROCESSOR_GROUP_INFO
-    {
-        public ulong Mask;  // Bit mask of active processors in the group
-        public int Count;  // Count of active processors in the group
-        public int Offset; // Base process index offset this group starts at
-    }
-
     internal static unsafe partial class MSQuicFunc
     {
         internal delegate void QUIC_TRACE_RUNDOWN_CALLBACK();

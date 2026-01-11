@@ -68,6 +68,7 @@ namespace MSQuic1
         public const int NonceSize = 12;
         public const int TagSize = 16;
 
+        //编码和解码是一起的
         public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper)
         {
             using (Aes aesAlg = Aes.Create())
@@ -79,11 +80,6 @@ namespace MSQuic1
                 ReadOnlySpan<byte> temp = encryptor.TransformFinalBlock(plaintext.Buffer, plaintext.Offset, plaintext.Length);
                 temp.CopyTo(Ciper.GetSpan());
             }
-        }
-
-        public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
-        {
-
         }
     }
 

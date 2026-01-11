@@ -10,6 +10,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -219,8 +220,8 @@ namespace MSQuic1
             }
             return Entry;
         }
-
-#if DEBUG
+        
+        [Conditional("DEBUG")]
         static void QUIC_CID_SET_PATH(QUIC_CONNECTION Conn, QUIC_CID Cid, QUIC_PATH Path)
         {
             NetLog.Assert(!Cid.Retired);
@@ -234,11 +235,13 @@ namespace MSQuic1
             }
         }
 
+        [Conditional("DEBUG")]
         static void QUIC_CID_CLEAR_PATH(QUIC_CID Cid)
         {
             Cid.AssignedPath = null;
         }
 
+        [Conditional("DEBUG")]
         static void QUIC_CID_VALIDATE_NULL(QUIC_CONNECTION Conn, QUIC_CID Cid)
         {
             NetLog.Assert(Cid.AssignedPath == null);
@@ -247,16 +250,5 @@ namespace MSQuic1
                 NetLog.Assert(Conn.Paths[PathIdx].DestCid != Cid);
             }
         }
-#else
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QUIC_CID_SET_PATH(QUIC_CONNECTION Conn, QUIC_CID Cid, QUIC_PATH Path){}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QUIC_CID_CLEAR_PATH(QUIC_CID Cid){ }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QUIC_CID_VALIDATE_NULL(QUIC_CONNECTION Conn, QUIC_CID Cid){ }
-#endif
-
     }
 }
