@@ -16,11 +16,13 @@ namespace MSQuic1
     //QUIC 版本协商数据包
     internal class QUIC_VERSION_NEGOTIATION_PACKET
     {
+        public const int sizeof_Length = 6;
+
         public byte Unused; //7位
         public byte IsLongHeader;//1位
         public uint Version;
         public byte DestCidLength;
-        public QUIC_BUFFER m_DestCid = null;
+        private QUIC_BUFFER m_DestCid = null;
 
         public QUIC_BUFFER DestCid
         {
@@ -78,6 +80,19 @@ namespace MSQuic1
         //uint8_t Payload[0];
 
         public const int sizeof_Length = 6;
+
+        public QUIC_BUFFER DestCid
+        {
+            get
+            {
+                if (m_DestCid == null)
+                {
+                    m_DestCid = new QUIC_BUFFER();
+                }
+                return m_DestCid;
+            }
+        }
+
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
             this.UpdateFirstByte(buffer[0]);
@@ -121,7 +136,7 @@ namespace MSQuic1
         public byte SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
         public byte FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
         public byte IsLongHeader;// 是否为长头部（1位，短头部为0）
-        public QUIC_BUFFER m_DestCid; // 目标连接ID，
+        private QUIC_BUFFER m_DestCid; // 目标连接ID，
                                       // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
                                       // uint8_t Payload[0];             // 数据包有效载荷
         

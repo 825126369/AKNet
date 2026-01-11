@@ -199,7 +199,7 @@ namespace MSQuic1
     
     internal class QUIC_TOKEN_CONTENTS
     {
-        public const int sizeof_QUIC_TOKEN_CONTENTS = byte.MaxValue;
+        public const int sizeof_QUIC_TOKEN_CONTENTS = 100;
         public class Authenticated_DATA
         {
             private readonly byte[] bindBuffer = new byte[8];
@@ -1064,7 +1064,7 @@ namespace MSQuic1
                 var SupportedVersions = DefaultSupportedVersionsList;
                 int SupportedVersionsLength = DefaultSupportedVersionsList.Count;
 
-                int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET +
+                int PacketLength = QUIC_VERSION_NEGOTIATION_PACKET.sizeof_Length +
                     RecvPacket.SourceCid.Data.Length +
                     sizeof(byte) +
                     RecvPacket.DestCid.Data.Length +

@@ -231,7 +231,7 @@ namespace MSQuic1
             {
                 NetLog.Assert(!Stream.Flags.SentStopSending);
 
-                long RecvCompletionLength = Stream.RecvCompletionLength;
+                long RecvCompletionLength = Volatile.Read(ref Stream.RecvCompletionLength);
                 NetLog.Assert(RecvCompletionLength == 0 || Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
 
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
