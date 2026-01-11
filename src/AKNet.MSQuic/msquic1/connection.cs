@@ -3718,7 +3718,7 @@ namespace MSQuic1
                                 break;
                             }
 
-                            int Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, Frame);
+                            int Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, ref Frame);
                             if (QUIC_SUCCEEDED(Status))
                             {
                                 AckEliciting = true;

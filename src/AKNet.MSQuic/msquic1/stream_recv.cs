@@ -68,7 +68,7 @@ namespace MSQuic1
                 Stream.Flags.ReceiveEnabled = false;
                 Stream.Flags.ReceiveDataPending = false;
 
-                int TotalRecvLength = QuicRecvBufferGetTotalLength(Stream.RecvBuffer);
+                long TotalRecvLength = QuicRecvBufferGetTotalLength(Stream.RecvBuffer);
                 if (TotalRecvLength > FinalSize)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_FINAL_SIZE_ERROR);
@@ -589,23 +589,56 @@ namespace MSQuic1
             }
             else
             {
-                int WriteLength = (int)(Stream.Connection.Send.MaxData - Stream.Connection.Send.OrderedStreamBytesReceived);
+                long FlowControlQuota = Stream.Connection.Send.MaxData - Stream.Connection.Send.OrderedStreamBytesReceived;
+                long QuotaConsumed = 0;
+                long BufferSizeNeeded = 0;
+
                 Status = QuicRecvBufferWrite(
                             Stream.RecvBuffer,
                             Frame.Offset,
-                            Frame.Length,
+                            (ushort)Frame.Length,
                             Frame.Data,
-                            ref WriteLength,
-                            ref ReadyToDeliver);
+                            FlowControlQuota,
+                            out QuotaConsumed,
+                            out ReadyToDeliver,
+                            out BufferSizeNeeded);
+
+
+                if (BufferSizeNeeded > 0 && Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+                {
+                    NetLog.Assert(Status == QUIC_STATUS_BUFFER_TOO_SMALL);
+                    QuicStreamNotifyReceiveBufferNeeded(Stream, BufferSizeNeeded);
+                    if (Stream.Flags.SentStopSending)
+                    {
+                        Status = QUIC_STATUS_SUCCESS;
+                        goto Error;
+                    }
+
+                    Status =
+                        QuicRecvBufferWrite(
+                            Stream.RecvBuffer,
+                            Frame.Offset,
+                            (ushort)Frame.Length,
+                            Frame.Data,
+                            FlowControlQuota,
+                            out QuotaConsumed,
+                            out ReadyToDeliver,
+                            out BufferSizeNeeded);
+                }
 
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;
                 }
 
-                Stream.Connection.Send.OrderedStreamBytesReceived += WriteLength;
+                Stream.Connection.Send.OrderedStreamBytesReceived += QuotaConsumed;
                 NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived <= Stream.Connection.Send.MaxData);
-                NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived >= WriteLength);
+                NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived >= QuotaConsumed);
+
+                if (QuicRecvBufferGetTotalLength(Stream.RecvBuffer) == Stream.MaxAllowedRecvOffset)
+                {
+                   
+                }
 
                 if (EncryptedWith0Rtt)
                 {

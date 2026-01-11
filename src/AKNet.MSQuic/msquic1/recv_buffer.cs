@@ -83,8 +83,8 @@ namespace MSQuic1
         public QUIC_RECV_CHUNK PreallocatedChunk;
         public QUIC_RECV_CHUNK RetiredChunk;
         public readonly QUIC_RANGE WrittenRanges = new QUIC_RANGE();
-        public int ReadPendingLength;
-        public int BaseOffset;
+        public long ReadPendingLength;
+        public long BaseOffset;
         public int ReadStart;
         public int ReadLength;
         public int VirtualBufferLength;
@@ -159,14 +159,14 @@ namespace MSQuic1
             NetLog.Assert(RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
             NetLog.Assert(!CxPlatListIsEmpty(Chunks));
 
-            int NewBufferLength = RecvBuffer.VirtualBufferLength;
+            long NewBufferLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
             for (CXPLAT_LIST_ENTRY Link = Chunks.Next; Link != Chunks; Link = Link.Next)
             {
                 QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Link);
-                NewBufferLength += Chunk.Buffer.Length;
+                NewBufferLength += Chunk.AllocLength;
             }
 
-            if (NewBufferLength > int.MaxValue)
+            if (NewBufferLength > uint.MaxValue)
             {
                 return QUIC_STATUS_INVALID_PARAMETER;
             }
@@ -179,7 +179,7 @@ namespace MSQuic1
                 RecvBuffer.Capacity = FirstChunk.Buffer.Length;
             }
 
-            RecvBuffer.VirtualBufferLength = NewBufferLength;
+            RecvBuffer.VirtualBufferLength = Math.Max(RecvBuffer.VirtualBufferLength, (int)NewBufferLength);
             CxPlatListMoveItems(Chunks, RecvBuffer.Chunks);
             return QUIC_STATUS_SUCCESS;
         }
@@ -199,14 +199,14 @@ namespace MSQuic1
             }
         }
 
-        static int QuicRecvBufferGetTotalLength(QUIC_RECV_BUFFER RecvBuffer)
+        static long QuicRecvBufferGetTotalLength(QUIC_RECV_BUFFER RecvBuffer)
         {
             if (QuicRangeGetMaxSafe(RecvBuffer.WrittenRanges, out ulong TotalLength))
             {
                 TotalLength++;
             }
-            NetLog.Assert((int)TotalLength >= RecvBuffer.BaseOffset);
-            return (int)TotalLength;
+            NetLog.Assert((long)TotalLength >= RecvBuffer.BaseOffset);
+            return (long)TotalLength;
         }
 
         static int QuicRecvBufferReadBufferNeededCount(QUIC_RECV_BUFFER RecvBuffer)
@@ -255,10 +255,10 @@ namespace MSQuic1
 
             QUIC_SUBRANGE FirstRange = QuicRangeGet(RecvBuffer.WrittenRanges, 0);
             NetLog.Assert(FirstRange.Low == 0 || (int)FirstRange.Count > RecvBuffer.BaseOffset);
-            int ContiguousLength = (int)FirstRange.Count - RecvBuffer.BaseOffset;
+            long ContiguousLength = FirstRange.Count - RecvBuffer.BaseOffset;
 
             QUIC_RECV_CHUNK_ITERATOR Iterator = QuicRecvBufferGetChunkIterator(RecvBuffer, RecvBuffer.ReadPendingLength);
-            int ReadableDataLeft = ContiguousLength - RecvBuffer.ReadPendingLength;
+            long ReadableDataLeft = ContiguousLength - RecvBuffer.ReadPendingLength;
             int CurrentBufferId = 0;
 
             while (CurrentBufferId < BufferCount && ReadableDataLeft > 0 && 
@@ -266,7 +266,7 @@ namespace MSQuic1
             {
                 if (Buffers[CurrentBufferId].Length > ReadableDataLeft)
                 {
-                    Buffers[CurrentBufferId].Length = ReadableDataLeft;
+                    Buffers[CurrentBufferId].Length = (int)ReadableDataLeft;
                 }
                 ReadableDataLeft -= Buffers[CurrentBufferId].Length;
                 CurrentBufferId++;
@@ -283,9 +283,9 @@ namespace MSQuic1
             QuicRecvBufferValidate(RecvBuffer);
         }
 
-        static void QuicRecvBufferDrainFullChunks(QUIC_RECV_BUFFER RecvBuffer, ref int DrainLength)
+        static void QuicRecvBufferDrainFullChunks(QUIC_RECV_BUFFER RecvBuffer, ref long DrainLength)
         {
-            int RemainingDrainLength = DrainLength;
+            long RemainingDrainLength = DrainLength;
             QUIC_RECV_CHUNK_ITERATOR Iterator = QuicRecvBufferGetChunkIterator(RecvBuffer, 0);
             QUIC_RECV_CHUNK NewFirstChunk = Iterator.NextChunk;
             while (QuicRecvChunkIteratorNext(ref Iterator, false, out QUIC_SSBuffer Buffer))
@@ -325,27 +325,27 @@ namespace MSQuic1
             RecvBuffer.Capacity = NewFirstChunk != null ? NewFirstChunk.AllocLength : 0;
             RecvBuffer.ReadStart = 0;
             RecvBuffer.ReadLength = Math.Min(RecvBuffer.Capacity,
-                   (QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset));
+                   (int)(QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset));
 
             DrainLength = RemainingDrainLength;
         }
 
 
-        static void QuicRecvBufferDrainFirstChunk(QUIC_RECV_BUFFER RecvBuffer, int DrainLength)
+        static void QuicRecvBufferDrainFirstChunk(QUIC_RECV_BUFFER RecvBuffer, long DrainLength)
         {
             QUIC_RECV_CHUNK FirstChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
             NetLog.Assert(DrainLength < RecvBuffer.Capacity);
 
-            RecvBuffer.ReadStart = (RecvBuffer.ReadStart + DrainLength) % FirstChunk.AllocLength;
+            RecvBuffer.ReadStart = (int)(RecvBuffer.ReadStart + DrainLength) % FirstChunk.AllocLength;
 
             if (RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED ||
                 FirstChunk.Link.Next != RecvBuffer.Chunks)
             {
-                RecvBuffer.Capacity -= DrainLength;
+                RecvBuffer.Capacity -= (int)DrainLength;
             }
 
             RecvBuffer.ReadLength = Math.Min(RecvBuffer.Capacity,
-                   (QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset));
+                   (int)(QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset));
 
             if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE && RecvBuffer.ReadStart != 0)
             {
@@ -358,7 +358,7 @@ namespace MSQuic1
         //用于手动清空（drain）接收缓冲区中已读取但尚未被应用消费的数据（即“释放已确认接收的字节”）。
         //作用 当应用通过 MsQuicStreamReceiveComplete() 告知 MSQuic “我已处理完某段数据” 后，
         //该函数会将对应范围从接收窗口中移除，从而向对端通告更多接收窗口（ACK + window update），驱动流量继续。
-        static bool QuicRecvBufferDrain(QUIC_RECV_BUFFER RecvBuffer, int DrainLength)
+        static bool QuicRecvBufferDrain(QUIC_RECV_BUFFER RecvBuffer, long DrainLength)
         {
             NetLog.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
             NetLog.Assert(DrainLength <= RecvBuffer.ReadPendingLength);
@@ -424,7 +424,7 @@ namespace MSQuic1
             }
 
             NetLog.Assert((int)FirstRange.Count >= RecvBuffer.BaseOffset);
-            int ContiguousLength = (int)FirstRange.Count - RecvBuffer.BaseOffset;
+            long ContiguousLength = (int)FirstRange.Count - RecvBuffer.BaseOffset;
             return ContiguousLength > RecvBuffer.ReadPendingLength;
         }
 
@@ -437,52 +437,77 @@ namespace MSQuic1
             RecvBuffer.ReadPendingLength = 0;
         }
 
-        static int QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, QUIC_SSBuffer WriteBuffer, ref int WriteLimit, ref bool ReadyToRead)
+        //Quota限额
+        static int QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, long WriteOffset, ushort WriteLength, 
+            QUIC_SSBuffer WriteBuffer, long WriteQuota, 
+            out long QuotaConsumed, out bool NewDataReady, out long BufferSizeNeeded)
         {
             NetLog.Assert(WriteLength != 0);
-            ReadyToRead = false;
+            NewDataReady = false;
+            QuotaConsumed = 0;
+            BufferSizeNeeded = 0;
 
-            int AbsoluteLength = WriteOffset + WriteLength;
+            long AbsoluteLength = WriteOffset + WriteLength;
             if (AbsoluteLength <= RecvBuffer.BaseOffset)
             {
-                WriteLimit = 0;
+                //RecvBuffer->BaseOffset 是接收端已按序交付给应用的最远位置（也就是“缺口”的起始位置）。
+                //如果本次数据整个区间都在 BaseOffset 左边（含等于），
+                //说明它早已收到并交付过，现在又来一份完全重叠或更老的副本，自然可以直接忽略
                 return QUIC_STATUS_SUCCESS;
             }
-
+            
             if (AbsoluteLength > RecvBuffer.BaseOffset + RecvBuffer.VirtualBufferLength)
             {
+                //是接收端为这条流预分配的“虚拟环形缓冲区”总大小（默认 512 KB，可随窗口自动增长，但增长前是定值）。
+                //它表示：在当前 BaseOffset 之后，我最多还能缓存多少字节的乱序数据。
+                //RecvBuffer.BaseOffset + RecvBuffer.VirtualBufferLength
+                //就是“当前我能接受的最远逻辑偏移”。任何数据只要右边界超过这条线，就暂时没地方存。
+                //一旦本次 STREAM 帧的 WriteOffset+WriteLength 大于上面那条线，
+                //说明它完全或部分落在缓冲区之外，即使后来数据真的有用，现在也没空间缓存，于是直接返回
+                //QUIC_STATUS_BUFFER_TOO_SMALL
+                //告诉发送方：“我这边窗口 / 缓存不够，你先别发”
                 return QUIC_STATUS_BUFFER_TOO_SMALL;
             }
-
-
-            int CurrentMaxLength = QuicRecvBufferGetTotalLength(RecvBuffer);
+            
+            long CurrentMaxLength = QuicRecvBufferGetTotalLength(RecvBuffer);
             if (AbsoluteLength > CurrentMaxLength)
             {
-                if (AbsoluteLength - CurrentMaxLength > WriteLimit)
+                //CurrentMaxLength 返回的是当前已缓存的乱序数据总长度（单位：字节）。
+                //只有本次 STREAM 帧要写入的右边界超过了当前已缓存的尾部，才会真正新增缓存占用。
+                //否则只是“填洞”，不会多占内存，直接放行。
+                // WriteQuota 是连接级的“单次写入配额”，默认 64 KB（可配）。
+                //如果本次新增占用比剩余配额还大，就拒绝写入，返回
+                //QUIC_STATUS_BUFFER_TOO_SMALL
+                //相当于说：“我不能再让你一次性囤这么多乱序数据，先缓一缓。”
+                //如果配额够用，则把本次实际新增占用记下来，后面统一扣减连接级总配额
+                if (AbsoluteLength - CurrentMaxLength > WriteQuota)
                 {
                     return QUIC_STATUS_BUFFER_TOO_SMALL;
                 }
-                WriteLimit = AbsoluteLength - CurrentMaxLength;
-            }
-            else
-            {
-                WriteLimit = 0;
+                QuotaConsumed = AbsoluteLength - CurrentMaxLength;
             }
 
-            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+            //物理内存按需倍增
+            int AllocLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
+            if (AbsoluteLength > RecvBuffer.BaseOffset + AllocLength)
             {
-                int AllocLength = QuicRecvBufferGetTotalAllocLength(RecvBuffer);
-                if (AbsoluteLength > RecvBuffer.BaseOffset + AllocLength)
+                if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
                 {
-                    int NewBufferLength = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev).AllocLength << 1;
-                    while (AbsoluteLength > RecvBuffer.BaseOffset + NewBufferLength)
-                    {
-                        NewBufferLength <<= 1;
-                    }
-                    if (!QuicRecvBufferResize(RecvBuffer, NewBufferLength))
-                    {
-                        return QUIC_STATUS_OUT_OF_MEMORY;
-                    }
+                    BufferSizeNeeded = AbsoluteLength - (RecvBuffer.BaseOffset + AllocLength);
+                    return QUIC_STATUS_BUFFER_TOO_SMALL;
+                }
+
+                QUIC_RECV_CHUNK LastChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev);
+                int NewBufferLength = LastChunk.AllocLength << 1;
+                while (AbsoluteLength > RecvBuffer.BaseOffset + NewBufferLength)
+                {
+                    NewBufferLength <<= 1;
+                }
+
+                if (!QuicRecvBufferResize(RecvBuffer, NewBufferLength))
+                {
+                    BufferSizeNeeded = AbsoluteLength - (RecvBuffer.BaseOffset + AllocLength);
+                    return QUIC_STATUS_OUT_OF_MEMORY;
                 }
             }
 
@@ -497,12 +522,13 @@ namespace MSQuic1
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
+
             if (!WrittenRangesUpdated)
             {
                 return QUIC_STATUS_SUCCESS;
             }
 
-            ReadyToRead = UpdatedRange.Low == 0;
+            NewDataReady = UpdatedRange.Low == 0;
             QuicRecvBufferCopyIntoChunks(RecvBuffer, WriteOffset, WriteLength, WriteBuffer);
             QuicRecvBufferValidate(RecvBuffer);
             return QUIC_STATUS_SUCCESS;
@@ -540,37 +566,37 @@ namespace MSQuic1
 #endif
         }
 
-        static void QuicRecvBufferCopyIntoChunks(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, QUIC_SSBuffer WriteBuffer)
+        static void QuicRecvBufferCopyIntoChunks(QUIC_RECV_BUFFER RecvBuffer, long WriteOffset, ushort WriteLength, QUIC_SSBuffer WriteBuffer)
         {
             if (WriteOffset < RecvBuffer.BaseOffset)
             {
                 //收到的数据有重叠了
                 NetLog.Assert(RecvBuffer.BaseOffset - WriteOffset < ushort.MaxValue);
-                int Diff = (RecvBuffer.BaseOffset - WriteOffset);
+                ushort Diff = (ushort)(RecvBuffer.BaseOffset - WriteOffset);
                 WriteOffset += Diff;
                 WriteLength -= Diff;
                 WriteBuffer += Diff;
             }
 
-            int RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
+            long RelativeOffset = WriteOffset - RecvBuffer.BaseOffset;
             QUIC_RECV_CHUNK_ITERATOR Iterator = QuicRecvBufferGetChunkIterator(RecvBuffer, RelativeOffset);
             while (WriteLength != 0 && QuicRecvChunkIteratorNext(ref Iterator, false, out QUIC_SSBuffer Buffer))
             {
                 int CopyLength = Math.Min(Buffer.Length, WriteLength);
                 WriteBuffer.Slice(0, CopyLength).CopyTo(Buffer);
                 WriteBuffer += CopyLength;
-                WriteLength -= CopyLength;
+                WriteLength -= (ushort)CopyLength;
             }
 
             NetLog.Assert(WriteLength == 0); // Should always have enough room to copy everything
             QUIC_SUBRANGE FirstRange = QuicRangeGet(RecvBuffer.WrittenRanges, 0);
             if (FirstRange.Low == 0)
             {
-                RecvBuffer.ReadLength = Math.Min(RecvBuffer.Capacity, FirstRange.Count - RecvBuffer.BaseOffset);
+                RecvBuffer.ReadLength = (int)Math.Min(RecvBuffer.Capacity, FirstRange.Count - RecvBuffer.BaseOffset);
             }
         }
 
-        static QUIC_RECV_CHUNK_ITERATOR QuicRecvBufferGetChunkIterator(QUIC_RECV_BUFFER RecvBuffer, int Offset)
+        static QUIC_RECV_CHUNK_ITERATOR QuicRecvBufferGetChunkIterator(QUIC_RECV_BUFFER RecvBuffer, long Offset)
         {
             QUIC_RECV_CHUNK_ITERATOR Iterator = new QUIC_RECV_CHUNK_ITERATOR();
             Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
@@ -578,7 +604,7 @@ namespace MSQuic1
 
             if (Offset < RecvBuffer.Capacity)
             {
-                Iterator.StartOffset = (RecvBuffer.ReadStart + Offset) % Iterator.NextChunk.AllocLength;
+                Iterator.StartOffset = (int)(RecvBuffer.ReadStart + Offset) % Iterator.NextChunk.AllocLength;
                 Iterator.EndOffset = (RecvBuffer.ReadStart + RecvBuffer.Capacity - 1) % Iterator.NextChunk.AllocLength;
                 return Iterator;
             }
@@ -593,7 +619,7 @@ namespace MSQuic1
                 Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Iterator.NextChunk.Link.Next);
             }
 
-            Iterator.StartOffset = Offset;
+            Iterator.StartOffset = (int)Offset;
             Iterator.EndOffset = Iterator.NextChunk.AllocLength - 1;
             return Iterator;
         }
@@ -644,30 +670,24 @@ namespace MSQuic1
 
         static int QuicRecvBufferGetSpan(QUIC_RECV_BUFFER RecvBuffer)
         {
-            return QuicRecvBufferGetTotalLength(RecvBuffer) - RecvBuffer.BaseOffset;
+            return (int)(QuicRecvBufferGetTotalLength(RecvBuffer) - RecvBuffer.BaseOffset);
         }
 
         static int QuicRecvBufferGetTotalAllocLength(QUIC_RECV_BUFFER RecvBuffer)
         {
-            QUIC_RECV_CHUNK Chunk = null;
-            if (RecvBuffer.RecvMode != QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
+            if (CxPlatListIsEmpty(RecvBuffer.Chunks))
             {
-                Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Prev);
-                return Chunk.Buffer.Length;
+                return 0;
             }
 
-            Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
-            if (Chunk.Link.Next == RecvBuffer.Chunks)
+            int AllocLength = RecvBuffer.Capacity;
+            //这里忽略第一个块
+            // 如果存在更多区块且该区块正在被使用，则第一个区块的容量可能会减少
+            // 已被消耗）。其他块始终以其完整分配大小进行分配。
+            for (CXPLAT_LIST_ENTRY Link = RecvBuffer.Chunks.Next.Next; Link != RecvBuffer.Chunks; Link = Link.Next)
             {
-                return Chunk.Buffer.Length;
-            }
-
-            int AllocLength = RecvBuffer.ReadLength;
-            while (Chunk.Link.Next != RecvBuffer.Chunks)
-            {
-                Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Chunk.Link.Next);
-                NetLog.Assert(AllocLength + Chunk.Buffer.Length < int.MaxValue);
-                AllocLength += Chunk.Buffer.Length;
+                QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Link);
+                AllocLength += Chunk.AllocLength;
             }
             return AllocLength;
         }

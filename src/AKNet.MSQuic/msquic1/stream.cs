@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -838,5 +839,17 @@ namespace MSQuic1
             }
         }
 
+        static void QuicStreamNotifyReceiveBufferNeeded(QUIC_STREAM Stream, long BufferLengthNeeded)
+        {
+            NetLog.Assert(Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);
+
+            QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
+            Event.Type =  QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE_BUFFER_NEEDED;
+            Event.RECEIVE_BUFFER_NEEDED.BufferLengthNeeded = BufferLengthNeeded;
+            QuicStreamIndicateEvent(Stream, ref Event);
+        }
+
     }
+
+
 }

@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("AKNet.Quic")]
@@ -24,7 +25,8 @@ namespace MSQuic1
         public IDEAL_SEND_BUFFER_SIZE_DATA IDEAL_SEND_BUFFER_SIZE;
         public CANCEL_ON_LOSS_DATA CANCEL_ON_LOSS;
         public SHUTDOWN_COMPLETE_DATA SHUTDOWN_COMPLETE;
-        
+        public RECEIVE_BUFFER_NEEDED_DATA RECEIVE_BUFFER_NEEDED;
+
         public struct START_COMPLETE_DATA
         {
             public int Status;
@@ -82,6 +84,11 @@ namespace MSQuic1
         public struct CANCEL_ON_LOSS_DATA
         {
             public int ErrorCode;
+        }
+
+        public struct RECEIVE_BUFFER_NEEDED_DATA
+        {
+            public long BufferLengthNeeded;
         }
     }
 }

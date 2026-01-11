@@ -48,7 +48,7 @@ namespace MSQuic1
         public int NumPacketsSentWithEct;
         public long MaxData;
         public int PeerMaxData;
-        public int OrderedStreamBytesReceived;
+        public long OrderedStreamBytesReceived;
         public int OrderedStreamBytesSent;
         public long OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;

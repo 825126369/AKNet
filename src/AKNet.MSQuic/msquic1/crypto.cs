@@ -1268,11 +1268,11 @@ namespace MSQuic1
             QuicCryptoValidate(Crypto);
         }
 
-        static int QuicCryptoProcessFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame)
+        static int QuicCryptoProcessFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, ref QUIC_CRYPTO_EX Frame)
         {
             int Status = QUIC_STATUS_SUCCESS;
             bool DataReady = false;
-            Status = QuicCryptoProcessDataFrame(Crypto, KeyType, Frame, ref DataReady);
+            Status = QuicCryptoProcessDataFrame(Crypto, KeyType, ref Frame, ref DataReady);
             if (QUIC_FAILED(Status) || !DataReady)
             {
                 goto Error;
@@ -1294,13 +1294,13 @@ namespace MSQuic1
             return Status;
         }
 
-        static int QuicCryptoProcessDataFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, QUIC_CRYPTO_EX Frame, ref bool DataReady)
+        static int QuicCryptoProcessDataFrame(QUIC_CRYPTO Crypto, QUIC_PACKET_KEY_TYPE KeyType, ref QUIC_CRYPTO_EX Frame, ref bool DataReady)
         {
             int Status;
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);
-            int FlowControlLimit = ushort.MaxValue;
-
+            long FlowControlQuota = ushort.MaxValue;
             DataReady = false;
+
             if (Frame.Length == 0)
             {
                 Status = QUIC_STATUS_SUCCESS;
@@ -1323,13 +1323,17 @@ namespace MSQuic1
                     goto Error;
                 }
 
+                long BufferSizeNeeded = 0;
                 Status = QuicRecvBufferWrite(Crypto.RecvBuffer,
                         Crypto.RecvEncryptLevelStartOffset + Frame.Offset,
-                        Frame.Length,
+                        (ushort)Frame.Length,
                         Frame.Data,
-                        ref FlowControlLimit,
-                        ref DataReady);
+                        FlowControlQuota,
+                        out FlowControlQuota,
+                        out DataReady,
+                        out BufferSizeNeeded);
 
+                NetLog.Assert(BufferSizeNeeded == 0);
                 if (QUIC_FAILED(Status))
                 {
                     if (Status == QUIC_STATUS_BUFFER_TOO_SMALL)
