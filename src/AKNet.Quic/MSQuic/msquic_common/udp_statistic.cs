@@ -21,13 +21,7 @@ namespace AKNet.Common
     {
         public static void PrintInfo()
         {
-            //NetLog.Log("Quic UDP 统计信息: ");
-            //foreach(QUIC_WORKER v in MsQuicApi.Api.Registration.WorkerPool.Workers)
-            //{
-            //    NetLog.Log($"分区信息: 处理器Id:{v.Partition.Processor} Index: {v.Partition.Index}");
-            //    MSQuicFunc.QuicPartitionPrintPerfCounters(v.Partition);
-            //}
-
+            NetLog.Log("-----------");
             NetLog.Log("Quic UDP 所有分区总共统计信息: ");
             MSQuicFunc.QuicPerfCounterSnapShot(0);
             MSQuicFunc.udp_statistic_printInfo();

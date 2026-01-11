@@ -226,7 +226,7 @@ namespace MSQuic1
         public BlockedTimings_DATA BlockedTimings;
 
         //xuke 自定义
-        public readonly QUIC_BUFFER[] RecvBuffers = new QUIC_BUFFER[3]
+        public readonly QUIC_BUFFER[] StackRecvBuffers = new QUIC_BUFFER[3]
         {
             new QUIC_BUFFER(),new QUIC_BUFFER(),new QUIC_BUFFER(),
         };

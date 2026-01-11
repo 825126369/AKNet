@@ -437,52 +437,10 @@ namespace MSQuic1
             RecvBuffer.ReadPendingLength = 0;
         }
 
-        static int QuicRecvBufferFullDrain(QUIC_RECV_BUFFER RecvBuffer, int DrainLength)
-        {
-            NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
-            QUIC_RECV_CHUNK Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
-            NetLog.Assert(Chunk.ExternalReference);
-
-            Chunk.ExternalReference = false;
-            DrainLength -= RecvBuffer.ReadLength;
-            RecvBuffer.ReadStart = 0;
-            RecvBuffer.BaseOffset += RecvBuffer.ReadLength;
-            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
-            {
-                RecvBuffer.ReadPendingLength -= RecvBuffer.ReadLength;
-            }
-            RecvBuffer.ReadLength = (int)((int)QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset);
-
-            if (Chunk.Link.Next == RecvBuffer.Chunks)
-            {
-                NetLog.Assert(DrainLength == 0, "App drained more than was available!");
-                NetLog.Assert(RecvBuffer.ReadLength == 0);
-                return 0;
-            }
-
-            CxPlatListEntryRemove(Chunk.Link);
-            if (Chunk != RecvBuffer.PreallocatedChunk)
-            {
-                Chunk = null;
-            }
-
-            if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE)
-            {
-                Chunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(RecvBuffer.Chunks.Next);
-                RecvBuffer.Capacity = Chunk.AllocLength;
-                if (Chunk.AllocLength < RecvBuffer.ReadLength)
-                {
-                    RecvBuffer.ReadLength = Chunk.AllocLength;
-                }
-            }
-
-            return DrainLength;
-        }
-
         static int QuicRecvBufferWrite(QUIC_RECV_BUFFER RecvBuffer, int WriteOffset, int WriteLength, QUIC_SSBuffer WriteBuffer, ref int WriteLimit, ref bool ReadyToRead)
         {
             NetLog.Assert(WriteLength != 0);
-            ReadyToRead = false; // Most cases below aren't ready to read.
+            ReadyToRead = false;
 
             int AbsoluteLength = WriteOffset + WriteLength;
             if (AbsoluteLength <= RecvBuffer.BaseOffset)
