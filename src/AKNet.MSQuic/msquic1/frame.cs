@@ -879,7 +879,7 @@ namespace MSQuic1
             return true;
         }
 
-        static bool QuicMaxStreamsFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, QUIC_MAX_STREAMS_EX Frame)
+        static bool QuicMaxStreamsFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref QUIC_MAX_STREAMS_EX Frame)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Frame.MaximumStreams))
             {
@@ -889,7 +889,7 @@ namespace MSQuic1
             return true;
         }
 
-        static bool QuicNewTokenFrameDecode(ref QUIC_SSBuffer Buffer, QUIC_NEW_TOKEN_EX Frame)
+        static bool QuicNewTokenFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_NEW_TOKEN_EX Frame)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Frame.TokenLength) || Buffer.Length < Frame.TokenLength)
             {

@@ -3752,7 +3752,7 @@ namespace MSQuic1
                     case QUIC_FRAME_TYPE.QUIC_FRAME_NEW_TOKEN:
                         {
                             QUIC_NEW_TOKEN_EX Frame = new QUIC_NEW_TOKEN_EX();
-                            if (!QuicNewTokenFrameDecode(ref Payload, Frame))
+                            if (!QuicNewTokenFrameDecode(ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -3884,7 +3884,7 @@ namespace MSQuic1
                     case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
                         {
                             QUIC_MAX_STREAMS_EX Frame = new QUIC_MAX_STREAMS_EX();
-                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, Frame))
+                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
