@@ -469,10 +469,10 @@ namespace MSQuic1
                     break;
                 }
 
-                //if (CqeCount >= 32)
-                //{
-                //    break;
-                //}
+                if (CqeCount >= 32)
+                {
+                    break;
+                }
             }
 
             InterlockedFetchAndSetBoolean(ref Worker.Running);
