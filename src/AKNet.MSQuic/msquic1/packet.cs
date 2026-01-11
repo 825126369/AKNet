@@ -615,7 +615,7 @@ namespace MSQuic1
                 return false;
             }
 
-            if (TokenBuffer.Length != QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS)
+            if (TokenBuffer.Length != QUIC_TOKEN_CONTENTS.sizeof_Length)
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid Token Length");
                 DropPacket = true;
@@ -668,7 +668,7 @@ namespace MSQuic1
 
         static int QuicPacketMaxBufferSizeForRetryV1()
         {
-            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS;
+            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_Length;
         }
 
         //因为内存或其他原因导致连接失败时，会重试连接

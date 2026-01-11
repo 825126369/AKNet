@@ -199,53 +199,88 @@ namespace MSQuic1
     
     internal class QUIC_TOKEN_CONTENTS
     {
-        public const int sizeof_QUIC_TOKEN_CONTENTS = 100;
         public class Authenticated_DATA
         {
-            private readonly byte[] bindBuffer = new byte[8];
+            public const int sizeof_Length = 8;
+            private readonly byte[] bindBuffer = new byte[sizeof_Length];
             public bool IsNewToken;
             public long Timestamp;
 
-            public byte[] GetBuffer()
+            public void WriteFrom(QUIC_SSBuffer mBuffer)
             {
+                ulong TT = EndianBitConverter.ToUInt64(mBuffer.GetSpan());
+                Timestamp = Math.Abs((long)(TT));
+                IsNewToken = CommonFunc.BoolOk(TT >> 63);
+            }
+
+            public QUIC_SSBuffer GetBuffer()
+            {
+                ulong TT = (ulong)((IsNewToken ? 1UL: 0UL) << 63 | (ulong)Timestamp);
+                EndianBitConverter.SetBytes(bindBuffer, 0, TT);
                 return bindBuffer;
             }
         }
 
         public class Encrypted_DATA
         {
-            private readonly byte[] bindBuffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + 20];
-            public QUIC_ADDR RemoteAddress;
+            public const int sizeof_Length = MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_ADDR.sizeof_Length;
+            private readonly byte[] bindBuffer = new byte[sizeof_Length];
+
+            private QUIC_ADDR m_RemoteAddress;
             public readonly QUIC_BUFFER OrigConnId = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
 
-            public byte[] GetBuffer()
+            public QUIC_ADDR RemoteAddress
             {
-                return bindBuffer;
+                get
+                {
+                    if (m_RemoteAddress == null)
+                    {
+                        m_RemoteAddress = new QUIC_ADDR();
+                    }
+                    return m_RemoteAddress;
+                }
+
+                set
+                {
+                    m_RemoteAddress = value;
+                }
+            }
+
+            public void WriteFrom(QUIC_SSBuffer mBuffer)
+            {
+                ulong TT = EndianBitConverter.ToUInt64(mBuffer.GetSpan());
+                RemoteAddress.WriteFrom(mBuffer.GetSpan());
+                mBuffer.Slice(QUIC_ADDR.sizeof_Length, MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1).CopyTo(OrigConnId);
+            }
+
+            public QUIC_SSBuffer GetBuffer()
+            {
+                QUIC_SSBuffer mBuffer = bindBuffer;
+                RemoteAddress.ToSSBuffer().CopyTo(mBuffer);
+                OrigConnId.CopyTo(mBuffer.Slice(QUIC_ADDR.sizeof_Length));
+                return mBuffer;
             }
         }
 
+        public const int sizeof_Length = Authenticated_DATA.sizeof_Length + Encrypted_DATA.sizeof_Length + MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD;
         public readonly Authenticated_DATA Authenticated = new Authenticated_DATA();
         public readonly Encrypted_DATA Encrypted = new Encrypted_DATA();
         public readonly byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
 
-        public byte[] GetBuffer()
+        public QUIC_SSBuffer GetBuffer()
         {
-            return null;
+            QUIC_SSBuffer mBuffer = new byte[sizeof_Length];
+            Authenticated.GetBuffer().CopyTo(mBuffer);
+            Encrypted.GetBuffer().CopyTo(mBuffer.Slice(Authenticated_DATA.sizeof_Length));
+            ((QUIC_SSBuffer)EncryptionTag).CopyTo(mBuffer.Slice(Authenticated_DATA.sizeof_Length + Encrypted_DATA.sizeof_Length));
+            return mBuffer;
         }
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-
-        }
-
-        public void WriteFrom(byte[] buffer)
-        {
-
-        }
-
-        public void WriteTo(byte[] buffer)
-        {
-
+            Authenticated.WriteFrom(buffer);
+            Encrypted.WriteFrom(buffer.Slice(Authenticated_DATA.sizeof_Length));
+            buffer.Slice(Authenticated_DATA.sizeof_Length + Encrypted_DATA.sizeof_Length).CopyTo(EncryptionTag);
         }
     }
 

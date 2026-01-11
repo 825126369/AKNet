@@ -2978,7 +2978,7 @@ namespace MSQuic1
                     if (!InvalidRetryToken)
                     {
                         NetLog.Assert(!TokenBuffer.IsEmpty);
-                        NetLog.Assert(TokenBuffer.Length == QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS);
+                        NetLog.Assert(TokenBuffer.Length == QUIC_TOKEN_CONTENTS.sizeof_Length);
 
                         QUIC_TOKEN_CONTENTS Token = null;
                         if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, out Token))

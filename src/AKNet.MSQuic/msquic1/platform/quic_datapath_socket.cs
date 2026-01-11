@@ -21,6 +21,7 @@ namespace MSQuic1
     //一律强制转为IpV6地址
     internal class QUIC_ADDR
     {
+        public const int sizeof_Length = 28;
         public string ServerName;
         private IPEndPoint mEndPoint;
         private byte[] mAddressCache = new byte[16];
@@ -144,7 +145,7 @@ namespace MSQuic1
 
         public void WriteFrom(ReadOnlySpan<byte> Buffer)
         {
-            SocketAddress m = new SocketAddress(AddressFamily.InterNetworkV6, 28);
+            SocketAddress m = new SocketAddress(AddressFamily.InterNetworkV6, sizeof_Length);
             for (int i = 0; i < m.Size; i++)
             {
                 m[i] = Buffer[i];
@@ -155,7 +156,7 @@ namespace MSQuic1
 
         public QUIC_SSBuffer ToSSBuffer()
         {
-            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[28]);
+            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[sizeof_Length]);
             int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
             qUIC_SSBuffer.Length = nLength;
             return qUIC_SSBuffer;

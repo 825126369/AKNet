@@ -181,7 +181,7 @@ namespace MSQuic1
                 //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
                 //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
                 //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
-                //CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
             }
             else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
             {
@@ -209,7 +209,11 @@ namespace MSQuic1
                 //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
                 //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
                 //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
-                //CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+                CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+            }
+            else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            {
+                CXPLAT_AES_256_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
             }
             return QUIC_STATUS_SUCCESS;
         }
