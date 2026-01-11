@@ -167,7 +167,7 @@ namespace MSQuic1
 
         static void QuicStreamOnBytesDelivered(QUIC_STREAM Stream, long BytesDelivered)
         {
-            int RecvBufferDrainThreshold = Stream.RecvBuffer.VirtualBufferLength / QUIC_RECV_BUFFER_DRAIN_RATIO;
+            long RecvBufferDrainThreshold = Stream.RecvBuffer.VirtualBufferLength / QUIC_RECV_BUFFER_DRAIN_RATIO;
 
             Stream.RecvWindowBytesDelivered += BytesDelivered;
             Stream.Connection.Send.MaxData += BytesDelivered;
@@ -183,7 +183,8 @@ namespace MSQuic1
             if (Stream.RecvWindowBytesDelivered >= RecvBufferDrainThreshold)
             {
                 long TimeNow = CxPlatTimeUs();
-                if (Stream.RecvBuffer.VirtualBufferLength < Stream.Connection.Settings.ConnFlowControlWindow)
+                if (Stream.RecvBuffer.VirtualBufferLength != 0 && 
+                    Stream.RecvBuffer.VirtualBufferLength < Stream.Connection.Settings.ConnFlowControlWindow)
                 {
                     long TimeThreshold = ((Stream.RecvWindowBytesDelivered * Stream.Connection.Paths[0].SmoothedRtt) / RecvBufferDrainThreshold);
                     if (CxPlatTimeDiff(Stream.RecvWindowLastUpdate, TimeNow) <= TimeThreshold)

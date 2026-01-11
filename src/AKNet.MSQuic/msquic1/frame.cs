@@ -331,18 +331,6 @@ namespace MSQuic1
             return Buffer.Slice(1);
         }
 
-        static bool QuicUint8tDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
-        {
-            if (Buffer.Length < 1)
-            {
-                return false;
-            }
-
-            Value = Buffer[0];
-            Buffer = Buffer.Slice(1);
-            return true;
-        }
-
         static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
         {
             int RequiredLength = sizeof(byte) + QuicVarIntSize(Frame.ErrorCode) + QuicVarIntSize(Frame.StreamID) + QuicVarIntSize(Frame.FinalSize);

@@ -713,8 +713,12 @@ namespace MSQuic1
             int Status = QuicRecvBufferProvideChunks(Stream.RecvBuffer, Chunks);
             if (Status == QUIC_STATUS_SUCCESS)
             {
-                Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength;
-                QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA, false);
+                long NewMaxAllowedRecvOffset = Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength;
+                if (Stream.MaxAllowedRecvOffset < NewMaxAllowedRecvOffset)
+                {
+                    Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength;
+                    QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA, false);
+                }
             }
             return Status;
         }

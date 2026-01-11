@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic1
 {
@@ -176,16 +177,19 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
+        [Conditional("DEBUG")]
         public static void NET_ADD_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib)
         {
             Partition.udp_statistic.NET_ADD_STATS(mMib);
         }
 
+        [Conditional("DEBUG")]
         public static void NET_ADD_AVERAGE_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib, double nValue)
         {
             Partition.udp_statistic.NET_ADD_AVERAGE_STATS(mMib, nValue);
         }
 
+        [Conditional("DEBUG")]
         public static void udp_statistic_printInfo()
         {
             quic_partition_udp_statistic mm = new quic_partition_udp_statistic();
