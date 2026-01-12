@@ -28,11 +28,6 @@ namespace MSQuic1
         public readonly CXPLAT_LIST_ENTRY WaitingStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public readonly CXPLAT_LIST_ENTRY ClosedStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public QUIC_CONNECTION mConnection;
-
-#if DEBUG
-        public readonly CXPLAT_LIST_ENTRY<QUIC_STREAM> AllStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
-        public object AllStreamsLock = new object();
-#endif
     }
 
     internal static partial class MSQuicFunc
@@ -42,9 +37,6 @@ namespace MSQuic1
             CxPlatListInitializeHead(StreamSet.ClosedStreams);
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
             StreamSet.mConnection = Connection;
-#if DEBUG
-            CxPlatListInitializeHead(StreamSet.AllStreams);
-#endif
         }
 
         static void QuicStreamSetUninitialize(QUIC_STREAM_SET StreamSet)

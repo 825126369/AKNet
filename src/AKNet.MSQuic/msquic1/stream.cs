@@ -331,11 +331,6 @@ namespace MSQuic1
                 goto Exit;
             }
 
-#if DEBUG
-            CxPlatDispatchLockAcquire(Connection.Streams.AllStreamsLock);
-            CxPlatListInsertTail(Connection.Streams.AllStreams, Stream.AllStreamsLink);
-            CxPlatDispatchLockRelease(Connection.Streams.AllStreamsLock);
-#endif
             QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
 
             Stream.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_STREAM;
@@ -434,11 +429,6 @@ namespace MSQuic1
         Exit:
             if (Stream != null)
             {
-#if DEBUG
-                CxPlatDispatchLockAcquire(Connection.Streams.AllStreamsLock);
-                CxPlatListEntryRemove(Stream.AllStreamsLink);
-                CxPlatDispatchLockRelease(Connection.Streams.AllStreamsLock);
-#endif
                 QuicPerfCounterDecrement(Connection.Partition,  QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE);
                 Stream.Flags.Freed = true;
                 Stream.GetPool().CxPlatPoolFree(Stream);

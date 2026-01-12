@@ -705,65 +705,7 @@ namespace MSQuic1
                 SetFlag(ref Settings.IsSetFlags, E_SETTING_FLAG_VersionSettings, false);
             }
         }
-
-        static ulong QuicSettingsVersionSettingsToInternal(QUIC_VERSION_SETTINGS Settings, QUIC_SETTINGS InternalSettings)
-        {
-            if (Settings == null)
-            {
-                return QUIC_STATUS_INVALID_PARAMETER;
-            }
-
-            InternalSettings.IsSetFlags = 0;
-            for (int i = 0; i < Settings.AcceptableVersionsLength; ++i)
-            {
-                if (!QuicIsVersionSupported(Settings.AcceptableVersions[i]) &&
-                    !QuicIsVersionReserved(Settings.AcceptableVersions[i]))
-                {
-                    return QUIC_STATUS_INVALID_PARAMETER;
-                }
-            }
-
-            for (int i = 0; i < Settings.OfferedVersionsLength; ++i)
-            {
-                if (!QuicIsVersionSupported(Settings.OfferedVersions[i]) &&
-                    !QuicIsVersionReserved(Settings.OfferedVersions[i]))
-                {
-                    return QUIC_STATUS_INVALID_PARAMETER;
-                }
-            }
-
-            for (int i = 0; i < Settings.FullyDeployedVersions.Count; ++i)
-            {
-                if (!QuicIsVersionSupported(Settings.FullyDeployedVersions[i]) &&
-                    !QuicIsVersionReserved(Settings.FullyDeployedVersions[i]))
-                {
-                    return QUIC_STATUS_INVALID_PARAMETER;
-                }
-            }
-
-            if (Settings.AcceptableVersionsLength == 0 &&
-                Settings.FullyDeployedVersions.Count == 0 &&
-                Settings.OfferedVersionsLength == 0)
-            {
-                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
-                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
-                InternalSettings.VersionNegotiationExtEnabled = true;
-                InternalSettings.VersionSettings = null;
-            }
-            else
-            {
-                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionNegotiationExtEnabled, true);
-                InternalSettings.VersionNegotiationExtEnabled = true;
-                InternalSettings.VersionSettings = QuicSettingsCopyVersionSettings(Settings, true);
-                if (InternalSettings.VersionSettings == null)
-                {
-                    return QUIC_STATUS_OUT_OF_MEMORY;
-                }
-                SetFlag(ref InternalSettings.IsSetFlags, E_SETTING_FLAG_VersionSettings, true);
-            }
-            return QUIC_STATUS_SUCCESS;
-        }
-
+        
         static bool QuicSettingApply(QUIC_SETTINGS Destination, bool OverWrite, bool AllowMtuAndEcnChanges, QUIC_SETTINGS Source)
         {
             if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_SendBufferingEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_SendBufferingEnabled) || OverWrite))

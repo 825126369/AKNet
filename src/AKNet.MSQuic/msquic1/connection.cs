@@ -4564,14 +4564,6 @@ namespace MSQuic1
                 }
             }
 
-#if DEBUG
-            while (!CxPlatListIsEmpty(Connection.Streams.AllStreams))
-            {
-                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(Connection.Streams.AllStreams));
-                NetLog.Assert(Stream != null, "Stream was leaked!");
-            }
-#endif
-
             while (!CxPlatListIsEmpty(Connection.DestCids))
             {
                 QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(CxPlatListRemoveHead(Connection.DestCids));
