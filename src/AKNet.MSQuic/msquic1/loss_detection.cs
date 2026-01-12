@@ -10,6 +10,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace MSQuic1
@@ -899,6 +900,7 @@ namespace MSQuic1
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
         }
 
+        [Conditional("DEBUG")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection)
         {
@@ -907,29 +909,33 @@ namespace MSQuic1
             int nWaitSendCount = 0;
             int ackNeedCount = 0;
             List<ulong> mNumberList = new List<ulong>();
-            QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
-            while (Tail != null)
+            QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
+            while (mPackage != null)
             {
-                mNumberList.Add(Tail.PacketNumber);
-                if (Tail.Flags.IsAckEliciting)
+                if (mPackage.Flags.IsAckEliciting)
                 {
                     ackNeedCount++;
+                    mNumberList.Add(mPackage.PacketNumber);
                 }
 
-                Tail = Tail.Next;
+                mPackage = mPackage.Next;
                 nWaitSendCount++;
             }
 
-            Tail = LossDetection.LostPackets;
-            while (Tail != null)
+            mPackage = LossDetection.LostPackets;
+            while (mPackage != null)
             {
-                Tail = Tail.Next;
+                mPackage = mPackage.Next;
                 nLostCount++;
             }
 
-            //NetLog.Log($"PacketsInFlight: {LossDetection.PacketsInFlight}");
-            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}    {string.Join("-", mNumberList)}");
-            //NetLog.Log($"LostPackets: {nLostCount}");
+            NetLog.Log($"--------------------丢包/重传 统计------------------");
+            NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
+            NetLog.Log($"接收到的最大确认号: {LossDetection.LargestAck}");
+            NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
+            NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
+            NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
+            NetLog.Log($"LostPackets: {nLostCount}");
 #endif
         }
 
