@@ -153,6 +153,7 @@ namespace MSQuic1
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN;
                 QuicStreamIndicateEvent(Stream, ref Event);
+
                 QuicStreamTryCompleteShutdown(Stream);
                 QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA | QUIC_STREAM_SEND_FLAG_RECV_ABORT);
             }
@@ -313,7 +314,7 @@ namespace MSQuic1
 
                 if (FlushRecv)
                 {
-                    FlushRecv = QuicStreamReceiveComplete(Stream, (int)RecvCompletionLength);
+                    FlushRecv = QuicStreamReceiveComplete(Stream, RecvCompletionLength);
                 }
             }
         }
@@ -462,8 +463,8 @@ namespace MSQuic1
                 NetLog.Assert(!Stream.Flags.SentStopSending);
                 Stream.Flags.ReceiveEnabled = NewRecvEnabled;
 
-                if (Stream.Flags.Started && NewRecvEnabled && (Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE ||
-                    Stream.RecvBuffer.ReadPendingLength == 0))
+                if (Stream.Flags.Started && NewRecvEnabled && 
+                    (Stream.RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE || Stream.RecvBuffer.ReadPendingLength == 0))
                 {
                     QuicStreamRecvQueueFlush(Stream, true);
                 }

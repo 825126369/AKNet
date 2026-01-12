@@ -218,7 +218,7 @@ namespace MSQuic1
         public readonly QUIC_RECV_BUFFER RecvBuffer = new QUIC_RECV_BUFFER();
         public long RecvMax0RttLength;
         public long RecvMaxLength;
-        public long RecvPendingLength;
+        public long RecvPendingLength; //已排好队、等待应用来取
         public int RecvCompletionLength;
         public QUIC_STREAM_CALLBACK ClientCallbackHandler;
         public QUIC_OPERATION ReceiveCompleteOperation;
@@ -443,10 +443,12 @@ namespace MSQuic1
                 Stream.Flags.Freed = true;
                 Stream.GetPool().CxPlatPoolFree(Stream);
             }
+            
             if (PreallocatedRecvChunk != null)
             {
                 PreallocatedRecvChunk.GetPool().CxPlatPoolFree(PreallocatedRecvChunk);
             }
+
             return Status;
         }
 

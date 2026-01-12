@@ -83,12 +83,15 @@ namespace MSQuic1
         public QUIC_RECV_CHUNK PreallocatedChunk;
         public QUIC_RECV_CHUNK RetiredChunk;
         public readonly QUIC_RANGE WrittenRanges = new QUIC_RANGE();
-        public long ReadPendingLength;
-        public long BaseOffset;
-        public int ReadStart;
-        public int ReadLength;
+        public long ReadPendingLength;//当前已经向应用层“承诺”但尚未读完的总字节长度
+        public long BaseOffset;//逻辑偏移量，表示已按序交付给应用的最远位置（缺口起始）。所有后续乱序数据都以它为基准做相对偏移。
+        public int ReadStart; //在环形物理缓存里的起始下标（index，不是逻辑偏移）。配合 ReadLength 指出“当前这次要拷贝给应用的那块连续内存”落在哪个片段。
+        public int ReadLength; //本次准备拷贝给应用的连续字节数。
+
+        //接收窗口大小（默认 512 KB，可动态增长）。
+        //它决定 BaseOffset + VirtualBufferLength 这条“右沿”，任何逻辑偏移超过这条线的帧都会被临时拒绝（BUFFER_TOO_SMALL）
         public int VirtualBufferLength;
-        public int Capacity;
+        public int Capacity; //当前已分配的物理内存总大小
         public QUIC_RECV_BUF_MODE RecvMode;
 
         public QUIC_RECV_BUFFER()
@@ -415,6 +418,7 @@ namespace MSQuic1
             return RecvBuffer.ReadLength == 0;
         }
 
+        //看看现在能不能再塞一段新数据给应用” 的快捷判断——只有当连续收到的新字节比应用尚未读完的字节多时
         static bool QuicRecvBufferHasUnreadData(QUIC_RECV_BUFFER RecvBuffer)
         {
             QUIC_SUBRANGE FirstRange = QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0);
@@ -424,7 +428,7 @@ namespace MSQuic1
             }
 
             NetLog.Assert((int)FirstRange.Count >= RecvBuffer.BaseOffset);
-            long ContiguousLength = (int)FirstRange.Count - RecvBuffer.BaseOffset;
+            long ContiguousLength = FirstRange.Count - RecvBuffer.BaseOffset;
             return ContiguousLength > RecvBuffer.ReadPendingLength;
         }
 
@@ -608,7 +612,7 @@ namespace MSQuic1
                 Iterator.EndOffset = (RecvBuffer.ReadStart + RecvBuffer.Capacity - 1) % Iterator.NextChunk.AllocLength;
                 return Iterator;
             }
-                
+            
             Offset -= RecvBuffer.Capacity;
             Iterator.NextChunk = CXPLAT_CONTAINING_RECORD<QUIC_RECV_CHUNK>(Iterator.NextChunk.Link.Next);
 
