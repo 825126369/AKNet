@@ -8,12 +8,15 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace MSQuic1
 {
     internal struct QUIC_SUBRANGE
     {
+        public const int sizeof_Length = 16;
+
         public ulong Low;
         public int Count;
 
@@ -45,6 +48,59 @@ namespace MSQuic1
             return $"Low: {Low}, High: {High}, Count: {Count}";
         }
 
+        public override bool Equals(object? obj)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override int GetHashCode()
+        {
+            throw new NotSupportedException();
+        }
+
+        public static bool operator ==(QUIC_SUBRANGE? left, QUIC_SUBRANGE? right)
+        {
+            throw new NotSupportedException();
+        }
+
+        public static bool operator !=(QUIC_SUBRANGE? left, QUIC_SUBRANGE? right)
+        {
+            throw new NotSupportedException();
+        }
+
+        public static bool operator ==(QUIC_SUBRANGE left, QUIC_SUBRANGE? right)
+        {
+            if (right != null)
+            {
+                return left.Low == right.Value.Low && left.Count == right.Value.Count;
+            }
+            else
+            {
+                return left.IsEmpty;
+            }
+        }
+
+        public static bool operator ==(QUIC_SUBRANGE? left, QUIC_SUBRANGE right)
+        {
+            if (left != null)
+            {
+                return left.Value.Low == right.Low && left.Value.Count == right.Count;
+            }
+            else
+            {
+                return right.IsEmpty;
+            }
+        }
+
+        public static bool operator !=(QUIC_SUBRANGE left, QUIC_SUBRANGE? right)
+        {
+            return !(left == right);
+        }
+
+        public static bool operator !=(QUIC_SUBRANGE? left, QUIC_SUBRANGE right)
+        {
+            return !(left == right);
+        }
     }
 
     internal struct QUIC_RANGE_SEARCH_KEY
@@ -65,8 +121,6 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
-        public const int sizeof_QUIC_SUBRANGE = 16;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool IS_FIND_INDEX(int i)
         {
@@ -106,7 +160,7 @@ namespace MSQuic1
         {
             Range.UsedLength = 0;
             Range.MaxAllocSize = MaxAllocSize;
-            NetLog.Assert(sizeof_QUIC_SUBRANGE * QUIC_RANGE_INITIAL_SUB_COUNT <= MaxAllocSize);
+            NetLog.Assert(QUIC_SUBRANGE.sizeof_Length * QUIC_RANGE_INITIAL_SUB_COUNT <= MaxAllocSize);
             Range.SubRanges = Range.PreAllocSubRanges;
         }
 
@@ -158,8 +212,8 @@ namespace MSQuic1
             }
 
             int NewAllocLength = Range.AllocLength * 2;
-            int NewAllocSize = NewAllocLength * sizeof_QUIC_SUBRANGE;
-            NetLog.Assert(NewAllocSize > sizeof_QUIC_SUBRANGE, "Range alloc arithmetic underflow.");
+            int NewAllocSize = NewAllocLength * QUIC_SUBRANGE.sizeof_Length;
+            NetLog.Assert(NewAllocSize > QUIC_SUBRANGE.sizeof_Length, "Range alloc arithmetic underflow.");
             if (NewAllocSize > Range.MaxAllocSize)
             {
                 return false;
@@ -204,7 +258,7 @@ namespace MSQuic1
             return true;
         }
 
-        static bool QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index, ref QUIC_SUBRANGE result)
+        static QUIC_SUBRANGE? QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index)
         {
             NetLog.Assert(Index <= Range.UsedLength);
             if (Range.UsedLength == Range.AllocLength)
@@ -213,7 +267,7 @@ namespace MSQuic1
                 {
                     if (Range.MaxAllocSize == QUIC_MAX_RANGE_ALLOC_SIZE || Index == 0)
                     {
-                        return false;
+                        return null;
                     }
 
                     if (Index > 1)
@@ -250,9 +304,8 @@ namespace MSQuic1
                 }
                 Range.UsedLength++;
             }
-
-            result = Range.SubRanges[Index];
-            return true;
+            
+            return Range.SubRanges[Index];
         }
 
         static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
@@ -295,12 +348,13 @@ namespace MSQuic1
 
             if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count) //没有合并的可能了
             {
-                if (!QuicRangeMakeSpace(Range, ref i, ref Sub))
+                QUIC_SUBRANGE? SubA = QuicRangeMakeSpace(Range, ref i);
+                if (SubA == null)
                 {
-                    //增长空间失败
                     return QUIC_SUBRANGE.Empty;
                 }
 
+                Sub = SubA.Value;
                 Sub.Low = Low;
                 Sub.Count = Count;
                 RangeUpdated = true;
