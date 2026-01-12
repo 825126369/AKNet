@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic1
 {
@@ -721,6 +722,7 @@ namespace MSQuic1
             Builder.HpMask.AsSpan().Clear();
         }
 
+        [Conditional("DEBUG")]
         static void QuicPacketBuilderValidate(QUIC_PACKET_BUILDER Builder, bool ShouldHaveData)
         {
             if (ShouldHaveData)
