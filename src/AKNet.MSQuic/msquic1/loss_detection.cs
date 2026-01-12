@@ -1115,7 +1115,7 @@ namespace MSQuic1
 
             int i = 0;
             QUIC_SUBRANGE AckBlock;
-            while (!(AckBlock = QuicRangeGetSafe(AckBlocks, i++)).IsEmpty)
+            while ((AckBlock = QuicRangeGetSafe(AckBlocks, i++)) != null)
             {
                 //在收到一个新的 ACK 帧后，检查之前标记为“已丢失”的数据包是否其实已经被接收方成功接收了。
                 //如果确实被接收了，则将这些数据包标记为“虚假丢包”（spurious loss），并从“待重传队列”中移除它们。

@@ -793,7 +793,7 @@ namespace MSQuic1
             int Count = Frame.FirstAckBlock + 1;
 
             bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out DontCare).IsEmpty)
+            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out DontCare) == null)
             {
                 return false;
             }
@@ -828,7 +828,7 @@ namespace MSQuic1
 
                 Largest -=  (ulong)(Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out DontCare).IsEmpty)
+                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out DontCare) == null)
                 {
                     return false;
                 }

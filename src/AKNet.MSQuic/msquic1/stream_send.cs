@@ -542,7 +542,7 @@ namespace MSQuic1
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
-                while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Stream.RecoveryNextOffset)
+                while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && (long)Sack.Low < Stream.RecoveryNextOffset)
                 {
                     NetLog.Assert((long)Sack.End <= Stream.RecoveryNextOffset);
                 }
@@ -787,13 +787,13 @@ namespace MSQuic1
                 {
                     //在发送数据时，跳过已经被对端确认（SACKed）的数据范围，避免重复发送。
                     int i = 0;
-                    while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Left)
+                    while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && (long)Sack.Low < Left)
                     {
                         NetLog.Assert((long)Sack.End <= Left);
                     }
                 }
 
-                if (!Sack.IsEmpty)
+                if (Sack != null)
                 {
                     if (Right > (long)Sack.Low)
                     {
@@ -874,7 +874,7 @@ namespace MSQuic1
                 {
                     NetLog.Assert(Stream.RecoveryNextOffset <= Right);
                     Stream.RecoveryNextOffset = Right;
-                    if (!Sack.IsEmpty && Stream.RecoveryNextOffset == (long)Sack.Low)
+                    if (Sack != null && Stream.RecoveryNextOffset == (long)Sack.Low)
                     {
                         Stream.RecoveryNextOffset += Sack.Count;
                     }
@@ -883,7 +883,7 @@ namespace MSQuic1
                 if (Stream.NextSendOffset < Right)
                 {
                     Stream.NextSendOffset = (int)Right;
-                    if (!Sack.IsEmpty && Stream.NextSendOffset == (long)Sack.Low)
+                    if (Sack != null && Stream.NextSendOffset == (long)Sack.Low)
                     {
                         Stream.NextSendOffset += Sack.Count;
                     }
@@ -1097,7 +1097,7 @@ namespace MSQuic1
                     QuicRangeSetMin(Stream.SparseAckRanges, (ulong)Stream.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Stream.SparseAckRanges, 0);
-                    if (!Sack.IsEmpty && Sack.Low == (ulong)Stream.UnAckedOffset)
+                    if (Sack != null && Sack.Low == (ulong)Stream.UnAckedOffset)
                     {
                         Stream.UnAckedOffset = (long)(Sack.Low + (ulong)Sack.Count);
                         QuicRangeRemoveSubranges(Stream.SparseAckRanges, 0, 1);
@@ -1150,7 +1150,7 @@ namespace MSQuic1
 
                 bool SacksUpdated = false;
                 QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, out SacksUpdated);
-                if (Sack.IsEmpty)
+                if (Sack == null)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_INTERNAL_ERROR);
                 }

@@ -885,13 +885,13 @@ namespace MSQuic1
                 else
                 {
                     int i = 0;
-                    while (!(Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)Left)
+                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)Left)
                     {
                         NetLog.Assert(Sack.High < (ulong)Left);
                     }
                 }
 
-                if (!Sack.IsEmpty)
+                if (Sack != null)
                 {
                     if ((ulong)Right > Sack.Low)
                     {
@@ -1007,7 +1007,7 @@ namespace MSQuic1
                 {
                     NetLog.Assert(Crypto.RecoveryNextOffset <= Right);
                     Crypto.RecoveryNextOffset = (int)Right;
-                    if (!Sack.IsEmpty && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
+                    if (Sack != null && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
                     {
                         Crypto.RecoveryNextOffset += (int)Sack.Count;
                     }
@@ -1016,7 +1016,7 @@ namespace MSQuic1
                 if (Crypto.NextSendOffset < Right)
                 {
                     Crypto.NextSendOffset = Right;
-                    if (!Sack.IsEmpty && (ulong)Crypto.NextSendOffset == Sack.Low)
+                    if (Sack != null && (ulong)Crypto.NextSendOffset == Sack.Low)
                     {
                         Crypto.NextSendOffset += Sack.Count;
                     }
@@ -1176,7 +1176,7 @@ namespace MSQuic1
                     QuicRangeSetMin(Crypto.SparseAckRanges, (ulong)Crypto.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, 0);
-                    if (!Sack.IsEmpty && Sack.Low == (ulong)Crypto.UnAckedOffset)
+                    if (Sack != null && Sack.Low == (ulong)Crypto.UnAckedOffset)
                     {
                         Crypto.UnAckedOffset = (int)(Sack.Low + (ulong)Sack.Count);
                         QuicRangeRemoveSubranges(Crypto.SparseAckRanges, 0, 1);
@@ -1585,7 +1585,7 @@ namespace MSQuic1
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while (!(Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)).IsEmpty && Sack.Low < (ulong)End)
+            while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
             {
                 if (Start < Sack.Low + (ulong)Sack.Count)
                 {

@@ -60,44 +60,25 @@ namespace MSQuic1
 
         public static bool operator ==(QUIC_SUBRANGE? left, QUIC_SUBRANGE? right)
         {
-            throw new NotSupportedException();
+            if (left.HasValue && right.HasValue)
+            {
+                return left.Value.Low == right.Value.Low && left.Value.Count == right.Value.Count;
+            }
+            else if (left.HasValue)
+            {
+                return left.Value.IsEmpty;
+            }
+            else if (right.HasValue)
+            {
+                return right.Value.IsEmpty;
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
         }
 
         public static bool operator !=(QUIC_SUBRANGE? left, QUIC_SUBRANGE? right)
-        {
-            throw new NotSupportedException();
-        }
-
-        public static bool operator ==(QUIC_SUBRANGE left, QUIC_SUBRANGE? right)
-        {
-            if (right != null)
-            {
-                return left.Low == right.Value.Low && left.Count == right.Value.Count;
-            }
-            else
-            {
-                return left.IsEmpty;
-            }
-        }
-
-        public static bool operator ==(QUIC_SUBRANGE? left, QUIC_SUBRANGE right)
-        {
-            if (left != null)
-            {
-                return left.Value.Low == right.Low && left.Value.Count == right.Count;
-            }
-            else
-            {
-                return right.IsEmpty;
-            }
-        }
-
-        public static bool operator !=(QUIC_SUBRANGE left, QUIC_SUBRANGE? right)
-        {
-            return !(left == right);
-        }
-
-        public static bool operator !=(QUIC_SUBRANGE? left, QUIC_SUBRANGE right)
         {
             return !(left == right);
         }
@@ -326,7 +307,7 @@ namespace MSQuic1
             if (IS_FIND_INDEX(result))
             {
                 i = result;
-                while (!(Sub = QuicRangeGetSafe(Range, i - 1)).IsEmpty && QuicRangeCompare(Key, Sub) == 0) //有重叠的话，早就合并了，没必要在这里啊
+                while ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && QuicRangeCompare(Key, Sub) == 0) //有重叠的话，早就合并了，没必要在这里啊
                 {
                     --i;
                 }
@@ -337,7 +318,7 @@ namespace MSQuic1
             }
 
             Sub = QuicRangeGetSafe(Range, i - 1);
-            if (!Sub.IsEmpty && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
+            if (Sub != null && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
             {
                 --i; //使用可以合并的索引
             }
@@ -346,15 +327,15 @@ namespace MSQuic1
                 Sub = QuicRangeGetSafe(Range, i);
             }
 
-            if (Sub.IsEmpty || Sub.Low > Low + (ulong)Count) //没有合并的可能了
+            if (Sub == null || Sub.Low > Low + (ulong)Count) //没有合并的可能了
             {
-                QUIC_SUBRANGE? SubA = QuicRangeMakeSpace(Range, ref i);
-                if (SubA == null)
+                QUIC_SUBRANGE? SubNullAble = QuicRangeMakeSpace(Range, ref i);
+                if (!SubNullAble.HasValue)
                 {
                     return QUIC_SUBRANGE.Empty;
                 }
 
-                Sub = SubA.Value;
+                Sub = (QUIC_SUBRANGE)SubNullAble;
                 Sub.Low = Low;
                 Sub.Count = Count;
                 RangeUpdated = true;
@@ -375,7 +356,7 @@ namespace MSQuic1
 
                 int j = i + 1;
                 QUIC_SUBRANGE Next;
-                while (!(Next = QuicRangeGetSafe(Range, j)).IsEmpty && Next.Low <= Low + (ulong)Count)
+                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + (ulong)Count)
                 {
                     if (Next.High >= Sub.High)
                     {
@@ -561,7 +542,7 @@ namespace MSQuic1
         static bool QuicRangeAddValue(QUIC_RANGE Range, ulong Value)
         {
             bool DontCare = false;
-            return !QuicRangeAddRange(Range, Value, 1, out DontCare).IsEmpty;
+            return QuicRangeAddRange(Range, Value, 1, out DontCare) != null;
         }
 
     }

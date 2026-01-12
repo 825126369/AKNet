@@ -76,8 +76,7 @@ namespace MSQuic1
         //false: 增加没问题
         static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
         {
-            bool RangeUpdated = false;
-            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out RangeUpdated) == null || !RangeUpdated;
+            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out bool RangeUpdated) == null || !RangeUpdated;
         }
 
         static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, ulong LargestAckedPacketNumber)

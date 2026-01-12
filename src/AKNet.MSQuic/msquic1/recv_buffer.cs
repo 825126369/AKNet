@@ -230,7 +230,7 @@ namespace MSQuic1
             }
 
             QUIC_SUBRANGE FirstRange = QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0);
-            if (FirstRange.IsEmpty || FirstRange.Low != 0)
+            if (FirstRange == null || FirstRange.Low != 0)
             {
                 return 0;
             }
@@ -252,7 +252,7 @@ namespace MSQuic1
 
         static void QuicRecvBufferRead(QUIC_RECV_BUFFER RecvBuffer, ref long BufferOffset, ref int BufferCount, QUIC_BUFFER[] Buffers)
         {
-            Debug.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
+            Debug.Assert(QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0) != null);
             Debug.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
             Debug.Assert(RecvBuffer.ReadPendingLength == 0 || RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
 
@@ -363,7 +363,7 @@ namespace MSQuic1
         //该函数会将对应范围从接收窗口中移除，从而向对端通告更多接收窗口（ACK + window update），驱动流量继续。
         static bool QuicRecvBufferDrain(QUIC_RECV_BUFFER RecvBuffer, long DrainLength)
         {
-            NetLog.Assert(!QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0).IsEmpty);
+            NetLog.Assert(QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0) != null);
             NetLog.Assert(DrainLength <= RecvBuffer.ReadPendingLength);
             NetLog.Assert(!CxPlatListIsEmpty(RecvBuffer.Chunks));
             NetLog.Assert(DrainLength <= RecvBuffer.VirtualBufferLength);
@@ -422,7 +422,7 @@ namespace MSQuic1
         static bool QuicRecvBufferHasUnreadData(QUIC_RECV_BUFFER RecvBuffer)
         {
             QUIC_SUBRANGE FirstRange = QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0);
-            if (FirstRange.IsEmpty || FirstRange.Low != 0)
+            if (FirstRange == null || FirstRange.Low != 0)
             {
                 return false;
             }
@@ -522,7 +522,7 @@ namespace MSQuic1
                     WriteLength,
                     out WrittenRangesUpdated);
 
-            if (UpdatedRange.IsEmpty)
+            if (UpdatedRange == null)
             {
                 return QUIC_STATUS_OUT_OF_MEMORY;
             }
