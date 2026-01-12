@@ -26,7 +26,7 @@ namespace MSQuic1
             return rtt + (rtt / 8);
         }
 
-        public static readonly long QUIC_INITIAL_RTT = MS_TO_US(333); // 一律用微秒表示
+        public const long QUIC_INITIAL_RTT = 333; // 这是毫秒表示
 
         public const int QUIC_MIN_INITIAL_PACKET_LENGTH = 1200;
         public const int QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN = QUIC_MIN_INITIAL_PACKET_LENGTH;
@@ -200,8 +200,8 @@ namespace MSQuic1
         public const int QUIC_INITIAL_PACKET_LENGTH = 1240;
         public const int QUIC_DPLPMTUD_DEFAULT_MIN_MTU = (QUIC_INITIAL_PACKET_LENGTH + CXPLAT_MIN_IPV6_HEADER_SIZE + CXPLAT_UDP_HEADER_SIZE);
         public const int QUIC_DPLPMTUD_DEFAULT_MAX_MTU = 1500;
-        public const int QUIC_MAX_CALLBACK_TIME_WARNING = 10;
-        public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
+        public static readonly long QUIC_MAX_CALLBACK_TIME_WARNING = MS_TO_US(10);
+        public static readonly long QUIC_MAX_CALLBACK_TIME_ERROR = MS_TO_US(1000);
 
         public const long QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
         public const long QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
