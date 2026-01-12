@@ -196,17 +196,17 @@ namespace AKNet.Common
         }
 
         [Conditional("DEBUG")]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Assert(bool bTrue, object message = null)
         {
             if (!bTrue)
             {
                 string msg = GetAssertMsg(message, GetStackTraceInfo());
-                Debug.Assert(bTrue, msg);
                 if (LogErrorFunc != null)
                 {
                     LogErrorFunc(msg);
                 }
+
+                //Debug.Assert 会终止整个应用程序，错误日志就不能输出到文件里了
             }
         }
     }

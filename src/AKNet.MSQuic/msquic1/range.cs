@@ -239,7 +239,7 @@ namespace MSQuic1
             return true;
         }
 
-        static QUIC_SUBRANGE? QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index)
+        static bool QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index, out QUIC_SUBRANGE result)
         {
             NetLog.Assert(Index <= Range.UsedLength);
             if (Range.UsedLength == Range.AllocLength)
@@ -248,7 +248,8 @@ namespace MSQuic1
                 {
                     if (Range.MaxAllocSize == QUIC_MAX_RANGE_ALLOC_SIZE || Index == 0)
                     {
-                        return null;
+                        result = QUIC_SUBRANGE.Empty;
+                        return false;
                     }
 
                     if (Index > 1)
@@ -286,7 +287,8 @@ namespace MSQuic1
                 Range.UsedLength++;
             }
             
-            return Range.SubRanges[Index];
+            result = Range.SubRanges[Index];
+            return true;
         }
 
         static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
@@ -329,13 +331,11 @@ namespace MSQuic1
 
             if (Sub == null || Sub.Low > Low + (ulong)Count) //没有合并的可能了
             {
-                QUIC_SUBRANGE? SubNullAble = QuicRangeMakeSpace(Range, ref i);
-                if (!SubNullAble.HasValue)
+                if (!QuicRangeMakeSpace(Range, ref i, out Sub))
                 {
                     return QUIC_SUBRANGE.Empty;
                 }
 
-                Sub = (QUIC_SUBRANGE)SubNullAble;
                 Sub.Low = Low;
                 Sub.Count = Count;
                 RangeUpdated = true;

@@ -222,11 +222,11 @@ namespace MSQuic1
             }
             else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
             {
-                Debug.Assert(false);
+                NetLog.Assert(false);
             }
             else
             {
-                Debug.Assert(false);
+                NetLog.Assert(false);
             }
             return QUIC_STATUS_SUCCESS;
         }
