@@ -209,29 +209,21 @@ namespace MSQuic1
             NetLog.Assert(Range.SubRanges != null);
             if (NextIndex == 0)
             {
-                for (int i = 0; i < Range.UsedLength; i++)
-                {
-                    NewSubRanges[i + 1] = Range.SubRanges[i];
-                }
+                Range.SubRanges.AsSpan().Slice(0, Range.UsedLength).CopyTo(NewSubRanges.AsSpan().Slice(1));
             }
             else if (NextIndex == Range.UsedLength)
             {
-                for (int i = 0; i < Range.UsedLength; i++)
-                {
-                    NewSubRanges[i] = Range.SubRanges[i];
-                }
+                Range.SubRanges.AsSpan().Slice(0, Range.UsedLength).CopyTo(NewSubRanges);
             }
             else
             {
-                for (int i = 0; i < NextIndex; i++)
-                {
-                    NewSubRanges[i] = Range.SubRanges[i];
-                }
+                Range.SubRanges.AsSpan().Slice(0, NextIndex).CopyTo(NewSubRanges);
+                Range.SubRanges.AsSpan().Slice(NextIndex, Range.UsedLength - NextIndex).CopyTo(NewSubRanges.AsSpan().Slice(NextIndex + 1));
+            }
 
-                for (int i = 0; i < Range.UsedLength - NextIndex; i++)
-                {
-                    NewSubRanges[i + NextIndex + 1] = Range.SubRanges[i + NextIndex];
-                }
+            if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
+            {
+                Range.SubRanges = null;
             }
 
             Range.SubRanges = NewSubRanges;
@@ -254,10 +246,7 @@ namespace MSQuic1
 
                     if (Index > 1)
                     {
-                        for (int i = 0; i < Index - 1; i++)
-                        {
-                            Range.SubRanges[i] = Range.SubRanges[i + 1];
-                        }
+                        Range.SubRanges.AsSpan().Slice(1, Index - 1).CopyTo(Range.SubRanges);
                     }
 
                     Index--;
@@ -268,10 +257,7 @@ namespace MSQuic1
                 NetLog.Assert(Range.SubRanges != null);
                 if (Index == 0)
                 {
-                    for (int i = 0; i < Range.UsedLength; i++)
-                    {
-                        Range.SubRanges[i + 1] = Range.SubRanges[i];
-                    }
+                    Range.SubRanges.AsSpan().Slice(0, Range.UsedLength).CopyTo(Range.SubRanges.AsSpan().Slice(1));
                 }
                 else if (Index == Range.UsedLength)
                 {
@@ -279,10 +265,7 @@ namespace MSQuic1
                 }
                 else
                 {
-                    for (int i = 0; i < Range.UsedLength - Index; i++)
-                    {
-                        Range.SubRanges[i + Index + 1] = Range.SubRanges[i + Index];
-                    }
+                    Range.SubRanges.AsSpan().Slice(Index, Range.UsedLength - Index).CopyTo(Range.SubRanges.AsSpan().Slice(Index + 1));
                 }
                 Range.UsedLength++;
             }
@@ -383,11 +366,10 @@ namespace MSQuic1
         {
             NetLog.Assert(Count > 0);
             NetLog.Assert(Index + Count <= Range.UsedLength);
-            
-            int nMoveCount = Range.UsedLength - (Index + Count);
-            for (int i = Index; i < Index + nMoveCount; i++)
+
+            if (Index + Count < Range.UsedLength)
             {
-                Range.SubRanges[i] = Range.SubRanges[i + Count];
+                Range.SubRanges.AsSpan().Slice(Index + Count, Range.UsedLength - Index - Count).CopyTo(Range.SubRanges.AsSpan().Slice(Index));
             }
             
             Range.UsedLength -= Count;
@@ -410,12 +392,7 @@ namespace MSQuic1
                     }
                 }
 
-                for (int i = 0; i < Range.UsedLength; i++)
-                {
-                    NewSubRanges[i].Low = Range.SubRanges[i].Low;
-                    NewSubRanges[i].Count = Range.SubRanges[i].Count;
-                }
-
+                Range.SubRanges.AsSpan().Slice(0, Range.UsedLength).CopyTo(NewSubRanges);
                 Range.SubRanges = NewSubRanges;
                 return true;
             }
