@@ -774,12 +774,12 @@ namespace MSQuic1
 
             if (ClosedRemotely)
             {
-                NetLog.LogError("ClosedRemotely");
+                NetLog.LogError($"ClosedRemotely: {RemoteReasonPhrase}");
                 Connection.State.ClosedRemotely = true;
             }
             else
             {
-                NetLog.LogError("ClosedLocally");
+                NetLog.LogError($"ClosedLocally: {RemoteReasonPhrase}");
                 Connection.State.ClosedLocally = true;
                 if (!Connection.State.ExternalOwner)
                 {

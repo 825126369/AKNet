@@ -80,7 +80,7 @@ namespace MSQuic1
         public udp_statistic_cell[] mibs = new udp_statistic_cell[(int)UDP_STATISTIC_TYPE.MAX];
         public static readonly string[] mMitDesList = new string[]
         {
-            "LOSS_DETECTION 触发次数 平均时间",
+            "QUIC_CONN_TIMER_LOSS_DETECTION 计时器 平均轮询时间",
              "",
              "",
              "",

@@ -753,6 +753,7 @@ namespace MSQuic1
             {
                 Buffer = QuicVarIntEncode((ulong)TotalLength, Buffer);
             }
+
             for (int i = 0; i < BufferCount; ++i)
             {
                 if (Buffers[i].Length != 0)

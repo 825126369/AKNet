@@ -668,7 +668,6 @@ namespace MSQuic1
         //这个是 定时器 触发的 方法
         static void QuicLossDetectionProcessTimerOperation(QUIC_LOSS_DETECTION LossDetection)
         {
-            //NetLog.Log("QuicLossDetectionProcessTimerOperation: ");
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             QUIC_SENT_PACKET_METADATA OldestPacket = QuicLossDetectionOldestOutstandingPacket(LossDetection);
             if (OldestPacket == null && (QuicConnIsServer(Connection) || Connection.Crypto.TlsState.WriteKey ==  QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT))
@@ -679,7 +678,9 @@ namespace MSQuic1
             long TimeNow = CxPlatTimeUs();
             if (OldestPacket != null && CxPlatTimeDiff(OldestPacket.SentTime, TimeNow) >= MS_TO_US(Connection.Settings.DisconnectTimeoutMs))
             {
-                QuicConnCloseLocally(Connection, QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT, null);
+                QuicConnCloseLocally(Connection, 
+                    QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT,
+                    "LossDetection DisconnectTimeout");
             }
             else
             {
@@ -853,16 +854,19 @@ namespace MSQuic1
             return Packet;
         }
 
+        //QuicLossDetectionScheduleProbe 是 MSQuic 内部用来“立即安排一次探测包（PTO probe）发送” 的函数，核心目的只有一句话：
+        //当丢检定时器（PTO）到期，而发送端仍然没有收到任何 ACK 时，调用它把一个探测包塞进发送队列，强制让对端回 ACK，从而打破“死沉默”。
         static void QuicLossDetectionScheduleProbe(QUIC_LOSS_DETECTION LossDetection)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             LossDetection.ProbeCount++;
 
             int NumPackets = 2;
-            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets);//设置紧急包豁免数量
+            QuicCongestionControlSetExemption(Connection.CongestionControl, NumPackets); //设置紧急包豁免数量
             QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_PROBE);
             Connection.Send.TailLossProbeNeeded = true;
 
+            //如果流中还有剩余数据,就发剩余数据,来探测
             if (Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
                 for (CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next; Entry != Connection.Send.SendStreams; Entry = Entry.Next)
@@ -878,6 +882,7 @@ namespace MSQuic1
                 }
             }
             
+            //没有足够的数据存在，那就发送先前的数据
             QUIC_SENT_PACKET_METADATA Packet = LossDetection.SentPackets;
             while (Packet != null)
             {
@@ -1056,7 +1061,7 @@ namespace MSQuic1
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
 
-            long AckDelay = 0; // 我用微秒
+            long AckDelay = 0; //微秒
             QUIC_ACK_ECN_EX Ecn = default;
             bool Result = QuicAckFrameDecode(
                     FrameType,
