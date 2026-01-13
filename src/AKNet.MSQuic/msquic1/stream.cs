@@ -179,7 +179,7 @@ namespace MSQuic1
         public QUIC_SEND_REQUEST SendRequests;
         public QUIC_SEND_REQUEST SendRequestsTail;
         public QUIC_SEND_REQUEST SendBookmark; //发送标签，指向下一个要发送的字节所在的请求
-        public QUIC_SEND_REQUEST SendBufferBookmark; //发送Buffer标签， 指向第一个非缓冲（如 0-RTT）的发送请求
+        public QUIC_SEND_REQUEST SendBufferBookmark; //发送Buffer标签， 指向第一个非缓冲的发送请求
         public int QueuedSendOffset;//应用层已调用 Send() 提交，但尚未被发送引擎处理的数据的结束偏移量。
         public long Queued0Rtt;
         public long Sent0Rtt;

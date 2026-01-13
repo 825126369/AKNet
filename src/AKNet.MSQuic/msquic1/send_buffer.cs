@@ -13,8 +13,13 @@ namespace MSQuic1
 {
     internal class QUIC_SEND_BUFFER
     {
-        public int PostedBytes;
-        public int BufferedBytes;
+        public int PostedBytes; //应用累计发送的总字节数
+        public int BufferedBytes; //当前仍躺在发送缓冲区里、尚未被 ACK 释放的字节总数。
+
+        //根据当前带宽估算（BDP ≈ cwnd × srtt）得出的“理想缓冲深度”。
+        //作为软上限使用：
+        //低于它：随便发，尽量把管道灌满；
+        //高于它：开始限流，让应用“等一等”，避免 buffer bloat。
         public int IdealBytes;
     }
 
@@ -38,6 +43,8 @@ namespace MSQuic1
         static void QuicSendBufferFill(QUIC_CONNECTION Connection)
         {
             NetLog.Assert(Connection.Settings.SendBufferingEnabled);
+
+            //对所有的流操作
             CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next;
             while (QuicSendBufferHasSpace(Connection.SendBuffer) && Entry != Connection.Send.SendStreams)
             {
@@ -53,6 +60,7 @@ namespace MSQuic1
                     Req = Req.Next;
                 }
             }
+
         }
 
         static void QuicSendBufferConnectionAdjust(QUIC_CONNECTION Connection)

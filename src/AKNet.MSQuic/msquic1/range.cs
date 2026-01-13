@@ -325,7 +325,7 @@ namespace MSQuic1
                 i = INSERT_INDEX_TO_FIND_INDEX(result);
             }
 
-            Debug.Assert(i >= 0 && i < Range.AllocLength);
+            Debug.Assert(i >= 0 && i <= Range.AllocLength);
             if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
             {
                 i--; //使用可以合并的索引

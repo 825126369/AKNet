@@ -103,10 +103,9 @@ namespace MSQuic1
                 Stream.SendRequestsTail = SendRequest;
             }
         }
-
-
-
+        
         //内部缓存一个待发送数据缓存，用于重传等
+        //原先的发送请求包含多个外部缓冲区，现在都拷贝到内部缓冲区
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
@@ -123,8 +122,9 @@ namespace MSQuic1
                 QUIC_SSBuffer CurBuf = Buf;
                 for (int i = 0; i < Req.BufferCount; i++)
                 {
-                    Req.Buffers[i].GetSpan().CopyTo(CurBuf.GetSpan());
-                    CurBuf += Req.Buffers[i].Length;
+                    var mSpan = Req.Buffers[i].GetSpan();
+                    mSpan.CopyTo(CurBuf.GetSpan());
+                    CurBuf += mSpan.Length;
                 }
                 Req.InternalBuffer.Buffer = Buf.Buffer;
             }
@@ -326,11 +326,13 @@ namespace MSQuic1
 
                 if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS))
                 {
+                    //如果丢包发生了，这个流被取消
                     Stream.Flags.CancelOnLoss = true;
                 }
 
                 if (!Stream.Flags.SendEnabled)
                 {
+                    //不允许发送数据,则直接取消
                     QuicStreamCompleteSendRequest(Stream, SendRequest, true, false);
                     continue;
                 }
@@ -344,12 +346,13 @@ namespace MSQuic1
 
                 if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN))
                 {
+                    //有Fin标志关闭流
                     QuicStreamSendShutdown(Stream, true, false, SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DELAY_SEND), 0);
                 }
 
                 QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA, SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DELAY_SEND));
 
-                if (Stream.Connection.Settings.SendBufferingEnabled)
+                if (Stream.Connection.Settings.SendBufferingEnabled) //默认是true
                 {
                     QuicSendBufferFill(Stream.Connection);
                 }
@@ -1128,7 +1131,7 @@ namespace MSQuic1
                     Stream.SendRequests = Req.Next;
                     if (Stream.SendRequests == null)
                     {
-                        Stream.SendRequestsTail = Stream.SendRequests;
+                        Stream.SendRequestsTail = Stream.SendRequests = null;
                     }
 
                     QuicStreamCompleteSendRequest(Stream, Req, false, true);

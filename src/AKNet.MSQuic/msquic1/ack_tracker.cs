@@ -90,9 +90,9 @@ namespace MSQuic1
         {
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
 
-            //NetLog.Log($"Tracker.PacketNumbersToAck 0000: {LargestAckedPacketNumber}, {Tracker.PacketNumbersToAck}");
+            NetLog.Log($"Tracker.PacketNumbersToAck 0000: {LargestAckedPacketNumber}, {Tracker.PacketNumbersToAck}");
             QuicRangeSetMin(Tracker.PacketNumbersToAck, LargestAckedPacketNumber + 1);
-            //NetLog.Log($"Tracker.PacketNumbersToAck 1111: {Tracker.PacketNumbersToAck}");
+            NetLog.Log($"Tracker.PacketNumbersToAck 1111:  {Tracker.PacketNumbersToAck}");
             
             if (!QuicAckTrackerHasPacketsToAck(Tracker) && BoolOk(Tracker.AckElicitingPacketsToAcknowledge))
             {
@@ -147,7 +147,8 @@ namespace MSQuic1
         }
 
         //接收到数据包的时候,把 包号 存下来
-        static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, ulong PacketNumber, long RecvTimeUs, CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
+        static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, ulong PacketNumber, long RecvTimeUs, 
+            CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
         {
             //NetLog.Log("发送确认 ACK PacketNumber: " + PacketNumber);
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
@@ -199,7 +200,7 @@ namespace MSQuic1
 
             Tracker.AckElicitingPacketsToAcknowledge++;
 
-            if (BoolOk(Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+            if (HasFlag(Connection.Send.SendFlags, QUIC_CONN_SEND_FLAG_ACK))
             {
                 goto Exit;
             }

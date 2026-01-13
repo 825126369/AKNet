@@ -219,7 +219,7 @@ namespace MSQuic1
             }
         }
 
-        //当包确认的时候，把重传队列去掉
+        //当包确认的时候
         static void QuicLossDetectionOnPacketAcknowledged(QUIC_LOSS_DETECTION LossDetection,QUIC_ENCRYPT_LEVEL EncryptLevel, QUIC_SENT_PACKET_METADATA Packet,
             bool IsImplicit, long AckTime, long AckDelay)
         {
@@ -690,7 +690,6 @@ namespace MSQuic1
                 {
                     QuicLossDetectionScheduleProbe(LossDetection);
                 }
-
                 QuicLossDetectionUpdateTimer(LossDetection, false);
             }
         }
@@ -712,6 +711,8 @@ namespace MSQuic1
             QuicSentPacketPoolReturnPacketMetadata(Packet, Connection);
         }
 
+        //1:去掉 丢包队列 里大于2倍RTO时间的包
+        //2:把 发送队列里的 可疑丢包，加到 丢包队列里
         static bool QuicLossDetectionDetectAndHandleLostPackets(QUIC_LOSS_DETECTION LossDetection, long TimeNow)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -757,6 +758,7 @@ namespace MSQuic1
 
                     if (Packet.PacketNumber + QUIC_PACKET_REORDER_THRESHOLD < LossDetection.LargestAck)
                     {
+                        //怀疑丢包1
                         if (!NonretransmittableHandshakePacket)
                         {
                            
@@ -764,6 +766,7 @@ namespace MSQuic1
                     }
                     else if (Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeAtOrBefore64(Packet.SentTime + TimeReorderThreshold, TimeNow))
                     {
+                        //怀疑丢包2
                         if (!NonretransmittableHandshakePacket)
                         {
                             
@@ -771,9 +774,11 @@ namespace MSQuic1
                     }
                     else
                     {
+                        //不怀疑丢包
                         break;
                     }
 
+                    //这里处理可疑的丢包
                     Connection.Stats.Send.SuspectedLostPackets++;
                     QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
                     if (Packet.Flags.IsAckEliciting)
@@ -791,7 +796,7 @@ namespace MSQuic1
                         LossDetection.SentPackets = Packet.Next;
                         if (Packet.Next == null)
                         {
-                            LossDetection.SentPacketsTail = LossDetection.SentPackets;
+                            LossDetection.SentPacketsTail = LossDetection.SentPackets = null;
                         }
                     }
                     else
@@ -803,6 +808,7 @@ namespace MSQuic1
                         }
                     }
 
+                    //把Packet 加入到 丢包队列里
                     if (LossDetection.LostPacketsTail == null)
                     {
                         LossDetection.LostPackets = LossDetection.LostPacketsTail = Packet;
@@ -815,6 +821,7 @@ namespace MSQuic1
                     
                     Packet = Packet.Next;
                     LossDetection.LostPacketsTail.Next = null;
+                    LossDetection.SentPacketsTail.Next = null;
                 }
 
                 QuicLossValidate(LossDetection);
@@ -897,12 +904,13 @@ namespace MSQuic1
                 Packet = Packet.Next;
             }
 
+            //最后发送Ping包
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
         }
 
         [Conditional("DEBUG")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection)
+        static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection, string Tag)
         {
 #if DEBUG
             int nLostCount = 0;
@@ -929,13 +937,13 @@ namespace MSQuic1
                 nLostCount++;
             }
 
-            //NetLog.Log($"--------------------丢包/重传 统计------------------");
-            //NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
-            //NetLog.Log($"接收到的最大确认号: {LossDetection.LargestAck}");
-            //NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
-            //NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
-            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
-            //NetLog.Log($"LostPackets: {nLostCount}");
+            NetLog.Log($"-----------{Tag}---------丢包/重传 统计------------------");
+            NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
+            NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
+            NetLog.Log($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
+            NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
+            NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
+            NetLog.Log($"LostPackets: {nLostCount}");
 #endif
         }
 
@@ -1086,7 +1094,7 @@ namespace MSQuic1
                 }
                 else
                 {
-                    //NetLog.Log("Connection.DecodedAckRanges: " + Connection.DecodedAckRanges);
+                    NetLog.Log("处理ACK帧 Connection.DecodedAckRanges: " + Connection.DecodedAckRanges);
                     AckDelay <<= (int)Connection.PeerTransportParams.AckDelayExponent;
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,
@@ -1124,6 +1132,8 @@ namespace MSQuic1
             QUIC_SENT_PACKET_METADATA LostPacketsStart = LossDetection.LostPackets;
             QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
             QUIC_SENT_PACKET_METADATA LargestAckedPacket = null;
+
+            QuicLossPrintStateInfo(LossDetection, "00000");
 
             int i = 0;
             QUIC_SUBRANGE AckBlock;
@@ -1167,6 +1177,7 @@ namespace MSQuic1
                         {
                             AckedPacketsTail.Next = LostPacketsStart;
                         }
+
                         AckedPacketsTail = LastEnd;
                         AckedPacketsTail.Next = null;
 
@@ -1189,6 +1200,7 @@ namespace MSQuic1
                             }
                         }
                         QuicLossValidate(LossDetection);
+                        QuicLossPrintStateInfo(LossDetection, "1111111");
                     }
 
                     //如果所有之前认为丢失的包都恢复了，则通知拥塞控制模块进行相应调整。
@@ -1203,7 +1215,6 @@ namespace MSQuic1
 
             CheckSentPackets:
                 //NetLog.Log("AckBlock: " + AckBlock);
-                QuicLossPrintStateInfo(LossDetection);
                 
                 //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
                 if (SentPacketsStart != null)
@@ -1264,8 +1275,8 @@ namespace MSQuic1
                             }
                         }
 
-                        QuicLossPrintStateInfo(LossDetection);
                         QuicLossValidate(LossDetection);
+                        QuicLossPrintStateInfo(LossDetection, "2222222");
                     }
                 }
                 
@@ -1285,6 +1296,7 @@ namespace MSQuic1
 
             if (AckedPackets == null)
             {
+                NetLog.Log("AckedPackets == null");
                 return;
             }
 
@@ -1318,6 +1330,7 @@ namespace MSQuic1
             }
 
             QuicLossValidate(LossDetection);
+            QuicLossPrintStateInfo(LossDetection, "3333333");
 
             if (NewLargestAckRetransmittable && !NewLargestAckDifferentPath)
             {

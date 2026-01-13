@@ -793,8 +793,7 @@ namespace MSQuic1
             ulong Largest = Frame.LargestAcknowledged; //最大确认的序号
             int Count = Frame.FirstAckBlock + 1;
 
-            bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out DontCare) == null)
+            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out _) == null)
             {
                 return false;
             }
@@ -829,7 +828,7 @@ namespace MSQuic1
 
                 Largest -=  (ulong)(Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out DontCare) == null)
+                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out _) == null)
                 {
                     return false;
                 }

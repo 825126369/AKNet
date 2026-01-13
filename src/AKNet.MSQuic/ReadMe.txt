@@ -16,3 +16,5 @@
 # MSQuic 重要特征：
 
 1：Packet Number(包号): 从0开始，永不重复,无论是重传包还是不同流的包，包号严格递增，从而精确计算 RTT。
+
+2: QUIC_STREAM_EVENT_SEND_COMPLETE,当发送数据 加到 缓冲区里的时候返回
