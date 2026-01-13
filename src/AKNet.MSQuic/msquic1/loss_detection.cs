@@ -929,13 +929,13 @@ namespace MSQuic1
                 nLostCount++;
             }
 
-            NetLog.Log($"--------------------丢包/重传 统计------------------");
-            NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
-            NetLog.Log($"接收到的最大确认号: {LossDetection.LargestAck}");
-            NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
-            NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
-            NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
-            NetLog.Log($"LostPackets: {nLostCount}");
+            //NetLog.Log($"--------------------丢包/重传 统计------------------");
+            //NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
+            //NetLog.Log($"接收到的最大确认号: {LossDetection.LargestAck}");
+            //NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
+            //NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
+            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
+            //NetLog.Log($"LostPackets: {nLostCount}");
 #endif
         }
 
@@ -1086,6 +1086,7 @@ namespace MSQuic1
                 }
                 else
                 {
+                    //NetLog.Log("Connection.DecodedAckRanges: " + Connection.DecodedAckRanges);
                     AckDelay <<= (int)Connection.PeerTransportParams.AckDelayExponent;
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,
@@ -1095,7 +1096,7 @@ namespace MSQuic1
                         AckDelay,
                         Connection.DecodedAckRanges,
                         ref InvalidFrame,
-                        FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? Ecn : default);
+                        (FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? Ecn : default));
                 }
             }
 
@@ -1351,9 +1352,7 @@ namespace MSQuic1
                         EctCeDeltaSum += Ecn.CE_Count - Packets.EcnCeCounter;
                         EctCeDeltaSum += Ecn.ECT_0_Count - Packets.EcnEctCounter;
 
-                        if (EctCeDeltaSum < 0 ||
-                            EctCeDeltaSum < EcnEctCounter ||
-                            Ecn.ECT_1_Count != 0 ||
+                        if (EctCeDeltaSum < 0 || EctCeDeltaSum < EcnEctCounter || Ecn.ECT_1_Count != 0 ||
                             (ulong)Connection.Send.NumPacketsSentWithEct < Ecn.ECT_0_Count)
                         {
                             EcnValidated = false;

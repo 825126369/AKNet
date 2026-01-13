@@ -10,6 +10,7 @@
 using AKNet.Common;
 using System;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace MSQuic1
 {
@@ -98,6 +99,20 @@ namespace MSQuic1
         public readonly QUIC_SUBRANGE[] PreAllocSubRanges = new QUIC_SUBRANGE[MSQuicFunc.QUIC_RANGE_INITIAL_SUB_COUNT];
 
         public int AllocLength => SubRanges.Length;
+
+        public override string ToString()
+        {
+            StringBuilder mBuilder = new StringBuilder();
+            mBuilder.AppendLine($"----------------- QUIC_RANGE ------------------");
+            mBuilder.AppendLine($"SubRanges UsedLength: {UsedLength} AllocLength:{AllocLength}");
+            for (int i = 0; i < UsedLength; i++)
+            {
+                mBuilder.Append("[");
+                mBuilder.Append(SubRanges[i].ToString());
+                mBuilder.Append("]  ");
+            }
+            return mBuilder.ToString();
+        }
     }
 
     internal static partial class MSQuicFunc
@@ -156,6 +171,11 @@ namespace MSQuic1
         static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
         {
             return Range.SubRanges[Index];
+        }
+
+        static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
+        {
+            Range.SubRanges[Index] = t;
         }
 
         static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
@@ -358,7 +378,7 @@ namespace MSQuic1
                 }
             }
 
-            Range.SubRanges[i] = Sub;
+            QuicRangeSet(Range, i, Sub);
             return Sub;
         }
 
@@ -492,10 +512,9 @@ namespace MSQuic1
         static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
         {
             int i = 0;
-            QUIC_SUBRANGE Sub = QUIC_SUBRANGE.Empty;
             while (i < QuicRangeSize(Range))
             {
-                Sub = QuicRangeGet(Range, i);
+                var Sub = QuicRangeGet(Range, i);
                 if (Sub.Low >= Low)
                 {
                     break;
@@ -505,6 +524,7 @@ namespace MSQuic1
                 {
                     Sub.Count -= (int)(Low - Sub.Low);
                     Sub.Low = Low;
+                    QuicRangeSet(Range, i, Sub);
                     break;
                 }
                 i++;

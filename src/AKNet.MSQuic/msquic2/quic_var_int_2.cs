@@ -14,12 +14,12 @@ namespace MSQuic2
 {
     internal static partial class MSQuicFunc
     {
-        static Span<byte> QuicVarIntEncode(int Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode(int Value, Span<byte> Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode(uint Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode(uint Value, Span<byte> Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
@@ -37,7 +37,7 @@ namespace MSQuic2
             return Buffer.Slice(sizeof(ushort));
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)
+        public static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);

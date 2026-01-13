@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic1
 {
@@ -576,7 +577,7 @@ namespace MSQuic1
             }
         }
 
-
+        [Conditional("DEBUG")]
         static void QuicSendValidate(QUIC_SEND Send)
         {
             if (Send.Uninitialized)

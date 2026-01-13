@@ -101,7 +101,7 @@ namespace MSQuic2
             return (Index >= 0 && Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty);
         }
 
-        static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
+        public static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
         {
             Range.UsedLength = 0;
             Range.AllocLength = QUIC_RANGE_INITIAL_SUB_COUNT;

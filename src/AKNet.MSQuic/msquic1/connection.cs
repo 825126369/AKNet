@@ -3694,7 +3694,7 @@ namespace MSQuic1
                             {
                                 if (InvalidAckFrame)
                                 {
-                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, "无效的ACK帧");
                                 }
                                 return false;
                             }
