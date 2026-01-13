@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -132,13 +133,14 @@ namespace MSQuic1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int FIND_INDEX_TO_INSERT_INDEX(int i)
         {
-            return -(i + 2);
+            return -i - 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int INSERT_INDEX_TO_FIND_INDEX(int i)
         {
-            return - (i + 2);
+            Debug.Assert((int)(uint)(-((i) + 1)) == Math.Abs(-(i + 1)));
+            return Math.Abs(-(i + 1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -266,6 +268,7 @@ namespace MSQuic1
 
                     if (Index > 1)
                     {
+                        //如果达到最大UsedLength，那就去掉最老的块
                         Range.SubRanges.AsSpan().Slice(1, Index - 1).CopyTo(Range.SubRanges);
                     }
 
@@ -322,10 +325,10 @@ namespace MSQuic1
                 i = INSERT_INDEX_TO_FIND_INDEX(result);
             }
 
-            Sub = QuicRangeGetSafe(Range, i - 1);
-            if (Sub != null && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
+            Debug.Assert(i >= 0 && i <= Range.AllocLength);
+            if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
             {
-                --i; //使用可以合并的索引
+                i--; //使用可以合并的索引
             }
             else
             {
@@ -341,6 +344,7 @@ namespace MSQuic1
 
                 Sub.Low = Low;
                 Sub.Count = Count;
+                QuicRangeSet(Range, i, Sub);
                 RangeUpdated = true;
             }
             else //找到可以合并的Sub了
@@ -367,6 +371,7 @@ namespace MSQuic1
                     }
                     j++;
                 }
+                QuicRangeSet(Range, i, Sub);
 
                 int RemoveCount = j - (i + 1);
                 if (RemoveCount != 0)
@@ -378,7 +383,6 @@ namespace MSQuic1
                 }
             }
 
-            QuicRangeSet(Range, i, Sub);
             return Sub;
         }
 
@@ -425,7 +429,7 @@ namespace MSQuic1
             {
                 return -1;
             }
-            if (Key.Low > QuicRangeGetHigh(Sub))
+            if (QuicRangeGetHigh(Sub) < Key.Low)
             {
                 return 1;
             }
@@ -492,20 +496,19 @@ namespace MSQuic1
         {
             int Result;
             int i;
-            for (i = QuicRangeSize(Range) - 1; i >= 0; i--)
+            for (i = QuicRangeSize(Range); i > 0; i--)
             {
-                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i);
-                Result = QuicRangeCompare(Key, Sub);
-                if (Result == 0)
+                QUIC_SUBRANGE Sub = QuicRangeGet(Range, i - 1);
+                if ((Result = QuicRangeCompare(Key, Sub)) == 0) //有交集
                 {
-                    return i;
+                    return (int)(i - 1);
                 }
                 else if (Result > 0)
                 {
-                    return FIND_INDEX_TO_INSERT_INDEX(i + 1);
+                    break;
                 }
             }
-            return FIND_INDEX_TO_INSERT_INDEX(0);
+            return FIND_INDEX_TO_INSERT_INDEX(i);
         }
 #endif
 
