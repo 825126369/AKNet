@@ -1054,6 +1054,7 @@ namespace MSQuic1
             QUIC_SENT_PACKET_METADATA LostPacketsStart = LossDetection.LostPackets;
             QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
             QUIC_SENT_PACKET_METADATA SentPacketsStart_Prev = null;
+            QUIC_SENT_PACKET_METADATA LostPacketsStart_Prev = null;
 
             int i = 0;
             QUIC_SUBRANGE AckBlock;
@@ -1069,58 +1070,80 @@ namespace MSQuic1
                         goto CheckSentPackets;
                     }
 
-                    QUIC_SENT_PACKET_METADATA LastStart = null;
-                    QUIC_SENT_PACKET_METADATA LastEnd = null;
-                    while (LostPacketsStart != null && LostPacketsStart.PacketNumber < AckBlock.Low)
+                    QUIC_SENT_PACKET_METADATA BeginRemovePre = LostPacketsStart_Prev;
+                    QUIC_SENT_PACKET_METADATA BeginRemove = null;
+                    QUIC_SENT_PACKET_METADATA EndRemove = null;
+                    QUIC_SENT_PACKET_METADATA EndRemoveNext = null;
+                    while (LostPacketsStart != null)
                     {
-                        LastStart = LostPacketsStart;
-                        LostPacketsStart = LostPacketsStart.Next;
+                        if (LostPacketsStart.PacketNumber < AckBlock.Low)
+                        {
+                            BeginRemovePre = LostPacketsStart;
+                            LostPacketsStart = LostPacketsStart.Next;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
 
-                    QUIC_SENT_PACKET_METADATA End = LostPacketsStart;
-                    while (End != null && End.PacketNumber <= QuicRangeGetHigh(AckBlock))
+                    if (LostPacketsStart != null && LostPacketsStart.PacketNumber >= AckBlock.Low)
                     {
-                        LastEnd = End;
-                        Connection.Stats.Send.SpuriousLostPackets++;//被怀疑丢失，但又确认的包
-                        QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
-                        End = End.Next;
+                        while (LostPacketsStart != null && LostPacketsStart.PacketNumber <= AckBlock.High)
+                        {
+                            Connection.Stats.Send.SpuriousLostPackets++;//被怀疑丢失，但又确认的包
+                            QuicPerfCounterDecrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
+
+                            if (BeginRemove == null)
+                            {
+                                BeginRemove = LostPacketsStart;
+                            }
+
+                            EndRemove = LostPacketsStart;
+                            EndRemoveNext = LostPacketsStart.Next;
+                            LostPacketsStart = LostPacketsStart.Next;
+                        }
                     }
 
-                    if (LostPacketsStart != End)
+                    if (BeginRemove != null)
                     {
-                        //添加到“已确认收到”的链表中。
+                        //确认的包，加到ACK确认队列里
                         if (AckedPacketsTail == null)
                         {
-                            AckedPackets = AckedPacketsTail = LostPacketsStart;
+                            AckedPackets = BeginRemove;
+                            AckedPacketsTail = EndRemove;
                         }
                         else
                         {
-                            AckedPacketsTail.Next = LostPacketsStart;
+                            AckedPacketsTail.Next = BeginRemove;
+                            AckedPacketsTail = EndRemove;
                         }
 
-                        AckedPacketsTail = LastEnd;
-                        AckedPacketsTail.Next = null;
+                        EndRemove.Next = null;
 
-                        //将这些包从“丢失链表”中移除
-                        if (LastStart == null)
+                        //移除/拼接 剩余块
+                        if (BeginRemove == LossDetection.LostPackets && EndRemove == LossDetection.LostPacketsTail)
                         {
-                            LossDetection.LostPackets = End;
+                            LossDetection.LostPackets = LossDetection.LostPacketsTail = null;
                         }
-                        else
+                        else if (BeginRemove == LossDetection.SentPackets)
                         {
-                            LastStart.Next = End;
+                            LossDetection.LostPackets = EndRemoveNext;
+                        }
+                        else if (EndRemove == LossDetection.LostPacketsTail)
+                        {
+                            LossDetection.LostPacketsTail = BeginRemovePre;
                         }
 
-                        if (LastEnd == LossDetection.LostPacketsTail)
+                        if (BeginRemovePre != null)
                         {
-                            LossDetection.LostPacketsTail = LastStart;
-                            if (LossDetection.LostPacketsTail != null)
-                            {
-                                LossDetection.LostPacketsTail.Next = null;
-                            }
+                            BeginRemovePre.Next = EndRemoveNext;
                         }
+                        NetLog.Assert(SentPacketsStart == EndRemoveNext);
                         QuicLossValidate(LossDetection);
                     }
+
+                    LostPacketsStart_Prev = BeginRemovePre;
 
                     //如果所有之前认为丢失的包都恢复了，则通知拥塞控制模块进行相应调整。
                     if (LossDetection.LostPackets == null)
