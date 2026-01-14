@@ -24,6 +24,12 @@ namespace AKNet.MSQuic.Common
         private readonly object _syncRoot = new object();
         private readonly AkCircularManyBuffer _buffer = new AkCircularManyBuffer();
         private bool _final;
+
+        public override string ToString()
+        {
+            return $"_buffer: {_buffer.Length}, MaxBufferedBytes: {MaxBufferedBytes}, _final: {_final}";
+        }
+
         public bool HasCapacity()
         {
             lock (_syncRoot)

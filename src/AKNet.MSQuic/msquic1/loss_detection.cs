@@ -947,7 +947,7 @@ namespace MSQuic1
 #endif
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
         {
 #if DEBUG

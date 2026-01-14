@@ -36,7 +36,7 @@ namespace AKNet.MSQuic.Common
     internal partial class QuicStream
     {
         private readonly QUIC_STREAM _handle;
-        private ReceiveBuffers _receiveBuffers = new ReceiveBuffers();
+        public ReceiveBuffers _receiveBuffers = new ReceiveBuffers();
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
@@ -149,6 +149,8 @@ namespace AKNet.MSQuic.Common
 
             _receiveTcs.TrySetResult();
             data.TotalBufferLength = totalCopied;
+
+            //NetLog.Log($"HandleEventReceive _receiveBuffers {_receiveBuffers} totalCopied: {totalCopied}, {data.TotalBufferLength}");
 
             //如果先前处于需要接收状态
             if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
@@ -345,7 +347,8 @@ namespace AKNet.MSQuic.Common
             } while (!buffer.IsEmpty && totalCopied == 0);
 
             //如果需要设置 需要接收
-            if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            //2026-01-14, 这个判断得注释掉，否则,逻辑刚好卡住，只能接收一部分数据。
+            //if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {
