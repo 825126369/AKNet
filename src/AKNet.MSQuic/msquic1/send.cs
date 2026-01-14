@@ -802,7 +802,7 @@ namespace MSQuic1
                 goto Exit;
             }
 
-            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_PATH_RESPONSE))
+            if (HasFlag(Send.SendFlags, QUIC_CONN_SEND_FLAG_PATH_RESPONSE))
             {
                 int i;
                 for (i = 0; i < Connection.PathsCount; ++i)
