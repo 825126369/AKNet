@@ -908,88 +908,6 @@ namespace MSQuic1
             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
         }
 
-        [Conditional("DEBUG")]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection, string Tag)
-        {
-#if DEBUG
-            int nLostCount = 0;
-            int nWaitSendCount = 0;
-            int ackNeedCount = 0;
-            List<ulong> mNumberList = new List<ulong>();
-            QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
-            while (mPackage != null)
-            {
-                if (mPackage.Flags.IsAckEliciting)
-                {
-                    ackNeedCount++;
-                    mNumberList.Add(mPackage.PacketNumber);
-                }
-
-                mPackage = mPackage.Next;
-                nWaitSendCount++;
-            }
-
-            mPackage = LossDetection.LostPackets;
-            while (mPackage != null)
-            {
-                mPackage = mPackage.Next;
-                nLostCount++;
-            }
-
-            //NetLog.Log($"-----------{Tag}---------丢包/重传 统计------------------");
-            //NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
-            //NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
-            //NetLog.Log($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
-            //NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
-            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
-            //NetLog.Log($"LostPackets: {nLostCount}");
-#endif
-        }
-
-        [Conditional("DEBUG")]
-        static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
-        {
-#if DEBUG
-            uint AckElicitingPackets = 0;
-            QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
-            while (Tail != null)
-            {
-                if (Tail.Flags.IsAckEliciting)
-                {
-                    AckElicitingPackets++;
-                }
-
-                if (Tail.Next != null)
-                {
-                    Tail = Tail.Next;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            NetLog.Assert(LossDetection.SentPacketsTail == Tail);
-            NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets, LossDetection.PacketsInFlight + ", " + AckElicitingPackets);
-            if (LossDetection.SentPacketsTail == null)
-            {
-                NetLog.Assert(LossDetection.SentPackets == null);
-            }
-
-            Tail = LossDetection.LostPackets;
-            while (Tail != null && Tail.Next != null)
-            {
-                Tail = Tail.Next;
-            }
-            NetLog.Assert(LossDetection.LostPacketsTail == Tail);
-            if (LossDetection.LostPacketsTail == null)
-            {
-                NetLog.Assert(LossDetection.LostPackets == null);
-            }
-#endif
-        }
-
         static void QuicLossDetectionOnZeroRttRejected(QUIC_LOSS_DETECTION LossDetection)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -1215,7 +1133,7 @@ namespace MSQuic1
 
             CheckSentPackets:
                 //NetLog.Log("AckBlock: " + AckBlock);
-                
+                QuicLossValidate(LossDetection);
                 //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
                 if (SentPacketsStart != null)
                 {
@@ -1446,5 +1364,87 @@ namespace MSQuic1
         }
 
 
+        //------------------------------------------诊断信息----------------------------------------------
+        [Conditional("DEBUG")]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection, string Tag)
+        {
+#if DEBUG
+            int nLostCount = 0;
+            int nWaitSendCount = 0;
+            int ackNeedCount = 0;
+            List<ulong> mNumberList = new List<ulong>();
+            QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
+            while (mPackage != null)
+            {
+                if (mPackage.Flags.IsAckEliciting)
+                {
+                    ackNeedCount++;
+                    mNumberList.Add(mPackage.PacketNumber);
+                }
+
+                mPackage = mPackage.Next;
+                nWaitSendCount++;
+            }
+
+            mPackage = LossDetection.LostPackets;
+            while (mPackage != null)
+            {
+                mPackage = mPackage.Next;
+                nLostCount++;
+            }
+
+            //NetLog.Log($"-----------{Tag}---------丢包/重传 统计------------------");
+            //NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
+            //NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
+            //NetLog.Log($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
+            //NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
+            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
+            //NetLog.Log($"LostPackets: {nLostCount}");
+#endif
+        }
+
+        [Conditional("DEBUG")]
+        static void QuicLossValidate(QUIC_LOSS_DETECTION LossDetection)
+        {
+#if DEBUG
+            int AckElicitingPackets = 0;
+            QUIC_SENT_PACKET_METADATA Tail = LossDetection.SentPackets;
+            while (Tail != null)
+            {
+                if (Tail.Flags.IsAckEliciting)
+                {
+                    AckElicitingPackets++;
+                }
+
+                if (Tail.Next != null)
+                {
+                    Tail = Tail.Next;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            NetLog.Assert(LossDetection.SentPacketsTail == Tail);
+            NetLog.Assert(LossDetection.PacketsInFlight == AckElicitingPackets, LossDetection.PacketsInFlight + ", " + AckElicitingPackets);
+            if (LossDetection.SentPacketsTail == null)
+            {
+                NetLog.Assert(LossDetection.SentPackets == null);
+            }
+
+            Tail = LossDetection.LostPackets;
+            while (Tail != null && Tail.Next != null)
+            {
+                Tail = Tail.Next;
+            }
+            NetLog.Assert(LossDetection.LostPacketsTail == Tail);
+            if (LossDetection.LostPacketsTail == null)
+            {
+                NetLog.Assert(LossDetection.LostPackets == null);
+            }
+#endif
+        }
     }
 }
