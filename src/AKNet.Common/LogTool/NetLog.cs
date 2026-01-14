@@ -55,6 +55,7 @@ namespace AKNet.Common
     
     public static partial class NetLog
     {
+        private const bool bPrintAllLogToFile = true;
         public static bool bPrintLog = true;
         public static event Action<string> LogFunc;
         public static event Action<string> LogWarningFunc;
@@ -71,7 +72,18 @@ namespace AKNet.Common
             if (bInit) return; bInit = true;
 
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
-            LogErrorFunc += LogErrorToFile;
+
+            if (bPrintAllLogToFile)
+            {
+                LogFunc += LogErrorToFile;
+                LogWarningFunc += LogErrorToFile;
+                LogErrorFunc += LogErrorToFile;
+            }
+            else
+            {
+                LogErrorFunc += LogErrorToFile;
+            }
+
 #if DEBUG
             try
             {
