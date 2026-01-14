@@ -155,40 +155,6 @@ namespace MSQuic1
             }
         }
 
-        static void QuicStreamSetGetFlowControlSummary(QUIC_STREAM_SET StreamSet, ref long FcAvailable, ref long SendWindow)
-        {
-            FcAvailable = 0;
-            SendWindow = 0;
-
-            if (StreamSet.StreamTable != null)
-            {
-                var Enumerator = StreamSet.StreamTable.GetEnumerator();
-                while (Enumerator.MoveNext())
-                {
-                    var Entry = Enumerator.Current;
-                    QUIC_STREAM Stream = Entry.Value;
-
-                    if ((long.MaxValue - FcAvailable) >= (Stream.MaxAllowedSendOffset - Stream.NextSendOffset))
-                    {
-                        FcAvailable += Stream.MaxAllowedSendOffset - Stream.NextSendOffset;
-                    }
-                    else
-                    {
-                        FcAvailable = long.MaxValue;
-                    }
-
-                    if ((long.MaxValue - SendWindow) >= Stream.SendWindow)
-                    {
-                        SendWindow += Stream.SendWindow;
-                    }
-                    else
-                    {
-                        SendWindow = long.MaxValue;
-                    }
-                }
-            }
-        }
-
         static bool QuicStreamSetInsertStream(QUIC_STREAM_SET StreamSet, QUIC_STREAM Stream)
         {
             Stream.Flags.InStreamTable = true;
