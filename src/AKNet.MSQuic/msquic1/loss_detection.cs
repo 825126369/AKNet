@@ -274,6 +274,7 @@ namespace MSQuic1
                         break;
 
                     case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                        //发送端告诉对端：“我想继续发数据，但你的 MAX_STREAM_DATA 窗口已经顶到上限，无法再发一个字节。”
                         if (BoolOk(Packet.Frames[i].STREAM_DATA_BLOCKED.Stream.OutFlowBlockedReasons & QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL))
                         {
                             QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].STREAM_DATA_BLOCKED.Stream, QUIC_STREAM_SEND_FLAG_DATA_BLOCKED, false);
@@ -821,7 +822,6 @@ namespace MSQuic1
                     
                     Packet = Packet.Next;
                     LossDetection.LostPacketsTail.Next = null;
-                    LossDetection.SentPacketsTail.Next = null;
                 }
 
                 QuicLossValidate(LossDetection);
@@ -937,13 +937,13 @@ namespace MSQuic1
                 nLostCount++;
             }
 
-            NetLog.Log($"-----------{Tag}---------丢包/重传 统计------------------");
-            NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
-            NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
-            NetLog.Log($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
-            NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
-            NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
-            NetLog.Log($"LostPackets: {nLostCount}");
+            //NetLog.Log($"-----------{Tag}---------丢包/重传 统计------------------");
+            //NetLog.Log($"飞行中的包: {LossDetection.PacketsInFlight}");
+            //NetLog.Log($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
+            //NetLog.Log($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
+            //NetLog.Log($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
+            //NetLog.Log($"SentPackets: {nWaitSendCount}, {ackNeedCount}, {nWaitSendCount - ackNeedCount}  {string.Join('-', mNumberList)}");
+            //NetLog.Log($"LostPackets: {nLostCount}");
 #endif
         }
 
@@ -1094,7 +1094,7 @@ namespace MSQuic1
                 }
                 else
                 {
-                    NetLog.Log("处理ACK帧 Connection.DecodedAckRanges: " + Connection.DecodedAckRanges);
+                    //NetLog.Log("处理ACK帧 Connection.DecodedAckRanges: " + Connection.DecodedAckRanges);
                     AckDelay <<= (int)Connection.PeerTransportParams.AckDelayExponent;
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,

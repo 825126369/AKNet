@@ -608,6 +608,8 @@ namespace MSQuic1
                     MaximumData = Stream.MaxAllowedRecvOffset
                 };
 
+                //NetLog.Log("Send QUIC_MAX_STREAM_DATA_EX: " + Frame.MaximumData);
+
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
                 if (QuicMaxStreamDataFrameEncode(Frame, ref mBuf))
                 {

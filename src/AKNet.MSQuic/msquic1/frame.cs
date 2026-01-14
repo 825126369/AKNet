@@ -286,7 +286,7 @@ namespace MSQuic1
         QUIC_FRAME_STREAM_6 = 0xe,
         QUIC_FRAME_STREAM_7 = 0xf,
         QUIC_FRAME_MAX_DATA = 0x10,
-        QUIC_FRAME_MAX_STREAM_DATA = 0x11,
+        QUIC_FRAME_MAX_STREAM_DATA = 0x11, //接收端主动告诉发送端：“这条流你可以发到哪个绝对字节偏移。
         QUIC_FRAME_MAX_STREAMS = 0x12, // to 0x13
         QUIC_FRAME_MAX_STREAMS_1 = 0x13,
         QUIC_FRAME_DATA_BLOCKED = 0x14,

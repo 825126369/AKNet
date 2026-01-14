@@ -90,9 +90,9 @@ namespace MSQuic1
         {
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
 
-            NetLog.Log($"Tracker.PacketNumbersToAck 0000: {LargestAckedPacketNumber}, {Tracker.PacketNumbersToAck}");
+            //NetLog.Log($"Tracker.PacketNumbersToAck 0000: {LargestAckedPacketNumber}, {Tracker.PacketNumbersToAck}");
             QuicRangeSetMin(Tracker.PacketNumbersToAck, LargestAckedPacketNumber + 1);
-            NetLog.Log($"Tracker.PacketNumbersToAck 1111:  {Tracker.PacketNumbersToAck}");
+            //NetLog.Log($"Tracker.PacketNumbersToAck 1111:  {Tracker.PacketNumbersToAck}");
             
             if (!QuicAckTrackerHasPacketsToAck(Tracker) && BoolOk(Tracker.AckElicitingPacketsToAcknowledge))
             {

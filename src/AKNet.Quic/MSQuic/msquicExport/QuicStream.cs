@@ -266,7 +266,12 @@ namespace AKNet.MSQuic.Common
                 case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_ACCEPTED:
                     HandleEventPeerAccepted();
                     break;
-            };
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE:
+                    
+                    break;
+                default:
+                    throw new Exception($"没有处理更多的流事件: {streamEvent.Type}");
+            }
 
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
