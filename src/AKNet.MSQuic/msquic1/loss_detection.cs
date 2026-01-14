@@ -1126,7 +1126,7 @@ namespace MSQuic1
                         {
                             LossDetection.LostPackets = LossDetection.LostPacketsTail = null;
                         }
-                        else if (BeginRemove == LossDetection.SentPackets)
+                        else if (BeginRemove == LossDetection.LostPackets)
                         {
                             LossDetection.LostPackets = EndRemoveNext;
                         }
@@ -1139,7 +1139,7 @@ namespace MSQuic1
                         {
                             BeginRemovePre.Next = EndRemoveNext;
                         }
-                        NetLog.Assert(SentPacketsStart == EndRemoveNext);
+                        NetLog.Assert(LostPacketsStart == EndRemoveNext);
                         QuicLossValidate(LossDetection);
                     }
 
@@ -1164,6 +1164,9 @@ namespace MSQuic1
                     //它们还没被确认，保持原位
                     //如果多个ACK,这个 BeginRemovePre 值有可能不为null啊
                     QUIC_SENT_PACKET_METADATA BeginRemovePre = SentPacketsStart_Prev;
+                    QUIC_SENT_PACKET_METADATA BeginRemove = null;
+                    QUIC_SENT_PACKET_METADATA EndRemove = null;
+                    QUIC_SENT_PACKET_METADATA EndRemoveNext = null;
                     while (SentPacketsStart != null)
                     {
                         if (SentPacketsStart.PacketNumber < AckBlock.Low)
@@ -1177,9 +1180,6 @@ namespace MSQuic1
                         }
                     }
 
-                    QUIC_SENT_PACKET_METADATA BeginRemove = null;
-                    QUIC_SENT_PACKET_METADATA EndRemove = null;
-                    QUIC_SENT_PACKET_METADATA EndRemoveNext = null;
                     if (SentPacketsStart != null && SentPacketsStart.PacketNumber >= AckBlock.Low)
                     {
                         //如果接收到的 ACK 块，大于等于发送包的 包号，那么刚好是正要等待确认的
