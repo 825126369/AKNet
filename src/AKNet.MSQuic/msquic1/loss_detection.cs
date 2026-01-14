@@ -1053,6 +1053,7 @@ namespace MSQuic1
             QUIC_SENT_PACKET_METADATA LargestAckedPacket = null;
             QUIC_SENT_PACKET_METADATA LostPacketsStart = LossDetection.LostPackets;
             QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
+            QUIC_SENT_PACKET_METADATA SentPacketsStart_Prev = null;
 
             int i = 0;
             QUIC_SUBRANGE AckBlock;
@@ -1133,13 +1134,13 @@ namespace MSQuic1
 
             CheckSentPackets:
                 //NetLog.Log("AckBlock: " + AckBlock);
-                QuicLossValidate(LossDetection);
-                QuicLossPrintStateInfo(LossDetection, "111111");
+
                 //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
-                if (LossDetection.SentPackets != null)
+                if (SentPacketsStart != null)
                 {
-                    //忽略 小于 最小ACK 的包，等其他ACK区间去确认（它们还没被确认，保持原位）
-                    QUIC_SENT_PACKET_METADATA BeginRemovePre = null;
+                    //它们还没被确认，保持原位
+                    //如果多个ACK,这个 BeginRemovePre 值有可能不为null啊
+                    QUIC_SENT_PACKET_METADATA BeginRemovePre = SentPacketsStart_Prev;
                     while (SentPacketsStart != null)
                     {
                         if (SentPacketsStart.PacketNumber < AckBlock.Low)
@@ -1209,14 +1210,18 @@ namespace MSQuic1
                         {
                             LossDetection.SentPacketsTail = BeginRemovePre;
                         }
-                        else
+
+                        if(BeginRemovePre != null)
                         {
                             BeginRemovePre.Next = EndRemoveNext;
                         }
+                        NetLog.Assert(SentPacketsStart == EndRemoveNext);
 
                         QuicLossPrintStateInfo(LossDetection, "2222222");
                         QuicLossValidate(LossDetection);
                     }
+
+                    SentPacketsStart_Prev = BeginRemovePre;
                 }
                 
                 if (LargestAckedPacket != null && LossDetection.LargestAck <= LargestAckedPacket.PacketNumber)
@@ -1388,42 +1393,43 @@ namespace MSQuic1
         [Conditional("DEBUG")]
         static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection, string Tag)
         {
-#if DEBUG
-            int nLostCount = 0;
-            int nAllSendCount = 0;
-            int ackNeedSendCount = 0;
-            List<ulong> mNumberList = new List<ulong>();
-            QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
-            while (mPackage != null)
+            if (false)
             {
-                if (mPackage.Flags.IsAckEliciting)
+                int nLostCount = 0;
+                int nAllSendCount = 0;
+                int ackNeedSendCount = 0;
+                List<ulong> mNumberList = new List<ulong>();
+                QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
+                while (mPackage != null)
                 {
-                    ackNeedSendCount++;
-                    mNumberList.Add(mPackage.PacketNumber);
+                    if (mPackage.Flags.IsAckEliciting)
+                    {
+                        ackNeedSendCount++;
+                        mNumberList.Add(mPackage.PacketNumber);
+                    }
+
+                    mPackage = mPackage.Next;
+                    nAllSendCount++;
                 }
 
-                mPackage = mPackage.Next;
-                nAllSendCount++;
-            }
+                mPackage = LossDetection.LostPackets;
+                while (mPackage != null)
+                {
+                    mPackage = mPackage.Next;
+                    nLostCount++;
+                }
 
-            mPackage = LossDetection.LostPackets;
-            while (mPackage != null)
-            {
-                mPackage = mPackage.Next;
-                nLostCount++;
+                List<string> mLogList = new List<string>();
+                mLogList.Add($"-----------{Tag}---------丢包/重传 统计-------线程ID: {Thread.CurrentThread.ManagedThreadId}-----------");
+                mLogList.Add($"飞行中的包数量: {LossDetection.PacketsInFlight}");
+                mLogList.Add($"需要ACK确认的包数量: {mNumberList.Count}");
+                mLogList.Add($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
+                mLogList.Add($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
+                mLogList.Add($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
+                mLogList.Add($"SentPackets: {nAllSendCount}, {mNumberList.Count}, {nAllSendCount - mNumberList.Count}  {string.Join('-', mNumberList)}");
+                mLogList.Add($"LostPackets: {nLostCount}");
+                NetLog.Log(string.Join("\n", mLogList));
             }
-
-            List<string> mLogList = new List<string>();
-            mLogList.Add($"-----------{Tag}---------丢包/重传 统计-------线程ID: {Thread.CurrentThread.ManagedThreadId}-----------");
-            mLogList.Add($"飞行中的包数量: {LossDetection.PacketsInFlight}");
-            mLogList.Add($"需要ACK确认的包数量: {mNumberList.Count}");
-            mLogList.Add($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");
-            mLogList.Add($"本次收到ACK确认的最大包号: {LossDetection.LargestAck}");
-            mLogList.Add($"没有收到ACK时,下一步探测数量: {LossDetection.ProbeCount}");
-            mLogList.Add($"SentPackets: {nAllSendCount}, {mNumberList.Count}, {nAllSendCount - mNumberList.Count}  {string.Join('-', mNumberList)}");
-            mLogList.Add($"LostPackets: {nLostCount}");
-            NetLog.Log(string.Join("\n", mLogList));
-#endif
         }
 
         [Conditional("DEBUG")]
