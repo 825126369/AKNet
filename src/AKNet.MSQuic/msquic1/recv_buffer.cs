@@ -84,7 +84,10 @@ namespace MSQuic1
         public QUIC_RECV_CHUNK RetiredChunk;
         public readonly QUIC_RANGE WrittenRanges = new QUIC_RANGE();
         public long ReadPendingLength;//当前已经向应用层“承诺”但尚未读完的总字节长度
-        public long BaseOffset;//逻辑偏移量，表示已按序交付给应用的最远位置（缺口起始）。所有后续乱序数据都以它为基准做相对偏移。
+
+        // 在这个偏移前面的 都是 好的有序的流，可以向应用程序分发数据
+        // 在这个偏移后面的 所有后续乱序数据都以它为基准做相对偏移
+        public long BaseOffset;
         public int ReadStart; //在环形物理缓存里的起始下标（index，不是逻辑偏移）。配合 ReadLength 指出“当前这次要拷贝给应用的那块连续内存”落在哪个片段。
         public int ReadLength; //本次准备拷贝给应用的连续字节数。
 
@@ -286,6 +289,8 @@ namespace MSQuic1
             QuicRecvBufferValidate(RecvBuffer);
         }
 
+        //把已经连续收齐、且应用也已读完的物理内存块归还给池/系统” 的辅助函数，核心目的只有一句话：
+        //接收侧已经攒够一段连续且被应用消耗掉的数据，就把底下对应的物理 chunk 释放掉，省内存。
         static void QuicRecvBufferDrainFullChunks(QUIC_RECV_BUFFER RecvBuffer, ref long DrainLength)
         {
             long RemainingDrainLength = DrainLength;
@@ -356,11 +361,8 @@ namespace MSQuic1
                 RecvBuffer.ReadStart = 0;
             }
         }
-
-
-        //用于手动清空（drain）接收缓冲区中已读取但尚未被应用消费的数据（即“释放已确认接收的字节”）。
-        //作用 当应用通过 MsQuicStreamReceiveComplete() 告知 MSQuic “我已处理完某段数据” 后，
-        //该函数会将对应范围从接收窗口中移除，从而向对端通告更多接收窗口（ACK + window update），驱动流量继续。
+        
+        //用于手动清空 接收缓冲区中 已被应用程序读取的字节数量。
         static bool QuicRecvBufferDrain(QUIC_RECV_BUFFER RecvBuffer, long DrainLength)
         {
             NetLog.Assert(QuicRangeGetSafe(RecvBuffer.WrittenRanges, 0) != null);
@@ -387,11 +389,7 @@ namespace MSQuic1
                 RecvBuffer.RetiredChunk = null;
             }
 
-            //
-            // Drain chunks that are entirely covered by the drain.
-            //
             QuicRecvBufferDrainFullChunks(RecvBuffer, ref DrainLength);
-
             if (CxPlatListIsEmpty(RecvBuffer.Chunks))
             {
                 NetLog.Assert(RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED);

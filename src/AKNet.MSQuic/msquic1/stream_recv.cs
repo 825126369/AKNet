@@ -232,10 +232,6 @@ namespace MSQuic1
             while (FlushRecv)
             {
                 NetLog.Assert(!Stream.Flags.SentStopSending);
-
-                long RecvCompletionLength = Volatile.Read(ref Stream.RecvCompletionLength);
-                NetLog.Assert(RecvCompletionLength == 0 || Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
-
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
 
@@ -293,7 +289,7 @@ namespace MSQuic1
                 NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
                 int Status = QuicStreamIndicateEvent(Stream, ref Event);
-                RecvCompletionLength = Interlocked.Exchange(ref Stream.RecvCompletionLength, 0);
+                long RecvCompletionLength = 0;
                 if (Status == QUIC_STATUS_CONTINUE)
                 {
                     NetLog.Assert(!Stream.Flags.SentStopSending);
@@ -373,8 +369,8 @@ namespace MSQuic1
                         if (Stream.MaxAllowedSendOffset < Frame.MaximumData)
                         {
                             Stream.MaxAllowedSendOffset = Frame.MaximumData;
-                            UpdatedFlowControl = true;
 
+                            UpdatedFlowControl = true;
                             Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, int.MaxValue);
 
                             QuicSendBufferStreamAdjust(Stream);
@@ -384,7 +380,7 @@ namespace MSQuic1
                             QuicSendQueueFlush(Stream.Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_STREAM_FLOW_CONTROL);
 
                             //NetLog.Log("Receive QUIC_MAX_STREAM_DATA_EX: " + Frame.MaximumData);
-                            //NetLog.Log("Stream.SendWindow: " + Stream.SendWindow);
+                            NetLog.Log("Stream.SendWindow: " + Stream.SendWindow);
                         }
 
                         break;
@@ -506,8 +502,10 @@ namespace MSQuic1
 
         static void QuicStreamRecvQueueFlush(QUIC_STREAM Stream, bool AllowInlineFlush)
         {
+            NetLog.Log($"QuicStreamRecvQueueFlush 0000: ReceiveEnabled: {Stream.Flags.ReceiveEnabled}, ReceiveDataPending: {Stream.Flags.ReceiveDataPending}");
             if (Stream.Flags.ReceiveEnabled && Stream.Flags.ReceiveDataPending)
             {
+                NetLog.Log("QuicStreamRecvQueueFlush 1111");
                 if (AllowInlineFlush)
                 {
                     QuicStreamRecvFlush(Stream);
@@ -536,7 +534,7 @@ namespace MSQuic1
 
         static int QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, ref QUIC_STREAM_EX Frame)
         {
-            NetLog.Log("QuicStreamProcessStreamFrame");
+            //NetLog.Log("QuicStreamProcessStreamFrame");
             int Status;
             bool ReadyToDeliver = false;
             long EndOffset = Frame.Offset + Frame.Length;
@@ -663,6 +661,7 @@ namespace MSQuic1
                 Stream.RecvMaxLength = EndOffset;
                 if (Stream.RecvBuffer.BaseOffset == Stream.RecvMaxLength)
                 {
+                    //BaseOffset前面的都是 有序的流，那么就可以分发了
                     ReadyToDeliver = true;
                 }
             }
