@@ -18,7 +18,7 @@ namespace TestNetClient
         public abstract QuicClientMainBase Create();
         public abstract void OnTestFinish();
 
-        public const int nClientCount = 1;
+        public const int nClientCount = 100;
         public const int nSingleSendPackageCount = 100;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
@@ -144,20 +144,7 @@ namespace TestNetClient
                     }
                 }
             }
-
-            if (nSendPackageCount >= nSumSendPackageCount)
-            {
-                if (mStopWatch.ElapsedMilliseconds - nLastReceiveTime > 1000)
-                {
-                    if (!bCallOnTestFinish)
-                    {
-                        bCallOnTestFinish = true;
-                        OnTestFinish();
-                    }
-                }
-            }
         }
-
 
         long nLastReceiveTime = 0;
         bool bCallOnTestFinish = false;
