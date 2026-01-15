@@ -681,6 +681,7 @@ namespace MSQuic1
             long TimeNow = CxPlatTimeUs();
             if (OldestPacket != null && CxPlatTimeDiff(OldestPacket.SentTime, TimeNow) >= MS_TO_US(Connection.Settings.DisconnectTimeoutMs))
             {
+                QuicLossPrintStateInfo(LossDetection, "");
                 //超时爆断
                 QuicConnCloseLocally(Connection, 
                     QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT,
@@ -1423,7 +1424,7 @@ namespace MSQuic1
         [Conditional("DEBUG")]
         static void QuicLossPrintStateInfo(QUIC_LOSS_DETECTION LossDetection, string Tag)
         {
-            if (false)
+            if (true)
             {
                 int nLostCount = 0;
                 int nAllSendCount = 0;
