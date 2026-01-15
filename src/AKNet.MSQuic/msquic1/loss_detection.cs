@@ -1030,6 +1030,10 @@ namespace MSQuic1
                         (FrameType ==  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_1 ? Ecn : default));
                 }
             }
+            else
+            {
+                NetLog.LogError("QuicLossDetectionProcessAckFrame 解析ACK帧失败");
+            }
 
             QuicRangeReset(Connection.DecodedAckRanges);
             return Result;

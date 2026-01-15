@@ -10,6 +10,8 @@
 using AKNet.Common;
 using System;
 using System.Security.Cryptography.X509Certificates;
+using static Google.Protobuf.WellKnownTypes.Field.Types;
+
 
 #if true
 using MSQuic1;
@@ -100,27 +102,46 @@ namespace MSTest
         public void TestMethod2()
         {
             QUIC_RANGE mRange = new QUIC_RANGE();
-            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 10, mRange);
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 128, mRange);
 
             List<ulong> mList = new List<ulong>();
             for (int i = 0; i < 100; i++)
             {
                 ulong A = (ulong)RandomTool.Random(0, ushort.MaxValue);
                 int nCount = RandomTool.Random(1, 3);
-                MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _);
+                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _) != null);
 
                 for(int j = 0; j < nCount; j++)
                 {
-                    mList.Add(A + (ulong)j);
+                    ulong value = A + (ulong)j;
+                    if (!mList.Contains(value))
+                    {
+                        mList.Add(value);
+                    }
                 }
             }
+
+            List<ulong> mList2 = new List<ulong>();
+            for (int i = 0; i < mRange.UsedLength; i++)
+            {
+                for (int j = 0; j < mRange.SubRanges[i].Count; j++)
+                {
+                    ulong value = mRange.SubRanges[i].Low + (ulong)j;
+                    if (!mList2.Contains(value))
+                    {
+                        mList2.Add(value);
+                    }
+                }
+            }
+
+            Assert.IsTrue(mList2.Count == mList.Count);
 
             foreach (ulong j in mList)
             {
                 bool bFind = false;
                 for (int i = 0; i < mRange.UsedLength; i++)
                 {
-                    if(mRange.SubRanges[i].Low >= j && j <= mRange.SubRanges[i].High)
+                    if(j >= mRange.SubRanges[i].Low && j <= mRange.SubRanges[i].High)
                     {
                         bFind = true;
                     }
@@ -135,7 +156,7 @@ namespace MSTest
                 Assert.IsTrue(mRange.SubRanges[i].High >= mRange.SubRanges[i].Low);
             }
 
-            for (int i = 1; i < mRange.AllocLength; i++)
+            for (int i = 1; i < mRange.UsedLength; i++)
             {
                 Assert.IsTrue(mRange.SubRanges[i].Low > mRange.SubRanges[i - 1].High);
             }

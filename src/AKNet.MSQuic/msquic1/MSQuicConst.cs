@@ -191,7 +191,7 @@ namespace MSQuic1
         //
         // Maximum memory allocated (in bytes) for different range tracking structures
         //
-        public const int QUIC_MAX_RANGE_ALLOC_SIZE = 0x100000;    // 1084576
+        public const int QUIC_MAX_RANGE_ALLOC_SIZE = 0x100000;    // 1084576，65536个区间
         public const int QUIC_MAX_RANGE_DUPLICATE_PACKETS = 0x1000;     // 4096
         public const int QUIC_MAX_RANGE_ACK_PACKETS = 0x800;      // 2048
         public const int QUIC_MAX_RANGE_DECODE_ACKS = 0x1000;      // 4096

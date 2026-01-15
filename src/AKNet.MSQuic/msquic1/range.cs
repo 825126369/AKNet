@@ -139,8 +139,7 @@ namespace MSQuic1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static int INSERT_INDEX_TO_FIND_INDEX(int i)
         {
-            Debug.Assert((int)(uint)(-((i) + 1)) == Math.Abs(-(i + 1)));
-            return Math.Abs(-(i + 1));
+            return (int)(uint)(-(i + 1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -206,7 +205,7 @@ namespace MSQuic1
         //这里为将要插入的元素，腾出位置
         static bool QuicRangeGrow(QUIC_RANGE Range, int NextIndex)
         {
-            if (Range.AllocLength == QUIC_MAX_RANGE_ALLOC_SIZE)
+            if (Range.AllocLength == QUIC_MAX_RANGE_ALLOC_SIZE / QUIC_SUBRANGE.sizeof_Length)
             {
                 return false;
             }
@@ -304,7 +303,7 @@ namespace MSQuic1
             QUIC_RANGE_SEARCH_KEY Key = new QUIC_RANGE_SEARCH_KEY()
             {
                 Low = Low,
-                High = Low + (ulong)(Count - 1)
+                High = QuicRangeGetHighByLow(Low, Count)
             };
 
             RangeUpdated = false;
@@ -312,7 +311,7 @@ namespace MSQuic1
             if (IS_FIND_INDEX(result))
             {
                 i = result;
-                while ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && QuicRangeCompare(Key, Sub) == 0) //有重叠的话，早就合并了，没必要在这里啊
+                while ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && QuicRangeCompare(Key, Sub) == 0)
                 {
                     --i;
                 }
@@ -352,6 +351,7 @@ namespace MSQuic1
                     Sub.Count += (int)(Sub.Low - Low);
                     Sub.Low = Low;
                 }
+
                 if (Sub.Low + (ulong)Sub.Count < Low + (ulong)Count)
                 {
                     RangeUpdated = true;
@@ -362,7 +362,7 @@ namespace MSQuic1
                 QUIC_SUBRANGE Next;
                 while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + (ulong)Count)
                 {
-                    if (Next.High >= Sub.High)
+                    if (Next.High > Sub.High)
                     {
                         Sub.Count = (int)(Next.High - Sub.Low + 1);
                     }
@@ -426,7 +426,7 @@ namespace MSQuic1
             {
                 return -1;
             }
-            if (QuicRangeGetHigh(Sub) < Key.Low)
+            if (Sub.High < Key.Low)
             {
                 return 1;
             }
@@ -498,7 +498,7 @@ namespace MSQuic1
                 QUIC_SUBRANGE Sub = QuicRangeGet(Range, i - 1);
                 if ((Result = QuicRangeCompare(Key, Sub)) == 0) //有交集
                 {
-                    return (int)(i - 1);
+                    return i - 1;
                 }
                 else if (Result > 0)
                 {
