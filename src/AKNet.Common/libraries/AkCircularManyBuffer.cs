@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("AKNet")]
@@ -66,7 +67,7 @@ namespace AKNet.Common
             }
         }
 
-        private readonly bool bNeedCheck = true;
+        private const bool bNeedCheck = false;
         private readonly int nInitBlockCount = 1;
         private readonly int nMaxBlockCount = 1;
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
@@ -389,9 +390,9 @@ namespace AKNet.Common
             mItemList.Clear();
         }
 
+        [Conditional("DEBUG")]
         private void Check_Length_Ok()
         {
-#if DEBUG
             if (bNeedCheck)
             {
                 int nSumLength = 0;
@@ -411,7 +412,6 @@ namespace AKNet.Common
                     throw new Exception($"nSumByteCount: {nSumByteCount}, nSumLength: {nSumLength}");
                 }
             }
-#endif
         }
     }
 }
