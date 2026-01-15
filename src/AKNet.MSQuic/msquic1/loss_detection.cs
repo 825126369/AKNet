@@ -684,7 +684,7 @@ namespace MSQuic1
                 //超时爆断
                 QuicConnCloseLocally(Connection, 
                     QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT,
-                    "LossDetection DisconnectTimeout");
+                    $"LossDetection DisconnectTimeout: {OldestPacket} 超时时间: {US_TO_S(TimeNow - OldestPacket.SentTime)}");
             }
             else
             {
@@ -695,6 +695,7 @@ namespace MSQuic1
                 }
                 QuicLossDetectionUpdateTimer(LossDetection, false);
             }
+
         }
 
         static void QuicLossDetectionOnPacketDiscarded(QUIC_LOSS_DETECTION LossDetection,QUIC_SENT_PACKET_METADATA Packet, bool DiscardedForLoss)

@@ -67,6 +67,11 @@ namespace MSQuic1
             return POOL_ENTRY;
         }
 
+        public override string ToString()
+        {
+            return $"PacketNumber: {PacketNumber}, SentTime: {SentTime}, TotalBytesSent: {TotalBytesSent}";
+        }
+
         public void Reset()
         {
             this.Next = null;
