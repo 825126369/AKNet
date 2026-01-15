@@ -170,16 +170,13 @@ namespace MSQuic1
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
         {
             return Range.SubRanges[Index];
         }
 
-        static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
-        {
-            Range.SubRanges[Index] = t;
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
             return Sub.High;
@@ -543,6 +540,25 @@ namespace MSQuic1
         {
             bool DontCare = false;
             return QuicRangeAddRange(Range, Value, 1, out DontCare) != null;
+        }
+
+        //2026-01-15 xuke 加的实用方法
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
+        {
+            Range.SubRanges[Index] = t;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static ulong QuicRangeGetLowByHigh(ulong High, int nCount)
+        {
+            return High + 1 - (ulong)nCount;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static ulong QuicRangeGetHighByLow(ulong Low, int nCount)
+        {
+            return Low + (ulong)(nCount - 1);
         }
 
     }

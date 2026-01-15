@@ -533,7 +533,7 @@ namespace MSQuic1
                 LargestAcknowledged = Largest,  
                 AckDelay = AckDelay,  
                 AdditionalAckBlockCount = i,
-                FirstAckBlock = (int)Count - 1 
+                FirstAckBlock = (int)Count - 1
             };
 
             if (!QuicAckHeaderEncode(Frame, Ecn, ref Buffer))
@@ -791,9 +791,9 @@ namespace MSQuic1
             }
 
             ulong Largest = Frame.LargestAcknowledged; //最大确认的序号
-            int Count = Frame.FirstAckBlock + 1;
+            int Count = Frame.FirstAckBlock + 1; //最大区间的长度
 
-            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out _) == null)
+            if (QuicRangeAddRange(AckRanges, QuicRangeGetLowByHigh(Largest, Count), Count, out _) == null)
             {
                 return false;
             }
@@ -814,13 +814,13 @@ namespace MSQuic1
 
                 Largest -= (ulong)Count;
                 QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX();
-                if (!QuicAckBlockDecode(ref Buffer, Block))
+                if (!QuicAckBlockDecode(ref Buffer, ref Block))
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                if ((ulong)Block.Gap + 1 > Largest)
+                if ((ulong)(Block.Gap + 1) > Largest)
                 {
                     InvalidFrame = true;
                     return false;
@@ -828,7 +828,7 @@ namespace MSQuic1
 
                 Largest -=  (ulong)(Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out _) == null)
+                if (QuicRangeAddRange(AckRanges, QuicRangeGetLowByHigh(Largest, Count), Count, out _) == null)
                 {
                     return false;
                 }
@@ -857,7 +857,7 @@ namespace MSQuic1
             return true;
         }
 
-        static bool QuicAckBlockDecode(ref QUIC_SSBuffer Buffer, QUIC_ACK_BLOCK_EX Block)
+        static bool QuicAckBlockDecode(ref QUIC_SSBuffer Buffer, ref QUIC_ACK_BLOCK_EX Block)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Block.Gap) || 
                 !QuicVarIntDecode(ref Buffer, ref Block.AckBlock))
