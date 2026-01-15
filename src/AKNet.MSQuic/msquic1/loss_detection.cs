@@ -684,7 +684,9 @@ namespace MSQuic1
                 //超时爆断
                 QuicConnCloseLocally(Connection, 
                     QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT,
-                    $"LossDetection DisconnectTimeout: {OldestPacket} 超时时间: {US_TO_S(TimeNow - OldestPacket.SentTime)}");
+                    $"LossDetection DisconnectTimeout: {OldestPacket} " +
+                    $"超时时间: {US_TO_S(TimeNow - OldestPacket.SentTime)} " +
+                    $"当前最大ACK: {LossDetection.LargestAck}");
             }
             else
             {
