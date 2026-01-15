@@ -1263,7 +1263,6 @@ namespace MSQuic1
 
             if (AckedPackets == null)
             {
-                NetLog.Log("AckedPackets == null");
                 return;
             }
 

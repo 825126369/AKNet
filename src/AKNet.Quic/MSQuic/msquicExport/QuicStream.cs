@@ -348,7 +348,7 @@ namespace AKNet.MSQuic.Common
 
             //如果需要设置 需要接收
             //2026-01-14, 这个判断得注释掉，否则,逻辑刚好卡住，只能接收一部分数据。
-            //if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            if (_receiveBuffers.HasCapacity())
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {

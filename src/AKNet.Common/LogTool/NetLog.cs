@@ -55,7 +55,7 @@ namespace AKNet.Common
     
     public static partial class NetLog
     {
-        private const bool bPrintAllLogToFile = false;
+        private const bool bPrintAllLogToFile = true;
         public static bool bPrintLog = true;
         public static event Action<string> LogFunc;
         public static event Action<string> LogWarningFunc;

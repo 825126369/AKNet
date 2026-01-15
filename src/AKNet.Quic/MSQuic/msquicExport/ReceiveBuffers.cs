@@ -38,6 +38,14 @@ namespace AKNet.MSQuic.Common
             }
         }
 
+        public int RemainLength()
+        {
+            lock (_syncRoot)
+            {
+                return _buffer.Length;
+            }
+        }
+
         public void SetFinal()
         {
             lock (_syncRoot)
