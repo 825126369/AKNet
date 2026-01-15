@@ -43,17 +43,6 @@ namespace MSTest
             //    }
             //}
 
-            //QUIC_RANGE mRange = new QUIC_RANGE();
-            //MSQuicFunc.QuicRangeInitialize(16 * 10, mRange);
-
-            //bool bUpdate = false;
-            //for (int i = 0; i < 100; i++)
-            //{
-            //    ulong A = (ulong)i;
-            //    int nCount = 1;
-            //    QuicRangeAddRange(mRange, A, nCount, out bUpdate);
-            //}
-
             ////PFX 证书测试
             //X509Certificate2 mCert = X509CertTool.GetPfxCert();
 
@@ -106,5 +95,51 @@ namespace MSTest
             //    NetLog.Log($"Count: {CxPlatListCount(mList)}");
             //}
         }
+
+        [TestMethod]
+        public void TestMethod2()
+        {
+            QUIC_RANGE mRange = new QUIC_RANGE();
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 10, mRange);
+
+            List<ulong> mList = new List<ulong>();
+            for (int i = 0; i < 100; i++)
+            {
+                ulong A = (ulong)RandomTool.Random(0, ushort.MaxValue);
+                int nCount = RandomTool.Random(1, 3);
+                MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _);
+
+                for(int j = 0; j < nCount; j++)
+                {
+                    mList.Add(A + (ulong)j);
+                }
+            }
+
+            foreach (ulong j in mList)
+            {
+                bool bFind = false;
+                for (int i = 0; i < mRange.UsedLength; i++)
+                {
+                    if(mRange.SubRanges[i].Low >= j && j <= mRange.SubRanges[i].High)
+                    {
+                        bFind = true;
+                    }
+                }
+
+                Assert.IsTrue(bFind);
+            }
+
+
+            for (int i = 0; i < mRange.UsedLength; i++)
+            {
+                Assert.IsTrue(mRange.SubRanges[i].High >= mRange.SubRanges[i].Low);
+            }
+
+            for (int i = 1; i < mRange.AllocLength; i++)
+            {
+                Assert.IsTrue(mRange.SubRanges[i].Low > mRange.SubRanges[i - 1].High);
+            }
+        }
+
     }
 }

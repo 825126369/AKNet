@@ -1244,7 +1244,7 @@ namespace MSQuic1
                         }
                         NetLog.Assert(SentPacketsStart == EndRemoveNext);
 
-                        QuicLossPrintStateInfo(LossDetection, "2222222");
+                        //QuicLossPrintStateInfo(LossDetection, "2222222");
                         QuicLossValidate(LossDetection);
                     }
 

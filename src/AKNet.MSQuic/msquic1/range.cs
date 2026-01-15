@@ -154,7 +154,7 @@ namespace MSQuic1
             return (Index >= 0 && Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty);
         }
 
-        static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
+        public static void QuicRangeInitialize(int MaxAllocSize, QUIC_RANGE Range)
         {
             Range.UsedLength = 0;
             Range.MaxAllocSize = MaxAllocSize;
@@ -294,9 +294,9 @@ namespace MSQuic1
             return true;
         }
 
-        static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
+        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
         {
-            NetLog.Assert(Low >= 0 && Low <= MSQuicFunc.QUIC_VAR_INT_MAX);
+            NetLog.Assert(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
             NetLog.Assert(Count >= 1);
 
             int i;
@@ -542,7 +542,7 @@ namespace MSQuic1
             return QuicRangeAddRange(Range, Value, 1, out DontCare) != null;
         }
 
-        //2026-01-15 xuke 加的实用方法
+        //-----------------------2026-01-15 xuke 加的实用方法---------------------
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
         {
@@ -560,6 +560,5 @@ namespace MSQuic1
         {
             return Low + (ulong)(nCount - 1);
         }
-
     }
 }
