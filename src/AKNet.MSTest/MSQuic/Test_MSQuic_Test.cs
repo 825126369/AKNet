@@ -102,10 +102,10 @@ namespace MSTest
         public void TestMethod2()
         {
             QUIC_RANGE mRange = new QUIC_RANGE();
-            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 128, mRange);
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
 
             List<ulong> mList = new List<ulong>();
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 ulong A = (ulong)RandomTool.Random(0, ushort.MaxValue);
                 int nCount = RandomTool.Random(1, 3);
