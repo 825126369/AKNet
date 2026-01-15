@@ -162,5 +162,39 @@ namespace MSTest
             }
         }
 
+
+        [TestMethod]
+        public void TestMethod3()
+        {
+            QUIC_RANGE mRange = new QUIC_RANGE();
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
+
+            MSQuicFunc.QuicRangeAddRange(mRange, 1, 4, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 2, 1, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 3, 4, out _);
+            Assert.IsTrue(mRange.UsedLength == 1);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 1, Count = 6 });
+
+            MSQuicFunc.QuicRangeAddRange(mRange, 0, 1, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 7, 1, out _);
+            Assert.IsTrue(mRange.UsedLength == 1);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 0, Count = 8 });
+
+            MSQuicFunc.QuicRangeAddRange(mRange, 9, 1, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 10, 1, out _);
+            Assert.IsTrue(mRange.UsedLength == 2);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 0, Count = 8 });
+            Assert.IsTrue(mRange.SubRanges[1] == new QUIC_SUBRANGE() { Low = 9, Count = 2 });
+
+            mRange.UsedLength = 0;
+            for (int i = 0; i < 1000; i++)
+            {
+                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, (ulong)i, 1, out _) != null);
+            }
+            Assert.IsTrue(mRange.UsedLength == 1);
+            Assert.IsTrue(mRange.SubRanges[0].Low == 0);
+            Assert.IsTrue(mRange.SubRanges[0].High == 999);
+        }
+
     }
 }
