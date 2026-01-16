@@ -409,7 +409,7 @@ namespace MSQuic1
             while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < End)
             {
                 //在已经被确认的ACK稀疏列表里，查找到还没被确认的集合
-                if (Start <= Sack.High)
+                if (Start < Sack.End)
                 {
                     if (Start >= Sack.Low)
                     {
