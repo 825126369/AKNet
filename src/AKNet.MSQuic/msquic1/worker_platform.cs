@@ -449,40 +449,29 @@ namespace MSQuic1
         static void CxPlatProcessEvents(CXPLAT_WORKER Worker)
         {
             var Cqes = Worker.Cqes;
-            int CqeCount = 0;
-
             if (Worker.EventQ.Count == 0)
             {
                 CxPlatEventWaitWithTimeout(Worker.mEventQReady, (int)Worker.State.WaitTime);
             }
 
-            while (Worker.EventQ.Count > 0)
+            while (Worker.EventQ.Count > 0 && Cqes.Count <= 16)
             {
                 SSocketAsyncEventArgs mArgs = null;
                 if (Worker.EventQ.TryDequeue(out mArgs))
                 {
-                    CqeCount++;
                     Cqes.Add(mArgs);
                 }
                 else
                 {
                     break;
                 }
-
-                if (CqeCount >= 32)
-                {
-                    break;
-                }
             }
 
             InterlockedFetchAndSetBoolean(ref Worker.Running);
-            if (CqeCount != 0)
+            if (Cqes.Count > 0)
             {
-#if DEBUG       //Debug statistics
-                Worker.CqeCount += CqeCount;
-#endif
                 Worker.State.NoWorkCount = 0;
-                for (int i = 0; i < CqeCount; ++i)
+                for (int i = 0; i < Cqes.Count; ++i)
                 {
                     SSocketAsyncEventArgs Sqe = Cqes[i];
                     Sqe.Do();
