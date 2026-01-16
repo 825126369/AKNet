@@ -15,9 +15,9 @@ namespace MSQuic1
 {
     internal struct QUIC_ACK_ECN_EX
     {
-        public ulong ECT_0_Count;
-        public ulong ECT_1_Count;
-        public ulong CE_Count;
+        public long ECT_0_Count;
+        public long ECT_1_Count;
+        public long CE_Count;
 
         public bool IsEmpty
         {
@@ -29,7 +29,7 @@ namespace MSQuic1
 
     internal struct QUIC_ACK_EX
     {
-        public ulong LargestAcknowledged; //最大被确认的数据包编号（Packet Number），即接收方收到的最新的数据包号
+        public long LargestAcknowledged; //最大被确认的数据包编号（Packet Number），即接收方收到的最新的数据包号
         public long AckDelay; //接收方从收到这个包到发送 ACK 的延迟时间（单位为时间戳单位，通常为 microseconds，经指数压缩）
         public int AdditionalAckBlockCount; //表示后面还有多少个 ACK Block（即除了第一个之外的额外块数量）
         public int FirstAckBlock;//第一个 ACK Block 中的连续确认区间长度（即有多少个连续的包被确认）
@@ -525,8 +525,8 @@ namespace MSQuic1
             int i = QuicRangeSize(AckBlocks) - 1;
 
             QUIC_SUBRANGE LastSub = QuicRangeGet(AckBlocks, i);
-            ulong Largest = QuicRangeGetHigh(LastSub);
-            ulong Count = (ulong)LastSub.Count;
+            long Largest = QuicRangeGetHigh(LastSub);
+            long Count = LastSub.Count;
 
             QUIC_ACK_EX Frame = new QUIC_ACK_EX()
             {
@@ -547,8 +547,8 @@ namespace MSQuic1
                 Largest -= Count;
 
                 QUIC_SUBRANGE Next = QuicRangeGet(AckBlocks, i - 1);
-                ulong NextLargest = QuicRangeGetHigh(Next);
-                Count = (ulong)Next.Count;
+                long NextLargest = QuicRangeGetHigh(Next);
+                Count = Next.Count;
 
                 NetLog.Assert(Largest > NextLargest);
                 NetLog.Assert(Count > 0);
@@ -772,7 +772,7 @@ namespace MSQuic1
                 !QuicVarIntDecode(ref Buffer, ref Frame.AckDelay) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.AdditionalAckBlockCount) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.FirstAckBlock) ||
-                (ulong)Frame.FirstAckBlock > Frame.LargestAcknowledged)
+                Frame.FirstAckBlock > Frame.LargestAcknowledged)
             {
                 return false;
             }
@@ -790,7 +790,7 @@ namespace MSQuic1
                 return false;
             }
 
-            ulong Largest = Frame.LargestAcknowledged; //最大确认的序号
+            long Largest = Frame.LargestAcknowledged; //最大确认的序号
             int Count = Frame.FirstAckBlock + 1; //最大区间的长度
 
             if (QuicRangeAddRange(AckRanges, QuicRangeGetLowByHigh(Largest, Count), Count, out _) == null)
@@ -806,13 +806,13 @@ namespace MSQuic1
 
             for (int i = 0; i < Frame.AdditionalAckBlockCount; i++)
             {
-                if ((ulong)Count > Largest)
+                if (Count > Largest)
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                Largest -= (ulong)Count;
+                Largest -= Count;
                 QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX();
                 if (!QuicAckBlockDecode(ref Buffer, ref Block))
                 {
@@ -820,13 +820,13 @@ namespace MSQuic1
                     return false;
                 }
 
-                if ((ulong)(Block.Gap + 1) > Largest)
+                if ((Block.Gap + 1) > Largest)
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                Largest -=  (ulong)(Block.Gap + 1);
+                Largest -= (Block.Gap + 1);
                 Count = Block.AckBlock + 1;
                 if (QuicRangeAddRange(AckRanges, QuicRangeGetLowByHigh(Largest, Count), Count, out _) == null)
                 {

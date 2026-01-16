@@ -44,7 +44,7 @@ namespace MSQuic1
         public bool LastFlushTimeValid;
         public bool TailLossProbeNeeded;
         public bool Uninitialized;
-        public ulong NextPacketNumber;
+        public long NextPacketNumber;
         public long LastFlushTime;
         public int NumPacketsSentWithEct;
         public long MaxData;

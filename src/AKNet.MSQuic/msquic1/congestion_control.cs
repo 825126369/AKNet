@@ -20,14 +20,14 @@ namespace MSQuic1
 
     internal struct QUIC_ECN_EVENT
     {
-        public ulong LargestPacketNumberAcked;
-        public ulong LargestSentPacketNumber;
+        public long LargestPacketNumberAcked;
+        public long LargestSentPacketNumber;
     }
 
     internal struct QUIC_LOSS_EVENT
     {
-        public ulong LargestPacketNumberLost;
-        public ulong LargestSentPacketNumber;
+        public long LargestPacketNumberLost;
+        public long LargestSentPacketNumber;
         public long NumRetransmittableBytes;
         public bool PersistentCongestion;
     }
@@ -35,8 +35,8 @@ namespace MSQuic1
     internal struct QUIC_ACK_EVENT
     {
         public long TimeNow;
-        public ulong LargestAck;
-        public ulong LargestSentPacketNumber;
+        public long LargestAck;
+        public long LargestSentPacketNumber;
         public long NumTotalAckedRetransmittableBytes;
         public int NumRetransmittableBytes;
         public QUIC_SENT_PACKET_METADATA AckedPackets;

@@ -485,7 +485,7 @@ namespace MSQuic1
                 if (!bIOPending)
                 {
                     NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                    CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
+                    DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
                 }
             }
             catch (Exception e)
@@ -651,9 +651,9 @@ namespace MSQuic1
                 mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
             }
 
-            //NetLog.Log("SendData.WsaBuffers.Count: " + SendData.WsaBuffers.Count);
+            //NetLog.Log($"SendData.WsaBuffers.Count: {SendData.WsaBuffers.Count} {mList[0].Count}");
             //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
-            //NetLogHelper.PrintByteArray("SendToAsync Length", arg.BufferList[0].AsSpan());
+            //NetLogHelper.PrintByteArray("SendToAsync Length", mList[0].Count);
 
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
@@ -661,7 +661,7 @@ namespace MSQuic1
             bool bIOPending = SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
             if(!bIOPending)
             {
-                CxPlatSendDataComplete(SendData.Sqe);
+                DataPathProcessCqe2(null, SendData.Sqe);
             }
 
             return 0;

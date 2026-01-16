@@ -47,7 +47,7 @@ namespace MSQuic1
         public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
         public QUIC_SENT_PACKET_METADATA Next;
         public ulong PacketId;
-        public ulong PacketNumber;
+        public long PacketNumber;
         public long TotalBytesSent;
         public long SentTime;
         public int PacketLength;
@@ -122,7 +122,7 @@ namespace MSQuic1
     {
         public struct ACK_DATA
         {
-            public ulong LargestAckedPacketNumber;
+            public long LargestAckedPacketNumber;
         }
 
         public struct RESET_STREAM_DATA
@@ -235,10 +235,10 @@ namespace MSQuic1
         public RETIRE_CONNECTION_ID_DATA RETIRE_CONNECTION_ID;
         public ACK_FREQUENCY_DATA ACK_FREQUENCY;
         public PATH_RESPONSE_DATA PATH_RESPONSE;
-        public int StreamOffset;
+        public long StreamOffset;
         public int StreamLength;
         public QUIC_FRAME_TYPE Type;
-        public int Flags;
+        public byte Flags;
 
         private STREAM_DATA_BLOCKED_DATA mSTREAM_DATA_BLOCKED;
         public STREAM_DATA_BLOCKED_DATA STREAM_DATA_BLOCKED

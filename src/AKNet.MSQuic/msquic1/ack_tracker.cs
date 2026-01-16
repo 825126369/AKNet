@@ -33,7 +33,7 @@ namespace MSQuic1
         //逻辑：只把“最近收到且还没被 ACK 发送出去”的包号保留在这里；一旦 ACK 帧被发送，就把对应区间从本字段里“commit”掉（QuicAckTrackerCommitAck）。
         public readonly QUIC_RANGE PacketNumbersToAck = new QUIC_RANGE();
         public QUIC_ACK_ECN_EX ReceivedECN;
-        public ulong LargestPacketNumberAcknowledged;
+        public long LargestPacketNumberAcknowledged;
         public long LargestPacketNumberRecvTime;
         public int AckElicitingPacketsToAcknowledge; //用途：记录需要确认的触发确认（ACK-eliciting）数据包的数量。
         public bool AlreadyWrittenAckFrame;
@@ -80,13 +80,13 @@ namespace MSQuic1
         }
         
         //接收到数据包的时候,把 包号 存下来
-        static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
+        static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, long PacketNumber)
         {
             return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out bool RangeUpdated) == null || !RangeUpdated;
         }
 
         //我本地发送的包里有这些ACK帧, 
-        static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, ulong LargestAckedPacketNumber)
+        static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, long LargestAckedPacketNumber)
         {
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
 
@@ -147,7 +147,7 @@ namespace MSQuic1
         }
 
         //接收到数据包的时候,把 包号 存下来
-        static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, ulong PacketNumber, long RecvTimeUs, 
+        static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, long PacketNumber, long RecvTimeUs, 
             CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
         {
             //NetLog.Log("发送确认 ACK PacketNumber: " + PacketNumber);
@@ -156,7 +156,7 @@ namespace MSQuic1
             NetLog.Assert(Connection != null);
             NetLog.Assert(PacketNumber <= QUIC_VAR_INT_MAX);
 
-            if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, out ulong CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
+            if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, out long CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
             {
                 Connection.Stats.Recv.ReorderedPackets++;//旧的数据包
             }

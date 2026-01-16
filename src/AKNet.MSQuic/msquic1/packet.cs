@@ -809,7 +809,7 @@ namespace MSQuic1
         }
 
         //这里编码 比较特殊，这里只编码了 64位包号的一部分， 所以后面接收的时候，需要解压缩
-        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
+        static void QuicPktNumEncode(long PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
         {
             for (int i = 0; i < PacketNumberLength; i++)
             {
@@ -860,7 +860,7 @@ namespace MSQuic1
             Token = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, 0, TokenLengthVarInt);
         }
 
-        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, ulong PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
+        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, long PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(PacketNumberLength != 0 && PacketNumberLength <= 4);
             int RequiredBufferLength = QUIC_SHORT_HEADER_V1.sizeof_Length + DestCid.Data.Length + PacketNumberLength;

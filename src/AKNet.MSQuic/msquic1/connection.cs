@@ -2466,7 +2466,7 @@ namespace MSQuic1
             Packet.PayloadLength -= CompressedPacketNumberLength;
 
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
-            Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, CompressedPacketNumber, CompressedPacketNumberLength);
+            Packet.PacketNumber = (long)QuicPktNumDecompress((ulong)Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, (ulong)CompressedPacketNumber, CompressedPacketNumberLength);
             Packet.PacketNumberSet = true;
 
             //NetLog.Log($"QuicPktNumDecompress: {Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber}, {CompressedPacketNumber}, {CompressedPacketNumberLength}");

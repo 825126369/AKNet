@@ -37,7 +37,7 @@ namespace MSQuic1
     {
         public QUIC_CONNECTION mConnection;
         public int PacketsInFlight; //当前在网络中飞行中的（即已发送但尚未被确认）可重传数据包数量。
-        public ulong LargestAck;//接收到的最大确认号（packet number），即对端最近一次 ACK 中最大的 packet number。
+        public long LargestAck;//接收到的最大确认号（packet number），即对端最近一次 ACK 中最大的 packet number。
         public QUIC_ENCRYPT_LEVEL LargestAckEncryptLevel; //收到最大 ACK 所属的加密级别（如 Initial、Handshake、0-RTT、1-RTT 等）。
         public long TimeOfLastPacketSent;//最后一个发送数据包的时间戳。
         public long TimeOfLastPacketAcked;//最后一个被确认的数据包的接收时间（即本地收到 ACK 的时间）。
@@ -46,7 +46,7 @@ namespace MSQuic1
         public long TotalBytesSent; //总共已发送的字节数。
         public long TotalBytesAcked; //总共已被确认的字节数。
         public long TotalBytesSentAtLastAck; //上次收到确认时已发送的总字节数。
-        public ulong LargestSentPacketNumber; //已发送的最大的 packet number。
+        public long LargestSentPacketNumber; //已发送的最大的 packet number。
         public QUIC_SENT_PACKET_METADATA SentPackets;
         public QUIC_SENT_PACKET_METADATA SentPacketsTail;
         public QUIC_SENT_PACKET_METADATA LostPackets;
@@ -698,7 +698,6 @@ namespace MSQuic1
                 }
                 QuicLossDetectionUpdateTimer(LossDetection, false);
             }
-
         }
 
         static void QuicLossDetectionOnPacketDiscarded(QUIC_LOSS_DETECTION LossDetection,QUIC_SENT_PACKET_METADATA Packet, bool DiscardedForLoss)
@@ -749,7 +748,7 @@ namespace MSQuic1
                 QUIC_PATH Path = Connection.Paths[0]; // TODO - Correct?
                 long Rtt = Math.Max(Path.SmoothedRtt, Path.LatestRttSample);
                 long TimeReorderThreshold = QUIC_TIME_REORDER_THRESHOLD(Rtt);
-                ulong LargestLostPacketNumber = 0;
+                long LargestLostPacketNumber = 0;
                 QUIC_SENT_PACKET_METADATA PrevPacket = null;
                 Packet = LossDetection.SentPackets;
                 while (Packet != null)
@@ -1011,7 +1010,7 @@ namespace MSQuic1
 
             if (Result)
             {
-                if (!QuicRangeGetMaxSafe(Connection.DecodedAckRanges, out ulong Largest) || LossDetection.LargestSentPacketNumber < Largest) 
+                if (!QuicRangeGetMaxSafe(Connection.DecodedAckRanges, out long Largest) || LossDetection.LargestSentPacketNumber < Largest) 
                 {
                     InvalidFrame = true;
                     Result = false;
@@ -1275,9 +1274,9 @@ namespace MSQuic1
                 return;
             }
 
-            ulong LargestAckedPacketNum = 0;
+            long LargestAckedPacketNum = 0;
             bool IsLargestAckedPacketAppLimited = false;
-            ulong EcnEctCounter = 0;
+            long EcnEctCounter = 0;
 
             QUIC_SENT_PACKET_METADATA AckedPacketsIterator = AckedPackets;
             while (AckedPacketsIterator != null)
@@ -1300,7 +1299,7 @@ namespace MSQuic1
                     IsLargestAckedPacketAppLimited = PacketMeta.Flags.IsAppLimited;
                 }
 
-                EcnEctCounter += (ulong)(PacketMeta.Flags.EcnEctSet ? 1 : 0);
+                EcnEctCounter += (PacketMeta.Flags.EcnEctSet ? 1 : 0);
                 QuicLossDetectionOnPacketAcknowledged(LossDetection, EncryptLevel, PacketMeta, false, TimeNow, AckDelay);
             }
 
@@ -1333,14 +1332,14 @@ namespace MSQuic1
                 {
                     QUIC_PACKET_SPACE Packets = Connection.Packets[(int)EncryptLevel];
                     bool EcnValidated = true;
-                    ulong EctCeDeltaSum = 0;
+                    long EctCeDeltaSum = 0;
                     if (!Ecn.IsEmpty)
                     {
                         EctCeDeltaSum += Ecn.CE_Count - Packets.EcnCeCounter;
                         EctCeDeltaSum += Ecn.ECT_0_Count - Packets.EcnEctCounter;
 
                         if (EctCeDeltaSum < 0 || EctCeDeltaSum < EcnEctCounter || Ecn.ECT_1_Count != 0 ||
-                            (ulong)Connection.Send.NumPacketsSentWithEct < Ecn.ECT_0_Count)
+                            Connection.Send.NumPacketsSentWithEct < Ecn.ECT_0_Count)
                         {
                             EcnValidated = false;
                         }
@@ -1429,7 +1428,7 @@ namespace MSQuic1
                 int nLostCount = 0;
                 int nAllSendCount = 0;
                 int ackNeedSendCount = 0;
-                List<ulong> mNumberList = new List<ulong>();
+                List<long> mNumberList = new List<long>();
                 QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
                 while (mPackage != null)
                 {

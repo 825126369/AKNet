@@ -24,14 +24,14 @@ namespace MSQuic1
 
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte DeferredPacketsCount;
-        public ulong NextRecvPacketNumber;
-        public ulong EcnEctCounter;
-        public ulong EcnCeCounter; // maps to ecn_ce_counters in RFC 9002.
+        public long NextRecvPacketNumber;
+        public long EcnEctCounter;
+        public long EcnCeCounter; // maps to ecn_ce_counters in RFC 9002.
         public QUIC_CONNECTION Connection;
         public QUIC_RX_PACKET DeferredPackets;
         public readonly QUIC_ACK_TRACKER AckTracker = new QUIC_ACK_TRACKER();
-        public ulong WriteKeyPhaseStartPacketNumber;
-        public ulong ReadKeyPhaseStartPacketNumber;
+        public long WriteKeyPhaseStartPacketNumber;
+        public long ReadKeyPhaseStartPacketNumber;
         public long CurrentKeyPhaseBytesSent;
         public bool CurrentKeyPhase;
         public bool AwaitingKeyPhaseConfirmation;

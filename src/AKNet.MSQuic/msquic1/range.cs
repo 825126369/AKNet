@@ -19,7 +19,7 @@ namespace MSQuic1
     {
         public const int sizeof_Length = 16;
 
-        public ulong Low;
+        public long Low;
         public int Count;
 
         public QUIC_SUBRANGE()
@@ -33,14 +33,14 @@ namespace MSQuic1
             get { return Count == 0; }
         }
 
-        public ulong High
+        public long High
         {
-            get { return Low + (ulong)(Count - 1); }
+            get { return Low + Count - 1; }
         }
 
-        public ulong End
+        public long End
         {
-            get { return Low + (ulong)Count; }
+            get { return Low + Count; }
         }
 
         public static QUIC_SUBRANGE Empty => default;
@@ -88,8 +88,8 @@ namespace MSQuic1
 
     internal struct QUIC_RANGE_SEARCH_KEY
     {
-        public ulong Low;
-        public ulong High;
+        public long Low;
+        public long High;
     }
 
     internal class QUIC_RANGE
@@ -176,12 +176,12 @@ namespace MSQuic1
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static ulong QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        static long QuicRangeGetHigh(QUIC_SUBRANGE Sub)
         {
             return Sub.High;
         }
 
-        static ulong QuicRangeGetMax(QUIC_RANGE Range)
+        static long QuicRangeGetMax(QUIC_RANGE Range)
         {
             return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
         }
@@ -191,7 +191,7 @@ namespace MSQuic1
             Range.UsedLength = 0;
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out ulong Value)
+        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out long Value)
         {
             Value = 0;
             if (Range.UsedLength > 0)
@@ -293,7 +293,7 @@ namespace MSQuic1
             return true;
         }
 
-        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, ulong Low, int Count, out bool RangeUpdated)
+        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, int Count, out bool RangeUpdated)
         {
             NetLog.Assert(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
             NetLog.Assert(Count >= 1);
@@ -322,7 +322,7 @@ namespace MSQuic1
             }
 
             Debug.Assert(i >= 0 && i <= Range.AllocLength);
-            if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + (ulong)Sub.Count == Low) //可以和前面的合并
+            if ((Sub = QuicRangeGetSafe(Range, i - 1)) != null && Sub.Low + Sub.Count == Low) //可以和前面的合并
             {
                 i--; //使用可以合并的索引
             }
@@ -331,7 +331,7 @@ namespace MSQuic1
                 Sub = QuicRangeGetSafe(Range, i);
             }
 
-            if (Sub == null || Sub.Low > Low + (ulong)Count) //没有合并的可能了
+            if (Sub == null || Sub.Low > Low + Count) //没有合并的可能了
             {
                 if (!QuicRangeMakeSpace(Range, ref i, out Sub))
                 {
@@ -352,15 +352,15 @@ namespace MSQuic1
                     Sub.Low = Low;
                 }
 
-                if (Sub.Low + (ulong)Sub.Count < Low + (ulong)Count)
+                if (Sub.Low + Sub.Count < Low + Count)
                 {
                     RangeUpdated = true;
-                    Sub.Count = (int)(Low + (ulong)Count - Sub.Low);
+                    Sub.Count = (int)(Low + Count - Sub.Low);
                 }
 
                 int j = i + 1;
                 QUIC_SUBRANGE Next;
-                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + (ulong)Count)
+                while ((Next = QuicRangeGetSafe(Range, j)) != null && Next.Low <= Low + Count)
                 {
                     if (Next.High > Sub.High)
                     {
@@ -509,7 +509,7 @@ namespace MSQuic1
         }
 #endif
 
-        static void QuicRangeSetMin(QUIC_RANGE Range, ulong Low)
+        static void QuicRangeSetMin(QUIC_RANGE Range, long Low)
         {
             int i = 0;
             while (i < QuicRangeSize(Range))
@@ -536,7 +536,7 @@ namespace MSQuic1
             }
         }
 
-        static bool QuicRangeAddValue(QUIC_RANGE Range, ulong Value)
+        static bool QuicRangeAddValue(QUIC_RANGE Range, long Value)
         {
             bool DontCare = false;
             return QuicRangeAddRange(Range, Value, 1, out DontCare) != null;
@@ -550,15 +550,15 @@ namespace MSQuic1
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static ulong QuicRangeGetLowByHigh(ulong High, int nCount)
+        static long QuicRangeGetLowByHigh(long High, int nCount)
         {
-            return High + 1 - (ulong)nCount;
+            return High + 1 - nCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static ulong QuicRangeGetHighByLow(ulong Low, int nCount)
+        static long QuicRangeGetHighByLow(long Low, int nCount)
         {
-            return Low + (ulong)(nCount - 1);
+            return Low + nCount - 1;
         }
     }
 }

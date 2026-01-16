@@ -58,10 +58,10 @@ namespace MSQuic1
         public long MinRttInLastRound; // microseconds
         public long MinRttInCurrentRound; // microseconds
         public long CssBaselineMinRtt; // microseconds
-        public ulong HyStartRoundEnd; // Packet Number
+        public long HyStartRoundEnd; // Packet Number
         public int CWndSlowStartGrowthDivisor;
         public int ConservativeSlowStartRounds;
-        public ulong RecoverySentPacketNumber;
+        public long RecoverySentPacketNumber;
     }
 
     internal static partial class MSQuicFunc

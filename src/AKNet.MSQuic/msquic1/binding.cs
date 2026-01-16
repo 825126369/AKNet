@@ -53,7 +53,7 @@ namespace MSQuic1
     internal class QUIC_RX_PACKET : CXPLAT_RECV_DATA
     {
         public ulong PacketId;
-        public ulong PacketNumber;
+        public long PacketNumber;
         public long SendTimestamp;
 
         public readonly QUIC_CID DestCid = new QUIC_CID();

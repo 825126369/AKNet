@@ -591,7 +591,7 @@ namespace MSQuic1
         public const int QUIC_RANGE_NO_MAX_ALLOC_SIZE = int.MaxValue;
         public const int QUIC_RANGE_USE_BINARY_SEARCH = 1;
         public const int QUIC_RANGE_INITIAL_SUB_COUNT = 8;
-        public const ulong QUIC_VAR_INT_MAX = (1UL << 62) - 1;
+        public const long QUIC_VAR_INT_MAX = (1L << 62) - 1;
 
         public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
 

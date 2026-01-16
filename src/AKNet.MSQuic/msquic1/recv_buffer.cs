@@ -207,12 +207,12 @@ namespace MSQuic1
 
         static long QuicRecvBufferGetTotalLength(QUIC_RECV_BUFFER RecvBuffer)
         {
-            if (QuicRangeGetMaxSafe(RecvBuffer.WrittenRanges, out ulong TotalLength))
+            if (QuicRangeGetMaxSafe(RecvBuffer.WrittenRanges, out long TotalLength))
             {
                 TotalLength++;
             }
-            NetLog.Assert((long)TotalLength >= RecvBuffer.BaseOffset);
-            return (long)TotalLength;
+            NetLog.Assert(TotalLength >= RecvBuffer.BaseOffset);
+            return TotalLength;
         }
 
         static int QuicRecvBufferReadBufferNeededCount(QUIC_RECV_BUFFER RecvBuffer)
@@ -516,7 +516,7 @@ namespace MSQuic1
             bool WrittenRangesUpdated = false;
             QUIC_SUBRANGE UpdatedRange = QuicRangeAddRange(
                     RecvBuffer.WrittenRanges,
-                    (ulong)WriteOffset,
+                    WriteOffset,
                     WriteLength,
                     out WrittenRangesUpdated);
 

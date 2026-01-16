@@ -749,7 +749,7 @@ namespace MSQuic1
                     Crypto.TlsState.BufferLength = 0;
                 }
                 Crypto.UnAckedOffset = BufferOffset;
-                QuicRangeSetMin(Crypto.SparseAckRanges, (ulong)Crypto.UnAckedOffset);
+                QuicRangeSetMin(Crypto.SparseAckRanges, Crypto.UnAckedOffset);
             }
 
             if (HasAckElicitingPacketsToAcknowledge)
@@ -782,7 +782,7 @@ namespace MSQuic1
             return QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL;
         }
 
-        static void QuicCryptoCombineIvAndPacketNumber(QUIC_SSBuffer IvIn, ulong PacketNumber, byte[] IvOut)
+        static void QuicCryptoCombineIvAndPacketNumber(QUIC_SSBuffer IvIn, long PacketNumber, byte[] IvOut)
         {
             IvOut[0] = IvIn[0];
             IvOut[1] = IvIn[1];
@@ -885,15 +885,15 @@ namespace MSQuic1
                 else
                 {
                     int i = 0;
-                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)Left)
+                    while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < Left)
                     {
-                        NetLog.Assert(Sack.High < (ulong)Left);
+                        NetLog.Assert(Sack.High < Left);
                     }
                 }
 
                 if (Sack != null)
                 {
-                    if ((ulong)Right > Sack.Low)
+                    if (Right > Sack.Low)
                     {
                         Right = (int)Sack.Low;
                     }
@@ -1007,7 +1007,7 @@ namespace MSQuic1
                 {
                     NetLog.Assert(Crypto.RecoveryNextOffset <= Right);
                     Crypto.RecoveryNextOffset = (int)Right;
-                    if (Sack != null && (ulong)Crypto.RecoveryNextOffset == Sack.Low)
+                    if (Sack != null && Crypto.RecoveryNextOffset == Sack.Low)
                     {
                         Crypto.RecoveryNextOffset += (int)Sack.Count;
                     }
@@ -1016,7 +1016,7 @@ namespace MSQuic1
                 if (Crypto.NextSendOffset < Right)
                 {
                     Crypto.NextSendOffset = Right;
-                    if (Sack != null && (ulong)Crypto.NextSendOffset == Sack.Low)
+                    if (Sack != null && Crypto.NextSendOffset == Sack.Low)
                     {
                         Crypto.NextSendOffset += Sack.Count;
                     }
@@ -1154,7 +1154,7 @@ namespace MSQuic1
             QUIC_PACKET_SPACE PacketSpace = Connection.Packets[(int)QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_1_RTT];
             PacketSpace.WriteKeyPhaseStartPacketNumber = Connection.Send.NextPacketNumber;
             PacketSpace.CurrentKeyPhase = !PacketSpace.CurrentKeyPhase;
-            PacketSpace.ReadKeyPhaseStartPacketNumber = ulong.MaxValue;
+            PacketSpace.ReadKeyPhaseStartPacketNumber = long.MaxValue;
             PacketSpace.AwaitingKeyPhaseConfirmation = true;
             PacketSpace.CurrentKeyPhaseBytesSent = 0;
         }
@@ -1173,12 +1173,12 @@ namespace MSQuic1
                 {
                     int OldUnAckedOffset = Crypto.UnAckedOffset;
                     Crypto.UnAckedOffset = FollowingOffset;
-                    QuicRangeSetMin(Crypto.SparseAckRanges, (ulong)Crypto.UnAckedOffset);
+                    QuicRangeSetMin(Crypto.SparseAckRanges, Crypto.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, 0);
-                    if (Sack != null && Sack.Low == (ulong)Crypto.UnAckedOffset)
+                    if (Sack != null && Sack.Low == Crypto.UnAckedOffset)
                     {
-                        Crypto.UnAckedOffset = (int)(Sack.Low + (ulong)Sack.Count);
+                        Crypto.UnAckedOffset = (int)(Sack.Low + Sack.Count);
                         QuicRangeRemoveSubranges(Crypto.SparseAckRanges, 0, 1);
                     }
 
@@ -1222,7 +1222,7 @@ namespace MSQuic1
             {
 
                 bool SacksUpdated = false;
-                QUIC_SUBRANGE Sack = QuicRangeAddRange(Crypto.SparseAckRanges, (ulong)Offset, Length, out SacksUpdated);
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Crypto.SparseAckRanges, Offset, Length, out SacksUpdated);
                 if (Sack == null)
                 {
                     QuicConnFatalError(Connection, QUIC_STATUS_OUT_OF_MEMORY, "Out of memory");
@@ -1231,14 +1231,14 @@ namespace MSQuic1
 
                 if (SacksUpdated)
                 {
-                    if (Crypto.NextSendOffset >= (int)Sack.Low && Crypto.NextSendOffset < (int)(Sack.Low + (ulong)Sack.Count))
+                    if (Crypto.NextSendOffset >= (int)Sack.Low && Crypto.NextSendOffset < (int)(Sack.Low + Sack.Count))
                     {
-                        Crypto.NextSendOffset = (int)(Sack.Low + (ulong)Sack.Count);
+                        Crypto.NextSendOffset = (int)(Sack.Low + Sack.Count);
                     }
-                    if ((ulong)Crypto.RecoveryNextOffset >= Sack.Low &&
-                        (ulong)Crypto.RecoveryNextOffset < Sack.Low + (ulong)Sack.Count)
+                    if (Crypto.RecoveryNextOffset >= Sack.Low &&
+                        Crypto.RecoveryNextOffset < Sack.Low + Sack.Count)
                     {
-                        Crypto.RecoveryNextOffset = (int)(Sack.Low + (ulong)Sack.Count);
+                        Crypto.RecoveryNextOffset = (int)(Sack.Low + Sack.Count);
                     }
                 }
             }
@@ -1570,35 +1570,35 @@ namespace MSQuic1
 
         static bool QuicCryptoOnLoss(QUIC_CRYPTO Crypto, QUIC_SENT_FRAME_METADATA FrameMetadata)
         {
-            ulong Start = (ulong)FrameMetadata.CRYPTO.Offset;
-            ulong End = (ulong)Start + (ulong)FrameMetadata.CRYPTO.Length;
+            long Start = FrameMetadata.CRYPTO.Offset;
+            long End = Start + FrameMetadata.CRYPTO.Length;
 
-            if (End <= (ulong)Crypto.UnAckedOffset) //小于这个偏移的说明，已经被确认了
+            if (End <= Crypto.UnAckedOffset) //小于这个偏移的说明，已经被确认了
             {
                 return false;
             }
 
-            if (Start < (ulong)Crypto.UnAckedOffset)
+            if (Start < Crypto.UnAckedOffset)
             {
-                Start = (ulong)Crypto.UnAckedOffset;
+                Start = Crypto.UnAckedOffset;
             }
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < (ulong)End)
+            while ((Sack = QuicRangeGetSafe(Crypto.SparseAckRanges, i++)) != null && Sack.Low < End)
             {
-                if (Start < Sack.Low + (ulong)Sack.Count)
+                if (Start <= Sack.High)
                 {
                     if (Start >= Sack.Low)
                     {
-                        if (End <= Sack.Low + (ulong)Sack.Count)
+                        if (End <= Sack.Low + Sack.Count)
                         {
                             return false;
                         }
-                        Start = Sack.Low + (ulong)Sack.Count;
+                        Start = Sack.Low + Sack.Count;
 
                     }
-                    else if (End <= Sack.Low + (ulong)Sack.Count)
+                    else if (End <= Sack.Low + Sack.Count)
                     {
                         End = Sack.Low;
                     }
@@ -1606,7 +1606,7 @@ namespace MSQuic1
             }
 
             bool UpdatedRecoveryWindow = false;
-            if (Start < (ulong)Crypto.RecoveryNextOffset)
+            if (Start < Crypto.RecoveryNextOffset)
             {
                 Crypto.RecoveryNextOffset = (int)Start;
                 UpdatedRecoveryWindow = true;

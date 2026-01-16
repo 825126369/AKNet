@@ -406,25 +406,25 @@ namespace MSQuic1
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).Count > 0 && Sack.Low < (ulong)End)
+            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < End)
             {
                 //在已经被确认的ACK稀疏列表里，查找到还没被确认的集合
-                if (Start < (long)Sack.End)
+                if (Start <= Sack.High)
                 {
-                    if (Start >= (long)Sack.Low)
+                    if (Start >= Sack.Low)
                     {
-                        if (End <= (long)Sack.End)
+                        if (End <= Sack.End)
                         {
                             goto Done; //已经被确认了
                         }
                         else
                         {
-                            Start = (long)Sack.End;
+                            Start = Sack.End;
                         }
                     }
-                    else if (End <= (long)Sack.End)
+                    else if (End <= Sack.End)
                     {
-                        End = (long)Sack.Low;
+                        End = Sack.Low;
                     }
                     else
                     {
@@ -1069,10 +1069,10 @@ namespace MSQuic1
 
         static void QuicStreamOnAck(QUIC_STREAM Stream, QUIC_SEND_PACKET_FLAGS PacketFlags, QUIC_SENT_FRAME_METADATA FrameMetadata)
         {
-            int Offset = FrameMetadata.StreamOffset;
+            long Offset = FrameMetadata.StreamOffset;
             int Length = FrameMetadata.StreamLength;
 
-            int FollowingOffset = Offset + Length;
+            long FollowingOffset = Offset + Length;
             uint RemoveSendFlags = 0;
             NetLog.Assert(FollowingOffset <= Stream.QueuedSendOffset);
 
@@ -1099,12 +1099,12 @@ namespace MSQuic1
                 {
 
                     Stream.UnAckedOffset = FollowingOffset;
-                    QuicRangeSetMin(Stream.SparseAckRanges, (ulong)Stream.UnAckedOffset);
+                    QuicRangeSetMin(Stream.SparseAckRanges, Stream.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Stream.SparseAckRanges, 0);
-                    if (Sack != null && Sack.Low == (ulong)Stream.UnAckedOffset)
+                    if (Sack != null && Sack.Low == Stream.UnAckedOffset)
                     {
-                        Stream.UnAckedOffset = (long)(Sack.Low + (ulong)Sack.Count);
+                        Stream.UnAckedOffset = Sack.Low + Sack.Count;
                         QuicRangeRemoveSubranges(Stream.SparseAckRanges, 0, 1);
                     }
 
@@ -1154,7 +1154,7 @@ namespace MSQuic1
             {
 
                 bool SacksUpdated = false;
-                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, out SacksUpdated);
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, Offset, Length, out SacksUpdated);
                 if (Sack == null)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_INTERNAL_ERROR);
