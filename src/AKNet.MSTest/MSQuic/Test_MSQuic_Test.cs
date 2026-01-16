@@ -196,5 +196,62 @@ namespace MSTest
             Assert.IsTrue(mRange.SubRanges[0].High == 999);
         }
 
+        [TestMethod]
+        public void TestMethod4()
+        {
+            QUIC_SSBuffer Encode()
+            {
+                QUIC_RANGE mAckRange = new QUIC_RANGE();
+                MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mAckRange);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 1, 1, out _);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 2, 1, out _);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 3, 1, out _);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 4, 1, out _);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 5, 1, out _);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 6, 1, out _);
+                MSQuicFunc.QuicRangeAddRange(mAckRange, 7, 1, out _);
+
+                QUIC_ACK_ECN_EX mECN = new QUIC_ACK_ECN_EX();
+                mECN.ECT_0_Count = 1;
+                mECN.ECT_1_Count = 2;
+                mECN.CE_Count = 3;
+
+                long AckDelay = 1;
+                QUIC_SSBuffer mBuffer = new byte[1024];
+                Assert.IsTrue(MSQuicFunc.QuicAckFrameEncode(mAckRange, AckDelay, mECN, ref mBuffer));
+                mBuffer.Length = mBuffer.Offset;
+                mBuffer.Offset = 0;
+                return mBuffer;
+            }
+
+            void Decode(QUIC_SSBuffer mBuffer)
+            {
+                byte nFrameType = 0;
+                Assert.IsTrue(MSQuicFunc.QuicVarIntDecode(ref mBuffer, ref nFrameType));
+
+                QUIC_ACK_ECN_EX mECN = new QUIC_ACK_ECN_EX();
+                long AckDelay = 0;
+                bool InvalidFrame = false;
+
+                QUIC_RANGE mDecodeRange = new QUIC_RANGE();
+                MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mDecodeRange);
+                Assert.IsTrue(MSQuicFunc.QuicAckFrameDecode(
+                    (QUIC_FRAME_TYPE)nFrameType, 
+                    ref mBuffer, 
+                    ref InvalidFrame, 
+                    mDecodeRange, 
+                    ref mECN, 
+                    ref AckDelay));
+
+                Assert.IsTrue(mDecodeRange.SubRanges[0] == new QUIC_SUBRANGE() {Low = 1, Count = 7 });
+                Assert.IsTrue(mECN.ECT_0_Count == 1);
+                Assert.IsTrue(mECN.ECT_1_Count == 2);
+                Assert.IsTrue(mECN.CE_Count == 3);
+                Assert.IsTrue(AckDelay == 1);
+            }
+
+            Decode(Encode());
+        }
+
     }
 }

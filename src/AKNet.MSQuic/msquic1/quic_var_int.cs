@@ -73,7 +73,7 @@ namespace MSQuic1
             return QuicVarIntDecode(ref Buffer, ref value);
         }
 
-        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
+        public static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);

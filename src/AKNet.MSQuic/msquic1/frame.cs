@@ -520,7 +520,7 @@ namespace MSQuic1
             return true;
         }
 
-        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref QUIC_SSBuffer Buffer)
+        public static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref QUIC_SSBuffer Buffer)
         {
             int i = QuicRangeSize(AckBlocks) - 1;
 
@@ -779,7 +779,7 @@ namespace MSQuic1
             return true;
         }
 
-        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
+        public static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
         {
             InvalidFrame = false;
             NetLog.Assert(AckRanges.SubRanges != null);
