@@ -17,7 +17,7 @@ namespace AKNet.MSQuic.Client
         private bool _disposed;
         private readonly Memory<byte> mReceiveBuffer = new byte[Config.nIOContexBufferLength];
         private readonly Memory<byte> mSendBuffer = new byte[Config.nIOContexBufferLength];
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private bool bSendIOContextUsed = false;
 
@@ -123,6 +123,8 @@ namespace AKNet.MSQuic.Client
                 }
             }
 
+            //NetLog.Log($"SendNetStream: {mSendStreamList.Length}");
+
             if (bSend)
             {
                 SendNetStream2();
@@ -160,11 +162,12 @@ namespace AKNet.MSQuic.Client
                     }
 
                     await mQuicStream.WriteAsync(mSendBuffer.Slice(0, nLength)).ConfigureAwait(false);
+                    //NetLog.Log($"SendNetStream2: {mSendStreamList.Length}");
                 }
             }
             catch (Exception e)
             {
-                //NetLog.LogError(e.ToString());
+                NetLog.LogError(e.ToString());
                 DisConnectedWithError();
             }
         }
