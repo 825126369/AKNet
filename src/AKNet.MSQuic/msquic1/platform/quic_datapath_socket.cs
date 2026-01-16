@@ -479,10 +479,10 @@ namespace MSQuic1
 
             IoBlock.ReceiveArgs.UserToken = IoBlock;
             IoBlock.ReceiveArgs.SetBuffer(0, SocketProc.Parent.RecvBufLen);
-            bool bIOSyncCompleted = false;
+            bool bIOPending = false;
             try
             {
-                bIOSyncCompleted = !SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
+                bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
             }
             catch (Exception e)
             {
@@ -490,7 +490,7 @@ namespace MSQuic1
                 return false;
             }
 
-            if (bIOSyncCompleted)
+            if (!bIOPending)
             {
                 NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
                 CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
@@ -621,12 +621,6 @@ namespace MSQuic1
             return true;
         }
 
-        static void CxPlatSendDataComplete(CXPLAT_SEND_DATA SendData)
-        {
-            CXPLAT_SOCKET_PROC SocketProc = SendData.SocketProc;
-            SendDataFree(SendData);
-        }
-
         static void CxPlatSocketFreeRxIoBlock(DATAPATH_RX_IO_BLOCK IoBlock)
         {
             IoBlock.OwningPool.CxPlatPoolFree(IoBlock.CXPLAT_CONTAINING_RECORD);
@@ -666,14 +660,13 @@ namespace MSQuic1
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
             SendData.Sqe.BufferList = mList;
-            SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
-            return 0;
-        }
+            bool bIOPending = SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
+            if(!bIOPending)
+            {
+                DataPathProcessCqe2(null, SendData.Sqe);
+            }
 
-        static void CxPlatSocketSendEnqueue(CXPLAT_ROUTE Route,CXPLAT_SEND_DATA SendData)
-        {
-            SendData.LocalAddress = Route.LocalAddress;
-            CxPlatWorkerAddNetEvent(SendData.SocketProc.DatapathProc.mWorker, SendData.Sqe);
+            return 0;
         }
 
         static CXPLAT_SEND_DATA SendDataAlloc(CXPLAT_SOCKET Socket, CXPLAT_SEND_CONFIG Config)

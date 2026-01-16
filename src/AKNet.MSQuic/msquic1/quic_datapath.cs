@@ -564,7 +564,8 @@ namespace MSQuic1
             }
             else
             {
-                CxPlatSocketSendEnqueue(Route, SendData);
+                //2026-01-16 这里的话我改一下
+                CxPlatSocketSendInline(Route.LocalAddress, SendData);
             }
         }
 
