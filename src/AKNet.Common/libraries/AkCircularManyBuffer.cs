@@ -74,7 +74,7 @@ namespace AKNet.Common
         private readonly int BlockSize = 1024;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
         private LinkedListNode<BufferItem> nCurrentReadBlock => mItemList.First;
-        private int nSumByteCount;
+        private long nSumByteCount;
 
         public AkCircularManyBuffer(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = 1024)
         {
@@ -94,7 +94,11 @@ namespace AKNet.Common
         {
             get
             {
-                return nSumByteCount;
+                if (nSumByteCount > int.MaxValue)
+                {
+                    throw new OverflowException($"nSumByteCount: {nSumByteCount}, int.MaxValue: {int.MaxValue}");
+                }
+                return (int)nSumByteCount;
             }
         }
 
