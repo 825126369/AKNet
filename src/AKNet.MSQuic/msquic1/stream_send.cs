@@ -104,8 +104,7 @@ namespace MSQuic1
             }
         }
         
-        //内部缓存一个待发送数据缓存，用于重传等
-        //原先的发送请求包含多个外部缓冲区，现在都拷贝到内部缓冲区
+        //QUIC_SEND_REQUEST 自己去缓存自己引用的Buffer
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
@@ -545,7 +544,7 @@ namespace MSQuic1
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
-                while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && (long)Sack.Low < Stream.RecoveryNextOffset)
+                while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Stream.RecoveryNextOffset)
                 {
                     NetLog.Assert((long)Sack.End <= Stream.RecoveryNextOffset);
                 }
@@ -737,7 +736,7 @@ namespace MSQuic1
                 QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX()
                 {
                     StreamID = Stream.ID,
-                    StreamDataLimit = (int)Stream.NextSendOffset
+                    StreamDataLimit = Stream.NextSendOffset
                 };
 
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
@@ -772,12 +771,12 @@ namespace MSQuic1
                 bool Recovery;
                 if (Stream.RECOV_WINDOW_OPEN())
                 {
-                    Left = (int)Stream.RecoveryNextOffset;
+                    Left = Stream.RecoveryNextOffset;
                     Recovery = true;
                 }
                 else
                 {
-                    Left = (int)Stream.NextSendOffset;
+                    Left = Stream.NextSendOffset;
                     Recovery = false;
                 }
                 Right = Left + Buffer.Length; //刚开始设置 Right 为理想的最大值
@@ -792,17 +791,17 @@ namespace MSQuic1
                 {
                     //在发送数据时，跳过已经被对端确认（SACKed）的数据范围，避免重复发送。
                     int i = 0;
-                    while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && (long)Sack.Low < Left)
+                    while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Left)
                     {
-                        NetLog.Assert((long)Sack.End <= Left);
+                        NetLog.Assert(Sack.End <= Left);
                     }
                 }
 
                 if (Sack != null)
                 {
-                    if (Right > (long)Sack.Low)
+                    if (Right > Sack.Low)
                     {
-                        Right = (long)Sack.Low;
+                        Right = Sack.Low;
                     }
                 }
                 else
@@ -828,11 +827,11 @@ namespace MSQuic1
                 }
 
                 NetLog.Assert(Right >= Left);
-                int FramePayloadBytes = (int)(Right - Left);
+                int FramePayloadBytes = (ushort)(Right - Left);
                 QuicStreamWriteOneFrame(
                     Stream, 
                     ExplicitDataLength,
-                    (int)Left,
+                    Left,
                     ref FramePayloadBytes,
                     ref Buffer,
                     PacketMetadata);
@@ -879,7 +878,7 @@ namespace MSQuic1
                 {
                     NetLog.Assert(Stream.RecoveryNextOffset <= Right);
                     Stream.RecoveryNextOffset = Right;
-                    if (Sack != null && Stream.RecoveryNextOffset == (long)Sack.Low)
+                    if (Sack != null && Stream.RecoveryNextOffset == Sack.Low)
                     {
                         Stream.RecoveryNextOffset += Sack.Count;
                     }
@@ -887,8 +886,8 @@ namespace MSQuic1
 
                 if (Stream.NextSendOffset < Right)
                 {
-                    Stream.NextSendOffset = (int)Right;
-                    if (Sack != null && Stream.NextSendOffset == (long)Sack.Low)
+                    Stream.NextSendOffset = Right;
+                    if (Sack != null && Stream.NextSendOffset == Sack.Low)
                     {
                         Stream.NextSendOffset += Sack.Count;
                     }
@@ -896,9 +895,9 @@ namespace MSQuic1
 
                 if (Stream.MaxSentLength < Right)
                 {
-                    Send.OrderedStreamBytesSent += (int)Right - Stream.MaxSentLength;
+                    Send.OrderedStreamBytesSent += Right - Stream.MaxSentLength;
                     NetLog.Assert(Send.OrderedStreamBytesSent <= Send.PeerMaxData);
-                    Stream.MaxSentLength = (int)Right;
+                    Stream.MaxSentLength = Right;
                 }
 
                 QuicStreamValidateRecoveryState(Stream);
@@ -912,7 +911,7 @@ namespace MSQuic1
             QuicStreamSendDumpState(Stream);
         }
 
-        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
+        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength, long Offset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QUIC_STREAM_EX Frame = new QUIC_STREAM_EX()
             {
@@ -942,7 +941,7 @@ namespace MSQuic1
                 NetLog.Assert(Offset < Stream.QueuedSendOffset);
                 if (Frame.Length > Stream.QueuedSendOffset - Offset)
                 {
-                    Frame.Length = Stream.QueuedSendOffset - Offset;
+                    Frame.Length = (int)(Stream.QueuedSendOffset - Offset);
                     NetLog.Assert(Frame.Length > 0);
                 }
                 
@@ -989,7 +988,7 @@ namespace MSQuic1
             PacketMetadata.FrameCount++;
         }
 
-        static void QuicStreamCopyFromSendRequests(QUIC_STREAM Stream, int Offset, QUIC_SSBuffer Buf)
+        static void QuicStreamCopyFromSendRequests(QUIC_STREAM Stream, long Offset, QUIC_SSBuffer Buf)
         {
             NetLog.Assert(Buf.Length > 0);
             NetLog.Assert(Stream.SendRequests != null);
@@ -1021,7 +1020,7 @@ namespace MSQuic1
             NetLog.Assert(Req != null); //上面 选择了一个当前的 Request
 
             int CurIndex = 0;
-            int CurOffset = Offset - (int)Req.StreamOffset;
+            int CurOffset = (int)(Offset - Req.StreamOffset);
             while (CurOffset >= Req.Buffers[CurIndex].Length)
             {
                 CurOffset -= Req.Buffers[CurIndex++].Length;

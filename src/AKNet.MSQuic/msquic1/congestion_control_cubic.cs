@@ -613,7 +613,7 @@ namespace MSQuic1
             //这里是日志，就忽略了
         }
 
-        static int CubicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        static long CubicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
         {
             return Cc.Cubic.BytesInFlightMax;
         }

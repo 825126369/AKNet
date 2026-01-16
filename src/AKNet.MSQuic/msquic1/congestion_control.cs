@@ -65,7 +65,7 @@ namespace MSQuic1
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlOnSpuriousCongestionEvent;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlLogOutFlowStatus;
         public Func<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlGetExemptions;
-        public Func<QUIC_CONGESTION_CONTROL, int> QuicCongestionControlGetBytesInFlightMax;
+        public Func<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlGetBytesInFlightMax;
         public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetCongestionWindow;
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlIsAppLimited;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;
@@ -132,7 +132,7 @@ namespace MSQuic1
             return Cc.QuicCongestionControlOnSpuriousCongestionEvent(Cc);
         }
 
-        static int QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        static long QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
         {
             return Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
         }

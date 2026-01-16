@@ -48,9 +48,9 @@ namespace MSQuic1
         public long LastFlushTime;
         public int NumPacketsSentWithEct;
         public long MaxData;
-        public int PeerMaxData;
+        public long PeerMaxData;
         public long OrderedStreamBytesReceived;
-        public int OrderedStreamBytesSent;
+        public long OrderedStreamBytesSent;
         public long OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;
         public readonly CXPLAT_LIST_ENTRY SendStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);

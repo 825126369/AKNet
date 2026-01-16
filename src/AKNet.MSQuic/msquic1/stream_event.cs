@@ -77,7 +77,7 @@ namespace MSQuic1
         
         public struct IDEAL_SEND_BUFFER_SIZE_DATA
         {
-            public int ByteCount;
+            public long ByteCount;
         }
         
         public struct CANCEL_ON_LOSS_DATA

@@ -39,14 +39,14 @@ namespace MSQuic1
     {
         public ulong StreamID;
         public int ErrorCode;
-        public int FinalSize;
+        public long FinalSize;
     }
 
     internal struct QUIC_RELIABLE_RESET_STREAM_EX
     {
         public ulong StreamID;
         public int ErrorCode;
-        public int FinalSize;
+        public long FinalSize;
         public int ReliableSize;
     }
 
@@ -203,7 +203,7 @@ namespace MSQuic1
     internal struct QUIC_STREAM_DATA_BLOCKED_EX
     {
         public ulong StreamID;
-        public int StreamDataLimit;
+        public long StreamDataLimit;
     }
 
     internal struct QUIC_STREAM_EX
@@ -211,7 +211,7 @@ namespace MSQuic1
         public bool Fin;
         public bool ExplicitLength;
         public ulong StreamID;
-        public int Offset;
+        public long Offset;
         public int Length;
 
         private QUIC_BUFFER m_Data;

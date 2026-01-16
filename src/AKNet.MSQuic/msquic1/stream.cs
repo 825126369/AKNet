@@ -180,7 +180,7 @@ namespace MSQuic1
         public QUIC_SEND_REQUEST SendRequestsTail;
         public QUIC_SEND_REQUEST SendBookmark; //发送标签，指向下一个要发送的字节所在的请求
         public QUIC_SEND_REQUEST SendBufferBookmark; //发送Buffer标签， 指向第一个非缓冲的发送请求
-        public int QueuedSendOffset;//应用层已调用 Send() 提交，但尚未被发送引擎处理的数据的结束偏移量。
+        public long QueuedSendOffset;//应用层已调用 Send() 提交，但尚未被发送引擎处理的数据的结束偏移量。
         public long Queued0Rtt;
         public long Sent0Rtt;
 
@@ -188,11 +188,11 @@ namespace MSQuic1
         //发送端的一个核心流控（Flow Control）字段，表示当前允许发送的最大数据偏移量。
         //默认 64KB
         public long MaxAllowedSendOffset;
-        public int SendWindow;
-        public int LastIdealSendBuffer;
+        public long SendWindow;
+        public long LastIdealSendBuffer;
         //该流上已发送过的最大数据偏移量（exclusive）。
         //它记录了“我已经发送了从偏移 0 到 MaxSentLength 的数据”，是流控、重传和发送调度的核心依据。
-        public int MaxSentLength;
+        public long MaxSentLength;
         public long UnAckedOffset; //已发送但尚未被确认的最小数据偏移量
         public long NextSendOffset; //下一个要发送的数据的偏移量。
 
