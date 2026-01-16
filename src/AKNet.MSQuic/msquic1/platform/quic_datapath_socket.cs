@@ -479,21 +479,19 @@ namespace MSQuic1
 
             IoBlock.ReceiveArgs.UserToken = IoBlock;
             IoBlock.ReceiveArgs.SetBuffer(0, SocketProc.Parent.RecvBufLen);
-            bool bIOPending = false;
             try
             {
-                bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
+                bool bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
+                if (!bIOPending)
+                {
+                    NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
+                    CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
+                }
             }
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
                 return false;
-            }
-
-            if (!bIOPending)
-            {
-                NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
             }
             return true;
         }
@@ -663,7 +661,7 @@ namespace MSQuic1
             bool bIOPending = SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
             if(!bIOPending)
             {
-                DataPathProcessCqe2(null, SendData.Sqe);
+                CxPlatSendDataComplete(SendData.Sqe);
             }
 
             return 0;
