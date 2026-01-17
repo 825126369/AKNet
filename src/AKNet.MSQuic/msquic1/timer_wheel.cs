@@ -148,7 +148,7 @@ namespace MSQuic1
                         }
                         Entry = Entry.Prev;
                     }
-                    CxPlatListInsertHead(Entry, Connection.TimerLink);
+                    CxPlatListInsertMiddle(ListHead, Entry, Connection.TimerLink);
                 }
             }
             OldSlots = null;
@@ -206,7 +206,7 @@ namespace MSQuic1
             }
 
             //在这里把Work上的连接插入入口上
-            CxPlatListInsertHead(Entry, Connection.TimerLink);
+            CxPlatListInsertMiddle(ListHead, Entry, Connection.TimerLink);
             
             if (ExpirationTime < TimerWheel.NextExpirationTime)
             {

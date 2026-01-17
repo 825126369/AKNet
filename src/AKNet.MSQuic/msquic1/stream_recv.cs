@@ -115,7 +115,7 @@ namespace MSQuic1
             NetLog.Assert(BufferLength <= Stream.RecvPendingLength, "App overflowed read buffer!");
             if (Stream.RecvPendingLength == 0 || QuicRecvBufferDrain(Stream.RecvBuffer, BufferLength))
             {
-                Stream.Flags.ReceiveDataPending = false; // No more pending data to deliver.
+                Stream.Flags.ReceiveDataPending = false;
             }
 
             if (BufferLength != 0)

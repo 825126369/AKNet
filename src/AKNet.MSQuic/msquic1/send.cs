@@ -169,7 +169,7 @@ namespace MSQuic1
                     }
                     Entry = Entry.Prev;
                 }
-                CxPlatListInsertHead(Entry, Stream.SendLink); //这里就是插入这个队列里
+                CxPlatListInsertMiddle(Send.SendStreams, Entry, Stream.SendLink);
                 QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
             }
 

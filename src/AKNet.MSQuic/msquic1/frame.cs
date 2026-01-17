@@ -35,6 +35,12 @@ namespace MSQuic1
         public int FirstAckBlock;//第一个 ACK Block 中的连续确认区间长度（即有多少个连续的包被确认）
     }
 
+    internal struct QUIC_ACK_BLOCK_EX
+    {
+        public int Gap;
+        public int AckBlock;
+    }
+
     internal struct QUIC_RESET_STREAM_EX
     {
         public ulong StreamID;
@@ -79,13 +85,6 @@ namespace MSQuic1
     internal struct QUIC_TIMESTAMP_EX
     {
         public long Timestamp;
-    }
-
-    internal struct QUIC_ACK_BLOCK_EX
-    {
-        public int Gap;
-        public int AckBlock;
-
     }
 
     internal struct QUIC_CONNECTION_CLOSE_EX
