@@ -142,7 +142,7 @@ namespace AKNet.MSQuic.Server
 			{
 				var mQuicConnection2 = mQuicConnection;
 				mQuicConnection = null;
-				await mQuicConnection2.CloseAsync(0);
+				await mQuicConnection2.CloseAsync();
 			}
 		}
 
