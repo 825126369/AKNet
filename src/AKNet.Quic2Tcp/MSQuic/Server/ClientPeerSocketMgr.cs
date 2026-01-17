@@ -9,9 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.MSQuic.Common;
-using System;
 using System.Net;
-using System.Threading;
 
 namespace AKNet.MSQuic.Server
 {
