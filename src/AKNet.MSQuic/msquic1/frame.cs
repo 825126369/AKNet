@@ -131,7 +131,7 @@ namespace MSQuic1
 
     internal struct QUIC_MAX_DATA_EX
     {
-        public int MaximumData;
+        public long MaximumData;
     }
 
     internal struct QUIC_MAX_STREAMS_EX

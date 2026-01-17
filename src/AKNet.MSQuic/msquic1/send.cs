@@ -893,7 +893,7 @@ namespace MSQuic1
 
                     QUIC_MAX_DATA_EX Frame = new QUIC_MAX_DATA_EX()
                     {
-                        MaximumData = (int)Send.MaxData
+                        MaximumData = Send.MaxData
                     };
 
                     var mBuf = Builder.GetDatagramCanWriteSSBufer();

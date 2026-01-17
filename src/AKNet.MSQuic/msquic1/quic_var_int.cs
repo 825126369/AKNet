@@ -115,7 +115,7 @@ namespace MSQuic1
 
         static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
+            NetLog.Assert(Value <= QUIC_VAR_INT_MAX, Value);
             if (Value < 0x40) // 64
             {
                 Buffer[0] = (byte)Value;

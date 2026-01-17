@@ -826,7 +826,7 @@ namespace MSQuic1
                     Right = MaxConnFlowControlOffset;
                 }
 
-                NetLog.Assert(Right >= Left);
+                NetLog.Assert(Right > Left && Right - Left < ushort.MaxValue, $"{Left}, {Right}");
                 int FramePayloadBytes = (ushort)(Right - Left);
                 QuicStreamWriteOneFrame(
                     Stream, 

@@ -219,7 +219,13 @@ namespace MSQuic1
             {
                 TotalLength++;
             }
-            NetLog.Assert(TotalLength >= RecvBuffer.BaseOffset);
+
+            NetLog.Assert(TotalLength >= RecvBuffer.BaseOffset, $"{TotalLength}, {RecvBuffer.BaseOffset}");
+            if(TotalLength < RecvBuffer.BaseOffset)
+            {
+                NetLog.LogError(RecvBuffer.WrittenRanges.ToString());
+            }
+
             return TotalLength;
         }
 

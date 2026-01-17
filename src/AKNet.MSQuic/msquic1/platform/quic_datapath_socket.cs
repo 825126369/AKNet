@@ -658,10 +658,18 @@ namespace MSQuic1
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.UserToken = SendData;
             SendData.Sqe.BufferList = mList;
-            bool bIOPending = SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
-            if(!bIOPending)
+
+            try
             {
-                DataPathProcessCqe2(null, SendData.Sqe);
+                bool bIOPending = SendData.SocketProc.Socket.SendToAsync(SendData.Sqe);
+                if (!bIOPending)
+                {
+                    DataPathProcessCqe2(null, SendData.Sqe);
+                }
+            }
+            catch(Exception e)
+            {
+                NetLog.LogError(e.ToString());
             }
 
             return 0;
