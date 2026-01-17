@@ -1160,14 +1160,14 @@ namespace MSQuic1
                 }
                 else if (SacksUpdated)
                 {
-                    if (Stream.NextSendOffset >= (long)Sack.Low &&
-                        Stream.NextSendOffset < (long)Sack.Low + Sack.Count)
+                    if (Stream.NextSendOffset >= Sack.Low &&
+                        Stream.NextSendOffset < Sack.Low + Sack.Count)
                     {
-                        Stream.NextSendOffset = (long)Sack.Low + Sack.Count;
+                        Stream.NextSendOffset = Sack.Low + Sack.Count;
                     }
-                    if (Stream.RecoveryNextOffset >= (long)Sack.Low && Stream.RecoveryNextOffset < (long)Sack.Low + Sack.Count)
+                    if (Stream.RecoveryNextOffset >= Sack.Low && Stream.RecoveryNextOffset < Sack.Low + Sack.Count)
                     {
-                        Stream.RecoveryNextOffset = (long)Sack.Low + Sack.Count;
+                        Stream.RecoveryNextOffset = Sack.Low + Sack.Count;
                     }
                 }
             }

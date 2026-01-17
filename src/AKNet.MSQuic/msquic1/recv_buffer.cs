@@ -274,7 +274,7 @@ namespace MSQuic1
             NetLog.Assert(RecvBuffer.ReadPendingLength == 0 || RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
 
             QUIC_SUBRANGE FirstRange = QuicRangeGet(RecvBuffer.WrittenRanges, 0);
-            NetLog.Assert(FirstRange.Low == 0 || (int)FirstRange.Count > RecvBuffer.BaseOffset);
+            NetLog.Assert(FirstRange.Low == 0 || FirstRange.Count > RecvBuffer.BaseOffset);
             long ContiguousLength = FirstRange.Count - RecvBuffer.BaseOffset;
 
             QUIC_RECV_CHUNK_ITERATOR Iterator = QuicRecvBufferGetChunkIterator(RecvBuffer, RecvBuffer.ReadPendingLength);
@@ -366,8 +366,8 @@ namespace MSQuic1
                 RecvBuffer.Capacity -= (int)DrainLength;
             }
 
-            RecvBuffer.ReadLength = Math.Min(RecvBuffer.Capacity,
-                   (int)(QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset));
+            RecvBuffer.ReadLength = (int)Math.Min(RecvBuffer.Capacity,
+                   QuicRangeGet(RecvBuffer.WrittenRanges, 0).Count - RecvBuffer.BaseOffset);
 
             if (RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_SINGLE && RecvBuffer.ReadStart != 0)
             {
@@ -439,7 +439,7 @@ namespace MSQuic1
                 return false;
             }
 
-            NetLog.Assert((int)FirstRange.Count >= RecvBuffer.BaseOffset);
+            NetLog.Assert(FirstRange.Count >= RecvBuffer.BaseOffset, $"{FirstRange.Count} {RecvBuffer.BaseOffset}");
             long ContiguousLength = FirstRange.Count - RecvBuffer.BaseOffset;
             return ContiguousLength > RecvBuffer.ReadPendingLength;
         }
