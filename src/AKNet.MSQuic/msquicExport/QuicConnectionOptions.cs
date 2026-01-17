@@ -8,13 +8,19 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
-using System.Net.Sockets;
+using System.Net;
+using System.Net.Security;
 
 namespace AKNet.MSQuic.Common
 {
-    internal sealed class QuicStreamOptions
+    internal sealed class QuicConnectionOptions
     {
-        public QuicStreamType nType;
-        public Action<SocketAsyncEventArgs> ReceiveBufferFunc { get; set; } = null!;
+        public SslClientAuthenticationOptions ClientAuthenticationOptions { get; set; }
+        public IPEndPoint RemoteEndPoint { get; set; }
+        public Action CloseFinishFunc { get; set; }
+        public SslServerAuthenticationOptions ServerAuthenticationOptions;
+
+        public int DefaultCloseErrorCode;
+        public int DefaultStreamErrorCode;
     }
 }

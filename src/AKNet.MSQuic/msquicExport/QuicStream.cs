@@ -8,13 +8,15 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
 
-#if USE_MSQUIC_2 
+
+
+#if USE_MSQUIC_2
 using MSQuic2;
 #else
 using MSQuic1;
@@ -37,18 +39,17 @@ namespace AKNet.MSQuic.Common
 
     internal partial class QuicStream
     {
+        QuicConnection mConnection;
         private readonly QUIC_STREAM _handle;
-        private ReceiveBuffers _receiveBuffers = new ReceiveBuffers();
+        public ReceiveBuffers _receiveBuffers = new ReceiveBuffers();
         private int _receivedNeedsEnable;
         private MsQuicBuffers _sendBuffers = new MsQuicBuffers();
         private int _sendLocked;
         private Exception _sendException;
-        internal const int _defaultErrorCode = 100;
         private readonly bool _canRead;
         private readonly bool _canWrite;
-        public ulong _id;
+        private ulong _id;
         public QuicStreamType nType;
-        private Action<QuicStreamType>? _decrementStreamCapacity;
         private int _disposed = 0;
         private readonly KKValueTaskSource _startedTcs = new KKValueTaskSource();
         private readonly KKValueTaskSource _shutdownTcs = new KKValueTaskSource();
@@ -61,7 +62,7 @@ namespace AKNet.MSQuic.Common
                 {
                     if (target is QuicStream stream)
                     {
-                        stream.Abort(QuicAbortDirection.Read, QuicStream._defaultErrorCode);
+                        stream.Abort(QuicAbortDirection.Read, stream.mConnection.mOption.DefaultStreamErrorCode);
                         stream._receiveTcs.TrySetResult();
                     }
                 }
@@ -79,7 +80,7 @@ namespace AKNet.MSQuic.Common
                 {
                     if (target is QuicStream stream)
                     {
-                        stream.Abort(QuicAbortDirection.Write, QuicStream._defaultErrorCode);
+                        stream.Abort(QuicAbortDirection.Write, stream.mConnection.mOption.DefaultStreamErrorCode);
                     }
                 }
                 catch (ObjectDisposedException)
@@ -88,8 +89,12 @@ namespace AKNet.MSQuic.Common
             }
         };
 
+        public ulong Id => _id;
+
+        //发送流
         public QuicStream(QuicConnection mConnection, QuicStreamType nType)
         {
+            this.mConnection = mConnection;
             this.nType = nType;
             var Flags = nType == QuicStreamType.Unidirectional ? 
                 QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL : QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_NONE;
@@ -103,56 +108,36 @@ namespace AKNet.MSQuic.Common
             _canWrite = true;
         }
 
+        //接收流
         public QuicStream(QuicConnection mConnection, QUIC_STREAM mStreamHandle, QUIC_STREAM_OPEN_FLAGS flags)
         {
+            this.mConnection = mConnection;
+            this._id = mStreamHandle.ID;
             this._handle = mStreamHandle;
-            MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(mStreamHandle, NativeCallback, this);
-            _canRead = true;
-            _canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
+            this._canRead = true;
+            this._canWrite = !flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL);
             this.nType = flags.HasFlag(QUIC_STREAM_OPEN_FLAGS.QUIC_STREAM_OPEN_FLAG_UNIDIRECTIONAL) ? QuicStreamType.Unidirectional : QuicStreamType.Bidirectional;
-        }
-
-        public void CompleteWrites()
-        {
-            if (_disposed > 0)
-            {
-                throw new ObjectDisposedException(this.ToString());
-            }
-
-            if (_sendTcs.IsCompleted)
-            {
-                return;
-            }
-
-            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
-            {
-                NetLog.LogError("StreamShutdown failed");
-            }
+            MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_STREAM(mStreamHandle, NativeCallback, this);
         }
 
         private int HandleEventStartComplete(ref QUIC_STREAM_EVENT.START_COMPLETE_DATA data)
         {
-            Debug.Assert(_decrementStreamCapacity != null);
             _id = data.ID;
             if (MSQuicFunc.QUIC_SUCCEEDED(data.Status))
             {
-                _decrementStreamCapacity(nType);
                 if (data.PeerAccepted)
                 {
                     _startedTcs.TrySetResult();
                 }
                 else
                 {
-                    NetLog.LogError("HandleEventStartComplete Error");
+                    //If PeerAccepted == false, we will later receive PEER_ACCEPTED event, which will complete the _startedTcs.
                 }
             }
             else
             {
-                NetLog.LogError("HandleEventStartComplete Error");
-                _startedTcs.TrySetException(new Exception());
+                _startedTcs.TrySetException(new Exception("HandleEventStartComplete Error"));
             }
-
-            _decrementStreamCapacity = null;
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
 
@@ -166,11 +151,15 @@ namespace AKNet.MSQuic.Common
             NetLog.Assert(totalCopied >= 0);
             if (totalCopied < data.TotalBufferLength)
             {
-                Volatile.Write(ref _receivedNeedsEnable, 1);
+                Volatile.Write(ref _receivedNeedsEnable, 1); //设置为需要接收
             }
-            _receiveTcs.TrySetResult();
 
+            _receiveTcs.TrySetResult();
             data.TotalBufferLength = totalCopied;
+
+            //NetLog.Log($"HandleEventReceive _receiveBuffers {_receiveBuffers} totalCopied: {totalCopied}, {data.TotalBufferLength}");
+
+            //如果先前处于需要接收状态
             if (_receiveBuffers.HasCapacity() && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
             {
                 return MSQuicFunc.QUIC_STATUS_CONTINUE;
@@ -180,10 +169,12 @@ namespace AKNet.MSQuic.Common
                 return MSQuicFunc.QUIC_STATUS_SUCCESS;
             }
         }
-        
+
         private int HandleEventSendComplete(ref QUIC_STREAM_EVENT.SEND_COMPLETE_DATA data)
         {
             _sendBuffers.Reset();
+            Volatile.Write(ref _sendLocked, 0);
+
             Exception? exception = Volatile.Read(ref _sendException);
             if (exception != null)
             {
@@ -192,7 +183,9 @@ namespace AKNet.MSQuic.Common
 
             if (data.Canceled)
             {
-                NetLog.LogError("HandleEventSendComplete Canceled");
+                // If Canceled == true, we either aborted write,
+                // received PEER_RECEIVE_ABORTED or will receive SHUTDOWN_COMPLETE(ConnectionClose) later,
+                // all of which completes the _sendTcs.
             }
             else
             {
@@ -282,7 +275,12 @@ namespace AKNet.MSQuic.Common
                 case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_ACCEPTED:
                     HandleEventPeerAccepted();
                     break;
-            };
+                case QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE:
+                    
+                    break;
+                default:
+                    throw new Exception($"没有处理更多的流事件: {streamEvent.Type}");
+            }
 
             return MSQuicFunc.QUIC_STATUS_SUCCESS;
         }
@@ -293,17 +291,15 @@ namespace AKNet.MSQuic.Common
             return instance.HandleStreamEvent(ref streamEvent);
         }
 
-        internal ValueTask StartAsync(Action<QuicStreamType> decrementStreamCapacity, CancellationToken cancellationToken = default)
+        internal ValueTask StartAsync(CancellationToken cancellationToken = default)
         {
             Debug.Assert(!_startedTcs.IsCompleted);
 
             _startedTcs.TryInitialize(out ValueTask valueTask, this, cancellationToken);
-            _decrementStreamCapacity = decrementStreamCapacity;
             int status = MSQuicFunc.MsQuicStreamStart(_handle, QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_SHUTDOWN_ON_FAIL | QUIC_STREAM_START_FLAGS.QUIC_STREAM_START_FLAG_INDICATE_PEER_ACCEPT);
             if (MSQuicFunc.QUIC_FAILED(status))
             {
                 NetLog.LogError("MsQuicStreamStart Error");
-                _decrementStreamCapacity = decrementStreamCapacity;
                 _startedTcs.TrySetException(new Exception());
             }
 
@@ -357,14 +353,13 @@ namespace AKNet.MSQuic.Common
                 nLoopCount++;
             } while (!buffer.IsEmpty && totalCopied == 0);
 
-            //NetLog.Log("nLoopCount: " + nLoopCount);
-            //NetLog.Log("Thread.CurrentThread.ManagedThreadId: " + Thread.CurrentThread.ManagedThreadId);
-
-            if (totalCopied > 0 && Interlocked.CompareExchange(ref _receivedNeedsEnable, 0, 1) == 1)
+            //如果需要设置 需要接收
+            //2026-01-14, 这个判断得注释掉，否则,逻辑刚好卡住，只能接收一部分数据。
+            if (_receiveBuffers.HasCapacity())
             {
                 if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamReceiveSetEnabled(_handle, true)))
                 {
-                    NetLog.LogError("StreamReceivedSetEnabled failed");
+                    throw new Exception("MsQuicStreamReceiveSetEnabled failed");
                 }
             }
 
@@ -388,24 +383,53 @@ namespace AKNet.MSQuic.Common
                 throw new InvalidOperationException();
             }
 
-            _sendBuffers.Initialize(buffer);
-            int status = MSQuicFunc.MsQuicStreamSend(
-                _handle,
-                _sendBuffers.Buffers,
-                (int)_sendBuffers.Count,
-                QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE,
-                null);
-
-            if (MSQuicFunc.QUIC_FAILED(status))
+            if (_sendTcs.IsCompleted && cancellationToken.IsCancellationRequested)
             {
-                NetLog.LogError("MsQuicStreamSend Error: " + status);
-                return new ValueTask(Task.FromException(new Exception()));
+                return new ValueTask(Task.FromCanceled(cancellationToken));
             }
 
             if (!_sendTcs.TryGetValueTask(out ValueTask valueTask, this, cancellationToken))
             {
                 return new ValueTask(Task.FromException(new InvalidOperationException()));
             }
+
+            if (valueTask.IsCompleted)
+            {
+                return valueTask;
+            }
+
+            if (buffer.IsEmpty) //一个元素个数为0的空Buffer, 立刻返回结果
+            {
+                _sendTcs.TrySetResult();
+                if (completeWrites)
+                {
+                    if(MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicStreamShutdown(_handle, QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, default)))
+                    {
+                        throw new Exception("MsQuicStreamShutdown failed");
+                    }
+                }
+                return valueTask;
+            }
+
+            if (Interlocked.CompareExchange(ref _sendLocked, 1, 0) == 0)
+            {
+                _sendBuffers.Initialize(buffer);
+                int status = MSQuicFunc.MsQuicStreamSend(
+                    _handle,
+                    _sendBuffers.Buffers,
+                    _sendBuffers.Count,
+                    completeWrites ? QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN : QUIC_SEND_FLAGS.QUIC_SEND_FLAG_NONE,
+                    null);
+
+                if (MSQuicFunc.QUIC_FAILED(status))
+                {
+                    _sendBuffers.Reset();
+                    Volatile.Write(ref _sendLocked, 0);
+                    Interlocked.CompareExchange(ref _sendException, new Exception($"MSQuicFunc.MsQuicStreamSend: {status}"), null);
+                    _sendTcs.TrySetException(_sendException);
+                }
+            }
+
             return valueTask;
         }
 
@@ -463,17 +487,17 @@ namespace AKNet.MSQuic.Common
 
             if (!_startedTcs.IsCompletedSuccessfully)
             {
-                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, _defaultErrorCode);
+                StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT | QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_IMMEDIATE, mConnection.mOption.DefaultStreamErrorCode);
             }
             else
             {
                 if (!_receiveTcs.IsCompleted)
                 {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE, _defaultErrorCode);
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_ABORT_RECEIVE, mConnection.mOption.DefaultStreamErrorCode);
                 }
                 if (!_sendTcs.IsCompleted)
                 {
-                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, _defaultErrorCode);
+                    StreamShutdown(QUIC_STREAM_SHUTDOWN_FLAGS.QUIC_STREAM_SHUTDOWN_FLAG_GRACEFUL, mConnection.mOption.DefaultStreamErrorCode);
                 }
             }
             

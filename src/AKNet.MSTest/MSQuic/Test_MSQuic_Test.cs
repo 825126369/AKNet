@@ -104,16 +104,16 @@ namespace MSTest
             QUIC_RANGE mRange = new QUIC_RANGE();
             MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
 
-            List<ulong> mList = new List<ulong>();
+            List<long> mList = new List<long>();
             for (int i = 0; i < 1000; i++)
             {
-                ulong A = (ulong)RandomTool.Random(0, ushort.MaxValue);
+                long A = RandomTool.Random(0, ushort.MaxValue);
                 int nCount = RandomTool.Random(1, 3);
                 Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _) != null);
 
                 for(int j = 0; j < nCount; j++)
                 {
-                    ulong value = A + (ulong)j;
+                    long value = A + j;
                     if (!mList.Contains(value))
                     {
                         mList.Add(value);
@@ -121,12 +121,12 @@ namespace MSTest
                 }
             }
 
-            List<ulong> mList2 = new List<ulong>();
+            List<long> mList2 = new List<long>();
             for (int i = 0; i < mRange.UsedLength; i++)
             {
                 for (int j = 0; j < mRange.SubRanges[i].Count; j++)
                 {
-                    ulong value = mRange.SubRanges[i].Low + (ulong)j;
+                    long value = mRange.SubRanges[i].Low + (long)j;
                     if (!mList2.Contains(value))
                     {
                         mList2.Add(value);
@@ -136,7 +136,7 @@ namespace MSTest
 
             Assert.IsTrue(mList2.Count == mList.Count);
 
-            foreach (ulong j in mList)
+            foreach (long j in mList)
             {
                 bool bFind = false;
                 for (int i = 0; i < mRange.UsedLength; i++)
@@ -189,7 +189,7 @@ namespace MSTest
             mRange.UsedLength = 0;
             for (int i = 0; i < 1000; i++)
             {
-                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, (ulong)i, 1, out _) != null);
+                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, i, 1, out _) != null);
             }
             Assert.IsTrue(mRange.UsedLength == 1);
             Assert.IsTrue(mRange.SubRanges[0].Low == 0);

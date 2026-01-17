@@ -12,8 +12,16 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
 
-#if USE_MSQUIC_2 
+
+
+
+
+#if USE_MSQUIC_2
 using MSQuic2;
 #else
 using MSQuic1;
@@ -27,10 +35,8 @@ namespace AKNet.MSQuic.Common
         public QuicListenerOptions mOption;
         public IPEndPoint LocalEndPoint;
         private bool _disposed = false;
-
         private readonly ConcurrentQueue<QuicConnection> _acceptQueue = new ConcurrentQueue<QuicConnection>();
         private int currentConnectionsCount;
-
         private readonly KKResettableValueTaskSource newConnectionTcs = new KKResettableValueTaskSource();
 
         private void Init(QUIC_LISTENER _handle, QuicListenerOptions options)

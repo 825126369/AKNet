@@ -31,7 +31,7 @@ namespace AKNet.MSQuic.Common
             NetLog.Assert(index < Count);
             if (_buffers[index] == null)
             {
-                _buffers[index] = new QUIC_BUFFER(Config.nIOContexBufferLength);
+                _buffers[index] = new QUIC_BUFFER(1024);
             }
 
             _buffers[index].Offset = 0;
