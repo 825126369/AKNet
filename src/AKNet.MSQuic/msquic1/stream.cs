@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -64,61 +63,72 @@ namespace MSQuic1
 
     public class QUIC_STREAM_FLAGS
     {
-        public ulong AllFlags;
+        private ulong AllFlags;
+        public bool Allocated { get { return Get(0); } set { Set(0, value); } } //// Allocated by Connection. Used for Debugging.
+        public bool Initialized { get { return Get(1); } set { Set(1, value); } }    // Initialized successfully. Used for Debugging.
+        public bool Started { get { return Get(2); } set { Set(2, value); } }   // The app has started the stream.
+        public bool StartedIndicated { get { return Get(3); } set { Set(3, value); } }    // The app received a start complete event.
+        public bool PeerStreamStartEventActive { get { return Get(4); } set { Set(4, value); } }// The app is processing QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED
+        public bool Unidirectional { get { return Get(5); } set { Set(5, value); } }    // Sends/receives in 1 direction only.
+        public bool Opened0Rtt { get { return Get(6); } set { Set(6, value); } }    // A 0-RTT packet opened the stream.
+        public bool IndicatePeerAccepted { get { return Get(7); } set { Set(7, value); } }    // The app requested the PEER_ACCEPTED event.
+        public bool SendOpen { get { return Get(8); } set { Set(8, value); } }   // Send a STREAM frame immediately on start.
+        public bool SendOpenAcked { get { return Get(9); } set { Set(9, value); } }    // A STREAM frame has been acknowledged.
+        public bool LocalNotAllowed { get { return Get(10); } set { Set(10, value); } }    // Peer's unidirectional stream.
+        public bool LocalCloseFin { get { return Get(11); } set { Set(11, value); } }    // Locally closed (graceful).
+        public bool LocalCloseReset { get { return Get(12); } set { Set(12, value); } }   // Locally closed (locally aborted).
+        public bool LocalCloseResetReliable { get { return Get(13); } set { Set(13, value); } }   // Indicates that we should shutdown the send path once we sent/ACK'd ReliableOffsetSend bytes.
+        public bool LocalCloseResetReliableAcked { get { return Get(14); } set { Set(14, value); } } // Indicates the peer has acknowledged we will stop sending once we sent/ACK'd ReliableOffsetSend bytes.
+        public bool RemoteCloseResetReliable { get { return Get(15); } set { Set(15, value); } }   // Indicates that the peer initiated a reliable reset. Keep Recv path available for RecvMaxLength bytes.
+        public bool ReceivedStopSending { get { return Get(16); } set { Set(16, value); } }    // Peer sent STOP_SENDING frame.
+        public bool LocalCloseAcked { get { return Get(17); } set { Set(17, value); } }    // Any close acknowledged.
+        public bool FinAcked { get { return Get(18); } set { Set(18, value); } }    // Our FIN was acknowledged.
+        public bool InRecovery { get { return Get(19); } set { Set(19, value); } }    // Lost data is being retransmitted and is
+        public bool RemoteNotAllowed { get { return Get(20); } set { Set(20, value); } }    // Our unidirectional stream.
+        public bool RemoteCloseFin { get { return Get(21); } set { Set(21, value); } }    // Remotely closed.
+        public bool RemoteCloseReset { get { return Get(22); } set { Set(22, value); } }    // Remotely closed (remotely aborted).
+        public bool SentStopSending { get { return Get(23); } set { Set(23, value); } }   // We sent STOP_SENDING frame.
+        public bool RemoteCloseAcked { get { return Get(24); } set { Set(24, value); } }    // Any close acknowledged.
+        public bool SendEnabled { get { return Get(25); } set { Set(25, value); } }    // Application is allowed to send data.
+        public bool ReceiveEnabled { get { return Get(26); } set { Set(26, value); } }   // Application is ready for receive callbacks.
+        public bool ReceiveMultiple { get { return Get(27); } set { Set(27, value); } }   // The app supports multiple parallel receive indications.
+        public bool UseAppOwnedRecvBuffers { get { return Get(28); } set { Set(28, value); } }    // The stream is using app provided receive buffers.
+        public bool ReceiveFlushQueued { get { return Get(29); } set { Set(29, value); } }   // The receive flush operation is queued.
+        public bool ReceiveDataPending { get { return Get(30); } set { Set(30, value); } }   // Data (or FIN) is queued and ready for delivery.
+        public bool ReceiveCallActive { get { return Get(31); } set { Set(31, value); } }    // There is an active receive to the app.
+        public bool SendDelayed { get { return Get(32); } set { Set(32, value); } }    // A delayed send is currently queued.
+        public bool CancelOnLoss { get { return Get(33); } set { Set(33, value); } }    // Indicates that the stream is to be canceled
+                                                                                      // if loss is detected.
 
-        public bool Allocated              ;    // Allocated by Connection. Used for Debugging.
-        public bool Initialized            ;    // Initialized successfully. Used for Debugging.
-        public bool Started                ;    // The app has started the stream.
-        public bool StartedIndicated       ;    // The app received a start complete event.
-        public bool PeerStreamStartEventActive; // The app is processing QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED
-        public bool Unidirectional         ;    // Sends/receives in 1 direction only.
-        public bool Opened0Rtt             ;    // A 0-RTT packet opened the stream.
-        public bool IndicatePeerAccepted   ;    // The app requested the PEER_ACCEPTED event.
+        public bool HandleSendShutdown { get { return Get(34); } set { Set(34, value); } }    // Send shutdown complete callback delivered.
+        public bool HandleShutdown { get { return Get(35); } set { Set(35, value); } }    // Shutdown callback delivered.
+        public bool HandleClosed { get { return Get(36); } set { Set(36, value); } }    // Handle closed by application layer.
+
+        public bool ShutdownComplete { get { return Get(37); } set { Set(37, value); } }    // Both directions have been shutdown and acknowledged.
+        public bool Uninitialized { get { return Get(38); } set { Set(38, value); } }    // Uninitialize started/completed. Used for Debugging.
+        public bool Freed { get { return Get(39); } set { Set(39, value); } }    // Freed after last ref count released. Used for Debugging.
+
+        public bool InStreamTable { get { return Get(40); } set { Set(40, value); } }    // The stream is currently in the connection's table.
+        public bool InWaitingList { get { return Get(41); } set { Set(41, value); } }    // The stream is currently in the waiting list for stream id FC.
+        public bool DelayIdFcUpdate { get { return Get(42); } set { Set(42, value); } }    // Delay stream ID FC updates to StreamClose.
         
-        public bool SendOpen               ;    // Send a STREAM frame immediately on start.
-        public bool SendOpenAcked          ;    // A STREAM frame has been acknowledged.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void Set(int nB, bool bTrue)
+        {
+            MSQuicFunc.SetFlag(ref AllFlags, MSQuicFunc.BIT(nB), bTrue);
+        }
 
-        public bool LocalNotAllowed        ;    // Peer's unidirectional stream.
-        public bool LocalCloseFin          ;    // Locally closed (graceful).
-        public bool LocalCloseReset        ;    // Locally closed (locally aborted).
-        public bool LocalCloseResetReliable;    // Indicates that we should shutdown the send path once we sent/ACK'd ReliableOffsetSend bytes.
-        public bool LocalCloseResetReliableAcked; // Indicates the peer has acknowledged we will stop sending once we sent/ACK'd ReliableOffsetSend bytes.
-        public bool RemoteCloseResetReliable;   // Indicates that the peer initiated a reliable reset. Keep Recv path available for RecvMaxLength bytes.
-        public bool ReceivedStopSending    ;    // Peer sent STOP_SENDING frame.
-        public bool LocalCloseAcked        ;    // Any close acknowledged.
-        public bool FinAcked               ;    // Our FIN was acknowledged.
-        public bool InRecovery             ;    // Lost data is being retransmitted and is
-                                                // unacknowledged.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        bool Get(int nB)
+        {
+            return MSQuicFunc.HasFlag(AllFlags, MSQuicFunc.BIT(nB));
+        }
 
-        public bool RemoteNotAllowed       ;    // Our unidirectional stream.
-        public bool RemoteCloseFin         ;    // Remotely closed.
-        public bool RemoteCloseReset       ;    // Remotely closed (remotely aborted).
-        public bool SentStopSending        ;    // We sent STOP_SENDING frame.
-        public bool RemoteCloseAcked       ;    // Any close acknowledged.
-
-        public bool SendEnabled            ;    // Application is allowed to send data.
-        public bool ReceiveEnabled         ;    // Application is ready for receive callbacks.
-        public bool ReceiveMultiple        ;    // The app supports multiple parallel receive indications.
-        public bool UseAppOwnedRecvBuffers ;    // The stream is using app provided receive buffers.
-        public bool ReceiveFlushQueued     ;    // The receive flush operation is queued.
-        public bool ReceiveDataPending     ;    // Data (or FIN) is queued and ready for delivery.
-        public bool ReceiveCallActive      ;    // There is an active receive to the app.
-        public bool SendDelayed            ;    // A delayed send is currently queued.
-        public bool CancelOnLoss           ;    // Indicates that the stream is to be canceled
-                                                // if loss is detected.
-
-        public bool HandleSendShutdown     ;    // Send shutdown complete callback delivered.
-        public bool HandleShutdown         ;    // Shutdown callback delivered.
-        public bool HandleClosed           ;    // Handle closed by application layer.
-
-        public bool ShutdownComplete       ;    // Both directions have been shutdown and acknowledged.
-        public bool Uninitialized          ;    // Uninitialize started/completed. Used for Debugging.
-        public bool Freed                  ;    // Freed after last ref count released. Used for Debugging.
-
-        public bool InStreamTable          ;    // The stream is currently in the connection's table.
-        public bool InWaitingList          ;    // The stream is currently in the waiting list for stream id FC.
-        public bool DelayIdFcUpdate        ;    // Delay stream ID FC updates to StreamClose.
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Reset()
+        {
+            AllFlags = 0;
+        }
     }
 
     internal enum QUIC_STREAM_SEND_STATE
@@ -166,9 +176,6 @@ namespace MSQuic1
         public readonly CXPLAT_LIST_ENTRY WaitingLink;
         public readonly CXPLAT_LIST_ENTRY ClosedLink;
         public readonly CXPLAT_LIST_ENTRY SendLink;
-#if DEBUG
-        public readonly CXPLAT_LIST_ENTRY AllStreamsLink;
-#endif
         public QUIC_CONNECTION Connection;
         public ulong ID;
         public readonly QUIC_STREAM_FLAGS Flags = new QUIC_STREAM_FLAGS();
@@ -242,6 +249,11 @@ namespace MSQuic1
             public long CachedConnAmplificationProtUs;
             public long CachedConnCongestionControlUs;
             public long CachedConnFlowControlUs;
+
+            public void Reset()
+            {
+
+            }
         }
         
         public QUIC_STREAM()
@@ -250,18 +262,61 @@ namespace MSQuic1
             WaitingLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
             ClosedLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
             SendLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
-#if DEBUG
-            AllStreamsLink = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(this);
-#endif
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_STREAM> GetEntry()
         {
             return POOL_ENTRY;
         }
+
         public void Reset()
         {
-            throw new System.NotImplementedException();
+
+            RefCount = 0;
+            Array.Clear(RefTypeCount, 0, (int)QUIC_STREAM_REF.QUIC_STREAM_REF_COUNT);
+            OutstandingSentMetadata = 0;
+            Connection = null;
+            ID = 0;
+            Flags.Reset();
+            SendFlags = 0;
+            OutFlowBlockedReasons = 0;
+            ApiSendRequests = null;
+            SendRequests = null;
+            SendRequestsTail = null;
+            SendBookmark = null;
+            SendBufferBookmark = null;
+            QueuedSendOffset = 0;
+            Queued0Rtt = 0;
+            Sent0Rtt = 0;
+
+            MaxAllowedSendOffset = 0;
+            SendWindow = 0;
+            LastIdealSendBuffer = 0;
+            MaxSentLength = 0;
+            UnAckedOffset = 0;
+            NextSendOffset = 0;
+            RecoveryNextOffset = 0;
+            RecoveryEndOffset = 0;
+            ReliableOffsetSend = 0;
+
+            SendShutdownErrorCode = 0;
+            RecvShutdownErrorCode = 0;
+            MSQuicFunc.QuicRangeReset(SparseAckRanges);
+
+            SendPriority = 0;
+            MaxAllowedRecvOffset = 0;
+            RecvWindowBytesDelivered = 0;
+            RecvWindowLastUpdate = 0;
+            RecvBuffer.Reset();
+            RecvMax0RttLength = 0;
+            RecvMaxLength = 0;
+            RecvPendingLength = 0;
+            RecvCompletionLength = 0;
+            ClientCallbackHandler = null;
+            ReceiveCompleteOperation = null;
+            ReceiveCompleteOperationStorage.Reset();
+            ReceiveCompleteApiCtxStorage.Reset();
+            BlockedTimings = new BlockedTimings_DATA();
         }
 
         public void SetPool(CXPLAT_POOL<QUIC_STREAM> mPool)
@@ -426,6 +481,7 @@ namespace MSQuic1
             NewStream = Stream;
             Stream = null;
             PreallocatedRecvChunk = null;
+
         Exit:
             if (Stream != null)
             {

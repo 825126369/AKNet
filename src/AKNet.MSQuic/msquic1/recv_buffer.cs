@@ -97,9 +97,17 @@ namespace MSQuic1
         public int Capacity; //当前已分配的物理内存总大小
         public QUIC_RECV_BUF_MODE RecvMode;
 
-        public QUIC_RECV_BUFFER()
+        public void Reset()
         {
-
+            PreallocatedChunk = null;
+            RetiredChunk = null;
+            MSQuicFunc.QuicRangeReset(WrittenRanges);
+            ReadPendingLength = 0;
+            BaseOffset = 0;
+            ReadStart = 0; //在环形物理缓存里的起始下标（index，不是逻辑偏移）。配合 ReadLength 指出“当前这次要拷贝给应用的那块连续内存”落在哪个片段。
+            ReadLength = 0; //本次准备拷贝给应用的连续字节数。
+            VirtualBufferLength = 0;
+            Capacity = 0; //当前已分配的物理内存总大小
         }
     }
 

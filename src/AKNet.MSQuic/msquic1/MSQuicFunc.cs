@@ -57,7 +57,7 @@ namespace MSQuic1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BIT(int nr)
         {
-            return (ulong)(1 << nr);
+            return 1UL << nr;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
