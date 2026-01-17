@@ -35,12 +35,9 @@ namespace AKNet.MSQuic.Common
         {
             if (bInit)
             {
-                NetLog.LogError("���� ������");
                 return false;
             }
             bInit = true;
-
-            //MSQuicFunc.DoTest();
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicOpenVersion((uint)s_minMsQuicVersion.Major)))
             {
                 NetLog.LogError("MSQuicFunc.MsQuicOpenVersion Error");
