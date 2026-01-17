@@ -20,7 +20,7 @@ namespace MSQuic1
         public const int sizeof_Length = 16;
 
         public long Low;
-        public int Count;
+        public long Count;
 
         public QUIC_SUBRANGE()
         {
@@ -348,14 +348,14 @@ namespace MSQuic1
                 if (Sub.Low > Low)
                 {
                     RangeUpdated = true;
-                    Sub.Count += (int)(Sub.Low - Low);
+                    Sub.Count += Sub.Low - Low;
                     Sub.Low = Low;
                 }
 
                 if (Sub.Low + Sub.Count < Low + Count)
                 {
                     RangeUpdated = true;
-                    Sub.Count = (int)(Low + Count - Sub.Low);
+                    Sub.Count = Low + Count - Sub.Low;
                 }
 
                 int j = i + 1;
@@ -364,7 +364,7 @@ namespace MSQuic1
                 {
                     if (Next.High > Sub.High)
                     {
-                        Sub.Count = (int)(Next.High - Sub.Low + 1);
+                        Sub.Count = Next.High - Sub.Low + 1;
                     }
                     j++;
                 }
@@ -522,7 +522,7 @@ namespace MSQuic1
 
                 if (Sub.High >= Low)
                 {
-                    Sub.Count -= (int)(Low - Sub.Low);
+                    Sub.Count -= Low - Sub.Low;
                     Sub.Low = Low;
                     QuicRangeSet(Range, i, Sub);
                     break;

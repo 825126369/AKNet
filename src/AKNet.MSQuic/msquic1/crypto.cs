@@ -1018,7 +1018,7 @@ namespace MSQuic1
                     Crypto.NextSendOffset = Right;
                     if (Sack != null && Crypto.NextSendOffset == Sack.Low)
                     {
-                        Crypto.NextSendOffset += Sack.Count;
+                        Crypto.NextSendOffset += (int)Sack.Count;
                     }
                 }
 
