@@ -205,17 +205,9 @@ namespace MSQuic1
         CXPLAT_DATAPATH_FEATURE_RIO = 0x00000200,
         CXPLAT_DATAPATH_FEATURE_RECV_DSCP = 0x00000400,
     }
-    
-    internal class CXPLAT_SEND_DATA_COMMON
-    {
-        public CXPLAT_DATAPATH_TYPE DatapathType;
-        public byte ECN;
-        public byte DSCP;
-    }
-
 
     //应用程序数据 → ClientBuffer → 分割为多个片段 → WsaBuffers[0..n] → 网络发送
-    internal unsafe class CXPLAT_SEND_DATA : CXPLAT_SEND_DATA_COMMON, CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
+    internal unsafe class CXPLAT_SEND_DATA : CXPLAT_POOL_Interface<CXPLAT_SEND_DATA>
     {
         public CXPLAT_POOL<CXPLAT_SEND_DATA> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA> POOL_ENTRY = null;
@@ -224,15 +216,19 @@ namespace MSQuic1
         public CXPLAT_SOCKET_PROC SocketProc;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<QUIC_Pool_BUFFER> BufferPool;
+
+        public CXPLAT_DATAPATH_TYPE DatapathType;
+        public byte ECN;
+        public byte DSCP;
         public int TotalSize;
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
-        public List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
+        public readonly List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
         public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
-
         public SSocketAsyncEventArgs Sqe = null;
+
         public CXPLAT_SEND_DATA()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<CXPLAT_SEND_DATA>(this);
@@ -245,7 +241,21 @@ namespace MSQuic1
 
         public void Reset()
         {
-            
+            DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_UNKNOWN;
+            ECN = 0;
+            DSCP = 0;
+            TotalSize = 0;
+            SegmentSize = 0;
+            SendFlags = 0;
+            LocalAddress = null;
+            MappedRemoteAddress = null;
+            Owner = null;
+            Sqe = null;
+            SocketProc = null;
+            SendDataPool = null;
+            BufferPool = null;
+            WsaBuffers.Clear();
+            ClientBuffer.Reset();
         }
 
         public void SetPool(CXPLAT_POOL<CXPLAT_SEND_DATA> mPool)
@@ -288,7 +298,9 @@ namespace MSQuic1
 
         public void Reset()
         {
-            
+            PathId = 0;
+            Context = null;
+            Callback = null;
         }
 
         public void SetPool(CXPLAT_POOL<CXPLAT_ROUTE_RESOLUTION_OPERATION> mPool)
