@@ -901,6 +901,15 @@ namespace MSQuic1
 
                 QuicStreamValidateRecoveryState(Stream);
 
+                if (Recovery)
+                {
+                    NET_ADD_STATS(Stream.Connection.Partition, UDP_STATISTIC_TYPE.ReSendCount);
+                }
+                else
+                {
+                    NET_ADD_STATS(Stream.Connection.Partition, UDP_STATISTIC_TYPE.FirstSendCount);
+                }
+
                 if (ExitLoop)
                 {
                     break;

@@ -501,7 +501,7 @@ namespace MSQuic1
             }
 
             QuicPerfCounterIncrement(MsQuicLib.Partitions[Packet.PartitionIndex], QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
-            NetLog.LogError(Reason);
+            NetLog.LogWarning(Reason);
         }
 
         public static int QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
