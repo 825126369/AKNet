@@ -8,11 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using System;
-using System.Security.Cryptography.X509Certificates;
-using static Google.Protobuf.WellKnownTypes.Field.Types;
-
-
 #if true
 using MSQuic1;
 #else

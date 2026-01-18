@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -103,20 +104,20 @@ namespace MSQuic1
             Partition.ResetTokenHash = null;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicPerfCounterAdd(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type, long Value = 1)
         {
             NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
             Interlocked.Add(ref Partition.PerfCounters[(int)Type], Value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicPerfCounterIncrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
         {
             QuicPerfCounterAdd(Partition, Type, 1);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicPerfCounterDecrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
         {
             QuicPerfCounterAdd(Partition, Type, -1);
@@ -212,6 +213,7 @@ namespace MSQuic1
             " ", //QUIC_PERF_COUNTER_MAX,
         };
 
+        [Conditional("DEBUG")]
         public static void QuicPartitionPrintPerfCounters(QUIC_PARTITION Partition)
         {
             for(int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
@@ -222,6 +224,7 @@ namespace MSQuic1
             }
         }
 
+        [Conditional("DEBUG")]
         public static void QuicPrintPerfCounters()
         {
             for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
