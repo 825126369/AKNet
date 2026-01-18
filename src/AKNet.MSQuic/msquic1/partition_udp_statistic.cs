@@ -88,6 +88,7 @@ namespace MSQuic1
              "",
              "",
              "",
+             "",
 
             "QUIC_CONN_TIMER_PACING 触发次数",
             "QUIC_CONN_TIMER_ACK_DELAY 触发次数",
@@ -144,6 +145,11 @@ namespace MSQuic1
             }
         }
 
+        private double BaoLiuXiaoShu(double A)
+        {
+            return Math.Floor(A * 1000000) / 1000000;
+        }
+
         public void PRINT_NET_STATS()
         {
             for (int i = 0; i < (int)UDP_STATISTIC_TYPE.MAX; i++)
@@ -167,7 +173,7 @@ namespace MSQuic1
                 {
                     if (mCell.nType == MIB_LOG_TYPE.AVERAGE)
                     {
-                        NetLog.Log($"{mibDes} : {mCell.nCount}: {mCell.nValue / mCell.nCount}, {mCell.nMin}, {mCell.nMax}");
+                        NetLog.Log($"{mibDes} : {mCell.nCount}: {BaoLiuXiaoShu(mCell.nValue / mCell.nCount)}, {mCell.nMin}, {mCell.nMax}");
                     }
                     else
                     {
