@@ -654,14 +654,13 @@ namespace MSQuic1
                 }
             }
 
-            NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, US_TO_S(Delay));
-
             if (Delay == 0 && ExecuteImmediatelyIfNecessary)
             {
                 QuicLossDetectionProcessTimerOperation(LossDetection);
             }
             else
             {
+                NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LOSS_DETECTION_TIME_AVERAGE, US_TO_S(Delay));
                 QuicConnTimerSetEx(Connection,  QUIC_CONN_TIMER_TYPE.QUIC_CONN_TIMER_LOSS_DETECTION, Delay, TimeNow);
             }
         }
@@ -877,7 +876,7 @@ namespace MSQuic1
             QuicSendQueueFlush(Connection.Send,  QUIC_SEND_FLUSH_REASON.REASON_PROBE);
             Connection.Send.TailLossProbeNeeded = true;
 
-            //如果流中还有剩余数据,就发剩余数据,来探测
+            //如果流中还有剩余数据, 就发剩余数据来探测
             if (Connection.Crypto.TlsState.WriteKey == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
             {
                 for (CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next; Entry != Connection.Send.SendStreams; Entry = Entry.Next)
@@ -1322,6 +1321,7 @@ namespace MSQuic1
                 NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.SmoothedRtt, US_TO_S(Path.SmoothedRtt));
                 NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.MinRtt, US_TO_S(Path.MinRtt));
                 NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.MaxRtt, US_TO_S(Path.MaxRtt));
+                NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.AckDelay, US_TO_S(AckDelay));
             }
 
             if (NewLargestAck)

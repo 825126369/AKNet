@@ -21,6 +21,7 @@ namespace MSQuic1
         SmoothedRtt,
         MinRtt,
         MaxRtt,
+        AckDelay,
 
         //计时器
         QUIC_PERF_COUNTER_TIMER_PACING,
