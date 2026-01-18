@@ -48,5 +48,11 @@ namespace AKNet.Common
         {
             return 1UL << nr;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string GetByteArrayStr(byte[] buffer)
+        {
+            return string.Join(' ', buffer);
+        }
     }
 }

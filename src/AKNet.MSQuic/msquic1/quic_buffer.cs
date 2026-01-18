@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -237,12 +238,9 @@ namespace MSQuic1
             get => Length == 0;
         }
 
-        public void* GetBufferPtr()
+        public override string ToString()
         {
-            fixed (void* ptr = Buffer)
-            {
-                return ptr;
-            }
+            return (new QUIC_SSBuffer(this)).ToString();
         }
     }
 
@@ -251,6 +249,13 @@ namespace MSQuic1
         public int Offset;
         public int Length;
         public byte[] Buffer;
+
+        public QUIC_SSBuffer(QUIC_BUFFER mBuffer)
+        {
+            this.Offset = mBuffer.Offset;
+            this.Length = mBuffer.Length;
+            this.Buffer = mBuffer.Buffer;
+        }
 
         public QUIC_SSBuffer(byte[] Buffer)
         {
@@ -384,6 +389,20 @@ namespace MSQuic1
         public bool IsEmpty
         {
             get => Length == 0;
+        }
+
+        public override string ToString()
+        {
+            StringBuilder mBuilder = new StringBuilder();
+            if (Buffer != null)
+            {
+                mBuilder.AppendLine($"Offset: {Offset}, Length: {Length}, Buffer: {CommonFunc.GetByteArrayStr(Buffer)}");
+            }
+            else
+            {
+                mBuilder.AppendLine($"Offset: {Offset}, Length: {Length}, Buffer: null");
+            }
+            return mBuilder.ToString();
         }
     }
 }

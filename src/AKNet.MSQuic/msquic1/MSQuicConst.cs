@@ -256,7 +256,7 @@ namespace MSQuic1
         //
         // The scaling factor used locally for AckDelay field in the ACK_FRAME.
         //
-        public const int QUIC_ACK_DELAY_EXPONENT = 8;
+        public const byte QUIC_ACK_DELAY_EXPONENT = 8;
 
         //
         // The lifetime of a QUIC stateless retry token encryption key.
@@ -460,7 +460,7 @@ namespace MSQuic1
         public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
         public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
 
-        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = 25; // 毫秒，转 微秒
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = 25; // 毫秒
         //MAX_ACK_DELAY_MAX 是针对单次 ACK 延迟的限制，为了保证响应的及时性，所以这个值比较小。
         public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = ((1 << 14) - 1); //约 16 毫秒
         // 是针对配置参数的上限，考虑到特殊场景（像卫星链路这种高延迟的情况）可能需要较大的灵活性，因此这个值设置得比较大。

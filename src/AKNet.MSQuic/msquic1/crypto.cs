@@ -170,6 +170,8 @@ namespace MSQuic1
 
         static int QuicCryptoInitializeTls(QUIC_CRYPTO Crypto, CXPLAT_SEC_CONFIG SecConfig, QUIC_TRANSPORT_PARAMETERS Params)
         {
+           // NetLog.Log("Send QUIC_TRANSPORT_PARAMETERS: " + Params.ToString());
+
             int Status;
             CXPLAT_TLS_CONFIG TlsConfig = new CXPLAT_TLS_CONFIG();
             QUIC_CONNECTION Connection = QuicCryptoGetConnection(Crypto);

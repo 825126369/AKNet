@@ -1744,6 +1744,8 @@ namespace MSQuic1
             int Status = QUIC_STATUS_SUCCESS;
             Connection.State.PeerTransportParameterValid = true;
 
+            //NetLog.Log("Accept PeerTransportParams: " + Connection.PeerTransportParams.ToString());
+
             if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT))
             {
                 NetLog.Assert(Connection.PeerTransportParams.ActiveConnectionIdLimit >= QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN);
