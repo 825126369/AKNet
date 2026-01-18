@@ -198,10 +198,11 @@ namespace MSQuic1
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public SSocketAsyncEventArgs ReceiveArgs;
+        public long nReceiveArgsSyncCount;
 
         public void Reset()
         {
-
+            nReceiveArgsSyncCount = 0;
         }
     }
 
@@ -485,7 +486,15 @@ namespace MSQuic1
                 if (!bIOPending)
                 {
                     NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                    DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
+                    if (IoBlock.nReceiveArgsSyncCount++ > 10)
+                    {
+                        IoBlock.nReceiveArgsSyncCount = 0;
+                        DataPathProcessCqe(null, IoBlock.ReceiveArgs);
+                    }
+                    else
+                    {
+                        DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
+                    }
                 }
             }
             catch (Exception e)
@@ -532,10 +541,7 @@ namespace MSQuic1
                 CXPLAT_RECV_DATA DatagramChainTail = null;
 
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-
-                int NumberOfBytesTransferred = arg.BytesTransferred;
                 bool FoundLocalAddr = false;
-                int MessageLength = arg.BytesTransferred;
                 int MessageCount = 0;
                 bool IsCoalesced = false;
                 byte TOS = 0;
@@ -549,7 +555,7 @@ namespace MSQuic1
                     LocalAddr.ScopeId = mIPPacketInformation.Interface;
 
                     FoundLocalAddr = true;
-                    
+
                     int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService);
                     TOS = (byte)TypeOfService;
                 }
@@ -563,39 +569,30 @@ namespace MSQuic1
                 NetLog.Assert(arg.BytesTransferred <= SocketProc.Parent.RecvBufLen);
 
                 CXPLAT_RECV_DATA Datagram = IoBlock.CXPLAT_CONTAINING_RECORD.Data;
-                for (; NumberOfBytesTransferred != 0; NumberOfBytesTransferred -= MessageLength)
+                Datagram.CXPLAT_CONTAINING_RECORD = IoBlock.CXPLAT_CONTAINING_RECORD;
+                Datagram.Next = null;
+                Datagram.Buffer.Buffer = arg.Buffer;
+                Datagram.Buffer.Offset = arg.Offset;
+                Datagram.Buffer.Length = arg.BytesTransferred;
+                Datagram.Route = IoBlock.Route;
+                Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
+                Datagram.TypeOfService = TOS;
+                Datagram.Allocated = true;
+                Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
+                Datagram.QueuedOnConnection = false;
+
+                if (DatagramChainTail == null)
                 {
-                    Datagram.CXPLAT_CONTAINING_RECORD = IoBlock.CXPLAT_CONTAINING_RECORD;
-
-                    if (MessageLength > NumberOfBytesTransferred)
-                    {
-                        MessageLength = NumberOfBytesTransferred;
-                    }
-
-                    Datagram.Next = null;
-                    Datagram.Buffer.Buffer = arg.Buffer;
-                    Datagram.Buffer.Offset = arg.Offset;
-                    Datagram.Buffer.Length = arg.BytesTransferred;
-                    Datagram.Route = IoBlock.Route;
-                    Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
-                    Datagram.TypeOfService = TOS;
-                    Datagram.Allocated = true;
-                    Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
-                    Datagram.QueuedOnConnection = false;
-
-                    if (DatagramChainTail == null)
-                    {
-                        RecvDataChain = DatagramChainTail = Datagram;
-                    }
-                    else
-                    {
-                        DatagramChainTail.Next = Datagram;
-                        DatagramChainTail = DatagramChainTail.Next;
-                    }
-                    IoBlock.ReferenceCount++;
+                    RecvDataChain = DatagramChainTail = Datagram;
                 }
-
+                else
+                {
+                    DatagramChainTail.Next = Datagram;
+                    DatagramChainTail = Datagram;
+                }
+                IoBlock.ReferenceCount++;
                 IoBlock = null; //不加这个，会导致多个地方释放
+
                 NetLog.Assert(RecvDataChain != null);
                 if (SocketProc.Parent.PcpBinding)
                 {

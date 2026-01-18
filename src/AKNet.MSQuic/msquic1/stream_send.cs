@@ -112,20 +112,19 @@ namespace MSQuic1
 
             if (Req.TotalLength != 0)
             {
-                QUIC_SSBuffer Buf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
-                if (Buf.IsEmpty)
+                QUIC_SSBuffer CurBuf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
+                if (CurBuf.IsEmpty)
                 {
                     return QUIC_STATUS_OUT_OF_MEMORY;
                 }
 
-                QUIC_SSBuffer CurBuf = Buf;
                 for (int i = 0; i < Req.BufferCount; i++)
                 {
                     var mSpan = Req.Buffers[i].GetSpan();
                     mSpan.CopyTo(CurBuf.GetSpan());
                     CurBuf += mSpan.Length;
                 }
-                Req.InternalBuffer.Buffer = Buf.Buffer;
+                Req.InternalBuffer.Buffer = CurBuf.Buffer;
             }
             else
             {
@@ -826,7 +825,7 @@ namespace MSQuic1
                     Right = MaxConnFlowControlOffset;
                 }
 
-                NetLog.Assert(Right > Left && Right - Left < ushort.MaxValue, $"{Left}, {Right}");
+                NetLog.Assert(Right >= Left && Right - Left < ushort.MaxValue, $"{Left}, {Right}");
                 int FramePayloadBytes = (ushort)(Right - Left);
                 QuicStreamWriteOneFrame(
                     Stream, 
@@ -961,7 +960,7 @@ namespace MSQuic1
                 return;
             }
 
-            FramePayloadBytes = (ushort)Frame.Length;
+            FramePayloadBytes = Frame.Length;
             if (!QuicStreamFrameEncode(Frame, ref Buffer))
             {
                 NetLog.Assert(false);
@@ -979,11 +978,13 @@ namespace MSQuic1
                 Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_OPEN;
                 PacketMetadata.Frames[PacketMetadata.FrameCount].Flags |= QUIC_SENT_FRAME_FLAG_STREAM_OPEN;
             }
+
             if (Frame.Fin)
             {
                 Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_FIN;
                 PacketMetadata.Frames[PacketMetadata.FrameCount].Flags |= QUIC_SENT_FRAME_FLAG_STREAM_FIN;
             }
+
             QuicStreamSentMetadataIncrement(Stream);
             PacketMetadata.FrameCount++;
         }

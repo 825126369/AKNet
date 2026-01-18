@@ -451,8 +451,6 @@ namespace MSQuic1
         //它不直接构造新数据包，而是“触发重传动作”，由上层（如 QuicSendGeneratePacket）负责实际打包。
         static bool QuicLossDetectionRetransmitFrames(QUIC_LOSS_DETECTION LossDetection, QUIC_SENT_PACKET_METADATA Packet, bool ReleasePacket)
         {
-            NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.ReSendCount);
-
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             bool NewDataQueued = false;
             for (int i = 0; i < Packet.FrameCount; i++)

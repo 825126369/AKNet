@@ -40,7 +40,7 @@ namespace MSQuic1
         public int BytesInFlightMax;
         public int LastSendAllowance; // bytes
 
-        public byte Exemptions;
+        public byte Exemptions; //它是个“免责计数器”——只要不为 0，本轮丢包就不会把拥塞窗口 cwnd 砍掉一半，而是继续按 CUBic 曲线增长。
 
         public long TimeOfLastAck; // microseconds
         public long TimeOfCongAvoidStart; // microseconds

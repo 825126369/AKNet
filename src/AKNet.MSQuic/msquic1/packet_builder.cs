@@ -713,9 +713,17 @@ namespace MSQuic1
         {
             NetLog.Assert(Builder.SendData == null);
 
-            if (Builder.PacketBatchSent && Builder.PacketBatchRetransmittable)
+            if (Builder.PacketBatchSent)
             {
-                QuicLossDetectionUpdateTimer(Builder.Connection.LossDetection, false);
+                if (Builder.PacketBatchRetransmittable)
+                {
+                    NET_ADD_STATS(Builder.Connection.Partition, UDP_STATISTIC_TYPE.ReSendCount);
+                    QuicLossDetectionUpdateTimer(Builder.Connection.LossDetection, false);
+                }
+                else
+                {
+                    NET_ADD_STATS(Builder.Connection.Partition, UDP_STATISTIC_TYPE.FirstSendCount);
+                }
             }
 
             QuicSentPacketMetadataReleaseFrames(Builder.Metadata, Builder.Connection);

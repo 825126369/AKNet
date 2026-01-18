@@ -43,8 +43,6 @@ namespace MSQuic1
         static void QuicSendBufferFill(QUIC_CONNECTION Connection)
         {
             NetLog.Assert(Connection.Settings.SendBufferingEnabled);
-
-            //对所有的流操作
             CXPLAT_LIST_ENTRY Entry = Connection.Send.SendStreams.Next;
             while (QuicSendBufferHasSpace(Connection.SendBuffer) && Entry != Connection.Send.SendStreams)
             {
@@ -60,7 +58,6 @@ namespace MSQuic1
                     Req = Req.Next;
                 }
             }
-
         }
 
         static void QuicSendBufferConnectionAdjust(QUIC_CONNECTION Connection)

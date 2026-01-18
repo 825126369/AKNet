@@ -16,6 +16,7 @@ namespace MSQuic1
     internal enum UDP_STATISTIC_TYPE : int
     {
         LOSS_DETECTION_TIME_AVERAGE,
+        FirstSendCount,
         ReSendCount,
         SmoothedRtt,
         MinRtt,
@@ -81,6 +82,7 @@ namespace MSQuic1
         public static readonly string[] mMitDesList = new string[]
         {
             "QUIC_CONN_TIMER_LOSS_DETECTION 计时器 平均轮询时间",
+             "",
              "",
              "",
              "",
@@ -171,6 +173,15 @@ namespace MSQuic1
                         NetLog.Log($"{mibDes} : {mCell.nCount}");
                     }
                 }
+            }
+            
+            if (mibs[(int)UDP_STATISTIC_TYPE.FirstSendCount].nCount > 0)
+            {
+                NetLog.Log($"重发率: {mibs[(int)UDP_STATISTIC_TYPE.ReSendCount].nCount / mibs[(int)UDP_STATISTIC_TYPE.FirstSendCount].nCount}");
+            }
+            else
+            {
+                NetLog.Log($"重发率: N");
             }
         }
     }
