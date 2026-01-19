@@ -1098,7 +1098,6 @@ namespace MSQuic1
 
                 var SupportedVersions = DefaultSupportedVersionsList;
                 int SupportedVersionsLength = DefaultSupportedVersionsList.Count;
-
                 int PacketLength = QUIC_VERSION_NEGOTIATION_PACKET.sizeof_Length +
                     RecvPacket.SourceCid.Data.Length +
                     sizeof(byte) +
@@ -1120,6 +1119,8 @@ namespace MSQuic1
 
                 Buffer[0] = VerNeg.GetFirstByte(); Buffer += 1;
                 EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, QUIC_VERSION_VER_NEG); Buffer += 4;
+
+                Buffer[0] = (byte)RecvPacket.SourceCid.Data.Length; Buffer += 1;
                 RecvPacket.SourceCid.Data.GetSpan().CopyTo(Buffer.GetSpan()); Buffer += RecvPacket.SourceCid.Data.Length;
 
                 Buffer[0] = (byte)RecvPacket.DestCid.Data.Length; Buffer += 1;
