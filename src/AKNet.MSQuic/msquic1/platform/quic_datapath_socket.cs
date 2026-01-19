@@ -679,6 +679,7 @@ namespace MSQuic1
             if (SendData != null)
             {
                 SendData.ECN = (byte)Config.ECN;
+                SendData.DSCP = (byte)Config.DSCP;
                 SendData.SendFlags = Config.Flags;
                 SendData.TotalSize = 0;
                 SendData.Owner = DatapathProc;
