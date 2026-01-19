@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic1
 {
@@ -537,6 +538,7 @@ namespace MSQuic1
             return Stream.Queued0Rtt > Stream.NextSendOffset || (Stream.NextSendOffset == Stream.QueuedSendOffset && BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN));
         }
 
+        [Conditional("DEBUG")]
         static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
         {
             if (Stream.RECOV_WINDOW_OPEN())
@@ -842,7 +844,6 @@ namespace MSQuic1
                 }
 
                 Right = Left + FramePayloadBytes;
-
                 NetLog.Assert(Right <= Stream.QueuedSendOffset);
                 if (Right == Stream.QueuedSendOffset)
                 {
