@@ -225,8 +225,7 @@ namespace MSQuic1
             bool IsImplicit, long AckTime, long AckDelay)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
-            int PathIndex = -1;
-            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
+            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, out _);
 
             NetLog.Assert(EncryptLevel >=  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_INITIAL && EncryptLevel <  QUIC_ENCRYPT_LEVEL.QUIC_ENCRYPT_LEVEL_COUNT);
             if (QuicConnIsClient(Connection) && !Connection.State.HandshakeConfirmed && Packet.Flags.KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_1_RTT)
@@ -457,52 +456,52 @@ namespace MSQuic1
             {
                 switch (Packet.Frames[i].Type)
                 {
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PING:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_PING:
                         if (!Packet.Flags.IsMtuProbe)
                         {
                             QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
                         }
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RESET_STREAM:
                         NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].RESET_STREAM.Stream, QUIC_STREAM_SEND_FLAG_SEND_ABORT, false);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RELIABLE_RESET_STREAM:
                         NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].RELIABLE_RESET_STREAM.Stream, QUIC_STREAM_SEND_FLAG_RELIABLE_ABORT, false);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STOP_SENDING:
                         NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].STOP_SENDING.Stream, QUIC_STREAM_SEND_FLAG_RECV_ABORT, false);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_CRYPTO:
                         NewDataQueued |= QuicCryptoOnLoss(Connection.Crypto, Packet.Frames[i]);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_1:
                     case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_2:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_3:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_4:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_5:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_6:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_7:
                         NewDataQueued |= QuicStreamOnLoss(Packet.Frames[i].STREAM.Stream, Packet.Frames[i]);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_DATA:
                         NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_DATA);
                         break;
                     case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAM_DATA:
                         NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].MAX_STREAM_DATA.Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA, false);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS:
                         NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_STREAMS_BIDI);
                         break;
                     case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
                         NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_MAX_STREAMS_UNI);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_STREAM_DATA_BLOCKED:
                         NewDataQueued |= QuicSendSetStreamSendFlag(Connection.Send, Packet.Frames[i].STREAM_DATA_BLOCKED.Stream, QUIC_STREAM_SEND_FLAG_DATA_BLOCKED, false);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_NEW_CONNECTION_ID:
                         {
-                            bool IsLastCid =false;
+                            bool IsLastCid = false;
                             QUIC_CID SourceCid = QuicConnGetSourceCidFromSeq(Connection, Packet.Frames[i].NEW_CONNECTION_ID.Sequence, false, ref IsLastCid);
                             if (SourceCid != null && !SourceCid.Acknowledged)
                             {
@@ -512,7 +511,7 @@ namespace MSQuic1
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_RETIRE_CONNECTION_ID:
                         {
                             QUIC_CID DestCid = QuicConnGetDestCidFromSeq(Connection, Packet.Frames[i].RETIRE_CONNECTION_ID.Sequence, false);
                             if (DestCid != null)
@@ -525,10 +524,9 @@ namespace MSQuic1
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_PATH_CHALLENGE:
                         {
-                            int PathIndex = -1;
-                            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
+                            QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, out int PathIndex);
                             if (Path != null && !Path.IsPeerValidated)
                             {
                                 long TimeNow = CxPlatTimeUs();
@@ -548,17 +546,17 @@ namespace MSQuic1
                             break;
                         }
 
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_HANDSHAKE_DONE:
                         NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_HANDSHAKE_DONE);
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_DATAGRAM_1:
                         if (!Packet.Flags.SuspectedLost)
                         {
-                            QuicDatagramIndicateSendStateChange(Connection, ref Packet.Frames[i].DATAGRAM.ClientContext,   QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_LOST_SUSPECT);
+                            QuicDatagramIndicateSendStateChange(Connection, ref Packet.Frames[i].DATAGRAM.ClientContext, QUIC_DATAGRAM_SEND_STATE.QUIC_DATAGRAM_SEND_LOST_SUSPECT);
                         }
                         break;
-                    case  QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY:
+                    case QUIC_FRAME_TYPE.QUIC_FRAME_ACK_FREQUENCY:
                         if (Packet.Frames[i].ACK_FREQUENCY.Sequence == Connection.SendAckFreqSeqNum)
                         {
                             NewDataQueued |= QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_ACK_FREQUENCY);
@@ -707,8 +705,7 @@ namespace MSQuic1
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             if (Packet.Flags.IsMtuProbe && DiscardedForLoss)
             {
-                int PathIndex = 0;
-                QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, ref PathIndex);
+                QUIC_PATH Path = QuicConnGetPathByID(Connection, Packet.PathId, out _);
                 if (Path != null)
                 {
                     ushort PacketMtu = PacketSizeFromUdpPayloadSize(QuicAddrGetFamily(Path.Route.RemoteAddress), Packet.PacketLength);
@@ -886,7 +883,9 @@ namespace MSQuic1
         //当丢检定时器（PTO）到期，而发送端仍然没有收到任何 ACK 时，调用它把一个探测包塞进发送队列，强制让对端回 ACK，从而打破“死沉默”。
         static void QuicLossDetectionScheduleProbe(QUIC_LOSS_DETECTION LossDetection)
         {
-            NetLog.Log($"QuicLossDetectionScheduleProbe: debugID: {LossDetection.mConnection.debugID}");
+            NetLog.Log($"QuicLossDetectionScheduleProbe: 00000 debugID: {LossDetection.mConnection.debugID}");
+            NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_000);
+
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             LossDetection.ProbeCount++;
 
@@ -903,6 +902,8 @@ namespace MSQuic1
                     QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
                     if (QuicStreamCanSendNow(Stream, false))
                     {
+                        NetLog.Log($"QuicLossDetectionScheduleProbe: 11111 debugID: {LossDetection.mConnection.debugID}");
+                        NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_111);
                         if (--NumPackets == 0)
                         {
                             return;
@@ -917,16 +918,26 @@ namespace MSQuic1
             {
                 if (Packet.Flags.IsAckEliciting)
                 {
-                    if (QuicLossDetectionRetransmitFrames(LossDetection, Packet, false) &&  --NumPackets == 0)
+                    if (QuicLossDetectionRetransmitFrames(LossDetection, Packet, false))
                     {
-                        return;
+                        NetLog.Log($"QuicLossDetectionScheduleProbe: 22222 debugID: {LossDetection.mConnection.debugID}");
+                        NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_222);
+                        if (--NumPackets == 0)
+                        {
+                            return;
+                        }
                     }
                 }
                 Packet = Packet.Next;
             }
-
+            
             //最后发送Ping包
-            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
+            if(QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING))
+            {
+                NetLog.Log($"QuicLossDetectionScheduleProbe: 333333 debugID: {LossDetection.mConnection.debugID}");
+                NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_333);
+            }
+
         }
 
         static void QuicLossDetectionOnZeroRttRejected(QUIC_LOSS_DETECTION LossDetection)

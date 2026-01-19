@@ -4671,7 +4671,7 @@ namespace MSQuic1
         static void QuicConnProcessRouteCompletion(QUIC_CONNECTION Connection, byte[] PhysicalAddress, byte PathId, bool Succeeded)
         {
             int PathIndex = 0;
-            QUIC_PATH Path = QuicConnGetPathByID(Connection, PathId, ref PathIndex);
+            QUIC_PATH Path = QuicConnGetPathByID(Connection, PathId, out PathIndex);
             if (Path != null)
             {
                 if (Succeeded)

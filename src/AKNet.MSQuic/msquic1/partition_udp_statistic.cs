@@ -29,6 +29,11 @@ namespace MSQuic1
         QuicLossDetectionDetectAndHandleLostPackets_0000,
         QuicLossDetectionDetectAndHandleLostPackets_1111,
         QuicLossDetectionDetectAndHandleLostPackets_2222,
+
+        QuicLossDetectionScheduleProbe_000,
+        QuicLossDetectionScheduleProbe_111,
+        QuicLossDetectionScheduleProbe_222,
+        QuicLossDetectionScheduleProbe_333,
         //计时器
         QUIC_PERF_COUNTER_TIMER_PACING,
         QUIC_PERF_COUNTER_TIMER_ACK_DELAY,
