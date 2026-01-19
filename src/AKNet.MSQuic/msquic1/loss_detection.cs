@@ -684,13 +684,18 @@ namespace MSQuic1
                     QUIC_CLOSE_INTERNAL_SILENT | QUIC_CLOSE_QUIC_STATUS, QUIC_STATUS_CONNECTION_TIMEOUT,
                     $"LossDetection DisconnectTimeout: {OldestPacket} " +
                     $"超时时间: {US_TO_S(TimeNow - OldestPacket.SentTime)} " +
-                    $"当前最大ACK: {LossDetection.LargestAck}");
+                    $"当前最大ACK: {LossDetection.LargestAck}" +
+                    $"debugID: {LossDetection.mConnection.debugID}");
+
+                udp_statistic_printInfo();
+                throw new Exception();
             }
             else
             {
                 //这里的话就是 处理丢包
                 if (!QuicLossDetectionDetectAndHandleLostPackets(LossDetection, TimeNow))
                 {
+                    //这里就是防止超时爆断
                     QuicLossDetectionScheduleProbe(LossDetection);
                 }
                 QuicLossDetectionUpdateTimer(LossDetection, false);
@@ -722,6 +727,8 @@ namespace MSQuic1
             int LostRetransmittableBytes = 0;
             QUIC_SENT_PACKET_METADATA Packet;
 
+            NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionDetectAndHandleLostPackets_0000);
+
             if (LossDetection.LostPackets != null)
             {
                 //当一个数据包发送后超过 2*PTO 时间仍未确认，且已被标记为“丢失”，就可以认为它非常“陈旧”，可以被安全地清理。
@@ -744,6 +751,8 @@ namespace MSQuic1
 
                 QuicLossValidate(LossDetection);
             }
+
+            NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionDetectAndHandleLostPackets_1111);
 
             if (LossDetection.SentPackets != null)
             {
@@ -782,6 +791,7 @@ namespace MSQuic1
                     }
                     else
                     {
+                        NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionDetectAndHandleLostPackets_2222);
                         //不怀疑丢包
                         break;
                     }
@@ -876,6 +886,7 @@ namespace MSQuic1
         //当丢检定时器（PTO）到期，而发送端仍然没有收到任何 ACK 时，调用它把一个探测包塞进发送队列，强制让对端回 ACK，从而打破“死沉默”。
         static void QuicLossDetectionScheduleProbe(QUIC_LOSS_DETECTION LossDetection)
         {
+            NetLog.Log($"QuicLossDetectionScheduleProbe: debugID: {LossDetection.mConnection.debugID}");
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             LossDetection.ProbeCount++;
 
@@ -1022,7 +1033,7 @@ namespace MSQuic1
                 }
                 else
                 {
-                    //NetLog.Log("处理ACK帧 Connection.DecodedAckRanges: " + Connection.DecodedAckRanges);
+                    NetLog.Log($"处理ACK帧 Connection.DecodedAckRanges: {Connection.DecodedAckRanges} debugID: {Connection.debugID}");
                     AckDelay <<= Connection.PeerTransportParams.AckDelayExponent;
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,
@@ -1456,7 +1467,7 @@ namespace MSQuic1
                 }
 
                 List<string> mLogList = new List<string>();
-                mLogList.Add($"-----------{Tag}---------丢包/重传 统计-------线程ID: {Thread.CurrentThread.ManagedThreadId}-----------");
+                mLogList.Add($"-----------{Tag}---------丢包/重传 统计-------线程ID: {Thread.CurrentThread.ManagedThreadId} debugID: {LossDetection.mConnection.debugID}-----------");
                 mLogList.Add($"飞行中的包数量: {LossDetection.PacketsInFlight}");
                 mLogList.Add($"需要ACK确认的包数量: {mNumberList.Count}");
                 mLogList.Add($"发送包的最大包号: {LossDetection.LargestSentPacketNumber}");

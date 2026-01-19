@@ -41,6 +41,7 @@ namespace MSQuic1
         public long CqeCount;
         public bool ThreadStarted;
         public bool ThreadFinished;
+        public long lastFrameTime;
 #endif
 
         public int IdealProcessor;
@@ -329,7 +330,7 @@ namespace MSQuic1
 #endif
             Worker.State.ThreadID = CxPlatCurThreadID();
             Worker.Running = 1;
-
+            Worker.lastFrameTime = CxPlatTimeUs();
             SetThreadAffinity((ushort)Worker.IdealProcessor);
 
             int id = Thread.GetCurrentProcessorId();
@@ -343,6 +344,14 @@ namespace MSQuic1
                 ++Worker.LoopCount;
 #endif
                 Worker.State.TimeNow = CxPlatTimeUs();
+
+                var LastFrameTime = CxPlatTimeUs() - Worker.lastFrameTime;
+                if (LastFrameTime > S_TO_US(0.3))
+                {
+                    NetLog.LogWarning($"Worker {Worker.State.ThreadID} 帧时间太长: {US_TO_S(LastFrameTime)}");
+                }
+                Worker.lastFrameTime = CxPlatTimeUs();
+
                 CxPlatRunExecutionContexts(Worker);
                 if (Worker.State.WaitTime > 0 && BoolOk(InterlockedFetchAndClearBoolean(ref Worker.Running)))
                 {

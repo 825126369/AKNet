@@ -161,6 +161,9 @@ namespace MSQuic1
         public readonly CXPLAT_LIST_ENTRY WorkerLink;
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> TimerLink = null;
 
+        public static long debugIDCounter = 0;
+        public long debugID = 0; 
+
         public QUIC_WORKER Worker;
         public QUIC_PARTITION Partition;
         public QUIC_REGISTRATION Registration;
@@ -267,6 +270,8 @@ namespace MSQuic1
             {
                 Paths[i] = new QUIC_PATH();
             }
+
+            debugID = debugIDCounter++;
         }
 
         public void Reset()

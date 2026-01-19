@@ -25,6 +25,10 @@ namespace MSQuic1
         TwoPto,
         SendPackets_To_LostPackets,
         LostPackets_DiscardCount,
+
+        QuicLossDetectionDetectAndHandleLostPackets_0000,
+        QuicLossDetectionDetectAndHandleLostPackets_1111,
+        QuicLossDetectionDetectAndHandleLostPackets_2222,
         //计时器
         QUIC_PERF_COUNTER_TIMER_PACING,
         QUIC_PERF_COUNTER_TIMER_ACK_DELAY,
@@ -82,26 +86,6 @@ namespace MSQuic1
         }
 
         public udp_statistic_cell[] mibs = new udp_statistic_cell[(int)UDP_STATISTIC_TYPE.MAX];
-        public static readonly string[] mMitDesList = new string[]
-        {
-            "QUIC_CONN_TIMER_LOSS_DETECTION 计时器 平均轮询时间",
-             "",
-             "",
-             "",
-             "",
-             "",
-             "",
-             "",
-             "",
-             "",
-
-            "QUIC_CONN_TIMER_PACING 触发次数",
-            "QUIC_CONN_TIMER_ACK_DELAY 触发次数",
-            "QUIC_CONN_TIMER_LOSS_DETECTION 触发次数",
-            "QUIC_CONN_TIMER_KEEP_ALIVE 触发次数",
-            "QUIC_CONN_TIMER_IDLE 触发次数",
-            "QUIC_CONN_TIMER_SHUTDOWN 触发次数",
-        };
 
         //统计状态
         public void NET_ADD_STATS(UDP_STATISTIC_TYPE mMib)
@@ -161,15 +145,6 @@ namespace MSQuic1
             {
                 udp_statistic_cell mCell = mibs[i];
                 string mibDes = ((UDP_STATISTIC_TYPE)i).ToString();
-                if (i < mMitDesList.Length)
-                {
-                    mibDes = mMitDesList[i];
-                    if (string.IsNullOrWhiteSpace(mibDes))
-                    {
-                        mibDes = ((UDP_STATISTIC_TYPE)i).ToString();
-                    }
-                }
-
                 if (mCell == null)
                 {
                     NetLog.Log($"{mibDes} : null");
