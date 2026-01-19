@@ -38,16 +38,23 @@ namespace MSQuic1
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
+            UpdateFirstByte(buffer[0]);
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
         }
 
-        public void WriteTo(Span<byte> buffer)
+        private void UpdateFirstByte(byte buffer)
         {
-
+            Unused = (byte)(buffer & 0x7f);
+            IsLongHeader = (byte)((buffer & 0x80) >> 7);
         }
+
+        public byte GetFirstByte()
+        {
+            return (byte)(Unused | IsLongHeader << 7);
+        }
+
     }
 
     internal class QUIC_LONG_HEADER_V1
@@ -897,6 +904,7 @@ namespace MSQuic1
             bool IsInitial =
                 (Version != QUIC_VERSION_2 && PacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Version == QUIC_VERSION_2 && PacketType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2);
+
             int RequiredBufferLength =
                QUIC_LONG_HEADER_V1.sizeof_Length +
                 DestCid.Data.Length +
@@ -918,7 +926,6 @@ namespace MSQuic1
 #if DEBUG
             Buffer.GetSpan().Slice(0, RequiredBufferLength).Clear();
 #endif
-
             QUIC_LONG_HEADER_V1 Header = new QUIC_LONG_HEADER_V1();
             Header.IsLongHeader = 1;
             Header.FixedBit = (byte)(FixedBit ? 1 : 0);

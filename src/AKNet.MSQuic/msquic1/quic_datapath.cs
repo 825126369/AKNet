@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
@@ -216,15 +217,13 @@ namespace MSQuic1
         public CXPLAT_SOCKET_PROC SocketProc;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<QUIC_Pool_BUFFER> BufferPool;
-
-        public CXPLAT_DATAPATH_TYPE DatapathType;
+        public readonly CXPLAT_DATAPATH_TYPE DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
         public byte ECN;
         public byte DSCP;
         public int TotalSize;
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
         public readonly List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
-        public readonly QUIC_Pool_BUFFER ClientBuffer = new QUIC_Pool_BUFFER();
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
         public SSocketAsyncEventArgs Sqe = null;
@@ -241,7 +240,6 @@ namespace MSQuic1
 
         public void Reset()
         {
-            DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_UNKNOWN;
             ECN = 0;
             DSCP = 0;
             TotalSize = 0;
@@ -255,7 +253,6 @@ namespace MSQuic1
             SendDataPool = null;
             BufferPool = null;
             WsaBuffers.Clear();
-            ClientBuffer.Reset();
         }
 
         public void SetPool(CXPLAT_POOL<CXPLAT_SEND_DATA> mPool)
@@ -311,129 +308,27 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
+        static bool CxPlatSendDataCanAllocSend(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        {
+            return SendData.WsaBuffers.Count < SendData.Owner.Datapath.MaxSendBatchSize;
+        }
+
         //给发送数据分配Buffer
         static QUIC_Pool_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ||
-                DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-
-            return SendDataAllocBuffer(SendData, MaxBufferLength);
-        }
-
-        //SendDAta 分配一个数据报
-        static QUIC_Pool_BUFFER SendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
+            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL);
             NetLog.Assert(SendData != null);
             NetLog.Assert(MaxBufferLength > 0);
 
-            CxPlatSendDataFinalizeSendBuffer(SendData);
             if (!CxPlatSendDataCanAllocSend(SendData, MaxBufferLength))
             {
                 return null;
             }
 
-            if (SendData.SegmentSize == 0) //不分区
-            {
-                return CxPlatSendDataAllocPacketBuffer(SendData, MaxBufferLength);
-            }
-            else
-            {
-                return CxPlatSendDataAllocSegmentBuffer(SendData, MaxBufferLength);
-            }
-        }
-
-        static void CxPlatSendDataFinalizeSendBuffer(CXPLAT_SEND_DATA SendData)
-        {
-            if (SendData.ClientBuffer.Length == 0)
-            {
-                if (SendData.WsaBuffers.Count > 0)
-                {
-                    NetLog.Assert(SendData.WsaBuffers[SendData.WsaBuffers.Count - 1].Length < ushort.MaxValue);
-                    SendData.TotalSize += SendData.WsaBuffers[SendData.WsaBuffers.Count - 1].Length;
-                }
-                return;
-            }
-
-            NetLog.Assert(SendData.SegmentSize > 0 && SendData.WsaBuffers.Count > 0);
-            NetLog.Assert(SendData.ClientBuffer.Length > 0 && SendData.ClientBuffer.Length <= SendData.SegmentSize);
-            NetLog.Assert(CxPlatSendDataCanAllocSendSegment(SendData, 0));
-
-            SendData.WsaBuffers[SendData.WsaBuffers.Count - 1].Length += SendData.ClientBuffer.Length;
-            SendData.TotalSize += SendData.ClientBuffer.Length;
-
-            if (SendData.ClientBuffer.Length == SendData.SegmentSize)
-            {
-                SendData.ClientBuffer.Offset = SendData.SegmentSize;
-                SendData.ClientBuffer.Length = 0;
-            }
-            else
-            {
-                SendData.ClientBuffer.Buffer = null;
-                SendData.ClientBuffer.Length = 0;
-            }
-        }
-
-        static QUIC_Pool_BUFFER CxPlatSendDataAllocPacketBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            QUIC_Pool_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
-            if (WsaBuffer != null)
-            {
-                WsaBuffer.Length = MaxBufferLength;
-            }
-            return WsaBuffer;
-        }
-
-        static QUIC_Pool_BUFFER CxPlatSendDataAllocSegmentBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            NetLog.Assert(SendData.SegmentSize > 0);
-            NetLog.Assert(MaxBufferLength <= SendData.SegmentSize);
-
-            if (CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength))
-            {
-                SendData.ClientBuffer.Length = MaxBufferLength;
-                return SendData.ClientBuffer;
-            }
-
-            QUIC_Pool_BUFFER WsaBuffer = CxPlatSendDataAllocDataBuffer(SendData);
-            if (WsaBuffer == null)
-            {
-                return null;
-            }
-
-            WsaBuffer.Length = 0;
-            SendData.ClientBuffer.Buffer = WsaBuffer.Buffer;
-            SendData.ClientBuffer.Length = MaxBufferLength;
-            return SendData.ClientBuffer;
-        }
-
-        static bool CxPlatSendDataCanAllocSendSegment(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            if (SendData.ClientBuffer.Buffer == null)
-            {
-                return false;
-            }
-
-            NetLog.Assert(SendData.SegmentSize > 0);
-            NetLog.Assert(SendData.WsaBuffers.Count > 0);
-            int BytesAvailable = CXPLAT_LARGE_SEND_BUFFER_SIZE - SendData.WsaBuffers[SendData.WsaBuffers.Count - 1].Length - SendData.ClientBuffer.Length;
-            return MaxBufferLength <= BytesAvailable;
-        }
-
-        static bool CxPlatSendDataCanAllocSend(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
-        {
-            return (SendData.WsaBuffers.Count < SendData.Owner.Datapath.MaxSendBatchSize) ||
-                ((SendData.SegmentSize > 0) && CxPlatSendDataCanAllocSendSegment(SendData, MaxBufferLength));
-        }
-
-        static QUIC_Pool_BUFFER CxPlatSendDataAllocDataBuffer(CXPLAT_SEND_DATA SendData)
-        {
-            NetLog.Assert(SendData.WsaBuffers.Count < SendData.Owner.Datapath.MaxSendBatchSize);
             QUIC_Pool_BUFFER WsaBuffer = SendData.BufferPool.CxPlatPoolAlloc();
-            if (WsaBuffer.Buffer == null)
-            {
-                return null;
-            }
-
+            NetLog.Assert(WsaBuffer != null, "WsaBuffer == null");
+            NetLog.Assert(WsaBuffer.Buffer != null, "WsaBuffer.Buffer == null");
+            WsaBuffer.Length = MaxBufferLength;
             SendData.WsaBuffers.Add(WsaBuffer);
             return WsaBuffer;
         }
@@ -567,18 +462,9 @@ namespace MSQuic1
         {
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;
-            CxPlatSendDataFinalizeSendBuffer(SendData);
+            //CxPlatSendDataFinalizeSendBuffer(SendData);
             SendData.MappedRemoteAddress = Route.RemoteAddress;
-
-            if (!BoolOk(SendData.SendFlags & CXPLAT_SEND_FLAGS_MAX_THROUGHPUT))
-            {
-                CxPlatSocketSendInline(Route.LocalAddress, SendData);
-            }
-            else
-            {
-                //2026-01-16 这里的话我改一下
-                CxPlatSocketSendInline(Route.LocalAddress, SendData);
-            }
+            CxPlatSocketSendInline(Route.LocalAddress, SendData);
         }
 
         static void CxPlatSocketDelete(CXPLAT_SOCKET Socket)
@@ -644,17 +530,25 @@ namespace MSQuic1
 
         static void CxPlatSendDataFree(CXPLAT_SEND_DATA SendData)
         {
-            SendDataFree(SendData);
+            foreach (var v in SendData.WsaBuffers)
+            {
+                SendData.BufferPool.CxPlatPoolFree(v);
+            }
+            SendData.WsaBuffers.Clear();
+            SendData.SendDataPool.CxPlatPoolFree(SendData);
+        }
+
+        static void CxPlatSendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_Pool_BUFFER Buffer)
+        {
+            QUIC_Pool_BUFFER TailBuffer = SendData.WsaBuffers[SendData.WsaBuffers.Count - 1];
+            NetLog.Assert(Buffer == TailBuffer);
+            SendData.BufferPool.CxPlatPoolFree(Buffer);
+            SendData.WsaBuffers.Remove(Buffer);
         }
 
         static bool CxPlatSendDataIsFull(CXPLAT_SEND_DATA SendData)
         {
-             return SendDataIsFull(SendData);
-        }
-
-        static bool SendDataIsFull(CXPLAT_SEND_DATA SendData)
-        {
-            return !CxPlatSendDataCanAllocSend(SendData, SendData.SegmentSize);
+             return SendData.WsaBuffers.Count < CXPLAT_MAX_BATCH_SEND;
         }
 
         static void CxPlatDataPathQueryRssScalabilityInfo(CXPLAT_DATAPATH Datapath)
@@ -673,34 +567,6 @@ namespace MSQuic1
             if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
             {
               
-            }
-        }
-
-        static void CxPlatSendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_Pool_BUFFER Buffer)
-        {
-            SendDataFreeBuffer(SendData, Buffer);
-        }
-
-        static void SendDataFreeBuffer(CXPLAT_SEND_DATA SendData, QUIC_Pool_BUFFER Buffer)
-        {
-            QUIC_BUFFER TailBuffer = SendData.WsaBuffers[SendData.WsaBuffers.Count - 1];
-
-            if (SendData.SegmentSize == 0)
-            {
-                NetLog.Assert(Buffer == TailBuffer);
-                SendData.BufferPool.CxPlatPoolFree(Buffer);
-                SendData.WsaBuffers.Remove(Buffer);
-            }
-            else
-            {
-                if (TailBuffer.Length == 0)
-                {
-                    SendData.BufferPool.CxPlatPoolFree(Buffer);
-                    SendData.WsaBuffers.Remove(Buffer);
-                }
-
-                SendData.ClientBuffer.Buffer = null;
-                SendData.ClientBuffer.Length = 0;
             }
         }
 

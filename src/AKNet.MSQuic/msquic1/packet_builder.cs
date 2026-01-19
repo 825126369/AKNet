@@ -612,9 +612,9 @@ namespace MSQuic1
         Exit:
             if (FinalQuicPacket)
             {
-                NetLog.Assert(Builder.Datagram.Offset == 0);
                 if (Builder.Datagram != null)
                 {
+                    NetLog.Assert(Builder.Datagram.Offset == 0);
                     if (Builder.Metadata.Flags.EcnEctSet)
                     {
                         ++Connection.Send.NumPacketsSentWithEct;

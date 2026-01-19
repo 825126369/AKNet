@@ -62,19 +62,25 @@ namespace MSQuic1
         }
     }
 
-    internal class QUIC_Pool_BUFFER : QUIC_BUFFER, CXPLAT_POOL_Interface<QUIC_Pool_BUFFER>
+    internal class QUIC_Pool_BUFFER : CXPLAT_POOL_Interface<QUIC_Pool_BUFFER>
     {
         public CXPLAT_POOL<QUIC_Pool_BUFFER> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> POOL_ENTRY = null;
+        public int Offset;
+        public int Length;
+        public readonly byte[] Buffer;
 
-        public QUIC_Pool_BUFFER() : base()
+        public QUIC_Pool_BUFFER()
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
         }
 
-        public QUIC_Pool_BUFFER(int nInitSize):base(nInitSize)
+        public QUIC_Pool_BUFFER(int nInitSize)
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
+            Buffer = new byte[nInitSize];
+            Offset = 0;
+            Length = Buffer.Length;
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> GetEntry()
@@ -90,6 +96,80 @@ namespace MSQuic1
         public void SetPool(CXPLAT_POOL<QUIC_Pool_BUFFER> mPool)
         {
             this.mPool = mPool;
+        }
+
+        public Span<byte> GetSpan()
+        {
+            return Buffer.AsSpan().Slice(Offset, Length);
+        }
+
+        public void Reset()
+        {
+            Offset = 0;
+            Length = Buffer.Length;
+        }
+
+        public void CopyTo(QUIC_BUFFER Buffer)
+        {
+            GetSpan().CopyTo(Buffer.GetSpan());
+        }
+
+        public void CopyTo(QUIC_SSBuffer Buffer)
+        {
+            GetSpan().CopyTo(Buffer.GetSpan());
+        }
+
+        public int Capacity
+        {
+            get { return Buffer.Length; }
+        }
+
+        public byte this[int index]
+        {
+            get
+            {
+                return Buffer[index + Offset];
+            }
+
+            set
+            {
+                Buffer[index + Offset] = value;
+            }
+        }
+
+        public void Clear()
+        {
+            Array.Clear(this.Buffer, 0, this.Buffer.Length);
+        }
+
+        public QUIC_SSBuffer Slice(int Offset)
+        {
+            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length - Offset);
+        }
+
+        public QUIC_SSBuffer Slice(int Offset, int Length)
+        {
+            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length);
+        }
+
+        public static QUIC_SSBuffer operator +(QUIC_Pool_BUFFER Buffer, int Offset)
+        {
+            return Buffer.Slice(Offset);
+        }
+
+        public static QUIC_SSBuffer operator -(QUIC_Pool_BUFFER Buffer, int Offset)
+        {
+            return Buffer.Slice(-Offset);
+        }
+
+        public static int operator -(QUIC_Pool_BUFFER Buffer1, QUIC_Pool_BUFFER Buffer2)
+        {
+            return Buffer1.Offset - Buffer2.Offset;
+        }
+
+        public override string ToString()
+        {
+            return (new QUIC_SSBuffer(this)).ToString();
         }
     }
 
@@ -257,6 +337,13 @@ namespace MSQuic1
             this.Buffer = mBuffer.Buffer;
         }
 
+        public QUIC_SSBuffer(QUIC_Pool_BUFFER mBuffer)
+        {
+            this.Offset = mBuffer.Offset;
+            this.Length = mBuffer.Length;
+            this.Buffer = mBuffer.Buffer;
+        }
+
         public QUIC_SSBuffer(byte[] Buffer)
         {
             this.Offset = 0;
@@ -364,6 +451,18 @@ namespace MSQuic1
         }
 
         public static implicit operator QUIC_SSBuffer(QUIC_BUFFER? amount)
+        {
+            if (amount == null)
+            {
+                return default;
+            }
+            else
+            {
+                return new QUIC_SSBuffer(amount.Buffer, amount.Offset, amount.Length);
+            }
+        }
+
+        public static implicit operator QUIC_SSBuffer(QUIC_Pool_BUFFER? amount)
         {
             if (amount == null)
             {

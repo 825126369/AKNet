@@ -1072,7 +1072,7 @@ namespace MSQuic1
             QUIC_BINDING Binding = StatelessCtx.Binding;
             QUIC_RX_PACKET RecvPacket = StatelessCtx.Packet;
             QUIC_PARTITION Partition = MsQuicLib.Partitions[StatelessCtx.Packet.PartitionIndex];
-            QUIC_BUFFER SendDatagram = null;
+            QUIC_Pool_BUFFER SendDatagram = null;
 
             NetLog.Assert(RecvPacket.ValidatedHeaderInv);
 
@@ -1111,35 +1111,24 @@ namespace MSQuic1
                 {
                     goto Exit;
                 }
-
-                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = new QUIC_VERSION_NEGOTIATION_PACKET();
-                VerNeg.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
+                QUIC_SSBuffer Buffer = SendDatagram;
+                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = new QUIC_VERSION_NEGOTIATION_PACKET();
                 VerNeg.IsLongHeader = 1;
-                VerNeg.Version = QUIC_VERSION_VER_NEG;
+                VerNeg.Unused = (byte)(0x7F & CxPlatRandom.RandomByte());
 
-                QUIC_SSBuffer Buffer = VerNeg.DestCid;
-                int nBufferOffset = 0;
-                VerNeg.DestCid.Length = (byte)RecvPacket.SourceCid.Data.Length;
-                RecvPacket.SourceCid.Data.CopyTo(Buffer);
-                nBufferOffset += RecvPacket.SourceCid.Data.Length;
+                Buffer[0] = VerNeg.GetFirstByte(); Buffer += 1;
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, QUIC_VERSION_VER_NEG); Buffer += 4;
+                RecvPacket.SourceCid.Data.GetSpan().CopyTo(Buffer.GetSpan()); Buffer += RecvPacket.SourceCid.Data.Length;
 
-                Buffer[nBufferOffset] = (byte)RecvPacket.DestCid.Data.Length;
-                nBufferOffset += RecvPacket.SourceCid.Data.Length;
-                RecvPacket.DestCid.Data.CopyTo(Buffer);
-                nBufferOffset += RecvPacket.DestCid.Data.Length;
+                Buffer[0] = (byte)RecvPacket.DestCid.Data.Length; Buffer += 1;
+                RecvPacket.DestCid.Data.GetSpan().CopyTo(Buffer.GetSpan()); Buffer += RecvPacket.DestCid.Data.Length;
 
-                byte RandomValue = 0;
-                CxPlatRandom.Random(ref RandomValue);
-                VerNeg.Unused = (byte)(0x7F & RandomValue);
-
-                EndianBitConverter.SetBytes(Buffer.GetSpan(), nBufferOffset, Binding.RandomReservedVersion);
-                nBufferOffset += sizeof(uint);
-
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, Binding.RandomReservedVersion); Buffer += sizeof(uint);
                 for (int i = 0; i < SupportedVersionsLength; i++)
                 {
-                    EndianBitConverter.SetBytes(Buffer.GetSpan(), nBufferOffset, (uint)SupportedVersions[i]);
+                    EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, SupportedVersions[i]); Buffer += sizeof(uint);
                 }
                 RecvPacket.ReleaseDeferred = false;
             }
