@@ -306,7 +306,7 @@ namespace MSQuic1
                 int NewDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), IsPathMtuDiscovery ? Builder.Path.MtuDiscovery.ProbeSize : DatagramSize);
                 if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE) && NewDatagramLength > Connection.PeerTransportParams.MaxUdpPayloadSize)
                 {
-                    NewDatagramLength = (int)Connection.PeerTransportParams.MaxUdpPayloadSize;
+                    NewDatagramLength = Connection.PeerTransportParams.MaxUdpPayloadSize;
                 }
 
                 Builder.Datagram = CxPlatSendDataAllocBuffer(Builder.SendData, NewDatagramLength);

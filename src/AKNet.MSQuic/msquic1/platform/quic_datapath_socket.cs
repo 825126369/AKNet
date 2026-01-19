@@ -684,6 +684,7 @@ namespace MSQuic1
                 SendData.Owner = DatapathProc;
                 SendData.SendDataPool = SendDataPool;
                 SendData.BufferPool = DatapathProc.SendBufferPool;
+                SendData.WsaBuffers.Clear();
 
                 if (SendData.Sqe == null)
                 {

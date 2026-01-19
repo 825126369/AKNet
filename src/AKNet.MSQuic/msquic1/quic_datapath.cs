@@ -248,7 +248,6 @@ namespace MSQuic1
             LocalAddress = null;
             MappedRemoteAddress = null;
             Owner = null;
-            Sqe = null;
             SocketProc = null;
             SendDataPool = null;
             BufferPool = null;
@@ -308,9 +307,14 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
-        static bool CxPlatSendDataCanAllocSend(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
+        static bool CxPlatSendDataCanAllocSend(CXPLAT_SEND_DATA SendData)
         {
             return SendData.WsaBuffers.Count < SendData.Owner.Datapath.MaxSendBatchSize;
+        }
+
+        static bool CxPlatSendDataIsFull(CXPLAT_SEND_DATA SendData)
+        {
+            return !CxPlatSendDataCanAllocSend(SendData);
         }
 
         //给发送数据分配Buffer
@@ -320,7 +324,7 @@ namespace MSQuic1
             NetLog.Assert(SendData != null);
             NetLog.Assert(MaxBufferLength > 0);
 
-            if (!CxPlatSendDataCanAllocSend(SendData, MaxBufferLength))
+            if (!CxPlatSendDataCanAllocSend(SendData))
             {
                 return null;
             }
@@ -544,11 +548,6 @@ namespace MSQuic1
             NetLog.Assert(Buffer == TailBuffer);
             SendData.BufferPool.CxPlatPoolFree(Buffer);
             SendData.WsaBuffers.Remove(Buffer);
-        }
-
-        static bool CxPlatSendDataIsFull(CXPLAT_SEND_DATA SendData)
-        {
-             return SendData.WsaBuffers.Count < CXPLAT_MAX_BATCH_SEND;
         }
 
         static void CxPlatDataPathQueryRssScalabilityInfo(CXPLAT_DATAPATH Datapath)

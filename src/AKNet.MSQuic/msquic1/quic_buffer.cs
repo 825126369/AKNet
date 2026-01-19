@@ -72,7 +72,7 @@ namespace MSQuic1
 
         public QUIC_Pool_BUFFER()
         {
-            POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
+            NetLog.Assert(false, "错误的 QUIC_Pool_BUFFER 构造函数");
         }
 
         public QUIC_Pool_BUFFER(int nInitSize)
