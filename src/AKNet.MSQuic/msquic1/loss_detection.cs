@@ -726,10 +726,15 @@ namespace MSQuic1
             {
                 //当一个数据包发送后超过 2*PTO 时间仍未确认，且已被标记为“丢失”，就可以认为它非常“陈旧”，可以被安全地清理。
                 long TwoPto = QuicLossDetectionComputeProbeTimeout(LossDetection, Connection.Paths[0], 2);
-                while ((Packet = LossDetection.LostPackets) != null && Packet.PacketNumber < LossDetection.LargestAck && CxPlatTimeDiff(Packet.SentTime, TimeNow) > TwoPto)
+                NET_ADD_AVERAGE_STATS(Connection.Partition, UDP_STATISTIC_TYPE.TwoPto, US_TO_S(TwoPto));
+
+                while ((Packet = LossDetection.LostPackets) != null && 
+                    Packet.PacketNumber < LossDetection.LargestAck && 
+                    CxPlatTimeDiff(Packet.SentTime, TimeNow) > TwoPto)
                 {
                     LossDetection.LostPackets = Packet.Next;
                     QuicLossDetectionOnPacketDiscarded(LossDetection, Packet, true);
+                    NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.LostPackets_DiscardCount);
                 }
 
                 if (LossDetection.LostPackets == null)
@@ -782,6 +787,8 @@ namespace MSQuic1
                     }
 
                     //这里处理可疑的丢包
+                    NetLog.Log("SendPackets_To_LostPackets");
+                    NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.SendPackets_To_LostPackets);
                     Connection.Stats.Send.SuspectedLostPackets++;
                     QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
                     if (Packet.Flags.IsAckEliciting)

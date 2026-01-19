@@ -22,7 +22,9 @@ namespace MSQuic1
         MinRtt,
         MaxRtt,
         AckDelay,
-
+        TwoPto,
+        SendPackets_To_LostPackets,
+        LostPackets_DiscardCount,
         //计时器
         QUIC_PERF_COUNTER_TIMER_PACING,
         QUIC_PERF_COUNTER_TIMER_ACK_DELAY,
@@ -83,6 +85,9 @@ namespace MSQuic1
         public static readonly string[] mMitDesList = new string[]
         {
             "QUIC_CONN_TIMER_LOSS_DETECTION 计时器 平均轮询时间",
+             "",
+             "",
+             "",
              "",
              "",
              "",
