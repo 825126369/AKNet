@@ -486,15 +486,7 @@ namespace MSQuic1
                 if (!bIOPending)
                 {
                     NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                    if (IoBlock.nReceiveArgsSyncCount++ > 10)
-                    {
-                        IoBlock.nReceiveArgsSyncCount = 0;
-                        DataPathProcessCqe(null, IoBlock.ReceiveArgs);
-                    }
-                    else
-                    {
-                        DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
-                    }
+                    DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
                 }
             }
             catch (Exception e)

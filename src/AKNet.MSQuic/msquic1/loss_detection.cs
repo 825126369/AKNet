@@ -788,6 +788,7 @@ namespace MSQuic1
 
                     //这里处理可疑的丢包
                     NetLog.Log("SendPackets_To_LostPackets");
+                    throw new Exception("SendPackets_To_LostPackets");
                     NET_ADD_STATS(Connection.Partition, UDP_STATISTIC_TYPE.SendPackets_To_LostPackets);
                     Connection.Stats.Send.SuspectedLostPackets++;
                     QuicPerfCounterIncrement(Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_SUSPECTED_LOST);
