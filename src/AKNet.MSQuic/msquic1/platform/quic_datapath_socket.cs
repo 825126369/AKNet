@@ -638,8 +638,7 @@ namespace MSQuic1
             mList.Clear();
             foreach (var v in SendData.WsaBuffers)
             {
-                NetLog.Assert(v.Offset == 0);
-                mList.Add(new ArraySegment<byte>(v.Buffer, v.Offset, v.Length));
+                mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Length));
             }
 
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();

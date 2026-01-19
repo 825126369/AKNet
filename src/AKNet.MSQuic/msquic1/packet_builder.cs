@@ -614,7 +614,6 @@ namespace MSQuic1
             {
                 if (Builder.Datagram != null)
                 {
-                    NetLog.Assert(Builder.Datagram.Offset == 0);
                     if (Builder.Metadata.Flags.EcnEctSet)
                     {
                         ++Connection.Send.NumPacketsSentWithEct;

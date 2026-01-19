@@ -66,7 +66,6 @@ namespace MSQuic1
     {
         public CXPLAT_POOL<QUIC_Pool_BUFFER> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> POOL_ENTRY = null;
-        public int Offset;
         public int Length;
         public readonly byte[] Buffer;
 
@@ -79,7 +78,6 @@ namespace MSQuic1
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
             Buffer = new byte[nInitSize];
-            Offset = 0;
             Length = Buffer.Length;
         }
 
@@ -100,12 +98,11 @@ namespace MSQuic1
 
         public Span<byte> GetSpan()
         {
-            return Buffer.AsSpan().Slice(Offset, Length);
+            return Buffer.AsSpan().Slice(0, Length);
         }
 
         public void Reset()
         {
-            Offset = 0;
             Length = Buffer.Length;
         }
 
@@ -128,12 +125,12 @@ namespace MSQuic1
         {
             get
             {
-                return Buffer[index + Offset];
+                return Buffer[index];
             }
 
             set
             {
-                Buffer[index + Offset] = value;
+                Buffer[index] = value;
             }
         }
 
@@ -144,12 +141,12 @@ namespace MSQuic1
 
         public QUIC_SSBuffer Slice(int Offset)
         {
-            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length - Offset);
+            return new QUIC_SSBuffer(Buffer, Offset, Length - Offset);
         }
 
         public QUIC_SSBuffer Slice(int Offset, int Length)
         {
-            return new QUIC_SSBuffer(Buffer, this.Offset + Offset, Length);
+            return new QUIC_SSBuffer(Buffer, Offset, Length);
         }
 
         public static QUIC_SSBuffer operator +(QUIC_Pool_BUFFER Buffer, int Offset)
@@ -160,11 +157,6 @@ namespace MSQuic1
         public static QUIC_SSBuffer operator -(QUIC_Pool_BUFFER Buffer, int Offset)
         {
             return Buffer.Slice(-Offset);
-        }
-
-        public static int operator -(QUIC_Pool_BUFFER Buffer1, QUIC_Pool_BUFFER Buffer2)
-        {
-            return Buffer1.Offset - Buffer2.Offset;
         }
 
         public override string ToString()
@@ -339,7 +331,7 @@ namespace MSQuic1
 
         public QUIC_SSBuffer(QUIC_Pool_BUFFER mBuffer)
         {
-            this.Offset = mBuffer.Offset;
+            this.Offset = 0;
             this.Length = mBuffer.Length;
             this.Buffer = mBuffer.Buffer;
         }
@@ -470,7 +462,7 @@ namespace MSQuic1
             }
             else
             {
-                return new QUIC_SSBuffer(amount.Buffer, amount.Offset, amount.Length);
+                return new QUIC_SSBuffer(amount.Buffer, 0, amount.Length);
             }
         }
 
