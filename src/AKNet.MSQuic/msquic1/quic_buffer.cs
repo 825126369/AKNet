@@ -488,11 +488,11 @@ namespace MSQuic1
             StringBuilder mBuilder = new StringBuilder();
             if (Buffer != null)
             {
-                mBuilder.AppendLine($"Offset: {Offset}, Length: {Length}, Buffer: {CommonFunc.GetByteArrayStr(Buffer)}");
+                mBuilder.AppendLine($"Offset: {Offset}, Length: {Length}, GetSpan: {CommonFunc.GetByteArrayStr(GetSpan())}");
             }
             else
             {
-                mBuilder.AppendLine($"Offset: {Offset}, Length: {Length}, Buffer: null");
+                mBuilder.AppendLine($"Offset: {Offset}, Length: {Length}, GetSpan: null");
             }
             return mBuilder.ToString();
         }

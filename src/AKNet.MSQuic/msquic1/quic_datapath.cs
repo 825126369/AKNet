@@ -466,7 +466,6 @@ namespace MSQuic1
         {
             CXPLAT_SOCKET_PROC SocketProc = Route.Queue;
             SendData.SocketProc = SocketProc;
-            //CxPlatSendDataFinalizeSendBuffer(SendData);
             SendData.MappedRemoteAddress = Route.RemoteAddress;
             CxPlatSocketSendInline(Route.LocalAddress, SendData);
         }

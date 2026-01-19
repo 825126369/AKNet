@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
@@ -53,6 +54,12 @@ namespace AKNet.Common
         public static string GetByteArrayStr(byte[] buffer)
         {
             return string.Join(' ', buffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string GetByteArrayStr(ReadOnlySpan<byte> buffer)
+        {
+            return string.Join<byte>(' ', buffer.ToArray());
         }
     }
 }
