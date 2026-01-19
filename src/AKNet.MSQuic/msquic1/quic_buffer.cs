@@ -78,7 +78,7 @@ namespace MSQuic1
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER>(this);
             Buffer = new byte[nInitSize];
-            Length = Buffer.Length;
+            Length = 0;
         }
 
         public CXPLAT_POOL_ENTRY<QUIC_Pool_BUFFER> GetEntry()
@@ -103,7 +103,8 @@ namespace MSQuic1
 
         public void Reset()
         {
-            Length = Buffer.Length;
+            Clear();
+            Length = 0;
         }
 
         public void CopyTo(QUIC_BUFFER Buffer)
@@ -136,7 +137,7 @@ namespace MSQuic1
 
         public void Clear()
         {
-            Array.Clear(this.Buffer, 0, this.Buffer.Length);
+            this.Buffer.AsSpan().Clear();
         }
 
         public QUIC_SSBuffer Slice(int Offset)

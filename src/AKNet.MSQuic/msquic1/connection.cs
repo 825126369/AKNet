@@ -3629,7 +3629,7 @@ namespace MSQuic1
                 QUIC_FRAME_TYPE FrameType = (QUIC_FRAME_TYPE)nFrameType;
                 if (!QUIC_FRAME_IS_KNOWN(FrameType))
                 {
-                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, "QUIC_FRAME_IS_KNOWN");
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, $"QUIC_FRAME_IS_KNOWN: {nFrameType}");
                     return false;
                 }
 
