@@ -3622,7 +3622,7 @@ namespace MSQuic1
                 ulong nFrameType = 0;
                 if (!QuicVarIntDecode(ref Payload, ref nFrameType))
                 {
-                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, $"解析帧类型错误: {nFrameType}");
                     return false;
                 }
 
