@@ -970,11 +970,6 @@ namespace MSQuic1
             }
         }
 
-        static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
-        {
-
-        }
-
         static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
         {
             if (Connection.Crypto.TlsState.ReadKey > QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
@@ -4298,12 +4293,6 @@ namespace MSQuic1
             }
 
         Done:
-
-            if (UpdatedFlowControl)
-            {
-                QuicConnLogOutFlowStats(Connection);
-            }
-
             if (Connection.State.ShutdownComplete || Connection.State.HandleClosed)
             {
 

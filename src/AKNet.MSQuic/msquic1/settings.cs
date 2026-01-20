@@ -89,7 +89,7 @@ namespace MSQuic1
         public uint ConnFlowControlWindow;
         public long MaxWorkerQueueDelayUs;
         public uint MaxStatelessOperations;
-        public uint InitialWindowPackets;
+        public int InitialWindowPackets;
         public long SendIdleTimeoutMs;
         public long InitialRttMs;
         public long MaxAckDelayMs;
