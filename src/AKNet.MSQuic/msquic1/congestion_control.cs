@@ -56,8 +56,8 @@ namespace MSQuic1
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlCanSend;
         public Action<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlSetExemption;
         public Action<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlReset;
-        public Func<QUIC_CONGESTION_CONTROL, long, bool, uint> QuicCongestionControlGetSendAllowance;
-        public Action<QUIC_CONGESTION_CONTROL, int> QuicCongestionControlOnDataSent;
+        public Func<QUIC_CONGESTION_CONTROL, long, bool, long> QuicCongestionControlGetSendAllowance;
+        public Action<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlOnDataSent;
         public Func<QUIC_CONGESTION_CONTROL, int, bool> QuicCongestionControlOnDataInvalidated;
         public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
@@ -66,7 +66,7 @@ namespace MSQuic1
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlLogOutFlowStatus;
         public Func<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlGetExemptions;
         public Func<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlGetBytesInFlightMax;
-        public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetCongestionWindow;
+        public Func<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlGetCongestionWindow;
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlIsAppLimited;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;
 
@@ -97,7 +97,7 @@ namespace MSQuic1
             return Cc.QuicCongestionControlCanSend(Cc);
         }
 
-        static uint QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
+        static long QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
         {
             return Cc.QuicCongestionControlGetSendAllowance(Cc, TimeSinceLastSend, TimeSinceLastSendValid);
         }

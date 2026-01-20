@@ -883,7 +883,6 @@ namespace MSQuic1
         //当丢检定时器（PTO）到期，而发送端仍然没有收到任何 ACK 时，调用它把一个探测包塞进发送队列，强制让对端回 ACK，从而打破“死沉默”。
         static void QuicLossDetectionScheduleProbe(QUIC_LOSS_DETECTION LossDetection)
         {
-            NetLog.Log($"QuicLossDetectionScheduleProbe: 00000 debugID: {LossDetection.mConnection.debugID}");
             NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_000);
 
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
@@ -902,7 +901,6 @@ namespace MSQuic1
                     QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(Entry);
                     if (QuicStreamCanSendNow(Stream, false))
                     {
-                        NetLog.Log($"QuicLossDetectionScheduleProbe: 11111 debugID: {LossDetection.mConnection.debugID}");
                         NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_111);
                         if (--NumPackets == 0)
                         {
@@ -920,7 +918,6 @@ namespace MSQuic1
                 {
                     if (QuicLossDetectionRetransmitFrames(LossDetection, Packet, false))
                     {
-                        NetLog.Log($"QuicLossDetectionScheduleProbe: 22222 debugID: {LossDetection.mConnection.debugID}");
                         NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_222);
                         if (--NumPackets == 0)
                         {
@@ -934,7 +931,6 @@ namespace MSQuic1
             //最后发送Ping包
             if(QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING))
             {
-                NetLog.Log($"QuicLossDetectionScheduleProbe: 333333 debugID: {LossDetection.mConnection.debugID}");
                 NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionScheduleProbe_333);
             }
 
