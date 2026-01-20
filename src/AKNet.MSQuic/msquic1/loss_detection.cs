@@ -1044,7 +1044,7 @@ namespace MSQuic1
                 }
                 else
                 {
-                    NetLog.Log($"处理ACK帧 Connection.DecodedAckRanges: {Connection.DecodedAckRanges} debugID: {Connection.debugID}");
+                    //NetLog.Log($"处理ACK帧 Connection.DecodedAckRanges: {Connection.DecodedAckRanges} debugID: {Connection.debugID}");
                     AckDelay <<= Connection.PeerTransportParams.AckDelayExponent;
                     QuicLossDetectionProcessAckBlocks(
                         LossDetection,

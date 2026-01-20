@@ -163,18 +163,15 @@ namespace MSTest
         {
             QUIC_RANGE mRange = new QUIC_RANGE();
             MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
-
             MSQuicFunc.QuicRangeAddRange(mRange, 1, 4, out _);
             MSQuicFunc.QuicRangeAddRange(mRange, 2, 1, out _);
             MSQuicFunc.QuicRangeAddRange(mRange, 3, 4, out _);
             Assert.IsTrue(mRange.UsedLength == 1);
             Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 1, Count = 6 });
-
             MSQuicFunc.QuicRangeAddRange(mRange, 0, 1, out _);
             MSQuicFunc.QuicRangeAddRange(mRange, 7, 1, out _);
             Assert.IsTrue(mRange.UsedLength == 1);
             Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 0, Count = 8 });
-
             MSQuicFunc.QuicRangeAddRange(mRange, 9, 1, out _);
             MSQuicFunc.QuicRangeAddRange(mRange, 10, 1, out _);
             Assert.IsTrue(mRange.UsedLength == 2);
@@ -189,6 +186,22 @@ namespace MSTest
             Assert.IsTrue(mRange.UsedLength == 1);
             Assert.IsTrue(mRange.SubRanges[0].Low == 0);
             Assert.IsTrue(mRange.SubRanges[0].High == 999);
+            
+            mRange = new QUIC_RANGE();
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
+            MSQuicFunc.QuicRangeAddRange(mRange, 20, 2, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 25, 2, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 30, 2, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 18, 2, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 32, 2, out _);
+            Assert.IsTrue(mRange.UsedLength == 3);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 18, Count = 4 });
+            Assert.IsTrue(mRange.SubRanges[2] == new QUIC_SUBRANGE() { Low = 30, Count = 4 });
+
+            MSQuicFunc.QuicRangeAddRange(mRange, 22, 5, out _);
+            MSQuicFunc.QuicRangeAddRange(mRange, 27, 3, out _);
+            Assert.IsTrue(mRange.UsedLength == 1);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 18, Count = 16 });
         }
 
         [TestMethod]

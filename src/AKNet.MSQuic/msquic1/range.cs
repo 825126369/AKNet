@@ -538,8 +538,7 @@ namespace MSQuic1
 
         static bool QuicRangeAddValue(QUIC_RANGE Range, long Value)
         {
-            bool DontCare = false;
-            return QuicRangeAddRange(Range, Value, 1, out DontCare) != null;
+            return QuicRangeAddRange(Range, Value, 1, out _) != null;
         }
 
         //-----------------------2026-01-15 xuke 加的实用方法---------------------

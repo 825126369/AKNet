@@ -85,7 +85,7 @@ namespace MSQuic1
             return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out bool RangeUpdated) == null || !RangeUpdated;
         }
 
-        //我本地发送的包里有这些ACK帧, 
+        //ACK确认后,向前进。 
         static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, long LargestAckedPacketNumber)
         {
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
