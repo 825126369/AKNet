@@ -18,7 +18,7 @@ namespace AKNet.Quic.Client
         private bool _disposed;
         private readonly Memory<byte> mReceiveBuffer = new byte[Config.nIOContexBufferLength];
         private readonly Memory<byte> mSendBuffer = new byte[Config.nIOContexBufferLength];
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
+        private readonly AkCircularManyBuffer mSendStreamList = new AkCircularManyBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private bool bSendIOContextUsed = false;
 
