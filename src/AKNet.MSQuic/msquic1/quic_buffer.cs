@@ -166,7 +166,7 @@ namespace MSQuic1
         }
     }
 
-    internal unsafe class QUIC_BUFFER
+    internal class QUIC_BUFFER
     {
         public int Offset;
         public int Length;
@@ -323,16 +323,9 @@ namespace MSQuic1
         public int Length;
         public byte[] Buffer;
 
-        public QUIC_SSBuffer(QUIC_BUFFER mBuffer)
+        public QUIC_SSBuffer(QUIC_SSBuffer mBuffer)
         {
             this.Offset = mBuffer.Offset;
-            this.Length = mBuffer.Length;
-            this.Buffer = mBuffer.Buffer;
-        }
-
-        public QUIC_SSBuffer(QUIC_Pool_BUFFER mBuffer)
-        {
-            this.Offset = 0;
             this.Length = mBuffer.Length;
             this.Buffer = mBuffer.Buffer;
         }

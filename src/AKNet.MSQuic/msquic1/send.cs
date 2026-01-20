@@ -461,7 +461,8 @@ namespace MSQuic1
 
                     QUIC_PACKET_SPACE Packets = Connection.Packets[(int)Builder.EncryptLevel];
                     byte ZeroRttPacketType = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
-                    WrotePacketFrames = Builder.PacketType != ZeroRttPacketType && QuicAckTrackerHasPacketsToAck(Packets.AckTracker) &&
+                    WrotePacketFrames = Builder.PacketType != ZeroRttPacketType && 
+                        QuicAckTrackerHasPacketsToAck(Packets.AckTracker) &&
                         QuicAckTrackerAckFrameEncode(Packets.AckTracker, Builder);
 
                     WrotePacketFrames |= QuicStreamSendWrite(Stream, Builder);
