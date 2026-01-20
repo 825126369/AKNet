@@ -202,6 +202,14 @@ namespace MSTest
             MSQuicFunc.QuicRangeAddRange(mRange, 27, 3, out _);
             Assert.IsTrue(mRange.UsedLength == 1);
             Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 18, Count = 16 });
+
+            MSQuicFunc.QuicRangeSetMin(mRange, 19);
+            Assert.IsTrue(mRange.UsedLength == 1);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 19, Count = 15 });
+
+            MSQuicFunc.QuicRangeSetMin(mRange, 33);
+            Assert.IsTrue(mRange.UsedLength == 1);
+            Assert.IsTrue(mRange.SubRanges[0] == new QUIC_SUBRANGE() { Low = 33, Count = 1 });
         }
 
         [TestMethod]

@@ -509,7 +509,7 @@ namespace MSQuic1
         }
 #endif
 
-        static void QuicRangeSetMin(QUIC_RANGE Range, long Low)
+        public static void QuicRangeSetMin(QUIC_RANGE Range, long Low)
         {
             int i = 0;
             while (i < QuicRangeSize(Range))

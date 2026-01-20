@@ -368,6 +368,7 @@ namespace MSQuic1
             QuicPerfCounterAdd(Stream.Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
         }
 
+        //更新恢复窗口
         static bool QuicStreamOnLoss(QUIC_STREAM Stream, QUIC_SENT_FRAME_METADATA FrameMetadata)
         {
             if (Stream.Flags.LocalCloseReset)
