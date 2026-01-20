@@ -113,7 +113,22 @@ namespace MSQuic1
 
             if (Req.TotalLength != 0)
             {
-                QUIC_SSBuffer CurBuf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
+                QUIC_SSBuffer CurBuf = QUIC_SSBuffer.Empty;
+                if (_KK_OP)
+                {
+                    if (Req.InternalBuffer.Buffer == null)
+                    {
+                        Req.InternalBuffer.Buffer = new byte[2048];
+                    }
+
+                    Debug.Assert(Req.TotalLength < 2048);
+                    CurBuf = Req.InternalBuffer.Buffer;
+                }
+                else
+                {
+                    CurBuf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
+                }
+
                 if (CurBuf.IsEmpty)
                 {
                     return QUIC_STATUS_OUT_OF_MEMORY;

@@ -13,6 +13,7 @@ namespace MSQuic1
 {
     internal static partial class MSQuicFunc
     {
+        public const bool _KK_OP = true;
         public const bool _KERNEL_MODE = false;
 
         public const uint VER_MAJOR = 2;
