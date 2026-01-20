@@ -33,6 +33,7 @@ namespace MSQuic1
         {
             POOL_ENTRY = new CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST>(this);
         }
+
         public CXPLAT_POOL_ENTRY<QUIC_SEND_REQUEST> GetEntry()
         {
             return POOL_ENTRY;
@@ -56,7 +57,6 @@ namespace MSQuic1
             this.Flags = 0;
             this.StreamOffset = 0;
             this.TotalLength = 0;
-            this.InternalBuffer.Reset();
             this.ClientContext = null;
         }
     }
