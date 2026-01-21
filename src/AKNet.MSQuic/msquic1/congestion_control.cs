@@ -38,7 +38,7 @@ namespace MSQuic1
         public long LargestAck;
         public long LargestSentPacketNumber;
         public long NumTotalAckedRetransmittableBytes;
-        public int NumRetransmittableBytes;
+        public long NumRetransmittableBytes;
         public QUIC_SENT_PACKET_METADATA AckedPackets;
         public long SmoothedRtt;
         public long MinRtt;

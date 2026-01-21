@@ -108,7 +108,7 @@ namespace MSQuic1
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(KeyType);
-            int AckedRetransmittableBytes = 0;
+            long AckedRetransmittableBytes = 0;
             long TimeNow = CxPlatTimeUs();
 
             NetLog.Assert(KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL || KeyType == QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_HANDSHAKE);
@@ -1069,7 +1069,7 @@ namespace MSQuic1
             QUIC_SENT_PACKET_METADATA AckedPackets = null;//ACK确认包的队头
             QUIC_SENT_PACKET_METADATA AckedPacketsTail = AckedPackets;
 
-            int AckedRetransmittableBytes = 0;
+            long AckedRetransmittableBytes = 0;
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
             long TimeNow = CxPlatTimeUs();
             long MinRtt = long.MaxValue;
