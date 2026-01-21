@@ -721,7 +721,7 @@ namespace MSQuic1
         static bool QuicLossDetectionDetectAndHandleLostPackets(QUIC_LOSS_DETECTION LossDetection, long TimeNow)
         {
             QUIC_CONNECTION Connection = QuicLossDetectionGetConnection(LossDetection);
-            int LostRetransmittableBytes = 0;
+            long LostRetransmittableBytes = 0;
             QUIC_SENT_PACKET_METADATA Packet;
 
             NET_ADD_STATS(LossDetection.mConnection.Partition, UDP_STATISTIC_TYPE.QuicLossDetectionDetectAndHandleLostPackets_0000);
