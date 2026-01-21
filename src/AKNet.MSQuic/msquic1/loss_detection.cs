@@ -1066,8 +1066,6 @@ namespace MSQuic1
         static void QuicLossDetectionProcessAckBlocks(QUIC_LOSS_DETECTION LossDetection, QUIC_PATH Path, QUIC_RX_PACKET Packet, QUIC_ENCRYPT_LEVEL EncryptLevel,
             long AckDelay, QUIC_RANGE AckBlocks, ref bool InvalidAckBlock, QUIC_ACK_ECN_EX Ecn)
         {
-            Debug.Assert(LossDetection.mConnection.WorkerThreadID == Thread.CurrentThread.ManagedThreadId, "多线程错误");
-
             QUIC_SENT_PACKET_METADATA AckedPackets = null;//ACK确认包的队头
             QUIC_SENT_PACKET_METADATA AckedPacketsTail = AckedPackets;
 

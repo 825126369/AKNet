@@ -1008,6 +1008,17 @@ namespace MSQuic1
                 MsQuicLib.Datapath = null;
             }
 
+#if DEBUG
+            long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
+            QuicLibrarySumPerfCounters(PerfCounters);
+
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_CONNECTED] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_STRM_ACTIVE] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_QUEUE_DEPTH] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH] == 0);
+            NetLog.Assert(PerfCounters[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_WORK_OPER_QUEUE_DEPTH] == 0);
+#endif
             NetLog.Assert(CxPlatListIsEmpty(MsQuicLib.Bindings));
             MsQuicLibraryFreePartitions();
             QuicSettingsCleanup(MsQuicLib.Settings);

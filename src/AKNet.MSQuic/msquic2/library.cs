@@ -14,51 +14,6 @@ using System.Threading;
 
 namespace MSQuic2
 {
-    internal class QUIC_API_TABLE
-    {
-        //QUIC_SET_CONTEXT_FN SetContext;
-        //QUIC_GET_CONTEXT_FN GetContext;
-        //QUIC_SET_CALLBACK_HANDLER_FN SetCallbackHandler;
-
-        //QUIC_SET_PARAM_FN SetParam;
-        //QUIC_GET_PARAM_FN GetParam;
-
-        //QUIC_REGISTRATION_OPEN_FN RegistrationOpen;
-        //QUIC_REGISTRATION_CLOSE_FN RegistrationClose;
-        //QUIC_REGISTRATION_SHUTDOWN_FN RegistrationShutdown;
-
-        //QUIC_CONFIGURATION_OPEN_FN ConfigurationOpen;
-        //QUIC_CONFIGURATION_CLOSE_FN ConfigurationClose;
-        //QUIC_CONFIGURATION_LOAD_CREDENTIAL_FN
-        //                                    ConfigurationLoadCredential;
-
-        //QUIC_LISTENER_OPEN_FN ListenerOpen;
-        //QUIC_LISTENER_CLOSE_FN ListenerClose;
-        //QUIC_LISTENER_START_FN ListenerStart;
-        //QUIC_LISTENER_STOP_FN ListenerStop;
-
-        //QUIC_CONNECTION_OPEN_FN ConnectionOpen;
-        //QUIC_CONNECTION_CLOSE_FN ConnectionClose;
-        //QUIC_CONNECTION_SHUTDOWN_FN ConnectionShutdown;
-        //QUIC_CONNECTION_START_FN ConnectionStart;
-        //QUIC_CONNECTION_SET_CONFIGURATION_FN
-        //                                    ConnectionSetConfiguration;
-        //QUIC_CONNECTION_SEND_RESUMPTION_FN ConnectionSendResumptionTicket;
-
-        //QUIC_STREAM_OPEN_FN StreamOpen;
-        //QUIC_STREAM_CLOSE_FN StreamClose;
-        //QUIC_STREAM_START_FN StreamStart;
-        //QUIC_STREAM_SHUTDOWN_FN StreamShutdown;
-        //QUIC_STREAM_SEND_FN StreamSend;
-        //QUIC_STREAM_RECEIVE_COMPLETE_FN StreamReceiveComplete;
-        //QUIC_STREAM_RECEIVE_SET_ENABLED_FN StreamReceiveSetEnabled;
-
-        //QUIC_DATAGRAM_SEND_FN DatagramSend;
-
-        //QUIC_CONNECTION_COMP_RESUMPTION_FN ConnectionResumptionTicketValidationComplete; // Available from v2.2
-        //QUIC_CONNECTION_COMP_CERT_FN ConnectionCertificateValidationComplete;      // Available from v2.2
-    }
-
     internal enum QUIC_HANDLE_TYPE
     {
         QUIC_HANDLE_TYPE_REGISTRATION,
@@ -216,22 +171,6 @@ namespace MSQuic2
             {
                 MsQuicLib.CustomPartitions = false;
                 int MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-
-                //if (MsQuicLib.Storage != null)
-                //{
-                //    uint32_t MaxPartitionCountLen = sizeof(MaxPartitionCount);
-                //    CxPlatStorageReadValue(
-                //        MsQuicLib.Storage,
-                //        QUIC_SETTING_MAX_PARTITION_COUNT,
-                //        (uint8_t*)&MaxPartitionCount,
-                //        &MaxPartitionCountLen);
-
-                //    if (MaxPartitionCount == 0)
-                //    {
-                //        MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-                //    }
-                //}
-
                 if (MsQuicLib.PartitionCount > MaxPartitionCount)
                 {
                     MsQuicLib.PartitionCount = MaxPartitionCount;
@@ -353,7 +292,7 @@ namespace MSQuic2
                 }
             }
 
-            Status = CxPlatDataPathInitialize( DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize(DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 
@@ -941,34 +880,19 @@ namespace MSQuic2
         public const int QUIC_API_VERSION_1 = 1; // Not supported any more
         public const int QUIC_API_VERSION_2 = 2; // Current latest
 
-        public static int MsQuicOpenVersion(uint Version, out QUIC_API_TABLE QuicApi)
+        public static int MsQuicOpenVersion(uint Version)
         {
-            int Status;
-            bool ReleaseRefOnFailure = false;
-            QuicApi = null;
-
             if (Version != QUIC_API_VERSION_2)
             {
                 return QUIC_STATUS_NOT_SUPPORTED;
             }
 
             MsQuicLibraryLoad();
-            Status = MsQuicAddRef();
+            int Status = MsQuicAddRef();
             if (QUIC_FAILED(Status))
             {
                 goto Exit;
             }
-            ReleaseRefOnFailure = true;
-
-            QUIC_API_TABLE Api = new QUIC_API_TABLE();
-            if (Api == null)
-            {
-                Status = QUIC_STATUS_OUT_OF_MEMORY;
-                goto Exit;
-            }
-
-            QuicApi = Api;
-
         Exit:
             return Status;
         }
@@ -1065,9 +989,6 @@ namespace MSQuic2
 
         static void MsQuicLibraryUninitialize()
         {
-#if DEBUG
-            CXPLAT_DATAPATH CleanUpDatapath = null;
-#endif
             if (MsQuicLib.StatelessRegistration != null)
             {
                 MsQuicRegistrationShutdown(MsQuicLib.StatelessRegistration,  QUIC_CONNECTION_SHUTDOWN_FLAGS.QUIC_CONNECTION_SHUTDOWN_FLAG_SILENT, 0);
@@ -1082,16 +1003,9 @@ namespace MSQuic2
             NetLog.Assert(CxPlatListIsEmpty(MsQuicLib.Registrations));
             if (MsQuicLib.Datapath != null)
             {
-#if DEBUG
-                CleanUpDatapath = MsQuicLib.Datapath;
-#endif
                 CxPlatDataPathUninitialize(MsQuicLib.Datapath);
                 MsQuicLib.Datapath = null;
             }
-
-#if DEBUG
-            NetLog.Assert(MsQuicLib.ConnectionCount == 0);
-#endif
 
 #if DEBUG
             long[] PerfCounters = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
