@@ -68,15 +68,15 @@ namespace AKNet.Common
         }
 
         private const bool bNeedCheck = false;
-        private readonly int nInitBlockCount = 1;
-        private readonly int nMaxBlockCount = 1;
+        private readonly int nInitBlockCount = 0;
+        private readonly int nMaxBlockCount = 0;
         private readonly LinkedList<BufferItem> mItemList = new LinkedList<BufferItem>();
-        private readonly int BlockSize = 1024;
+        private readonly int BlockSize = 0;
         private LinkedListNode<BufferItem> nCurrentWriteBlock;
         private LinkedListNode<BufferItem> nCurrentReadBlock => mItemList.First;
         private long nSumByteCount;
 
-        public AkCircularManyBuffer(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = 1024)
+        public AkCircularManyBuffer(int nBlockSize = 1024, int nInitBlockCount = 1, int nMaxBlockCount = -1)
         {
             this.BlockSize = nBlockSize;
             this.nInitBlockCount = nInitBlockCount;

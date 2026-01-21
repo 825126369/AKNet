@@ -8,12 +8,11 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 namespace MSQuic1
 {
     internal static partial class MSQuicFunc
     {
-        public const bool _KK_OP = true;
+        public const bool _KK_OP = false;
         public const bool _KERNEL_MODE = false;
 
         public const uint VER_MAJOR = 2;
