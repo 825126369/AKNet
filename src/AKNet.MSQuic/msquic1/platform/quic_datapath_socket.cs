@@ -414,18 +414,6 @@ namespace MSQuic1
                 SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex]; //这里设置 Socket分区
                 CxPlatRefIncrement(ref SocketProc.DatapathProc.RefCount);
 
-                try
-                {
-                    IPEndPoint bindPoint = Socket.LocalAddress.GetIPEndPoint();
-                    SocketProc.Socket.Bind(bindPoint);
-                }
-                catch (Exception e)
-                {
-                    NetLog.LogError(e.ToString());
-                    Status = QUIC_STATUS_INTERNAL_ERROR;
-                    goto Error;
-                }
-
                 if (Config.RemoteAddress != null)
                 {
                     var MappedRemoteAddress = Config.RemoteAddress;
@@ -440,6 +428,24 @@ namespace MSQuic1
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
+                }
+                else if (Config.LocalAddress != null)
+                {
+                    try
+                    {
+                        IPEndPoint bindPoint = Socket.LocalAddress.GetIPEndPoint();
+                        SocketProc.Socket.Bind(bindPoint);
+                    }
+                    catch (Exception e)
+                    {
+                        NetLog.LogError(e.ToString());
+                        Status = QUIC_STATUS_INTERNAL_ERROR;
+                        goto Error;
+                    }
+                }
+                else
+                {
+                    NetLog.Assert(false);
                 }
 
                 if (i == 0)
@@ -665,26 +671,22 @@ namespace MSQuic1
             CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool = DatapathProc.SendDataPool;
 
             CXPLAT_SEND_DATA SendData = SendDataPool.CxPlatPoolAlloc();
-            if (SendData != null)
+            SendData.ECN = (byte)Config.ECN;
+            SendData.DSCP = (byte)Config.DSCP;
+            SendData.SendFlags = Config.Flags;
+            SendData.TotalSize = 0;
+            SendData.Owner = DatapathProc;
+            SendData.SendDataPool = SendDataPool;
+            SendData.BufferPool = DatapathProc.SendBufferPool;
+            SendData.WsaBuffers.Clear();
+
+            if (SendData.Sqe == null)
             {
-                SendData.ECN = (byte)Config.ECN;
-                SendData.DSCP = (byte)Config.DSCP;
-                SendData.SendFlags = Config.Flags;
-                SendData.TotalSize = 0;
-                SendData.Owner = DatapathProc;
-                SendData.SendDataPool = SendDataPool;
-                SendData.BufferPool = DatapathProc.SendBufferPool;
-                SendData.WsaBuffers.Clear();
-
-                if (SendData.Sqe == null)
-                {
-                    SendData.Sqe = new SSocketAsyncEventArgs();
-                    SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
-                    SendData.Sqe.Completed += DataPathProcessCqe3;
-                    SendData.Sqe.Completed2 += DataPathProcessCqe2;
-                }
+                SendData.Sqe = new SSocketAsyncEventArgs();
+                SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
+                SendData.Sqe.Completed += DataPathProcessCqe3;
+                SendData.Sqe.Completed2 += DataPathProcessCqe2;
             }
-
             return SendData;
         }
 
@@ -693,23 +695,21 @@ namespace MSQuic1
             CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
             CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = DatapathProc.RecvDatagramPool;
             DATAPATH_RX_IO_BLOCK IoBlock = OwningPool.CxPlatPoolAlloc().IoBlock;
-            if (IoBlock != null)
-            {
-                IoBlock.Route.State = CXPLAT_ROUTE_STATE.RouteResolved;
-                IoBlock.OwningPool = OwningPool;
-                IoBlock.ReferenceCount = 0;
-                IoBlock.SocketProc = SocketProc;
+            IoBlock.Route.State = CXPLAT_ROUTE_STATE.RouteResolved;
+            IoBlock.OwningPool = OwningPool;
+            IoBlock.ReferenceCount = 0;
+            IoBlock.SocketProc = SocketProc;
 
-                if (IoBlock.ReceiveArgs == null)
-                {
-                    IoBlock.ReceiveArgs = new SSocketAsyncEventArgs();
-                    IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
-                    byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
-                    IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
-                    IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
-                    IoBlock.ReceiveArgs.Completed2 += DataPathProcessCqe2;
-                }
+            if (IoBlock.ReceiveArgs == null)
+            {
+                IoBlock.ReceiveArgs = new SSocketAsyncEventArgs();
+                IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
+                byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
+                IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
+                IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
+                IoBlock.ReceiveArgs.Completed2 += DataPathProcessCqe2;
             }
+
             return IoBlock;
         }
 
