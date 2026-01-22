@@ -161,6 +161,9 @@ namespace MSQuic2
         public readonly CXPLAT_LIST_ENTRY WorkerLink;
         public readonly CXPLAT_LIST_ENTRY<QUIC_CONNECTION> TimerLink = null;
 
+        public static long debugIDCounter = 0;
+        public long debugID = 0; 
+
         public QUIC_WORKER Worker;
         public QUIC_PARTITION Partition;
         public QUIC_REGISTRATION Registration;
@@ -267,6 +270,8 @@ namespace MSQuic2
             {
                 Paths[i] = new QUIC_PATH();
             }
+
+            debugID = debugIDCounter++;
         }
 
         public void Reset()
@@ -774,12 +779,12 @@ namespace MSQuic2
 
             if (ClosedRemotely)
             {
-                NetLog.LogError("ClosedRemotely");
+                NetLog.LogError($"ClosedRemotely: {RemoteReasonPhrase}");
                 Connection.State.ClosedRemotely = true;
             }
             else
             {
-                NetLog.LogError("ClosedLocally");
+                NetLog.LogError($"ClosedLocally: {RemoteReasonPhrase}");
                 Connection.State.ClosedLocally = true;
                 if (!Connection.State.ExternalOwner)
                 {
@@ -963,11 +968,6 @@ namespace MSQuic2
                 QuicConnUnregister(Connection);
                 QuicConnRelease(Connection, QUIC_CONNECTION_REF.QUIC_CONN_REF_HANDLE_OWNER);
             }
-        }
-
-        static void QuicConnLogOutFlowStats(QUIC_CONNECTION Connection)
-        {
-
         }
 
         static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
@@ -1750,6 +1750,8 @@ namespace MSQuic2
             int Status = QUIC_STATUS_SUCCESS;
             Connection.State.PeerTransportParameterValid = true;
 
+            //NetLog.Log("Accept PeerTransportParams: " + Connection.PeerTransportParams.ToString());
+
             if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_ACTIVE_CONNECTION_ID_LIMIT))
             {
                 NetLog.Assert(Connection.PeerTransportParams.ActiveConnectionIdLimit >= QUIC_TP_ACTIVE_CONNECTION_ID_LIMIT_MIN);
@@ -2472,7 +2474,7 @@ namespace MSQuic2
             Packet.PayloadLength -= CompressedPacketNumberLength;
 
             QUIC_ENCRYPT_LEVEL EncryptLevel = QuicKeyTypeToEncryptLevel(Packet.KeyType);
-            Packet.PacketNumber = QuicPktNumDecompress(Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, CompressedPacketNumber, CompressedPacketNumberLength);
+            Packet.PacketNumber = (long)QuicPktNumDecompress((ulong)Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber, (ulong)CompressedPacketNumber, CompressedPacketNumberLength);
             Packet.PacketNumberSet = true;
 
             //NetLog.Log($"QuicPktNumDecompress: {Connection.Packets[(int)EncryptLevel].NextRecvPacketNumber}, {CompressedPacketNumber}, {CompressedPacketNumberLength}");
@@ -2984,7 +2986,7 @@ namespace MSQuic2
                     if (!InvalidRetryToken)
                     {
                         NetLog.Assert(!TokenBuffer.IsEmpty);
-                        NetLog.Assert(TokenBuffer.Length == sizeof_QUIC_TOKEN_CONTENTS);
+                        NetLog.Assert(TokenBuffer.Length == QUIC_TOKEN_CONTENTS.sizeof_Length);
 
                         QUIC_TOKEN_CONTENTS Token = null;
                         if (!QuicRetryTokenDecrypt(Packet, TokenBuffer, out Token))
@@ -3626,14 +3628,14 @@ namespace MSQuic2
                 ulong nFrameType = 0;
                 if (!QuicVarIntDecode(ref Payload, ref nFrameType))
                 {
-                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, $"解析帧类型错误: {nFrameType}");
                     return false;
                 }
 
                 QUIC_FRAME_TYPE FrameType = (QUIC_FRAME_TYPE)nFrameType;
                 if (!QUIC_FRAME_IS_KNOWN(FrameType))
                 {
-                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, "QUIC_FRAME_IS_KNOWN");
+                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, $"QUIC_FRAME_IS_KNOWN: {nFrameType}");
                     return false;
                 }
 
@@ -3700,7 +3702,7 @@ namespace MSQuic2
                             {
                                 if (InvalidAckFrame)
                                 {
-                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
+                                    QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR, "无效的ACK帧");
                                 }
                                 return false;
                             }
@@ -3724,7 +3726,7 @@ namespace MSQuic2
                                 break;
                             }
 
-                            int Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, Frame);
+                            int Status = QuicCryptoProcessFrame(Connection.Crypto, Packet.KeyType, ref Frame);
                             if (QUIC_SUCCEEDED(Status))
                             {
                                 AckEliciting = true;
@@ -3758,7 +3760,7 @@ namespace MSQuic2
                     case QUIC_FRAME_TYPE.QUIC_FRAME_NEW_TOKEN:
                         {
                             QUIC_NEW_TOKEN_EX Frame = new QUIC_NEW_TOKEN_EX();
-                            if (!QuicNewTokenFrameDecode(ref Payload, Frame))
+                            if (!QuicNewTokenFrameDecode(ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -3890,7 +3892,7 @@ namespace MSQuic2
                     case QUIC_FRAME_TYPE.QUIC_FRAME_MAX_STREAMS_1:
                         {
                             QUIC_MAX_STREAMS_EX Frame = new QUIC_MAX_STREAMS_EX();
-                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, Frame))
+                            if (!QuicMaxStreamsFrameDecode(FrameType, ref Payload, ref Frame))
                             {
                                 QuicConnTransportError(Connection, QUIC_ERROR_FRAME_ENCODING_ERROR);
                                 return false;
@@ -4297,12 +4299,6 @@ namespace MSQuic2
             }
 
         Done:
-
-            if (UpdatedFlowControl)
-            {
-                QuicConnLogOutFlowStats(Connection);
-            }
-
             if (Connection.State.ShutdownComplete || Connection.State.HandleClosed)
             {
 
@@ -4570,14 +4566,6 @@ namespace MSQuic2
                 }
             }
 
-#if DEBUG
-            while (!CxPlatListIsEmpty(Connection.Streams.AllStreams))
-            {
-                QUIC_STREAM Stream = CXPLAT_CONTAINING_RECORD<QUIC_STREAM>(CxPlatListRemoveHead(Connection.Streams.AllStreams));
-                NetLog.Assert(Stream != null, "Stream was leaked!");
-            }
-#endif
-
             while (!CxPlatListIsEmpty(Connection.DestCids))
             {
                 QUIC_CID CID = CXPLAT_CONTAINING_RECORD<QUIC_CID>(CxPlatListRemoveHead(Connection.DestCids));
@@ -4599,7 +4587,6 @@ namespace MSQuic2
                 CxPlatRecvDataReturn((CXPLAT_RECV_DATA)Connection.ReceiveQueue);
                 Connection.ReceiveQueue = null;
             }
-
             QUIC_PATH Path = Connection.Paths[0];
             if (Path.Binding != null)
             {
@@ -4679,7 +4666,7 @@ namespace MSQuic2
         static void QuicConnProcessRouteCompletion(QUIC_CONNECTION Connection, byte[] PhysicalAddress, byte PathId, bool Succeeded)
         {
             int PathIndex = 0;
-            QUIC_PATH Path = QuicConnGetPathByID(Connection, PathId, ref PathIndex);
+            QUIC_PATH Path = QuicConnGetPathByID(Connection, PathId, out PathIndex);
             if (Path != null)
             {
                 if (Succeeded)

@@ -53,7 +53,7 @@ namespace MSQuic2
     internal class QUIC_RX_PACKET : CXPLAT_RECV_DATA
     {
         public ulong PacketId;
-        public ulong PacketNumber;
+        public long PacketNumber;
         public long SendTimestamp;
 
         public readonly QUIC_CID DestCid = new QUIC_CID();
@@ -207,50 +207,86 @@ namespace MSQuic2
         public const int sizeof_QUIC_TOKEN_CONTENTS = byte.MaxValue;
         public class Authenticated_DATA
         {
-            private readonly byte[] bindBuffer = new byte[8];
+            public const int sizeof_Length = 8;
+            private readonly byte[] bindBuffer = new byte[sizeof_Length];
             public bool IsNewToken;
             public long Timestamp;
 
-            public byte[] GetBuffer()
+            public void WriteFrom(QUIC_SSBuffer mBuffer)
             {
+                ulong TT = EndianBitConverter.ToUInt64(mBuffer.GetSpan());
+                Timestamp = Math.Abs((long)(TT));
+                IsNewToken = CommonFunc.BoolOk(TT >> 63);
+            }
+
+            public QUIC_SSBuffer GetBuffer()
+            {
+                ulong TT = (ulong)((IsNewToken ? 1UL: 0UL) << 63 | (ulong)Timestamp);
+                EndianBitConverter.SetBytes(bindBuffer, 0, TT);
                 return bindBuffer;
             }
         }
 
         public class Encrypted_DATA
         {
-            private readonly byte[] bindBuffer = new byte[MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + 20];
-            public QUIC_ADDR RemoteAddress;
+            public const int sizeof_Length = MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_ADDR.sizeof_Length;
+            private readonly byte[] bindBuffer = new byte[sizeof_Length];
+
+            private QUIC_ADDR m_RemoteAddress;
             public readonly QUIC_BUFFER OrigConnId = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
 
-            public byte[] GetBuffer()
+            public QUIC_ADDR RemoteAddress
             {
-                return bindBuffer;
+                get
+                {
+                    if (m_RemoteAddress == null)
+                    {
+                        m_RemoteAddress = new QUIC_ADDR();
+                    }
+                    return m_RemoteAddress;
+                }
+
+                set
+                {
+                    m_RemoteAddress = value;
+                }
+            }
+
+            public void WriteFrom(QUIC_SSBuffer mBuffer)
+            {
+                ulong TT = EndianBitConverter.ToUInt64(mBuffer.GetSpan());
+                RemoteAddress.WriteFrom(mBuffer.GetSpan());
+                mBuffer.Slice(QUIC_ADDR.sizeof_Length, MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1).CopyTo(OrigConnId);
+            }
+
+            public QUIC_SSBuffer GetBuffer()
+            {
+                QUIC_SSBuffer mBuffer = bindBuffer;
+                RemoteAddress.ToSSBuffer().CopyTo(mBuffer);
+                OrigConnId.CopyTo(mBuffer.Slice(QUIC_ADDR.sizeof_Length));
+                return mBuffer;
             }
         }
 
+        public const int sizeof_Length = Authenticated_DATA.sizeof_Length + Encrypted_DATA.sizeof_Length + MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD;
         public readonly Authenticated_DATA Authenticated = new Authenticated_DATA();
         public readonly Encrypted_DATA Encrypted = new Encrypted_DATA();
         public readonly byte[] EncryptionTag = new byte[MSQuicFunc.CXPLAT_ENCRYPTION_OVERHEAD];
 
-        public byte[] GetBuffer()
+        public QUIC_SSBuffer GetBuffer()
         {
-            return null;
+            QUIC_SSBuffer mBuffer = new byte[sizeof_Length];
+            Authenticated.GetBuffer().CopyTo(mBuffer);
+            Encrypted.GetBuffer().CopyTo(mBuffer.Slice(Authenticated_DATA.sizeof_Length));
+            ((QUIC_SSBuffer)EncryptionTag).CopyTo(mBuffer.Slice(Authenticated_DATA.sizeof_Length + Encrypted_DATA.sizeof_Length));
+            return mBuffer;
         }
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-
-        }
-
-        public void WriteFrom(byte[] buffer)
-        {
-
-        }
-
-        public void WriteTo(byte[] buffer)
-        {
-
+            Authenticated.WriteFrom(buffer);
+            Encrypted.WriteFrom(buffer.Slice(Authenticated_DATA.sizeof_Length));
+            buffer.Slice(Authenticated_DATA.sizeof_Length + Encrypted_DATA.sizeof_Length).CopyTo(EncryptionTag);
         }
     }
 
@@ -977,8 +1013,8 @@ namespace MSQuic2
                         continue;
                     }
                 }
-                FailedAddrMatch = false;
 
+                FailedAddrMatch = false;
                 if (QuicListenerMatchesAlpn(ExistingListener, Info))
                 {
                     if (CxPlatRefIncrementNonZero(ref ExistingListener.RefCount, 1))
@@ -1046,7 +1082,7 @@ namespace MSQuic2
             QUIC_BINDING Binding = StatelessCtx.Binding;
             QUIC_RX_PACKET RecvPacket = StatelessCtx.Packet;
             QUIC_PARTITION Partition = MsQuicLib.Partitions[StatelessCtx.Packet.PartitionIndex];
-            QUIC_BUFFER SendDatagram = null;
+            QUIC_Pool_BUFFER SendDatagram = null;
 
             NetLog.Assert(RecvPacket.ValidatedHeaderInv);
 
@@ -1072,8 +1108,7 @@ namespace MSQuic2
 
                 var SupportedVersions = DefaultSupportedVersionsList;
                 int SupportedVersionsLength = DefaultSupportedVersionsList.Count;
-
-                int PacketLength = sizeof_QUIC_VERSION_NEGOTIATION_PACKET +
+                int PacketLength = QUIC_VERSION_NEGOTIATION_PACKET.sizeof_Length +
                     RecvPacket.SourceCid.Data.Length +
                     sizeof(byte) +
                     RecvPacket.DestCid.Data.Length +
@@ -1085,51 +1120,41 @@ namespace MSQuic2
                 {
                     goto Exit;
                 }
-
-                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = new QUIC_VERSION_NEGOTIATION_PACKET();
-                VerNeg.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
+                QUIC_SSBuffer Buffer = SendDatagram;
+                QUIC_VERSION_NEGOTIATION_PACKET VerNeg = new QUIC_VERSION_NEGOTIATION_PACKET();
                 VerNeg.IsLongHeader = 1;
-                VerNeg.Version = QUIC_VERSION_VER_NEG;
+                VerNeg.Unused = (byte)(0x7F & CxPlatRandom.RandomByte());
 
-                QUIC_SSBuffer Buffer = VerNeg.DestCid;
-                int nBufferOffset = 0;
-                VerNeg.DestCid.Length = (byte)RecvPacket.SourceCid.Data.Length;
-                RecvPacket.SourceCid.Data.CopyTo(Buffer);
-                nBufferOffset += RecvPacket.SourceCid.Data.Length;
+                Buffer[0] = VerNeg.GetFirstByte(); Buffer += 1;
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, QUIC_VERSION_VER_NEG); Buffer += 4;
 
-                Buffer[nBufferOffset] = (byte)RecvPacket.DestCid.Data.Length;
-                nBufferOffset += RecvPacket.SourceCid.Data.Length;
-                RecvPacket.DestCid.Data.CopyTo(Buffer);
-                nBufferOffset += RecvPacket.DestCid.Data.Length;
+                Buffer[0] = (byte)RecvPacket.SourceCid.Data.Length; Buffer += 1;
+                RecvPacket.SourceCid.Data.GetSpan().CopyTo(Buffer.GetSpan()); Buffer += RecvPacket.SourceCid.Data.Length;
 
-                byte RandomValue = 0;
-                CxPlatRandom.Random(ref RandomValue);
-                VerNeg.Unused = (byte)(0x7F & RandomValue);
+                Buffer[0] = (byte)RecvPacket.DestCid.Data.Length; Buffer += 1;
+                RecvPacket.DestCid.Data.GetSpan().CopyTo(Buffer.GetSpan()); Buffer += RecvPacket.DestCid.Data.Length;
 
-                EndianBitConverter.SetBytes(Buffer.GetSpan(), nBufferOffset, Binding.RandomReservedVersion);
-                nBufferOffset += sizeof(uint);
-
+                EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, Binding.RandomReservedVersion); Buffer += sizeof(uint);
                 for (int i = 0; i < SupportedVersionsLength; i++)
                 {
-                    EndianBitConverter.SetBytes(Buffer.GetSpan(), nBufferOffset, (uint)SupportedVersions[i]);
+                    EndianBitConverter.SetBytes(Buffer.GetSpan(), 0, SupportedVersions[i]); Buffer += sizeof(uint);
                 }
                 RecvPacket.ReleaseDeferred = false;
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET)
             {
-                NetLog.Assert(RecvPacket.DestCid != null);
-                NetLog.Assert(RecvPacket.SourceCid == null);
+                NetLog.Assert(!RecvPacket.DestCid.Data.IsEmpty);
+                NetLog.Assert(RecvPacket.SourceCid.Data.IsEmpty);
 
-                int PacketLength = 0;
-                CxPlatRandom.Random(ref PacketLength);
+                byte PacketLength = CxPlatRandom.RandomByte();
                 PacketLength >>= 5;
                 PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
 
                 if (PacketLength >= RecvPacket.AvailBufferLength)
                 {
-                    PacketLength = (byte)RecvPacket.AvailBufferLength - 1;
+                    PacketLength = (byte)(RecvPacket.AvailBufferLength - 1);
                 }
 
                 if (PacketLength < QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
@@ -1143,22 +1168,25 @@ namespace MSQuic2
                 {
                     goto Exit;
                 }
-
-                QUIC_SHORT_HEADER_V1 ResetPacket = new QUIC_SHORT_HEADER_V1();
-                ResetPacket.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
-                CxPlatRandom.Random(SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
+                QUIC_SSBuffer mBuffer = SendDatagram;
+                CxPlatRandom.Random(mBuffer.Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
+
+                QUIC_SHORT_HEADER_V1 ResetPacket = new QUIC_SHORT_HEADER_V1();
                 ResetPacket.IsLongHeader = 0;
                 ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
-                QuicLibraryGenerateStatelessResetToken(Partition, RecvPacket.DestCid.Data, SendDatagram + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                mBuffer[0] = ResetPacket.GetFirstByte();
+
+                QuicLibraryGenerateStatelessResetToken(Partition, RecvPacket.DestCid.Data, mBuffer.Slice(PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
             {
-                NetLog.Assert(RecvPacket.DestCid != null);
-                NetLog.Assert(RecvPacket.SourceCid != null);
+                NetLog.Assert(!RecvPacket.DestCid.Data.IsEmpty);
+                NetLog.Assert(RecvPacket.SourceCid.Data.IsEmpty);
+                
                 int PacketLength = QuicPacketMaxBufferSizeForRetryV1();
                 SendDatagram = CxPlatSendDataAllocBuffer(SendData, PacketLength);
                 if (SendDatagram == null)
@@ -1214,7 +1242,7 @@ namespace MSQuic2
                         new QUIC_SSBuffer(NewDestCid, MsQuicLib.CidTotalLength),
                         RecvPacket.DestCid.Data,
                         Token.GetBuffer(),
-                        SendDatagram.Buffer);
+                        SendDatagram);
 
                 if (SendDatagram.Length == 0)
                 {

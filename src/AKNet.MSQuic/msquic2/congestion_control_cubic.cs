@@ -25,43 +25,43 @@ namespace MSQuic2
         public bool IsInRecovery;
         public bool IsInPersistentCongestion;
         public bool TimeOfLastAckValid;
-        public int InitialWindowPackets;
+        public long InitialWindowPackets;
         public long SendIdleTimeoutMs;
 
-        public int CongestionWindow; // bytes
-        public int PrevCongestionWindow; // bytes
-        public int SlowStartThreshold; // bytes
-        public int PrevSlowStartThreshold; // bytes
-        public int AimdWindow; // bytes
-        public int PrevAimdWindow; // bytes
-        public int AimdAccumulator; // bytes
+        public long CongestionWindow; // bytes
+        public long PrevCongestionWindow; // bytes
+        public long SlowStartThreshold; // 慢启动阶段的阈值, bytes
+        public long PrevSlowStartThreshold; // bytes
+        public long AimdWindow; // bytes
+        public long PrevAimdWindow; // bytes
+        public long AimdAccumulator; // bytes
 
-        public int BytesInFlight;
-        public int BytesInFlightMax;
-        public int LastSendAllowance; // bytes
+        public long BytesInFlight;
+        public long BytesInFlightMax;
+        public long LastSendAllowance; // bytes
 
-        public byte Exemptions;
+        public byte Exemptions; //它是个“免责计数器”——只要不为 0，本轮丢包就不会把拥塞窗口 cwnd 砍掉一半，而是继续按 CUBic 曲线增长。
 
         public long TimeOfLastAck; // microseconds
         public long TimeOfCongAvoidStart; // microseconds
-        public int KCubic; // millisec
-        public int PrevKCubic; // millisec
-        public int WindowPrior; // bytes (prior_cwnd from rfc8312bis)
-        public int PrevWindowPrior; // bytes
-        public int WindowMax; // bytes (W_max from rfc8312bis)
-        public int PrevWindowMax; // bytes
-        public int WindowLastMax; // bytes (W_last_max from rfc8312bis)
-        public int PrevWindowLastMax; // bytes
+        public long KCubic; // millisec
+        public long PrevKCubic; // millisec
+        public long WindowPrior; // bytes (prior_cwnd from rfc8312bis)
+        public long PrevWindowPrior; // bytes
+        public long WindowMax; // bytes (W_max from rfc8312bis)
+        public long PrevWindowMax; // bytes
+        public long WindowLastMax; // bytes (W_last_max from rfc8312bis)
+        public long PrevWindowLastMax; // bytes
 
         public QUIC_CUBIC_HYSTART_STATE HyStartState;
-        public int HyStartAckCount;
+        public long HyStartAckCount;
         public long MinRttInLastRound; // microseconds
         public long MinRttInCurrentRound; // microseconds
         public long CssBaselineMinRtt; // microseconds
-        public ulong HyStartRoundEnd; // Packet Number
-        public int CWndSlowStartGrowthDivisor;
-        public int ConservativeSlowStartRounds;
-        public ulong RecoverySentPacketNumber;
+        public long HyStartRoundEnd; // Packet Number
+        public long CWndSlowStartGrowthDivisor;
+        public long ConservativeSlowStartRounds;
+        public long RecoverySentPacketNumber;
     }
 
     internal static partial class MSQuicFunc
@@ -69,11 +69,13 @@ namespace MSQuic2
         public const int TEN_TIMES_BETA_CUBIC = 7;
         public const int TEN_TIMES_C_CUBIC = 4;
 
-        static uint CubeRoot(uint Radicand)
+        //“整数立方根”算法——用 逐位试填（bit-by-bit） 的方式，
+        //在 31 位范围内求 ⌊∛radicand⌋，完全避开浮点和 pow，保证 O(1) 时间、O(1) 空间、可预测的分支，适合内核或实时场景。
+        static long CubeRoot(long Radicand)
         {
             int i;
-            uint x = 0;
-            uint y = 0;
+            long x = 0;
+            long y = 0;
 
             for (i = 30; i >= 0; i -= 3)
             {
@@ -118,9 +120,9 @@ namespace MSQuic2
             Cc.mConnection = Connection;
 
             ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
-            Cubic.SlowStartThreshold = int.MaxValue;
+            Cubic.SlowStartThreshold = uint.MaxValue;
             Cubic.SendIdleTimeoutMs = Connection.Settings.SendIdleTimeoutMs;
-            Cubic.InitialWindowPackets = (int)Connection.Settings.InitialWindowPackets;
+            Cubic.InitialWindowPackets = Connection.Settings.InitialWindowPackets;
             Cubic.CongestionWindow = DatagramPayloadLength * Cubic.InitialWindowPackets;
             Cubic.BytesInFlightMax = Cubic.CongestionWindow / 2;
             Cubic.MinRttInCurrentRound = long.MaxValue;
@@ -129,8 +131,6 @@ namespace MSQuic2
             Cubic.CWndSlowStartGrowthDivisor = 1;
 
             CubicCongestionHyStartResetPerRttRound(Cubic);
-            QuicConnLogOutFlowStats(Connection);
-            QuicConnLogCubic(Connection);
         }
 
         static void CubicCongestionHyStartResetPerRttRound(QUIC_CONGESTION_CONTROL_CUBIC Cubic)
@@ -192,7 +192,7 @@ namespace MSQuic2
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
             ushort DatagramPayloadLength = QuicPathGetDatagramPayloadSize(Connection.Paths[0]);
-            Cubic.SlowStartThreshold = int.MaxValue;
+            Cubic.SlowStartThreshold = uint.MaxValue;
             Cubic.MinRttInCurrentRound = uint.MaxValue;
             Cubic.HyStartRoundEnd = Connection.Send.NextPacketNumber;
             CubicCongestionHyStartResetPerRttRound(Cubic);
@@ -206,20 +206,12 @@ namespace MSQuic2
             {
                 Cubic.BytesInFlight = 0;
             }
-
-            QuicConnLogOutFlowStats(Connection);
-            QuicConnLogCubic(Connection);
         }
 
-        static void QuicConnLogCubic(QUIC_CONNECTION Connection)
-        {
-
-        }
-
-        static uint CubicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
+        static long CubicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
-            uint SendAllowance;
+            long SendAllowance;
             QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
             if (Cubic.BytesInFlight >= Cubic.CongestionWindow)
             {
@@ -228,14 +220,14 @@ namespace MSQuic2
             else if (!TimeSinceLastSendValid || !Connection.Settings.PacingEnabled || !Connection.Paths[0].GotFirstRttSample ||
                 Connection.Paths[0].SmoothedRtt < QUIC_MIN_PACING_RTT)
             {
-                SendAllowance = (uint)(Cubic.CongestionWindow - Cubic.BytesInFlight);
+                SendAllowance = Cubic.CongestionWindow - Cubic.BytesInFlight;
             }
             else
             {
                 long EstimatedWnd;
                 if (Cubic.CongestionWindow < Cubic.SlowStartThreshold)
                 {
-                    EstimatedWnd = (long)Cubic.CongestionWindow << 1;
+                    EstimatedWnd = Cubic.CongestionWindow << 1;
                     if (EstimatedWnd > Cubic.SlowStartThreshold)
                     {
                         EstimatedWnd = Cubic.SlowStartThreshold;
@@ -246,13 +238,13 @@ namespace MSQuic2
                     EstimatedWnd = Cubic.CongestionWindow + (Cubic.CongestionWindow >> 2); // CongestionWindow * 1.25
                 }
 
-                SendAllowance = (uint)(Cubic.LastSendAllowance + (uint)(EstimatedWnd * TimeSinceLastSend / Connection.Paths[0].SmoothedRtt));
+                SendAllowance = Cubic.LastSendAllowance + (EstimatedWnd * TimeSinceLastSend / Connection.Paths[0].SmoothedRtt);
                 if (SendAllowance < Cubic.LastSendAllowance ||
                     SendAllowance > (Cubic.CongestionWindow - Cubic.BytesInFlight))
                 {
-                    SendAllowance = (uint)(Cubic.CongestionWindow - Cubic.BytesInFlight);
+                    SendAllowance = Cubic.CongestionWindow - Cubic.BytesInFlight;
                 }
-                Cubic.LastSendAllowance = (int)SendAllowance;
+                Cubic.LastSendAllowance = SendAllowance;
             }
             return SendAllowance;
         }
@@ -260,7 +252,6 @@ namespace MSQuic2
         static bool CubicCongestionControlUpdateBlockedState(QUIC_CONGESTION_CONTROL Cc, bool PreviousCanSendState)
         {
             QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
-            QuicConnLogOutFlowStats(Connection);
             if (PreviousCanSendState != CubicCongestionControlCanSend(Cc))
             {
                 if (PreviousCanSendState)
@@ -323,17 +314,18 @@ namespace MSQuic2
                     Cubic.WindowLastMax = Cubic.WindowMax;
                 }
 
-                Cubic.KCubic = (int)CubeRoot((uint)(Cubic.WindowMax / DatagramPayloadLength * (10 - TEN_TIMES_BETA_CUBIC) << 9) / TEN_TIMES_C_CUBIC);
+                Cubic.KCubic = CubeRoot((Cubic.WindowMax / DatagramPayloadLength * (10 - TEN_TIMES_BETA_CUBIC) << 9) / TEN_TIMES_C_CUBIC);
                 Cubic.KCubic = Cubic.KCubic * 1000;
                 Cubic.KCubic >>= 3;
 
                 CubicCongestionHyStartChangeState(Cc, QUIC_CUBIC_HYSTART_STATE.HYSTART_DONE);
                 Cubic.SlowStartThreshold = Cubic.CongestionWindow = Cubic.AimdWindow =
-                    (int)Math.Max((uint)DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS, Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10);
+                    Math.Max(DatagramPayloadLength * QUIC_PERSISTENT_CONGESTION_WINDOW_PACKETS, Cubic.CongestionWindow * TEN_TIMES_BETA_CUBIC / 10);
             }
+
         }
 
-        static void CubicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
+        static void CubicCongestionControlOnDataSent(QUIC_CONGESTION_CONTROL Cc, long NumRetransmittableBytes)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             bool PreviousCanSendState = QuicCongestionControlCanSend(Cc);
@@ -362,7 +354,7 @@ namespace MSQuic2
             CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
         }
 
-        static bool CubicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
+        static bool CubicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, long NumRetransmittableBytes)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
@@ -379,7 +371,7 @@ namespace MSQuic2
             long TimeNowUs = AckEvent.TimeNow;
             QUIC_CONNECTION Connection = QuicCongestionControlGetConnection(Cc);
             bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
-            int BytesAcked = AckEvent.NumRetransmittableBytes;
+            long BytesAcked = AckEvent.NumRetransmittableBytes;
 
             NetLog.Assert(Cubic.BytesInFlight >= BytesAcked, $"{Cubic.BytesInFlight}, {BytesAcked}");
             Cubic.BytesInFlight -= BytesAcked;
@@ -513,7 +505,7 @@ namespace MSQuic2
                 else
                 {
                     long TargetWindow = Math.Max(Cubic.CongestionWindow, Math.Min(CubicWindow, Cubic.CongestionWindow + (Cubic.CongestionWindow >> 1)));
-                    Cubic.CongestionWindow += (int)(((TargetWindow - Cubic.CongestionWindow) * DatagramPayloadLength) / Cubic.CongestionWindow);
+                    Cubic.CongestionWindow += (TargetWindow - Cubic.CongestionWindow) * DatagramPayloadLength / Cubic.CongestionWindow;
                 }
             }
 
@@ -556,10 +548,9 @@ namespace MSQuic2
             }
 
             NetLog.Assert(Cubic.BytesInFlight >= LossEvent.NumRetransmittableBytes);
-            Cubic.BytesInFlight -= (int)LossEvent.NumRetransmittableBytes;
+            Cubic.BytesInFlight -= LossEvent.NumRetransmittableBytes;
 
             CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
-            QuicConnLogCubic(QuicCongestionControlGetConnection(Cc));
         }
 
         static void CubicCongestionControlOnEcn(QUIC_CONGESTION_CONTROL Cc, QUIC_ECN_EVENT EcnEvent)
@@ -577,7 +568,6 @@ namespace MSQuic2
             }
 
             CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
-            QuicConnLogCubic(QuicCongestionControlGetConnection(Cc));
         }
 
         static bool CubicCongestionControlOnSpuriousCongestionEvent(QUIC_CONGESTION_CONTROL Cc)
@@ -604,7 +594,6 @@ namespace MSQuic2
             Cubic.HasHadCongestionEvent = false;
 
             bool Result = CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
-            QuicConnLogCubic(Connection);
             return Result;
         }
 
@@ -613,7 +602,7 @@ namespace MSQuic2
             //这里是日志，就忽略了
         }
 
-        static int CubicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        static long CubicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
         {
             return Cc.Cubic.BytesInFlightMax;
         }
@@ -623,9 +612,9 @@ namespace MSQuic2
             return Cc.Cubic.Exemptions;
         }
 
-        static uint CubicCongestionControlGetCongestionWindow(QUIC_CONGESTION_CONTROL Cc)
+        static long CubicCongestionControlGetCongestionWindow(QUIC_CONGESTION_CONTROL Cc)
         {
-            return (uint)Cc.Cubic.CongestionWindow;
+            return Cc.Cubic.CongestionWindow;
         }
 
         static bool CubicCongestionControlIsAppLimited(QUIC_CONGESTION_CONTROL Cc)

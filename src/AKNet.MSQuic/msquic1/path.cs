@@ -249,6 +249,7 @@ namespace MSQuic1
             return Path;
         }
 
+        //QuicPathSetAllowance 函数负责设置或更新与某个特定网络路径（Path）相关的这个 【允许发送的字节数】。
         static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int NewAllowance)
         {
             Path.Allowance = NewAllowance;

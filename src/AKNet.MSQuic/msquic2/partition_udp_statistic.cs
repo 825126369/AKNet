@@ -8,13 +8,32 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
+using System.Diagnostics;
 
 namespace MSQuic2
 {
     internal enum UDP_STATISTIC_TYPE : int
     {
         LOSS_DETECTION_TIME_AVERAGE,
+        FirstSendCount,
+        ReSendCount,
+        SmoothedRtt,
+        MinRtt,
+        MaxRtt,
+        AckDelay,
+        TwoPto,
+        SendPackets_To_LostPackets,
+        LostPackets_DiscardCount,
 
+        QuicLossDetectionDetectAndHandleLostPackets_0000,
+        QuicLossDetectionDetectAndHandleLostPackets_1111,
+        QuicLossDetectionDetectAndHandleLostPackets_2222,
+
+        QuicLossDetectionScheduleProbe_000,
+        QuicLossDetectionScheduleProbe_111,
+        QuicLossDetectionScheduleProbe_222,
+        QuicLossDetectionScheduleProbe_333,
         //计时器
         QUIC_PERF_COUNTER_TIMER_PACING,
         QUIC_PERF_COUNTER_TIMER_ACK_DELAY,
@@ -30,21 +49,31 @@ namespace MSQuic2
     {
         internal enum MIB_LOG_TYPE
         {
+            NONE,
             COUNT,
             AVERAGE,
         }
 
         internal class udp_statistic_cell
         {
-            public MIB_LOG_TYPE nType = MIB_LOG_TYPE.COUNT;
-            public long nMin = long.MaxValue;
-            public long nMax;
+            public MIB_LOG_TYPE nType = MIB_LOG_TYPE.NONE;
+            public double nMin = double.MaxValue;
+            public double nMax;
             public long nCount;
-            public long nValue;
+            public double nValue;
 
             public void Combine(udp_statistic_cell other)
             {
                 if (other == null) return;
+
+                if (nType == MIB_LOG_TYPE.NONE)
+                {
+                    nType = other.nType;
+                }
+                else if(nType != other.nType)
+                {
+                    throw new Exception();
+                }
 
                 if (this.nMin > other.nMin)
                 {
@@ -62,17 +91,6 @@ namespace MSQuic2
         }
 
         public udp_statistic_cell[] mibs = new udp_statistic_cell[(int)UDP_STATISTIC_TYPE.MAX];
-        public static readonly string[] mMitDesList = new string[]
-        {
-            "LOSS_DETECTION 触发次数 平均时间",
-
-            "QUIC_CONN_TIMER_PACING 触发次数",
-            "QUIC_CONN_TIMER_ACK_DELAY 触发次数",
-            "QUIC_CONN_TIMER_LOSS_DETECTION 触发次数",
-            "QUIC_CONN_TIMER_KEEP_ALIVE 触发次数",
-            "QUIC_CONN_TIMER_IDLE 触发次数",
-            "QUIC_CONN_TIMER_SHUTDOWN 触发次数",
-        };
 
         //统计状态
         public void NET_ADD_STATS(UDP_STATISTIC_TYPE mMib)
@@ -87,7 +105,7 @@ namespace MSQuic2
             mCell.nCount++;
         }
 
-        public void NET_ADD_AVERAGE_STATS(UDP_STATISTIC_TYPE mMib, long nValue)
+        public void NET_ADD_AVERAGE_STATS(UDP_STATISTIC_TYPE mMib, double nValue)
         {
             if (mibs[(int)mMib] == null)
             {
@@ -95,8 +113,8 @@ namespace MSQuic2
             }
             udp_statistic_cell mCell = mibs[(int)mMib];
 
-            mCell.nCount++;
             mCell.nType = MIB_LOG_TYPE.AVERAGE;
+            mCell.nCount++;
             mCell.nValue += nValue;
             if (nValue < mCell.nMin)
             {
@@ -121,17 +139,17 @@ namespace MSQuic2
             }
         }
 
+        private double BaoLiuXiaoShu(double A)
+        {
+            return Math.Floor(A * 1000000) / 1000000;
+        }
+
         public void PRINT_NET_STATS()
         {
             for (int i = 0; i < (int)UDP_STATISTIC_TYPE.MAX; i++)
             {
                 udp_statistic_cell mCell = mibs[i];
-                string mibDes = mMitDesList[i];
-                if (string.IsNullOrWhiteSpace(mibDes))
-                {
-                    mibDes = ((UDP_STATISTIC_TYPE)i).ToString();
-                }
-
+                string mibDes = ((UDP_STATISTIC_TYPE)i).ToString();
                 if (mCell == null)
                 {
                     NetLog.Log($"{mibDes} : null");
@@ -140,7 +158,7 @@ namespace MSQuic2
                 {
                     if (mCell.nType == MIB_LOG_TYPE.AVERAGE)
                     {
-                        NetLog.Log($"{mibDes} : {mCell.nCount}: {mCell.nValue / mCell.nCount}, {mCell.nMin}, {mCell.nMax}");
+                        NetLog.Log($"{mibDes} : {mCell.nCount}: {BaoLiuXiaoShu(mCell.nValue / mCell.nCount)}, {mCell.nMin}, {mCell.nMax}");
                     }
                     else
                     {
@@ -148,21 +166,33 @@ namespace MSQuic2
                     }
                 }
             }
+            
+            if (mibs[(int)UDP_STATISTIC_TYPE.FirstSendCount].nCount > 0)
+            {
+                NetLog.Log($"重发率: {mibs[(int)UDP_STATISTIC_TYPE.ReSendCount].nCount / mibs[(int)UDP_STATISTIC_TYPE.FirstSendCount].nCount}");
+            }
+            else
+            {
+                NetLog.Log($"重发率: N");
+            }
         }
     }
 
     internal static partial class MSQuicFunc
     {
+        [Conditional("DEBUG")]
         public static void NET_ADD_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib)
         {
             Partition.udp_statistic.NET_ADD_STATS(mMib);
         }
 
-        public static void NET_ADD_AVERAGE_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib, long nValue)
+        [Conditional("DEBUG")]
+        public static void NET_ADD_AVERAGE_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib, double nValue)
         {
             Partition.udp_statistic.NET_ADD_AVERAGE_STATS(mMib, nValue);
         }
 
+        [Conditional("DEBUG")]
         public static void udp_statistic_printInfo()
         {
             quic_partition_udp_statistic mm = new quic_partition_udp_statistic();

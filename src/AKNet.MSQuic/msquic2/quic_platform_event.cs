@@ -4,10 +4,9 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -37,7 +36,7 @@ namespace MSQuic2
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool CxPlatEventSet(EventWaitHandle Event)
         {
-            return Event.Set();
+             return Event.Set();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,7 +54,6 @@ namespace MSQuic2
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool CxPlatEventWaitWithTimeout(EventWaitHandle Event, int TimeoutMs)
         {
-            NetLog.Assert(TimeoutMs != int.MaxValue);
             return Event.WaitOne(TimeoutMs);
         }
 

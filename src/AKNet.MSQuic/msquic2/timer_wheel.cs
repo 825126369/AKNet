@@ -4,7 +4,7 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
@@ -148,7 +148,7 @@ namespace MSQuic2
                         }
                         Entry = Entry.Prev;
                     }
-                    CxPlatListInsertHead(Entry, Connection.TimerLink);
+                    CxPlatListInsertMiddle(ListHead, Entry, Connection.TimerLink);
                 }
             }
             OldSlots = null;
@@ -206,7 +206,7 @@ namespace MSQuic2
             }
 
             //在这里把Work上的连接插入入口上
-            CxPlatListInsertHead(Entry, Connection.TimerLink);
+            CxPlatListInsertMiddle(ListHead, Entry, Connection.TimerLink);
             
             if (ExpirationTime < TimerWheel.NextExpirationTime)
             {

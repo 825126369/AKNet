@@ -23,10 +23,17 @@ namespace MSQuic2
     {
         public QUIC_PACKET_SPACE CXPLAT_CONTAINING_RECORD = null;
 
+        //作用：重复包检测
+        //容量上限：QUIC_MAX_RANGE_DUPLICATE_PACKETS（默认 16384 字节）
+        //逻辑：任何先于此区间最小值的包都视为“已收过”，直接丢弃，不回 ACK。
         public readonly QUIC_RANGE PacketNumbersReceived = new QUIC_RANGE();
+
+        //作用：构造下一条 ACK 帧
+        //容量上限：QUIC_MAX_RANGE_ACK_PACKETS（默认 65536 字节）
+        //逻辑：只把“最近收到且还没被 ACK 发送出去”的包号保留在这里；一旦 ACK 帧被发送，就把对应区间从本字段里“commit”掉（QuicAckTrackerCommitAck）。
         public readonly QUIC_RANGE PacketNumbersToAck = new QUIC_RANGE();
         public QUIC_ACK_ECN_EX ReceivedECN;
-        public ulong LargestPacketNumberAcknowledged;
+        public long LargestPacketNumberAcknowledged;
         public long LargestPacketNumberRecvTime;
         public int AckElicitingPacketsToAcknowledge; //用途：记录需要确认的触发确认（ACK-eliciting）数据包的数量。
         public bool AlreadyWrittenAckFrame;
@@ -72,20 +79,21 @@ namespace MSQuic2
             QuicRangeReset(Tracker.PacketNumbersReceived);
         }
         
-        //ture:  增加 PacketNumber 有问题/有可能重复，
-        //false: 增加没问题
-        static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, ulong PacketNumber)
+        //接收到数据包的时候,把 包号 存下来
+        static bool QuicAckTrackerAddPacketNumber(QUIC_ACK_TRACKER Tracker, long PacketNumber)
         {
-            bool RangeUpdated = false;
-            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out RangeUpdated).IsEmpty || !RangeUpdated;
+            return QuicRangeAddRange(Tracker.PacketNumbersReceived, PacketNumber, 1, out bool RangeUpdated) == null || !RangeUpdated;
         }
 
-        static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, ulong LargestAckedPacketNumber)
+        //ACK确认后,向前进。 
+        static void QuicAckTrackerOnAckFrameAcked(QUIC_ACK_TRACKER Tracker, long LargestAckedPacketNumber)
         {
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
 
+            //NetLog.Log($"Tracker.PacketNumbersToAck 0000: {LargestAckedPacketNumber}, {Tracker.PacketNumbersToAck}");
             QuicRangeSetMin(Tracker.PacketNumbersToAck, LargestAckedPacketNumber + 1);
-
+            //NetLog.Log($"Tracker.PacketNumbersToAck 1111:  {Tracker.PacketNumbersToAck}");
+            
             if (!QuicAckTrackerHasPacketsToAck(Tracker) && BoolOk(Tracker.AckElicitingPacketsToAcknowledge))
             {
                 Tracker.AckElicitingPacketsToAcknowledge = 0;
@@ -138,8 +146,9 @@ namespace MSQuic2
             return true;
         }
 
-        //当接受到包的时候，增加ACK处理
-        static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, ulong PacketNumber, long RecvTimeUs, CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
+        //接收到数据包的时候,把 包号 存下来
+        static void QuicAckTrackerAckPacket(QUIC_ACK_TRACKER Tracker, long PacketNumber, long RecvTimeUs, 
+            CXPLAT_ECN_TYPE ECN, QUIC_ACK_TYPE AckType)
         {
             //NetLog.Log("发送确认 ACK PacketNumber: " + PacketNumber);
             QUIC_CONNECTION Connection = QuicAckTrackerGetPacketSpace(Tracker).Connection;
@@ -147,10 +156,9 @@ namespace MSQuic2
             NetLog.Assert(Connection != null);
             NetLog.Assert(PacketNumber <= QUIC_VAR_INT_MAX);
 
-            ulong CurLargestPacketNumber = 0;
-            if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, ref CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
+            if (QuicRangeGetMaxSafe(Tracker.PacketNumbersToAck, out long CurLargestPacketNumber) && CurLargestPacketNumber > PacketNumber)
             {
-                Connection.Stats.Recv.ReorderedPackets++;//乱序包
+                Connection.Stats.Recv.ReorderedPackets++;//旧的数据包
             }
 
             if (!QuicRangeAddValue(Tracker.PacketNumbersToAck, PacketNumber))
@@ -192,7 +200,7 @@ namespace MSQuic2
 
             Tracker.AckElicitingPacketsToAcknowledge++;
 
-            if (BoolOk(Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+            if (HasFlag(Connection.Send.SendFlags, QUIC_CONN_SEND_FLAG_ACK))
             {
                 goto Exit;
             }

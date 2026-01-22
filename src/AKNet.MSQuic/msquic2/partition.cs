@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -22,6 +23,7 @@ namespace MSQuic2
 
     internal class QUIC_PARTITION
     {
+        public int nThreadId;
         public int Index;
         public int Processor;
         public ulong SendBatchId;
@@ -101,20 +103,20 @@ namespace MSQuic2
             Partition.ResetTokenHash = null;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicPerfCounterAdd(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type, long Value = 1)
         {
             NetLog.Assert(Type >= 0 && Type < QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX);
             Interlocked.Add(ref Partition.PerfCounters[(int)Type], Value);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicPerfCounterIncrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
         {
             QuicPerfCounterAdd(Partition, Type, 1);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicPerfCounterDecrement(QUIC_PARTITION Partition, QUIC_PERFORMANCE_COUNTERS Type)
         {
             QuicPerfCounterAdd(Partition, Type, -1);
@@ -156,7 +158,8 @@ namespace MSQuic2
             long KeyIndex = Now / QUIC_STATELESS_RETRY_KEY_LIFETIME_MS;
             return QuicPartitioGetStatelessRetryKey(Partition, KeyIndex);
         }
-        
+
+
         static CXPLAT_KEY QuicPartitionGetStatelessRetryKeyForTimestamp(QUIC_PARTITION Partition,long Timestamp)
         {
             long Now = CxPlatTimeEpochMs64();
@@ -209,9 +212,10 @@ namespace MSQuic2
             " ", //QUIC_PERF_COUNTER_MAX,
         };
 
+        [Conditional("DEBUG")]
         public static void QuicPartitionPrintPerfCounters(QUIC_PARTITION Partition)
         {
-            for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
+            for(int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)
             {
                 QUIC_PERFORMANCE_COUNTERS nType = (QUIC_PERFORMANCE_COUNTERS)i;
                 long nCount = Partition.PerfCounters[i];
@@ -219,6 +223,7 @@ namespace MSQuic2
             }
         }
 
+        [Conditional("DEBUG")]
         public static void QuicPrintPerfCounters()
         {
             for (int i = 0; i < (int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX; i++)

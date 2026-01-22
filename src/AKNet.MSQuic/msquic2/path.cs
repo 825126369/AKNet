@@ -84,8 +84,9 @@ namespace MSQuic2
             Path.EcnValidationState = Connection.Settings.EcnEnabled ? ECN_VALIDATION_STATE.ECN_VALIDATION_TESTING : ECN_VALIDATION_STATE.ECN_VALIDATION_FAILED;
         }
 
-        static QUIC_PATH QuicConnGetPathByID(QUIC_CONNECTION Connection, byte ID, ref int Index)
+        static QUIC_PATH QuicConnGetPathByID(QUIC_CONNECTION Connection, byte ID, out int Index)
         {
+            Index = -1;
             for (int i = 0; i < Connection.PathsCount; ++i)
             {
                 if (Connection.Paths[i].ID == ID)

@@ -293,10 +293,11 @@ namespace MSQuic1
             CxPlatDispatchRwLockReleaseExclusive(Binding.RwLock);
         }
 
-        static int QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, ref QUIC_BINDING NewBinding)
+        static int QuicBindingInitialize(CXPLAT_UDP_CONFIG UdpConfig, out QUIC_BINDING NewBinding)
         {
             int Status;
             QUIC_BINDING Binding = new QUIC_BINDING();
+            NewBinding = null;
             if (Binding == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;

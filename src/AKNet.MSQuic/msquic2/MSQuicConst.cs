@@ -14,6 +14,7 @@ namespace MSQuic2
 {
     internal static partial class MSQuicFunc
     {
+        public const bool _KK_OP = false;
         public const bool _KERNEL_MODE = false;
 
         public const uint VER_MAJOR = 2;
@@ -27,7 +28,7 @@ namespace MSQuic2
             return rtt + (rtt / 8);
         }
 
-        public static readonly long QUIC_INITIAL_RTT = MS_TO_US(333); // 一律用微秒表示
+        public const long QUIC_INITIAL_RTT = 333; // 这是毫秒表示
 
         public const int QUIC_MIN_INITIAL_PACKET_LENGTH = 1200;
         public const int QUIC_MIN_UDP_PAYLOAD_LENGTH_FOR_VN = QUIC_MIN_INITIAL_PACKET_LENGTH;
@@ -192,7 +193,7 @@ namespace MSQuic2
         //
         // Maximum memory allocated (in bytes) for different range tracking structures
         //
-        public const int QUIC_MAX_RANGE_ALLOC_SIZE = 0x100000;    // 1084576
+        public const int QUIC_MAX_RANGE_ALLOC_SIZE = 0x100000;    // 1084576，65536个区间
         public const int QUIC_MAX_RANGE_DUPLICATE_PACKETS = 0x1000;     // 4096
         public const int QUIC_MAX_RANGE_ACK_PACKETS = 0x800;      // 2048
         public const int QUIC_MAX_RANGE_DECODE_ACKS = 0x1000;      // 4096
@@ -201,8 +202,8 @@ namespace MSQuic2
         public const int QUIC_INITIAL_PACKET_LENGTH = 1240;
         public const int QUIC_DPLPMTUD_DEFAULT_MIN_MTU = (QUIC_INITIAL_PACKET_LENGTH + CXPLAT_MIN_IPV6_HEADER_SIZE + CXPLAT_UDP_HEADER_SIZE);
         public const int QUIC_DPLPMTUD_DEFAULT_MAX_MTU = 1500;
-        public const int QUIC_MAX_CALLBACK_TIME_WARNING = 10;
-        public const int QUIC_MAX_CALLBACK_TIME_ERROR = 1000;
+        public static readonly long QUIC_MAX_CALLBACK_TIME_WARNING = MS_TO_US(10);
+        public static readonly long QUIC_MAX_CALLBACK_TIME_ERROR = MS_TO_US(1000);
 
         public const long QUIC_DEFAULT_DISCONNECT_TIMEOUT = 16000;  // 16 seconds, in ms
         public const long QUIC_MAX_DISCONNECT_TIMEOUT = 600000;  // 10 minutes, in ms
@@ -257,7 +258,7 @@ namespace MSQuic2
         //
         // The scaling factor used locally for AckDelay field in the ACK_FRAME.
         //
-        public const int QUIC_ACK_DELAY_EXPONENT = 8;
+        public const byte QUIC_ACK_DELAY_EXPONENT = 8;
 
         //
         // The lifetime of a QUIC stateless retry token encryption key.
@@ -461,7 +462,7 @@ namespace MSQuic2
         public const ulong QUIC_TP_ID_RELIABLE_RESET_ENABLED = 0x17f7586d2cb570;   // varint
         public const ulong QUIC_TP_ID_ENABLE_TIMESTAMP = 0x7158;         // varint
 
-        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = 25; // 毫秒，转 微秒
+        public static readonly long QUIC_TP_MAX_ACK_DELAY_DEFAULT = 25; // 毫秒
         //MAX_ACK_DELAY_MAX 是针对单次 ACK 延迟的限制，为了保证响应的及时性，所以这个值比较小。
         public static readonly long QUIC_TP_MAX_ACK_DELAY_MAX = ((1 << 14) - 1); //约 16 毫秒
         // 是针对配置参数的上限，考虑到特殊场景（像卫星链路这种高延迟的情况）可能需要较大的灵活性，因此这个值设置得比较大。
@@ -592,7 +593,7 @@ namespace MSQuic2
         public const int QUIC_RANGE_NO_MAX_ALLOC_SIZE = int.MaxValue;
         public const int QUIC_RANGE_USE_BINARY_SEARCH = 1;
         public const int QUIC_RANGE_INITIAL_SUB_COUNT = 8;
-        public const ulong QUIC_VAR_INT_MAX = (1UL << 62) - 1;
+        public const long QUIC_VAR_INT_MAX = (1L << 62) - 1;
 
         public const int QUIC_MAX_FRAMES_PER_PACKET = 12;
 

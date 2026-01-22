@@ -4,11 +4,12 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic2
 {
@@ -305,7 +306,7 @@ namespace MSQuic2
                 int NewDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), IsPathMtuDiscovery ? Builder.Path.MtuDiscovery.ProbeSize : DatagramSize);
                 if (BoolOk(Connection.PeerTransportParams.Flags & QUIC_TP_FLAG_MAX_UDP_PAYLOAD_SIZE) && NewDatagramLength > Connection.PeerTransportParams.MaxUdpPayloadSize)
                 {
-                    NewDatagramLength = (int)Connection.PeerTransportParams.MaxUdpPayloadSize;
+                    NewDatagramLength = Connection.PeerTransportParams.MaxUdpPayloadSize;
                 }
 
                 Builder.Datagram = CxPlatSendDataAllocBuffer(Builder.SendData, NewDatagramLength);
@@ -611,7 +612,6 @@ namespace MSQuic2
         Exit:
             if (FinalQuicPacket)
             {
-                NetLog.Assert(Builder.Datagram.Offset == 0);
                 if (Builder.Datagram != null)
                 {
                     if (Builder.Metadata.Flags.EcnEctSet)
@@ -712,15 +712,19 @@ namespace MSQuic2
         {
             NetLog.Assert(Builder.SendData == null);
 
-            if (Builder.PacketBatchSent && Builder.PacketBatchRetransmittable)
+            if (Builder.PacketBatchSent)
             {
-                QuicLossDetectionUpdateTimer(Builder.Connection.LossDetection, false);
+                if (Builder.PacketBatchRetransmittable)
+                {
+                    QuicLossDetectionUpdateTimer(Builder.Connection.LossDetection, false);
+                }
             }
 
             QuicSentPacketMetadataReleaseFrames(Builder.Metadata, Builder.Connection);
             Builder.HpMask.AsSpan().Clear();
         }
 
+        [Conditional("DEBUG")]
         static void QuicPacketBuilderValidate(QUIC_PACKET_BUILDER Builder, bool ShouldHaveData)
         {
             if (ShouldHaveData)

@@ -25,6 +25,7 @@ namespace MSQuic2
     //一律强制转为IpV6地址
     internal unsafe class QUIC_ADDR:IDisposable
     {
+        public const int sizeof_Length = 28;
         public string ServerName;
         public SOCKADDR_INET* RawAddr;
 
@@ -1421,8 +1422,8 @@ namespace MSQuic2
                 SendData.SegmentSize = HasFlag(Socket.Datapath.Features, CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION) ? Config.MaxPacketSize : 0;
                 SendData.TotalSize = 0;
                 SendData.WsaBuffers.Clear();
-                SendData.ClientBuffer.Buffer = null;
-                SendData.ClientBuffer.Length = 0;
+                //SendData.ClientBuffer.Buffer = null;
+                //SendData.ClientBuffer.Length = 0;
                 SendData.DatapathType = Config.Route.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
                 SendData.Owner = DatapathProc;
                 SendData.SendDataPool = SendDataPool;

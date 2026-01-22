@@ -4,7 +4,7 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
@@ -73,7 +73,7 @@ namespace MSQuic2
             return QuicVarIntDecode(ref Buffer, ref value);
         }
 
-        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
+        public static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -115,7 +115,7 @@ namespace MSQuic2
 
         static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
+            NetLog.Assert(Value <= QUIC_VAR_INT_MAX, Value);
             if (Value < 0x40) // 64
             {
                 Buffer[0] = (byte)Value;

@@ -4,12 +4,12 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace MSQuic2
 {
@@ -39,30 +39,23 @@ namespace MSQuic2
 
     internal class QUIC_SEND
     {
-        // 标志位与状态
         public bool FlushOperationPending;
         public bool DelayedAckTimerActive;
         public bool LastFlushTimeValid;
         public bool TailLossProbeNeeded;
         public bool Uninitialized;
-
-        public ulong NextPacketNumber;//包编号
-        public long LastFlushTime; //时间戳
-        public int NumPacketsSentWithEct; //显式拥塞通知（ECN）
-
-        // 流量控制
-        public long MaxData; //本端通告的 连接级最大接收数据量（即 MAX_DATA 帧中的值)
-        public int PeerMaxData; //对端通告的连接级窗口（即我们能发送的总数据上限）
-        public int OrderedStreamBytesReceived; //已按序交付给应用层的字节数/接收的字节数量
-        public int OrderedStreamBytesSent; //已发送的有序字节数
-        public long OrderedStreamBytesDeliveredAccumulator; //累计交付字节数（用于 BBR 等拥塞控制算法）
-
-        // 发送控制
+        public long NextPacketNumber;
+        public long LastFlushTime;
+        public int NumPacketsSentWithEct;
+        public long MaxData;
+        public long PeerMaxData;
+        public long OrderedStreamBytesReceived;
+        public long OrderedStreamBytesSent;
+        public long OrderedStreamBytesDeliveredAccumulator;
         public uint SendFlags;
-        // 发送队列
         public readonly CXPLAT_LIST_ENTRY SendStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
-        public QUIC_BUFFER InitialToken;// 初始令牌（用于 Retry 和验证）
-        public QUIC_CONNECTION mConnection; // 关联连接
+        public QUIC_BUFFER InitialToken;
+        public QUIC_CONNECTION mConnection;
     }
 
     internal enum QUIC_SEND_RESULT
@@ -155,7 +148,6 @@ namespace MSQuic2
 
             if (IsCloseFrame)
             {
-                Connection.LastCloseResponseTimeUs = CxPlatTimeUs();
                 QuicSendClear(Send);
             }
 
@@ -177,7 +169,7 @@ namespace MSQuic2
                     }
                     Entry = Entry.Prev;
                 }
-                CxPlatListInsertHead(Entry, Stream.SendLink); //这里就是插入这个队列里
+                CxPlatListInsertMiddle(Send.SendStreams, Entry, Stream.SendLink);
                 QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_SEND);
             }
 
@@ -469,7 +461,8 @@ namespace MSQuic2
 
                     QUIC_PACKET_SPACE Packets = Connection.Packets[(int)Builder.EncryptLevel];
                     byte ZeroRttPacketType = Connection.Stats.QuicVersion == QUIC_VERSION_2 ? (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_0_RTT_PROTECTED_V2 : (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_0_RTT_PROTECTED_V1;
-                    WrotePacketFrames = Builder.PacketType != ZeroRttPacketType && QuicAckTrackerHasPacketsToAck(Packets.AckTracker) &&
+                    WrotePacketFrames = Builder.PacketType != ZeroRttPacketType && 
+                        QuicAckTrackerHasPacketsToAck(Packets.AckTracker) &&
                         QuicAckTrackerAckFrameEncode(Packets.AckTracker, Builder);
 
                     WrotePacketFrames |= QuicStreamSendWrite(Stream, Builder);
@@ -585,10 +578,9 @@ namespace MSQuic2
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         static void QuicSendValidate(QUIC_SEND Send)
         {
-#if DEBUG
             if (Send.Uninitialized)
             {
                 return;
@@ -621,7 +613,6 @@ namespace MSQuic2
             {
                 NetLog.Assert(!HasAckElicitingPacketsToAcknowledge);
             }
-#endif
         }
 
         static void QuicSendUpdateAckState(QUIC_SEND Send)
@@ -812,7 +803,7 @@ namespace MSQuic2
                 goto Exit;
             }
 
-            if (BoolOk(Send.SendFlags & QUIC_CONN_SEND_FLAG_PATH_RESPONSE))
+            if (HasFlag(Send.SendFlags, QUIC_CONN_SEND_FLAG_PATH_RESPONSE))
             {
                 int i;
                 for (i = 0; i < Connection.PathsCount; ++i)
@@ -903,7 +894,7 @@ namespace MSQuic2
 
                     QUIC_MAX_DATA_EX Frame = new QUIC_MAX_DATA_EX()
                     {
-                        MaximumData = (int)Send.MaxData
+                        MaximumData = Send.MaxData
                     };
 
                     var mBuf = Builder.GetDatagramCanWriteSSBufer();

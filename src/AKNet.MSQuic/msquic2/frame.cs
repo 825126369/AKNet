@@ -15,9 +15,9 @@ namespace MSQuic2
 {
     internal struct QUIC_ACK_ECN_EX
     {
-        public ulong ECT_0_Count;
-        public ulong ECT_1_Count;
-        public ulong CE_Count;
+        public long ECT_0_Count;
+        public long ECT_1_Count;
+        public long CE_Count;
 
         public bool IsEmpty
         {
@@ -29,24 +29,30 @@ namespace MSQuic2
 
     internal struct QUIC_ACK_EX
     {
-        public ulong LargestAcknowledged; //最大被确认的数据包编号（Packet Number），即接收方收到的最新的数据包号
+        public long LargestAcknowledged; //最大被确认的数据包编号（Packet Number），即接收方收到的最新的数据包号
         public long AckDelay; //接收方从收到这个包到发送 ACK 的延迟时间（单位为时间戳单位，通常为 microseconds，经指数压缩）
         public int AdditionalAckBlockCount; //表示后面还有多少个 ACK Block（即除了第一个之外的额外块数量）
         public int FirstAckBlock;//第一个 ACK Block 中的连续确认区间长度（即有多少个连续的包被确认）
+    }
+
+    internal struct QUIC_ACK_BLOCK_EX
+    {
+        public int Gap;
+        public int AckBlock;
     }
 
     internal struct QUIC_RESET_STREAM_EX
     {
         public ulong StreamID;
         public int ErrorCode;
-        public int FinalSize;
+        public long FinalSize;
     }
 
     internal struct QUIC_RELIABLE_RESET_STREAM_EX
     {
         public ulong StreamID;
         public int ErrorCode;
-        public int FinalSize;
+        public long FinalSize;
         public int ReliableSize;
     }
 
@@ -79,13 +85,6 @@ namespace MSQuic2
     internal struct QUIC_TIMESTAMP_EX
     {
         public long Timestamp;
-    }
-
-    internal struct QUIC_ACK_BLOCK_EX
-    {
-        public int Gap;
-        public int AckBlock;
-
     }
 
     internal struct QUIC_CONNECTION_CLOSE_EX
@@ -132,7 +131,7 @@ namespace MSQuic2
 
     internal struct QUIC_MAX_DATA_EX
     {
-        public int MaximumData;
+        public long MaximumData;
     }
 
     internal struct QUIC_MAX_STREAMS_EX
@@ -203,7 +202,7 @@ namespace MSQuic2
     internal struct QUIC_STREAM_DATA_BLOCKED_EX
     {
         public ulong StreamID;
-        public int StreamDataLimit;
+        public long StreamDataLimit;
     }
 
     internal struct QUIC_STREAM_EX
@@ -211,7 +210,7 @@ namespace MSQuic2
         public bool Fin;
         public bool ExplicitLength;
         public ulong StreamID;
-        public int Offset;
+        public long Offset;
         public int Length;
 
         private QUIC_BUFFER m_Data;
@@ -286,7 +285,7 @@ namespace MSQuic2
         QUIC_FRAME_STREAM_6 = 0xe,
         QUIC_FRAME_STREAM_7 = 0xf,
         QUIC_FRAME_MAX_DATA = 0x10,
-        QUIC_FRAME_MAX_STREAM_DATA = 0x11,
+        QUIC_FRAME_MAX_STREAM_DATA = 0x11, //接收端主动告诉发送端：“这条流你可以发到哪个绝对字节偏移。
         QUIC_FRAME_MAX_STREAMS = 0x12, // to 0x13
         QUIC_FRAME_MAX_STREAMS_1 = 0x13,
         QUIC_FRAME_DATA_BLOCKED = 0x14,
@@ -329,18 +328,6 @@ namespace MSQuic2
         {
             Buffer[0] = (byte)Value;
             return Buffer.Slice(1);
-        }
-
-        static bool QuicUint8tDecode(ref QUIC_SSBuffer Buffer, ref byte Value)
-        {
-            if (Buffer.Length < 1)
-            {
-                return false;
-            }
-
-            Value = Buffer[0];
-            Buffer = Buffer.Slice(1);
-            return true;
         }
 
         static bool QuicResetStreamFrameEncode(QUIC_RESET_STREAM_EX Frame, ref QUIC_SSBuffer Buffer)
@@ -532,20 +519,20 @@ namespace MSQuic2
             return true;
         }
 
-        static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref QUIC_SSBuffer Buffer)
+        public static bool QuicAckFrameEncode(QUIC_RANGE AckBlocks, long AckDelay, QUIC_ACK_ECN_EX Ecn, ref QUIC_SSBuffer Buffer)
         {
             int i = QuicRangeSize(AckBlocks) - 1;
 
             QUIC_SUBRANGE LastSub = QuicRangeGet(AckBlocks, i);
-            ulong Largest = QuicRangeGetHigh(LastSub);
-            ulong Count = (ulong)LastSub.Count;
+            long Largest = QuicRangeGetHigh(LastSub);
+            long Count = LastSub.Count;
 
             QUIC_ACK_EX Frame = new QUIC_ACK_EX()
             {
                 LargestAcknowledged = Largest,  
                 AckDelay = AckDelay,  
                 AdditionalAckBlockCount = i,
-                FirstAckBlock = (int)Count - 1 
+                FirstAckBlock = (int)Count - 1
             };
 
             if (!QuicAckHeaderEncode(Frame, Ecn, ref Buffer))
@@ -559,8 +546,8 @@ namespace MSQuic2
                 Largest -= Count;
 
                 QUIC_SUBRANGE Next = QuicRangeGet(AckBlocks, i - 1);
-                ulong NextLargest = QuicRangeGetHigh(Next);
-                Count = (ulong)Next.Count;
+                long NextLargest = QuicRangeGetHigh(Next);
+                Count = Next.Count;
 
                 NetLog.Assert(Largest > NextLargest);
                 NetLog.Assert(Count > 0);
@@ -765,6 +752,7 @@ namespace MSQuic2
             {
                 Buffer = QuicVarIntEncode((ulong)TotalLength, Buffer);
             }
+
             for (int i = 0; i < BufferCount; ++i)
             {
                 if (Buffers[i].Length != 0)
@@ -783,14 +771,14 @@ namespace MSQuic2
                 !QuicVarIntDecode(ref Buffer, ref Frame.AckDelay) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.AdditionalAckBlockCount) ||
                 !QuicVarIntDecode(ref Buffer, ref Frame.FirstAckBlock) ||
-                (ulong)Frame.FirstAckBlock > Frame.LargestAcknowledged)
+                Frame.FirstAckBlock > Frame.LargestAcknowledged)
             {
                 return false;
             }
             return true;
         }
 
-        static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
+        public static bool QuicAckFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref bool InvalidFrame, QUIC_RANGE AckRanges, ref QUIC_ACK_ECN_EX Ecn, ref long AckDelay)
         {
             InvalidFrame = false;
             NetLog.Assert(AckRanges.SubRanges != null);
@@ -801,11 +789,10 @@ namespace MSQuic2
                 return false;
             }
 
-            ulong Largest = Frame.LargestAcknowledged; //最大确认的序号
-            int Count = Frame.FirstAckBlock + 1;
+            long Largest = Frame.LargestAcknowledged; //最大确认的序号
+            int Count = Frame.FirstAckBlock + 1; //最大区间的长度
 
-            bool DontCare = false;
-            if (QuicRangeAddRange(AckRanges, Largest + 1UL - (ulong)Count, Count, out DontCare).IsEmpty)
+            if (QuicRangeAddRange(AckRanges, QuicRangeGetLowByHigh(Largest, Count), Count, out _) == null)
             {
                 return false;
             }
@@ -818,29 +805,29 @@ namespace MSQuic2
 
             for (int i = 0; i < Frame.AdditionalAckBlockCount; i++)
             {
-                if ((ulong)Count > Largest)
+                if (Count > Largest)
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                Largest -= (ulong)Count;
+                Largest -= Count;
                 QUIC_ACK_BLOCK_EX Block = new QUIC_ACK_BLOCK_EX();
-                if (!QuicAckBlockDecode(ref Buffer, Block))
+                if (!QuicAckBlockDecode(ref Buffer, ref Block))
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                if ((ulong)Block.Gap + 1 > Largest)
+                if ((Block.Gap + 1) > Largest)
                 {
                     InvalidFrame = true;
                     return false;
                 }
 
-                Largest -=  (ulong)(Block.Gap + 1);
+                Largest -= (Block.Gap + 1);
                 Count = Block.AckBlock + 1;
-                if (QuicRangeAddRange(AckRanges, (Largest + 1 - (ulong)Count), Count, out DontCare).IsEmpty)
+                if (QuicRangeAddRange(AckRanges, QuicRangeGetLowByHigh(Largest, Count), Count, out _) == null)
                 {
                     return false;
                 }
@@ -869,7 +856,7 @@ namespace MSQuic2
             return true;
         }
 
-        static bool QuicAckBlockDecode(ref QUIC_SSBuffer Buffer, QUIC_ACK_BLOCK_EX Block)
+        static bool QuicAckBlockDecode(ref QUIC_SSBuffer Buffer, ref QUIC_ACK_BLOCK_EX Block)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Block.Gap) || 
                 !QuicVarIntDecode(ref Buffer, ref Block.AckBlock))
@@ -879,7 +866,7 @@ namespace MSQuic2
             return true;
         }
 
-        static bool QuicMaxStreamsFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, QUIC_MAX_STREAMS_EX Frame)
+        static bool QuicMaxStreamsFrameDecode(QUIC_FRAME_TYPE FrameType, ref QUIC_SSBuffer Buffer, ref QUIC_MAX_STREAMS_EX Frame)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Frame.MaximumStreams))
             {
@@ -889,7 +876,7 @@ namespace MSQuic2
             return true;
         }
 
-        static bool QuicNewTokenFrameDecode(ref QUIC_SSBuffer Buffer, QUIC_NEW_TOKEN_EX Frame)
+        static bool QuicNewTokenFrameDecode(ref QUIC_SSBuffer Buffer, ref QUIC_NEW_TOKEN_EX Frame)
         {
             if (!QuicVarIntDecode(ref Buffer, ref Frame.TokenLength) || Buffer.Length < Frame.TokenLength)
             {

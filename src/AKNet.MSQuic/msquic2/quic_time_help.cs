@@ -4,9 +4,10 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
 using AKNet.Platform;
 using System;
 using System.Diagnostics;
@@ -74,6 +75,12 @@ namespace MSQuic2
         static long US_TO_MS(long us)
         {
             return us / 1000;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static double US_TO_S(long us)
+        {
+            return us / 1000000.0;
         }
     }
 }

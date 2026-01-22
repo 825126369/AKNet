@@ -40,6 +40,7 @@ namespace MSQuic2
         QUIC_STREAM_EVENT_IDEAL_SEND_BUFFER_SIZE = 8,
         QUIC_STREAM_EVENT_PEER_ACCEPTED = 9,
         QUIC_STREAM_EVENT_CANCEL_ON_LOSS = 10,
+        QUIC_STREAM_EVENT_RECEIVE_BUFFER_NEEDED = 11,
     }
 
     internal enum QUIC_TLS_ALERT_CODES
@@ -492,11 +493,11 @@ namespace MSQuic2
         }
         public struct NETWORK_STATISTICS_DATA
         {
-            public int BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
+            public long BytesInFlight;              // Bytes that were sent on the wire, but not yet acked
             public long PostedBytes;                // Total bytes queued, but not yet acked. These may contain sent bytes that may have portentially lost too.
             public long IdealBytes;                 // Ideal number of bytes required to be available to  avoid limiting throughput
             public long SmoothedRTT;                // Smoothed RTT value
-            public int CongestionWindow;           // Congestion Window
+            public long CongestionWindow;           // Congestion Window
             public long Bandwidth;                  // Estimated bandwidth
         }
     }

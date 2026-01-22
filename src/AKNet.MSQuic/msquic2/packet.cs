@@ -4,7 +4,7 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
@@ -16,11 +16,13 @@ namespace MSQuic2
     //QUIC 版本协商数据包
     internal class QUIC_VERSION_NEGOTIATION_PACKET
     {
+        public const int sizeof_Length = 6;
+
         public byte Unused; //7位
         public byte IsLongHeader;//1位
         public uint Version;
         public byte DestCidLength;
-        public QUIC_BUFFER m_DestCid = null;
+        private QUIC_BUFFER m_DestCid = null;
 
         public QUIC_BUFFER DestCid
         {
@@ -36,16 +38,23 @@ namespace MSQuic2
 
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
-            IsLongHeader = (byte)((buffer[0] & 0x80) >> 7);
+            UpdateFirstByte(buffer[0]);
             Version = EndianBitConverter.ToUInt32(buffer.GetSpan(), 1);
             DestCidLength = buffer[5];
             m_DestCid = buffer.Slice(6);
         }
 
-        public void WriteTo(Span<byte> buffer)
+        private void UpdateFirstByte(byte buffer)
         {
-
+            Unused = (byte)(buffer & 0x7f);
+            IsLongHeader = (byte)((buffer & 0x80) >> 7);
         }
+
+        public byte GetFirstByte()
+        {
+            return (byte)(Unused | IsLongHeader << 7);
+        }
+
     }
 
     internal class QUIC_LONG_HEADER_V1
@@ -78,6 +87,19 @@ namespace MSQuic2
         //uint8_t Payload[0];
 
         public const int sizeof_Length = 6;
+
+        public QUIC_BUFFER DestCid
+        {
+            get
+            {
+                if (m_DestCid == null)
+                {
+                    m_DestCid = new QUIC_BUFFER();
+                }
+                return m_DestCid;
+            }
+        }
+
         public void WriteFrom(QUIC_SSBuffer buffer)
         {
             this.UpdateFirstByte(buffer[0]);
@@ -121,7 +143,7 @@ namespace MSQuic2
         public byte SpinBit; //1位，用于测量往返时间（RTT）。客户端和服务器会交替翻转该位，以帮助检测网络延迟
         public byte FixedBit;   // 固定位（1位，必须为1, 用于标识这是一个有效的 QUIC 数据包
         public byte IsLongHeader;// 是否为长头部（1位，短头部为0）
-        public QUIC_BUFFER m_DestCid; // 目标连接ID，
+        private QUIC_BUFFER m_DestCid; // 目标连接ID，
                                       // uint8_t PacketNumber[PnLength]; // 数据包编号（长度由PnLength决定）
                                       // uint8_t Payload[0];             // 数据包有效载荷
         
@@ -486,7 +508,7 @@ namespace MSQuic2
             }
 
             QuicPerfCounterIncrement(MsQuicLib.Partitions[Packet.PartitionIndex], QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_PKTS_DROPPED);
-            NetLog.LogError(Reason);
+            NetLog.LogWarning(Reason);
         }
 
         public static int QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
@@ -600,7 +622,7 @@ namespace MSQuic2
                 return false;
             }
 
-            if (TokenBuffer.Length != QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS)
+            if (TokenBuffer.Length != QUIC_TOKEN_CONTENTS.sizeof_Length)
             {
                 QuicPacketLogDrop(Owner, Packet, "Invalid Token Length");
                 DropPacket = true;
@@ -653,7 +675,7 @@ namespace MSQuic2
 
         static int QuicPacketMaxBufferSizeForRetryV1()
         {
-            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_QUIC_TOKEN_CONTENTS;
+            return MIN_RETRY_HEADER_LENGTH_V1() + 3 * QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_TOKEN_CONTENTS.sizeof_Length;
         }
 
         //因为内存或其他原因导致连接失败时，会重试连接
@@ -794,7 +816,7 @@ namespace MSQuic2
         }
 
         //这里编码 比较特殊，这里只编码了 64位包号的一部分， 所以后面接收的时候，需要解压缩
-        static void QuicPktNumEncode(ulong PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
+        static void QuicPktNumEncode(long PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
         {
             for (int i = 0; i < PacketNumberLength; i++)
             {
@@ -845,7 +867,7 @@ namespace MSQuic2
             Token = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, 0, TokenLengthVarInt);
         }
 
-        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, ulong PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
+        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, long PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(PacketNumberLength != 0 && PacketNumberLength <= 4);
             int RequiredBufferLength = QUIC_SHORT_HEADER_V1.sizeof_Length + DestCid.Data.Length + PacketNumberLength;
@@ -882,6 +904,7 @@ namespace MSQuic2
             bool IsInitial =
                 (Version != QUIC_VERSION_2 && PacketType == (byte)QUIC_LONG_HEADER_TYPE_V1.QUIC_INITIAL_V1) ||
                 (Version == QUIC_VERSION_2 && PacketType == (byte)QUIC_LONG_HEADER_TYPE_V2.QUIC_INITIAL_V2);
+
             int RequiredBufferLength =
                QUIC_LONG_HEADER_V1.sizeof_Length +
                 DestCid.Data.Length +
@@ -903,7 +926,6 @@ namespace MSQuic2
 #if DEBUG
             Buffer.GetSpan().Slice(0, RequiredBufferLength).Clear();
 #endif
-
             QUIC_LONG_HEADER_V1 Header = new QUIC_LONG_HEADER_V1();
             Header.IsLongHeader = 1;
             Header.FixedBit = (byte)(FixedBit ? 1 : 0);

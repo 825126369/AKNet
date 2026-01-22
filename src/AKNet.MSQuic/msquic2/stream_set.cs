@@ -4,7 +4,7 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
@@ -28,11 +28,6 @@ namespace MSQuic2
         public readonly CXPLAT_LIST_ENTRY WaitingStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public readonly CXPLAT_LIST_ENTRY ClosedStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public QUIC_CONNECTION mConnection;
-
-#if DEBUG
-        public readonly CXPLAT_LIST_ENTRY<QUIC_STREAM> AllStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
-        public object AllStreamsLock = new object();
-#endif
     }
 
     internal static partial class MSQuicFunc
@@ -42,9 +37,6 @@ namespace MSQuic2
             CxPlatListInitializeHead(StreamSet.ClosedStreams);
             CxPlatListInitializeHead(StreamSet.WaitingStreams);
             StreamSet.mConnection = Connection;
-#if DEBUG
-            CxPlatListInitializeHead(StreamSet.AllStreams);
-#endif
         }
 
         static void QuicStreamSetUninitialize(QUIC_STREAM_SET StreamSet)
@@ -163,40 +155,6 @@ namespace MSQuic2
             }
         }
 
-        static void QuicStreamSetGetFlowControlSummary(QUIC_STREAM_SET StreamSet, ref long FcAvailable, ref long SendWindow)
-        {
-            FcAvailable = 0;
-            SendWindow = 0;
-
-            if (StreamSet.StreamTable != null)
-            {
-                var Enumerator = StreamSet.StreamTable.GetEnumerator();
-                while (Enumerator.MoveNext())
-                {
-                    var Entry = Enumerator.Current;
-                    QUIC_STREAM Stream = Entry.Value;
-
-                    if ((long.MaxValue - FcAvailable) >= (Stream.MaxAllowedSendOffset - Stream.NextSendOffset))
-                    {
-                        FcAvailable += Stream.MaxAllowedSendOffset - Stream.NextSendOffset;
-                    }
-                    else
-                    {
-                        FcAvailable = long.MaxValue;
-                    }
-
-                    if ((long.MaxValue - SendWindow) >= Stream.SendWindow)
-                    {
-                        SendWindow += Stream.SendWindow;
-                    }
-                    else
-                    {
-                        SendWindow = long.MaxValue;
-                    }
-                }
-            }
-        }
-
         static bool QuicStreamSetInsertStream(QUIC_STREAM_SET StreamSet, QUIC_STREAM Stream)
         {
             Stream.Flags.InStreamTable = true;
@@ -257,13 +215,13 @@ namespace MSQuic2
                         QuicSendSetSendFlag(Stream.Connection.Send, STREAM_ID_IS_UNI_DIR(Stream.ID) ? QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED : QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED);
                     }
 
-                    int NewMaxAllowedSendOffset = QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Connection), Connection.PeerTransportParams);
+                    long NewMaxAllowedSendOffset = QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Connection), Connection.PeerTransportParams);
 
                     if (Stream.MaxAllowedSendOffset < NewMaxAllowedSendOffset)
                     {
                         Stream.MaxAllowedSendOffset = NewMaxAllowedSendOffset;
                         FlowBlockedFlagsToRemove |= QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL;
-                        Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
+                        Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
                     }
 
                     if (BoolOk(FlowBlockedFlagsToRemove))
@@ -361,7 +319,6 @@ namespace MSQuic2
             if (StreamCount <= Info.TotalStreamCount)
             {
                 Stream = QuicStreamSetLookupStream(StreamSet, StreamId);
-
             }
             else if (CreateIfMissing)
             {
@@ -409,7 +366,6 @@ namespace MSQuic2
                     Info.TotalStreamCount++;
 
                     QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_STREAM_SET);
-
                     QUIC_CONNECTION_EVENT Event = new QUIC_CONNECTION_EVENT();
                     Event.Type =  QUIC_CONNECTION_EVENT_TYPE.QUIC_CONNECTION_EVENT_PEER_STREAM_STARTED;
                     Event.PEER_STREAM_STARTED.Stream = Stream;

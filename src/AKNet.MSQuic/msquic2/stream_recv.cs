@@ -4,11 +4,12 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace MSQuic2
@@ -67,7 +68,7 @@ namespace MSQuic2
                 Stream.Flags.ReceiveEnabled = false;
                 Stream.Flags.ReceiveDataPending = false;
 
-                int TotalRecvLength = QuicRecvBufferGetTotalLength(Stream.RecvBuffer);
+                long TotalRecvLength = QuicRecvBufferGetTotalLength(Stream.RecvBuffer);
                 if (TotalRecvLength > FinalSize)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_FINAL_SIZE_ERROR);
@@ -104,7 +105,7 @@ namespace MSQuic2
             }
         }
 
-        static bool QuicStreamReceiveComplete(QUIC_STREAM Stream, int BufferLength)
+        static bool QuicStreamReceiveComplete(QUIC_STREAM Stream, long BufferLength)
         {
             if (Stream.Flags.SentStopSending || Stream.Flags.RemoteCloseFin)
             {
@@ -114,7 +115,7 @@ namespace MSQuic2
             NetLog.Assert(BufferLength <= Stream.RecvPendingLength, "App overflowed read buffer!");
             if (Stream.RecvPendingLength == 0 || QuicRecvBufferDrain(Stream.RecvBuffer, BufferLength))
             {
-                Stream.Flags.ReceiveDataPending = false; // No more pending data to deliver.
+                Stream.Flags.ReceiveDataPending = false;
             }
 
             if (BufferLength != 0)
@@ -152,6 +153,7 @@ namespace MSQuic2
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_PEER_SEND_SHUTDOWN;
                 QuicStreamIndicateEvent(Stream, ref Event);
+
                 QuicStreamTryCompleteShutdown(Stream);
                 QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA | QUIC_STREAM_SEND_FLAG_RECV_ABORT);
             }
@@ -164,9 +166,9 @@ namespace MSQuic2
             return false;
         }
 
-        static void QuicStreamOnBytesDelivered(QUIC_STREAM Stream, int BytesDelivered)
+        static void QuicStreamOnBytesDelivered(QUIC_STREAM Stream, long BytesDelivered)
         {
-            int RecvBufferDrainThreshold = Stream.RecvBuffer.VirtualBufferLength / QUIC_RECV_BUFFER_DRAIN_RATIO;
+            long RecvBufferDrainThreshold = Stream.RecvBuffer.VirtualBufferLength / QUIC_RECV_BUFFER_DRAIN_RATIO;
 
             Stream.RecvWindowBytesDelivered += BytesDelivered;
             Stream.Connection.Send.MaxData += BytesDelivered;
@@ -182,7 +184,8 @@ namespace MSQuic2
             if (Stream.RecvWindowBytesDelivered >= RecvBufferDrainThreshold)
             {
                 long TimeNow = CxPlatTimeUs();
-                if (Stream.RecvBuffer.VirtualBufferLength < Stream.Connection.Settings.ConnFlowControlWindow)
+                if (Stream.RecvBuffer.VirtualBufferLength != 0 && 
+                    Stream.RecvBuffer.VirtualBufferLength < Stream.Connection.Settings.ConnFlowControlWindow)
                 {
                     long TimeThreshold = ((Stream.RecvWindowBytesDelivered * Stream.Connection.Paths[0].SmoothedRtt) / RecvBufferDrainThreshold);
                     if (CxPlatTimeDiff(Stream.RecvWindowLastUpdate, TimeNow) <= TimeThreshold)
@@ -193,22 +196,24 @@ namespace MSQuic2
 
                 Stream.RecvWindowLastUpdate = TimeNow;
                 Stream.RecvWindowBytesDelivered = 0;
-
             }
-            else if (!BoolOk(Stream.Connection.Send.SendFlags & QUIC_CONN_SEND_FLAG_ACK))
+            else if (!HasFlag(Stream.Connection.Send.SendFlags, QUIC_CONN_SEND_FLAG_ACK))
             {
                 return;
             }
 
-            NetLog.Assert(Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength > Stream.MaxAllowedRecvOffset);
+            NetLog.Assert(Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength >= Stream.MaxAllowedRecvOffset);
             Stream.MaxAllowedRecvOffset = Stream.RecvBuffer.BaseOffset + Stream.RecvBuffer.VirtualBufferLength;
-
+            //NetLog.Log($"Stream.MaxAllowedRecvOffset: {Stream.MaxAllowedRecvOffset}");
+            
             QuicSendSetSendFlag(Stream.Connection.Send, QUIC_CONN_SEND_FLAG_MAX_DATA);
             QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_MAX_DATA, false);
         }
 
         static void QuicStreamRecvFlush(QUIC_STREAM Stream)
         {
+            //NetLog.Log("QuicStreamRecvFlush 000000000000000000");
+
             Stream.Flags.ReceiveFlushQueued = false;
             if (!Stream.Flags.ReceiveDataPending)
             {
@@ -220,50 +225,41 @@ namespace MSQuic2
                 return;
             }
 
-            QUIC_BUFFER[] RecvBuffers = Stream.RecvBuffers;
-            for (int i = 0; i < RecvBuffers.Length; i++)
-            {
-                RecvBuffers[i].Reset();
-            }
-
+            //NetLog.Log("QuicStreamRecvFlush 111111111111111111");
+            
+            QUIC_BUFFER[] StackRecvBuffers = Stream.StackRecvBuffers;
             bool FlushRecv = true;
             while (FlushRecv)
             {
                 NetLog.Assert(!Stream.Flags.SentStopSending);
-
-                long RecvCompletionLength = Stream.RecvCompletionLength;
-                NetLog.Assert(RecvCompletionLength == 0 || Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE);
-
                 QUIC_STREAM_EVENT Event = new QUIC_STREAM_EVENT();
                 Event.Type = QUIC_STREAM_EVENT_TYPE.QUIC_STREAM_EVENT_RECEIVE;
-                Event.RECEIVE.BufferCount = RecvBuffers.Length;
-                Event.RECEIVE.Buffers = RecvBuffers;
 
                 bool DataAvailable = QuicRecvBufferHasUnreadData(Stream.RecvBuffer);
                 if (DataAvailable)
                 {
                     int NumBuffersNeeded = QuicRecvBufferReadBufferNeededCount(Stream.RecvBuffer);
-                    if (NumBuffersNeeded > RecvBuffers.Length)
+                    if (NumBuffersNeeded > StackRecvBuffers.Length)
                     {
-                        QUIC_BUFFER[] NewRecvBuffers = new QUIC_BUFFER[NumBuffersNeeded];
+                        var NewRecvBuffers = new QUIC_BUFFER[NumBuffersNeeded];
                         if (NewRecvBuffers != null)
                         {
-                            RecvBuffers = NewRecvBuffers;
-                            for (int i = 0; i < RecvBuffers.Length; i++)
+                            StackRecvBuffers = NewRecvBuffers;
+                            for (int i = 0; i < StackRecvBuffers.Length; i++)
                             {
-                                RecvBuffers[i] = new QUIC_BUFFER();
+                                StackRecvBuffers[i] = new QUIC_BUFFER();
                             }
                         }
                     }
 
-                    Event.RECEIVE.Buffers = RecvBuffers;
-                    Event.RECEIVE.BufferCount = RecvBuffers.Length;
+                    Event.RECEIVE.Buffers = StackRecvBuffers;
+                    Event.RECEIVE.BufferCount = StackRecvBuffers.Length;
 
                     QuicRecvBufferRead(
                         Stream.RecvBuffer,
                         ref Event.RECEIVE.AbsoluteOffset,
                         ref Event.RECEIVE.BufferCount,
-                        RecvBuffers);
+                        StackRecvBuffers);
 
                     for (int i = 0; i < Event.RECEIVE.BufferCount; ++i)
                     {
@@ -293,8 +289,7 @@ namespace MSQuic2
                 NetLog.Assert(Stream.RecvPendingLength <= Stream.RecvBuffer.ReadPendingLength);
 
                 int Status = QuicStreamIndicateEvent(Stream, ref Event);
-
-                RecvCompletionLength = Interlocked.Exchange(ref Stream.RecvCompletionLength, 0);
+                long RecvCompletionLength = 0;
                 if (Status == QUIC_STATUS_CONTINUE)
                 {
                     NetLog.Assert(!Stream.Flags.SentStopSending);
@@ -304,6 +299,7 @@ namespace MSQuic2
                 }
                 else if (Status == QUIC_STATUS_PENDING)
                 {
+                    Debug.Assert(false);
                     FlushRecv = RecvCompletionLength != 0;
                 }
                 else
@@ -315,7 +311,7 @@ namespace MSQuic2
 
                 if (FlushRecv)
                 {
-                    FlushRecv = QuicStreamReceiveComplete(Stream, (int)RecvCompletionLength);
+                    FlushRecv = QuicStreamReceiveComplete(Stream, RecvCompletionLength);
                 }
             }
         }
@@ -370,19 +366,27 @@ namespace MSQuic2
                         {
                             return QUIC_STATUS_INVALID_PARAMETER;
                         }
-
+                        
                         if (Stream.MaxAllowedSendOffset < Frame.MaximumData)
                         {
                             Stream.MaxAllowedSendOffset = Frame.MaximumData;
-                            UpdatedFlowControl = true;
 
-                            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, int.MaxValue);
+                            UpdatedFlowControl = true;
+                            Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, uint.MaxValue);
 
                             QuicSendBufferStreamAdjust(Stream);
                             QuicStreamRemoveOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
                             QuicSendClearStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA_BLOCKED);
                             QuicStreamSendDumpState(Stream);
                             QuicSendQueueFlush(Stream.Connection.Send, QUIC_SEND_FLUSH_REASON.REASON_STREAM_FLOW_CONTROL);
+
+                            //NetLog.Log("Receive QUIC_MAX_STREAM_DATA_EX: " + Frame.MaximumData);
+                            //NetLog.Log("Stream.SendWindow: " + Stream.SendWindow);
+
+                            if(Stream.SendWindow == 0)
+                            {
+                                throw new Exception($"Stream.SendWindow: {Stream.SendWindow}");
+                            }
                         }
 
                         break;
@@ -451,6 +455,7 @@ namespace MSQuic2
 
         static int QuicStreamRecvSetEnabledState(QUIC_STREAM Stream, bool NewRecvEnabled)
         {
+            //NetLog.Log($"QuicStreamRecvSetEnabledState 0000: {NewRecvEnabled}");
             if (Stream.Flags.RemoteNotAllowed ||
                 Stream.Flags.RemoteCloseFin ||
                 Stream.Flags.RemoteCloseReset ||
@@ -464,9 +469,11 @@ namespace MSQuic2
                 NetLog.Assert(!Stream.Flags.SentStopSending);
                 Stream.Flags.ReceiveEnabled = NewRecvEnabled;
 
-                if (Stream.Flags.Started && NewRecvEnabled && (Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE ||
-                    Stream.RecvBuffer.ReadPendingLength == 0))
+                //NetLog.Log($"QuicStreamRecvSetEnabledState 11111: {NewRecvEnabled}");
+                if (Stream.Flags.Started && NewRecvEnabled && 
+                    (Stream.RecvBuffer.RecvMode == QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_MULTIPLE || Stream.RecvBuffer.ReadPendingLength == 0))
                 {
+                    //NetLog.Log($"QuicStreamRecvSetEnabledState 22222: {NewRecvEnabled}");
                     QuicStreamRecvQueueFlush(Stream, true);
                 }
             }
@@ -499,23 +506,23 @@ namespace MSQuic2
             }
         }
 
-
         static void QuicStreamRecvQueueFlush(QUIC_STREAM Stream, bool AllowInlineFlush)
         {
+            //NetLog.Log($"QuicStreamRecvQueueFlush 0000: ReceiveEnabled: {Stream.Flags.ReceiveEnabled}, ReceiveDataPending: {Stream.Flags.ReceiveDataPending}");
             if (Stream.Flags.ReceiveEnabled && Stream.Flags.ReceiveDataPending)
             {
+                //NetLog.Log("QuicStreamRecvQueueFlush 1111");
                 if (AllowInlineFlush)
                 {
                     QuicStreamRecvFlush(Stream);
-
                 }
                 else if (!Stream.Flags.ReceiveFlushQueued)
                 {
                     QUIC_OPERATION Oper;
-                    if ((Oper = QuicOperationAlloc(Stream.Connection.Partition,  QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)) != null)
+                    if ((Oper = QuicOperationAlloc(Stream.Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_FLUSH_STREAM_RECV)) != null)
                     {
                         Oper.FLUSH_STREAM_RECEIVE.Stream = Stream;
-                        QuicStreamAddRef(Stream,  QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
+                        QuicStreamAddRef(Stream, QUIC_STREAM_REF.QUIC_STREAM_REF_OPERATION);
                         QuicConnQueueOper(Stream.Connection, Oper);
                         Stream.Flags.ReceiveFlushQueued = true;
                     }
@@ -533,6 +540,7 @@ namespace MSQuic2
 
         static int QuicStreamProcessStreamFrame(QUIC_STREAM Stream, bool EncryptedWith0Rtt, ref QUIC_STREAM_EX Frame)
         {
+            //NetLog.Log("QuicStreamProcessStreamFrame");
             int Status;
             bool ReadyToDeliver = false;
             long EndOffset = Frame.Offset + Frame.Length;
@@ -592,23 +600,56 @@ namespace MSQuic2
             }
             else
             {
-                int WriteLength = (int)(Stream.Connection.Send.MaxData - Stream.Connection.Send.OrderedStreamBytesReceived);
+                long FlowControlQuota = Stream.Connection.Send.MaxData - Stream.Connection.Send.OrderedStreamBytesReceived;
+                long QuotaConsumed = 0;
+                long BufferSizeNeeded = 0;
+
                 Status = QuicRecvBufferWrite(
                             Stream.RecvBuffer,
                             Frame.Offset,
-                            Frame.Length,
+                            (ushort)Frame.Length,
                             Frame.Data,
-                            ref WriteLength,
-                            ref ReadyToDeliver);
+                            FlowControlQuota,
+                            out QuotaConsumed,
+                            out ReadyToDeliver,
+                            out BufferSizeNeeded);
+
+
+                if (BufferSizeNeeded > 0 && Stream.RecvBuffer.RecvMode ==  QUIC_RECV_BUF_MODE.QUIC_RECV_BUF_MODE_APP_OWNED)
+                {
+                    NetLog.Assert(Status == QUIC_STATUS_BUFFER_TOO_SMALL);
+                    QuicStreamNotifyReceiveBufferNeeded(Stream, BufferSizeNeeded);
+                    if (Stream.Flags.SentStopSending)
+                    {
+                        Status = QUIC_STATUS_SUCCESS;
+                        goto Error;
+                    }
+
+                    Status =
+                        QuicRecvBufferWrite(
+                            Stream.RecvBuffer,
+                            Frame.Offset,
+                            (ushort)Frame.Length,
+                            Frame.Data,
+                            FlowControlQuota,
+                            out QuotaConsumed,
+                            out ReadyToDeliver,
+                            out BufferSizeNeeded);
+                }
 
                 if (QUIC_FAILED(Status))
                 {
                     goto Error;
                 }
 
-                Stream.Connection.Send.OrderedStreamBytesReceived += WriteLength;
+                Stream.Connection.Send.OrderedStreamBytesReceived += QuotaConsumed;
                 NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived <= Stream.Connection.Send.MaxData);
-                NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived >= WriteLength);
+                NetLog.Assert(Stream.Connection.Send.OrderedStreamBytesReceived >= QuotaConsumed);
+
+                if (QuicRecvBufferGetTotalLength(Stream.RecvBuffer) == Stream.MaxAllowedRecvOffset)
+                {
+                   
+                }
 
                 if (EncryptedWith0Rtt)
                 {
@@ -626,6 +667,7 @@ namespace MSQuic2
                 Stream.RecvMaxLength = EndOffset;
                 if (Stream.RecvBuffer.BaseOffset == Stream.RecvMaxLength)
                 {
+                    //BaseOffset前面的都是 有序的流，那么就可以分发了
                     ReadyToDeliver = true;
                 }
             }

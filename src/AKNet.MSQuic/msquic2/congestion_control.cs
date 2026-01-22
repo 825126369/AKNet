@@ -20,14 +20,14 @@ namespace MSQuic2
 
     internal struct QUIC_ECN_EVENT
     {
-        public ulong LargestPacketNumberAcked;
-        public ulong LargestSentPacketNumber;
+        public long LargestPacketNumberAcked;
+        public long LargestSentPacketNumber;
     }
 
     internal struct QUIC_LOSS_EVENT
     {
-        public ulong LargestPacketNumberLost;
-        public ulong LargestSentPacketNumber;
+        public long LargestPacketNumberLost;
+        public long LargestSentPacketNumber;
         public long NumRetransmittableBytes;
         public bool PersistentCongestion;
     }
@@ -35,10 +35,10 @@ namespace MSQuic2
     internal struct QUIC_ACK_EVENT
     {
         public long TimeNow;
-        public ulong LargestAck;
-        public ulong LargestSentPacketNumber;
+        public long LargestAck;
+        public long LargestSentPacketNumber;
         public long NumTotalAckedRetransmittableBytes;
-        public int NumRetransmittableBytes;
+        public long NumRetransmittableBytes;
         public QUIC_SENT_PACKET_METADATA AckedPackets;
         public long SmoothedRtt;
         public long MinRtt;
@@ -56,17 +56,17 @@ namespace MSQuic2
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlCanSend;
         public Action<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlSetExemption;
         public Action<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlReset;
-        public Func<QUIC_CONGESTION_CONTROL, long, bool, uint> QuicCongestionControlGetSendAllowance;
-        public Action<QUIC_CONGESTION_CONTROL, int> QuicCongestionControlOnDataSent;
-        public Func<QUIC_CONGESTION_CONTROL, int, bool> QuicCongestionControlOnDataInvalidated;
+        public Func<QUIC_CONGESTION_CONTROL, long, bool, long> QuicCongestionControlGetSendAllowance;
+        public Action<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlOnDataSent;
+        public Func<QUIC_CONGESTION_CONTROL, long, bool> QuicCongestionControlOnDataInvalidated;
         public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_ECN_EVENT> QuicCongestionControlOnEcn;
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlOnSpuriousCongestionEvent;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlLogOutFlowStatus;
         public Func<QUIC_CONGESTION_CONTROL, byte> QuicCongestionControlGetExemptions;
-        public Func<QUIC_CONGESTION_CONTROL, int> QuicCongestionControlGetBytesInFlightMax;
-        public Func<QUIC_CONGESTION_CONTROL, uint> QuicCongestionControlGetCongestionWindow;
+        public Func<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlGetBytesInFlightMax;
+        public Func<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlGetCongestionWindow;
         public Func<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlIsAppLimited;
         public Action<QUIC_CONGESTION_CONTROL> QuicCongestionControlSetAppLimited;
 
@@ -97,7 +97,7 @@ namespace MSQuic2
             return Cc.QuicCongestionControlCanSend(Cc);
         }
 
-        static uint QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
+        static long QuicCongestionControlGetSendAllowance(QUIC_CONGESTION_CONTROL Cc, long TimeSinceLastSend, bool TimeSinceLastSendValid)
         {
             return Cc.QuicCongestionControlGetSendAllowance(Cc, TimeSinceLastSend, TimeSinceLastSendValid);
         }
@@ -132,7 +132,7 @@ namespace MSQuic2
             return Cc.QuicCongestionControlOnSpuriousCongestionEvent(Cc);
         }
 
-        static int QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
+        static long QuicCongestionControlGetBytesInFlightMax(QUIC_CONGESTION_CONTROL Cc)
         {
             return Cc.QuicCongestionControlGetBytesInFlightMax(Cc);
         }

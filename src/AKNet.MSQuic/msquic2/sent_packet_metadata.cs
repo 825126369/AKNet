@@ -4,7 +4,7 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
@@ -47,7 +47,7 @@ namespace MSQuic2
         public readonly CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> POOL_ENTRY = null;
         public QUIC_SENT_PACKET_METADATA Next;
         public ulong PacketId;
-        public ulong PacketNumber;
+        public long PacketNumber;
         public long TotalBytesSent;
         public long SentTime;
         public int PacketLength;
@@ -65,6 +65,11 @@ namespace MSQuic2
         public CXPLAT_POOL_ENTRY<QUIC_SENT_PACKET_METADATA> GetEntry()
         {
             return POOL_ENTRY;
+        }
+
+        public override string ToString()
+        {
+            return $"PacketNumber: {PacketNumber}, SentTime: {SentTime}, TotalBytesSent: {TotalBytesSent}";
         }
 
         public void Reset()
@@ -117,7 +122,7 @@ namespace MSQuic2
     {
         public struct ACK_DATA
         {
-            public ulong LargestAckedPacketNumber;
+            public long LargestAckedPacketNumber;
         }
 
         public struct RESET_STREAM_DATA
@@ -230,10 +235,10 @@ namespace MSQuic2
         public RETIRE_CONNECTION_ID_DATA RETIRE_CONNECTION_ID;
         public ACK_FREQUENCY_DATA ACK_FREQUENCY;
         public PATH_RESPONSE_DATA PATH_RESPONSE;
-        public int StreamOffset;
+        public long StreamOffset;
         public int StreamLength;
         public QUIC_FRAME_TYPE Type;
-        public int Flags;
+        public byte Flags;
 
         private STREAM_DATA_BLOCKED_DATA mSTREAM_DATA_BLOCKED;
         public STREAM_DATA_BLOCKED_DATA STREAM_DATA_BLOCKED

@@ -547,7 +547,7 @@ namespace MSQuic1
 
         NewBinding:
 
-            Status = QuicBindingInitialize(UdpConfig, ref NewBinding);
+            Status = QuicBindingInitialize(UdpConfig, out NewBinding);
             if (QUIC_FAILED(Status))
             {
                 goto Exit;

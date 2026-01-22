@@ -4,11 +4,12 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Diagnostics;
 
 namespace MSQuic2
 {
@@ -87,7 +88,6 @@ namespace MSQuic2
             {
                 Stream.SendBookmark = SendRequest;
             }
-
             if (Stream.SendBufferBookmark == null)
             {
                 NetLog.Assert(Stream.SendRequests == null || Stream.SendRequests.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
@@ -104,10 +104,8 @@ namespace MSQuic2
                 Stream.SendRequestsTail = SendRequest;
             }
         }
-
-
-
-        //内部缓存一个待发送数据缓存，用于重传等
+        
+        //QUIC_SEND_REQUEST 自己去缓存自己引用的Buffer
         static int QuicStreamSendBufferRequest(QUIC_STREAM Stream, QUIC_SEND_REQUEST Req)
         {
             QUIC_CONNECTION Connection = Stream.Connection;
@@ -115,19 +113,34 @@ namespace MSQuic2
 
             if (Req.TotalLength != 0)
             {
-                QUIC_SSBuffer Buf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
-                if (Buf.IsEmpty)
+                QUIC_SSBuffer CurBuf = QUIC_SSBuffer.Empty;
+                if (_KK_OP)
+                {
+                    if (Req.InternalBuffer.Buffer == null)
+                    {
+                        Req.InternalBuffer.Buffer = new byte[2048];
+                    }
+
+                    Debug.Assert(Req.TotalLength < 2048);
+                    CurBuf = Req.InternalBuffer.Buffer;
+                }
+                else
+                {
+                    CurBuf = QuicSendBufferAlloc(Connection.SendBuffer, Req.TotalLength);
+                }
+
+                if (CurBuf.IsEmpty)
                 {
                     return QUIC_STATUS_OUT_OF_MEMORY;
                 }
 
-                QUIC_SSBuffer CurBuf = Buf;
                 for (int i = 0; i < Req.BufferCount; i++)
                 {
-                    Req.Buffers[i].GetSpan().CopyTo(CurBuf.GetSpan());
-                    CurBuf += Req.Buffers[i].Length;
+                    var mSpan = Req.Buffers[i].GetSpan();
+                    mSpan.CopyTo(CurBuf.GetSpan());
+                    CurBuf += mSpan.Length;
                 }
-                Req.InternalBuffer.Buffer = Buf.Buffer;
+                Req.InternalBuffer.Buffer = CurBuf.Buffer;
             }
             else
             {
@@ -263,6 +276,9 @@ namespace MSQuic2
             if (Stream.SendBufferBookmark == SendRequest)
             {
                 Stream.SendBufferBookmark = SendRequest.Next;
+
+                NetLog.Assert(Stream.SendBufferBookmark == null ||
+                    !Stream.SendBufferBookmark.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_BUFFERED));
             }
 
             if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_START) && !Stream.Flags.Started)
@@ -327,11 +343,13 @@ namespace MSQuic2
 
                 if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_CANCEL_ON_LOSS))
                 {
+                    //如果丢包发生了，这个流被取消
                     Stream.Flags.CancelOnLoss = true;
                 }
 
                 if (!Stream.Flags.SendEnabled)
                 {
+                    //不允许发送数据,则直接取消
                     QuicStreamCompleteSendRequest(Stream, SendRequest, true, false);
                     continue;
                 }
@@ -345,12 +363,13 @@ namespace MSQuic2
 
                 if (SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_FIN))
                 {
+                    //有Fin标志关闭流
                     QuicStreamSendShutdown(Stream, true, false, SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DELAY_SEND), 0);
                 }
 
                 QuicSendSetStreamSendFlag(Stream.Connection.Send, Stream, QUIC_STREAM_SEND_FLAG_DATA, SendRequest.Flags.HasFlag(QUIC_SEND_FLAGS.QUIC_SEND_FLAG_DELAY_SEND));
 
-                if (Stream.Connection.Settings.SendBufferingEnabled)
+                if (Stream.Connection.Settings.SendBufferingEnabled) //默认是true
                 {
                     QuicSendBufferFill(Stream.Connection);
                 }
@@ -367,6 +386,7 @@ namespace MSQuic2
             QuicPerfCounterAdd(Stream.Connection.Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_APP_SEND_BYTES, TotalBytesSent);
         }
 
+        //更新恢复窗口
         static bool QuicStreamOnLoss(QUIC_STREAM Stream, QUIC_SENT_FRAME_METADATA FrameMetadata)
         {
             if (Stream.Flags.LocalCloseReset)
@@ -404,25 +424,25 @@ namespace MSQuic2
 
             QUIC_SUBRANGE Sack;
             int i = 0;
-            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).Count > 0 && Sack.Low < (ulong)End)
+            while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < End)
             {
                 //在已经被确认的ACK稀疏列表里，查找到还没被确认的集合
-                if (Start < (long)Sack.End)
+                if (Start < Sack.End)
                 {
-                    if (Start >= (long)Sack.Low)
+                    if (Start >= Sack.Low)
                     {
-                        if (End <= (long)Sack.End)
+                        if (End <= Sack.End)
                         {
                             goto Done; //已经被确认了
                         }
                         else
                         {
-                            Start = (long)Sack.End;
+                            Start = Sack.End;
                         }
                     }
-                    else if (End <= (long)Sack.End)
+                    else if (End <= Sack.End)
                     {
-                        End = (long)Sack.Low;
+                        End = Sack.Low;
                     }
                     else
                     {
@@ -537,13 +557,14 @@ namespace MSQuic2
             return Stream.Queued0Rtt > Stream.NextSendOffset || (Stream.NextSendOffset == Stream.QueuedSendOffset && BoolOk(Stream.SendFlags & QUIC_STREAM_SEND_FLAG_FIN));
         }
 
+        [Conditional("DEBUG")]
         static void QuicStreamValidateRecoveryState(QUIC_STREAM Stream)
         {
             if (Stream.RECOV_WINDOW_OPEN())
             {
                 QUIC_SUBRANGE Sack;
                 int i = 0;
-                while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Stream.RecoveryNextOffset)
+                while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Stream.RecoveryNextOffset)
                 {
                     NetLog.Assert((long)Sack.End <= Stream.RecoveryNextOffset);
                 }
@@ -605,6 +626,8 @@ namespace MSQuic2
                     StreamID = Stream.ID,
                     MaximumData = Stream.MaxAllowedRecvOffset
                 };
+
+                //NetLog.Log("Send QUIC_MAX_STREAM_DATA_EX: " + Frame.MaximumData);
 
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
                 if (QuicMaxStreamDataFrameEncode(Frame, ref mBuf))
@@ -733,7 +756,7 @@ namespace MSQuic2
                 QUIC_STREAM_DATA_BLOCKED_EX Frame = new QUIC_STREAM_DATA_BLOCKED_EX()
                 {
                     StreamID = Stream.ID,
-                    StreamDataLimit = (int)Stream.NextSendOffset
+                    StreamDataLimit = Stream.NextSendOffset
                 };
 
                 var mBuf = Builder.GetDatagramCanWriteSSBufer();
@@ -759,7 +782,7 @@ namespace MSQuic2
         static void QuicStreamWriteStreamFrames(QUIC_STREAM Stream, bool ExplicitDataLength, QUIC_SENT_PACKET_METADATA PacketMetadata, ref QUIC_SSBuffer Buffer)
         {
             QUIC_SEND Send = Stream.Connection.Send;
-            ExplicitDataLength = true;
+            ExplicitDataLength = true; //现在这届设置为true
 
             while (Buffer.Length > 0 && PacketMetadata.FrameCount < QUIC_MAX_FRAMES_PER_PACKET)
             {
@@ -768,12 +791,12 @@ namespace MSQuic2
                 bool Recovery;
                 if (Stream.RECOV_WINDOW_OPEN())
                 {
-                    Left = (int)Stream.RecoveryNextOffset;
+                    Left = Stream.RecoveryNextOffset;
                     Recovery = true;
                 }
                 else
                 {
-                    Left = (int)Stream.NextSendOffset;
+                    Left = Stream.NextSendOffset;
                     Recovery = false;
                 }
                 Right = Left + Buffer.Length; //刚开始设置 Right 为理想的最大值
@@ -783,22 +806,26 @@ namespace MSQuic2
                     Right = Stream.RecoveryEndOffset;
                 }
 
-                QUIC_SUBRANGE Sack = QUIC_SUBRANGE.Empty;
-                if (Left != Stream.MaxSentLength)
+                QUIC_SUBRANGE Sack;
+                if (Left == Stream.MaxSentLength)
+                {
+                    Sack = QUIC_SUBRANGE.Empty;
+                }
+                else
                 {
                     //在发送数据时，跳过已经被对端确认（SACKed）的数据范围，避免重复发送。
                     int i = 0;
-                    while (!(Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)).IsEmpty && (long)Sack.Low < Left)
+                    while ((Sack = QuicRangeGetSafe(Stream.SparseAckRanges, i++)) != null && Sack.Low < Left)
                     {
-                        NetLog.Assert((long)Sack.End <= Left);
+                        NetLog.Assert(Sack.End <= Left);
                     }
                 }
 
-                if (!Sack.IsEmpty)
+                if (Sack != null)
                 {
-                    if (Right > (long)Sack.Low)
+                    if (Right > Sack.Low)
                     {
-                        Right = (long)Sack.Low;
+                        Right = Sack.Low;
                     }
                 }
                 else
@@ -823,12 +850,12 @@ namespace MSQuic2
                     Right = MaxConnFlowControlOffset;
                 }
 
-                NetLog.Assert(Right >= Left);
-                int FramePayloadBytes = (int)(Right - Left);
+                NetLog.Assert(Right >= Left && Right - Left < ushort.MaxValue, $"{Left}, {Right}");
+                int FramePayloadBytes = (ushort)(Right - Left);
                 QuicStreamWriteOneFrame(
                     Stream, 
                     ExplicitDataLength,
-                    (int)Left,
+                    Left,
                     ref FramePayloadBytes,
                     ref Buffer,
                     PacketMetadata);
@@ -840,7 +867,6 @@ namespace MSQuic2
                 }
 
                 Right = Left + FramePayloadBytes;
-
                 NetLog.Assert(Right <= Stream.QueuedSendOffset);
                 if (Right == Stream.QueuedSendOffset)
                 {
@@ -875,7 +901,7 @@ namespace MSQuic2
                 {
                     NetLog.Assert(Stream.RecoveryNextOffset <= Right);
                     Stream.RecoveryNextOffset = Right;
-                    if (!Sack.IsEmpty && Stream.RecoveryNextOffset == (long)Sack.Low)
+                    if (Sack != null && Stream.RecoveryNextOffset == Sack.Low)
                     {
                         Stream.RecoveryNextOffset += Sack.Count;
                     }
@@ -883,8 +909,8 @@ namespace MSQuic2
 
                 if (Stream.NextSendOffset < Right)
                 {
-                    Stream.NextSendOffset = (int)Right;
-                    if (!Sack.IsEmpty && Stream.NextSendOffset == (long)Sack.Low)
+                    Stream.NextSendOffset = Right;
+                    if (Sack != null && Stream.NextSendOffset == Sack.Low)
                     {
                         Stream.NextSendOffset += Sack.Count;
                     }
@@ -892,12 +918,21 @@ namespace MSQuic2
 
                 if (Stream.MaxSentLength < Right)
                 {
-                    Send.OrderedStreamBytesSent += (int)Right - Stream.MaxSentLength;
+                    Send.OrderedStreamBytesSent += Right - Stream.MaxSentLength;
                     NetLog.Assert(Send.OrderedStreamBytesSent <= Send.PeerMaxData);
-                    Stream.MaxSentLength = (int)Right;
+                    Stream.MaxSentLength = Right;
                 }
 
                 QuicStreamValidateRecoveryState(Stream);
+
+                if (Recovery)
+                {
+                    NET_ADD_STATS(Stream.Connection.Partition, UDP_STATISTIC_TYPE.ReSendCount);
+                }
+                else
+                {
+                    NET_ADD_STATS(Stream.Connection.Partition, UDP_STATISTIC_TYPE.FirstSendCount);
+                }
 
                 if (ExitLoop)
                 {
@@ -908,7 +943,7 @@ namespace MSQuic2
             QuicStreamSendDumpState(Stream);
         }
 
-        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength,int Offset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
+        static void QuicStreamWriteOneFrame(QUIC_STREAM Stream, bool ExplicitDataLength, long Offset, ref int FramePayloadBytes, ref QUIC_SSBuffer Buffer,  QUIC_SENT_PACKET_METADATA PacketMetadata)
         {
             QUIC_STREAM_EX Frame = new QUIC_STREAM_EX()
             {
@@ -927,18 +962,13 @@ namespace MSQuic2
                 return;
             }
 
-            Frame.Length = Buffer.Length - HeaderLength;
-            if (Frame.Length > FramePayloadBytes)
-            {
-                Frame.Length = FramePayloadBytes;
-            }
-
+            Frame.Length = Math.Min(Buffer.Length - HeaderLength, FramePayloadBytes);
             if (Frame.Length > 0)
             {
                 NetLog.Assert(Offset < Stream.QueuedSendOffset);
                 if (Frame.Length > Stream.QueuedSendOffset - Offset)
                 {
-                    Frame.Length = Stream.QueuedSendOffset - Offset;
+                    Frame.Length = (int)(Stream.QueuedSendOffset - Offset);
                     NetLog.Assert(Frame.Length > 0);
                 }
                 
@@ -958,7 +988,7 @@ namespace MSQuic2
                 return;
             }
 
-            FramePayloadBytes = (ushort)Frame.Length;
+            FramePayloadBytes = Frame.Length;
             if (!QuicStreamFrameEncode(Frame, ref Buffer))
             {
                 NetLog.Assert(false);
@@ -976,16 +1006,18 @@ namespace MSQuic2
                 Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_OPEN;
                 PacketMetadata.Frames[PacketMetadata.FrameCount].Flags |= QUIC_SENT_FRAME_FLAG_STREAM_OPEN;
             }
+
             if (Frame.Fin)
             {
                 Stream.SendFlags &= ~QUIC_STREAM_SEND_FLAG_FIN;
                 PacketMetadata.Frames[PacketMetadata.FrameCount].Flags |= QUIC_SENT_FRAME_FLAG_STREAM_FIN;
             }
+
             QuicStreamSentMetadataIncrement(Stream);
             PacketMetadata.FrameCount++;
         }
 
-        static void QuicStreamCopyFromSendRequests(QUIC_STREAM Stream, int Offset, QUIC_SSBuffer Buf)
+        static void QuicStreamCopyFromSendRequests(QUIC_STREAM Stream, long Offset, QUIC_SSBuffer Buf)
         {
             NetLog.Assert(Buf.Length > 0);
             NetLog.Assert(Stream.SendRequests != null);
@@ -1017,7 +1049,7 @@ namespace MSQuic2
             NetLog.Assert(Req != null); //上面 选择了一个当前的 Request
 
             int CurIndex = 0;
-            int CurOffset = Offset - (int)Req.StreamOffset;
+            int CurOffset = (int)(Offset - Req.StreamOffset);
             while (CurOffset >= Req.Buffers[CurIndex].Length)
             {
                 CurOffset -= Req.Buffers[CurIndex++].Length;
@@ -1065,10 +1097,10 @@ namespace MSQuic2
 
         static void QuicStreamOnAck(QUIC_STREAM Stream, QUIC_SEND_PACKET_FLAGS PacketFlags, QUIC_SENT_FRAME_METADATA FrameMetadata)
         {
-            int Offset = FrameMetadata.StreamOffset;
+            long Offset = FrameMetadata.StreamOffset;
             int Length = FrameMetadata.StreamLength;
 
-            int FollowingOffset = Offset + Length;
+            long FollowingOffset = Offset + Length;
             uint RemoveSendFlags = 0;
             NetLog.Assert(FollowingOffset <= Stream.QueuedSendOffset);
 
@@ -1094,12 +1126,12 @@ namespace MSQuic2
                 if (Stream.UnAckedOffset < FollowingOffset)
                 {
                     Stream.UnAckedOffset = FollowingOffset;
-                    QuicRangeSetMin(Stream.SparseAckRanges, (ulong)Stream.UnAckedOffset);
+                    QuicRangeSetMin(Stream.SparseAckRanges, Stream.UnAckedOffset);
 
                     QUIC_SUBRANGE Sack = QuicRangeGetSafe(Stream.SparseAckRanges, 0);
-                    if (!Sack.IsEmpty && Sack.Low == (ulong)Stream.UnAckedOffset)
+                    if (Sack != null && Sack.Low == Stream.UnAckedOffset)
                     {
-                        Stream.UnAckedOffset = (long)(Sack.Low + (ulong)Sack.Count);
+                        Stream.UnAckedOffset = Sack.Low + Sack.Count;
                         QuicRangeRemoveSubranges(Stream.SparseAckRanges, 0, 1);
                     }
 
@@ -1107,10 +1139,12 @@ namespace MSQuic2
                     {
                         Stream.NextSendOffset = Stream.UnAckedOffset;
                     }
+
                     if (Stream.RecoveryNextOffset < Stream.UnAckedOffset)
                     {
                         Stream.RecoveryNextOffset = Stream.UnAckedOffset;
                     }
+
                     if (Stream.RecoveryEndOffset < Stream.UnAckedOffset)
                     {
                         Stream.Flags.InRecovery = false;
@@ -1128,7 +1162,7 @@ namespace MSQuic2
                     Stream.SendRequests = Req.Next;
                     if (Stream.SendRequests == null)
                     {
-                        Stream.SendRequestsTail = Stream.SendRequests;
+                        Stream.SendRequestsTail = Stream.SendRequests = null;
                     }
 
                     QuicStreamCompleteSendRequest(Stream, Req, false, true);
@@ -1147,23 +1181,22 @@ namespace MSQuic2
             }
             else
             {
-
                 bool SacksUpdated = false;
-                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, (ulong)Offset, Length, out SacksUpdated);
-                if (Sack.IsEmpty)
+                QUIC_SUBRANGE Sack = QuicRangeAddRange(Stream.SparseAckRanges, Offset, Length, out SacksUpdated);
+                if (Sack == null)
                 {
                     QuicConnTransportError(Stream.Connection, QUIC_ERROR_INTERNAL_ERROR);
                 }
                 else if (SacksUpdated)
                 {
-                    if (Stream.NextSendOffset >= (long)Sack.Low &&
-                        Stream.NextSendOffset < (long)Sack.Low + Sack.Count)
+                    if (Stream.NextSendOffset >= Sack.Low &&
+                        Stream.NextSendOffset < Sack.Low + Sack.Count)
                     {
-                        Stream.NextSendOffset = (long)Sack.Low + Sack.Count;
+                        Stream.NextSendOffset = Sack.Low + Sack.Count;
                     }
-                    if (Stream.RecoveryNextOffset >= (long)Sack.Low && Stream.RecoveryNextOffset < (long)Sack.Low + Sack.Count)
+                    if (Stream.RecoveryNextOffset >= Sack.Low && Stream.RecoveryNextOffset < Sack.Low + Sack.Count)
                     {
-                        Stream.RecoveryNextOffset = (long)Sack.Low + Sack.Count;
+                        Stream.RecoveryNextOffset = Sack.Low + Sack.Count;
                     }
                 }
             }
@@ -1197,6 +1230,6 @@ namespace MSQuic2
             QuicStreamSendDumpState(Stream);
             QuicStreamValidateRecoveryState(Stream);
         }
-
     }
+
 }

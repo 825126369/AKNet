@@ -4,26 +4,50 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2025/11/30 19:43:19
+*        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+using System.Text;
+
 namespace MSQuic2
 {
+    /*
+    Flags: 1143295
+    IdleTimeout:0
+    InitialMaxStreamDataBidiLocal:65536
+    InitialMaxStreamDataBidiRemote:65536
+    InitialMaxStreamDataUni:65536
+    InitialMaxBidiStreams:255
+    InitialMaxUniStreams:255
+    MaxUdpPayloadSize:1472
+    AckDelayExponent:8
+    MaxAckDelay:41
+    MinAckDelay:16000
+    ActiveConnectionIdLimit:4
+    MaxDatagramFrameSize:0
+    CibirLength:0
+    CibirOffset:0
+    StatelessResetToken:2 189 51 90 249 99 152 41 221 204 142 64 18 155 151 183
+    PreferredAddress:
+    OriginalDestinationConnectionID:Offset: 0, Length: 8, Buffer: 112 150 137 100 150 161 60 39 0 0 0 0 0 0 0 0 0 0 0 0 
+    */
+
     internal class QUIC_TRANSPORT_PARAMETERS : CXPLAT_POOL_Interface<QUIC_TRANSPORT_PARAMETERS>
     {
         public CXPLAT_POOL<QUIC_TRANSPORT_PARAMETERS> mPool = null;
         public readonly CXPLAT_POOL_ENTRY<QUIC_TRANSPORT_PARAMETERS> POOL_ENTRY = null;
 
         public uint Flags;
-        public long IdleTimeout;
-        public int InitialMaxStreamDataBidiLocal;
-        public int InitialMaxStreamDataBidiRemote;
-        public int InitialMaxStreamDataUni;
-        public int InitialMaxData;
+        public long IdleTimeout; //毫秒
+        public long InitialMaxStreamDataBidiLocal;
+        public long InitialMaxStreamDataBidiRemote;
+        public long InitialMaxStreamDataUni;
+        public long InitialMaxData;
         public int InitialMaxBidiStreams;
         public int InitialMaxUniStreams;
         public int MaxUdpPayloadSize;
-        public long AckDelayExponent;
+        public byte AckDelayExponent;
         public long MaxAckDelay; //这个是毫秒
         public long MinAckDelay; //这个是微妙
         public int ActiveConnectionIdLimit;
@@ -36,6 +60,33 @@ namespace MSQuic2
         public readonly QUIC_BUFFER RetrySourceConnectionID = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
         public QUIC_BUFFER VersionInfo = new QUIC_BUFFER();
         public readonly QUIC_BUFFER InitialSourceConnectionID = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
+
+        public override string ToString()
+        {
+            StringBuilder mBuilder = new StringBuilder();
+            mBuilder.AppendLine("------------- QUIC_TRANSPORT_PARAMETERS -----------------------");
+            mBuilder.AppendLine($"Flags: {Flags}");
+            mBuilder.AppendLine($"IdleTimeout:{IdleTimeout}");
+            mBuilder.AppendLine($"InitialMaxStreamDataBidiLocal:{InitialMaxStreamDataBidiLocal}");
+            mBuilder.AppendLine($"InitialMaxStreamDataBidiRemote:{InitialMaxStreamDataBidiRemote}");
+            mBuilder.AppendLine($"InitialMaxStreamDataUni:{InitialMaxStreamDataUni}");
+            mBuilder.AppendLine($"InitialMaxBidiStreams:{InitialMaxBidiStreams}");
+            mBuilder.AppendLine($"InitialMaxUniStreams:{InitialMaxUniStreams}");
+            mBuilder.AppendLine($"MaxUdpPayloadSize:{MaxUdpPayloadSize}");
+            mBuilder.AppendLine($"AckDelayExponent:{AckDelayExponent}");
+            mBuilder.AppendLine($"MaxAckDelay:{MaxAckDelay}");
+            mBuilder.AppendLine($"MinAckDelay:{MinAckDelay}");
+            mBuilder.AppendLine($"ActiveConnectionIdLimit:{ActiveConnectionIdLimit}");
+            mBuilder.AppendLine($"MaxDatagramFrameSize:{MaxDatagramFrameSize}");
+            mBuilder.AppendLine($"CibirLength:{CibirLength}");
+            mBuilder.AppendLine($"CibirOffset:{CibirOffset}");
+            mBuilder.AppendLine($"StatelessResetToken:{CommonFunc.GetByteArrayStr(StatelessResetToken)}");
+            mBuilder.AppendLine($"PreferredAddress:{PreferredAddress}");
+            mBuilder.AppendLine($"OriginalDestinationConnectionID:{OriginalDestinationConnectionID}");
+            mBuilder.AppendLine($"VersionInfo:{VersionInfo}");
+            mBuilder.AppendLine($"InitialSourceConnectionID:{InitialSourceConnectionID}");
+            return mBuilder.ToString();
+        }
 
         public QUIC_TRANSPORT_PARAMETERS()
         {
