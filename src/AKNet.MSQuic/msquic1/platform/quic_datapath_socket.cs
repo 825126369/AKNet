@@ -198,6 +198,7 @@ namespace MSQuic1
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public SSocketAsyncEventArgs ReceiveArgs;
+        public readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public long nReceiveArgsSyncCount;
 
         public void Reset()
@@ -703,7 +704,7 @@ namespace MSQuic1
             if (IoBlock.ReceiveArgs == null)
             {
                 IoBlock.ReceiveArgs = new SSocketAsyncEventArgs();
-                IoBlock.ReceiveArgs.RemoteEndPoint = SocketProc.Parent.RemoteAddress.GetIPEndPoint();
+                IoBlock.ReceiveArgs.RemoteEndPoint = IoBlock.mEndPointEmpty;
                 byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                 IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
                 IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
@@ -732,11 +733,10 @@ namespace MSQuic1
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
 
-            if (!CxPlatDataPathUdpRecvComplete(arg))
+            if (!CxPlatDataPathUdpRecvComplete(arg) || !CxPlatDataPathStartReceiveAsync(SocketProc))
             {
                 return;
             }
-            CxPlatDataPathStartReceiveAsync(SocketProc);
         }
 
         //这是接收
