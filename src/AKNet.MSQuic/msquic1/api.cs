@@ -68,7 +68,7 @@ namespace MSQuic1
                     out NewConnection);
         }
 
-        static void MsQuicConnectionClose(QUIC_HANDLE Handle)
+        public static void MsQuicConnectionClose(QUIC_HANDLE Handle)
         {
             QUIC_CONNECTION Connection;
             if (!IS_CONN_HANDLE(Handle))
@@ -314,7 +314,7 @@ namespace MSQuic1
             return Status;
         }
 
-        static int MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, QUIC_SSBuffer ResumptionData)
+        public static int MsQuicConnectionSendResumptionTicket(QUIC_HANDLE Handle, uint Flags, ushort DataLength, QUIC_SSBuffer ResumptionData)
         {
             int Status;
             QUIC_CONNECTION Connection;
@@ -427,7 +427,7 @@ namespace MSQuic1
             return Status;
         }
 
-        static void MsQuicStreamClose(QUIC_HANDLE Handle)
+        public static void MsQuicStreamClose(QUIC_HANDLE Handle)
         {
             QUIC_STREAM Stream;
             QUIC_CONNECTION Connection;
@@ -802,7 +802,7 @@ namespace MSQuic1
             return Status;
         }
 
-        static void MsQuicStreamReceiveComplete(QUIC_HANDLE Handle, long BufferLength)
+        public static void MsQuicStreamReceiveComplete(QUIC_HANDLE Handle, long BufferLength)
         {
             QUIC_STREAM Stream;
             QUIC_CONNECTION Connection;
