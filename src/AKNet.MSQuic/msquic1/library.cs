@@ -647,7 +647,7 @@ namespace MSQuic1
             return Entry;
         }
 
-        static int QuicLibraryGenerateStatelessResetToken(QUIC_PARTITION Partition, QUIC_BUFFER CID, QUIC_SSBuffer ResetToken)
+        static int QuicLibraryGenerateStatelessResetToken(QUIC_PARTITION Partition, QUIC_SSBuffer CID, QUIC_SSBuffer ResetToken)
         {
             QUIC_SSBuffer HashOutput = new byte[CXPLAT_HASH_SHA256_SIZE];
             CxPlatLockAcquire(Partition.ResetTokenLock);

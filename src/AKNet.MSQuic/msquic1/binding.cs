@@ -1135,17 +1135,16 @@ namespace MSQuic1
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_STATELESS_RESET)
             {
-                NetLog.Assert(RecvPacket.DestCid != null);
-                NetLog.Assert(RecvPacket.SourceCid == null);
+                NetLog.Assert(!RecvPacket.DestCid.Data.IsEmpty);
+                NetLog.Assert(RecvPacket.SourceCid.Data.IsEmpty);
 
-                int PacketLength = 0;
-                CxPlatRandom.Random(ref PacketLength);
+                byte PacketLength = CxPlatRandom.RandomByte();
                 PacketLength >>= 5;
                 PacketLength += QUIC_RECOMMENDED_STATELESS_RESET_PACKET_LENGTH;
 
                 if (PacketLength >= RecvPacket.AvailBufferLength)
                 {
-                    PacketLength = (byte)RecvPacket.AvailBufferLength - 1;
+                    PacketLength = (byte)(RecvPacket.AvailBufferLength - 1);
                 }
 
                 if (PacketLength < QUIC_MIN_STATELESS_RESET_PACKET_LENGTH)
@@ -1159,22 +1158,25 @@ namespace MSQuic1
                 {
                     goto Exit;
                 }
-
-                QUIC_SHORT_HEADER_V1 ResetPacket = new QUIC_SHORT_HEADER_V1();
-                ResetPacket.WriteFrom(SendDatagram.Buffer);
                 NetLog.Assert(SendDatagram.Length == PacketLength);
 
-                CxPlatRandom.Random(SendDatagram.Buffer.AsSpan().Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
+                QUIC_SSBuffer mBuffer = SendDatagram;
+                CxPlatRandom.Random(mBuffer.Slice(0, PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
+
+                QUIC_SHORT_HEADER_V1 ResetPacket = new QUIC_SHORT_HEADER_V1();
                 ResetPacket.IsLongHeader = 0;
                 ResetPacket.FixedBit = 1;
                 ResetPacket.KeyPhase = RecvPacket.SH.KeyPhase;
-                QuicLibraryGenerateStatelessResetToken(Partition, RecvPacket.DestCid.Data, SendDatagram + PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH);
+                mBuffer[0] = ResetPacket.GetFirstByte();
+
+                QuicLibraryGenerateStatelessResetToken(Partition, RecvPacket.DestCid.Data, mBuffer.Slice(PacketLength - QUIC_STATELESS_RESET_TOKEN_LENGTH));
                 QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_SEND_STATELESS_RESET);
             }
             else if (OperationType == QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_RETRY)
             {
-                NetLog.Assert(RecvPacket.DestCid != null);
-                NetLog.Assert(RecvPacket.SourceCid != null);
+                NetLog.Assert(!RecvPacket.DestCid.Data.IsEmpty);
+                NetLog.Assert(RecvPacket.SourceCid.Data.IsEmpty);
+                
                 int PacketLength = QuicPacketMaxBufferSizeForRetryV1();
                 SendDatagram = CxPlatSendDataAllocBuffer(SendData, PacketLength);
                 if (SendDatagram == null)
@@ -1230,7 +1232,7 @@ namespace MSQuic1
                         new QUIC_SSBuffer(NewDestCid, MsQuicLib.CidTotalLength),
                         RecvPacket.DestCid.Data,
                         Token.GetBuffer(),
-                        SendDatagram.Buffer);
+                        SendDatagram);
 
                 if (SendDatagram.Length == 0)
                 {
