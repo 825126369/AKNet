@@ -70,15 +70,10 @@ namespace MSQuic1
         public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
         public Socket Socket;
-        public byte[] AcceptAddrSpace = new byte[4 + 16 + 4 + 16];
-        public bool bReceiveIOContexUsed = false;
-        public bool bSendIOContexUsed = false;
         public bool Freed;
         public bool RecvFailure;
         public bool IoStarted;
         public bool Uninitialized;
-        public readonly CXPLAT_RUNDOWN_REF RundownRef = new CXPLAT_RUNDOWN_REF();
-        public int RioSendCount;
     }
 
     internal class CXPLAT_SOCKET_COMMON
@@ -98,7 +93,6 @@ namespace MSQuic1
         public int NumPerProcessorSockets;
         public bool HasFixedRemoteAddress;
         public byte DisconnectIndicated;
-        public bool PcpBinding;
         public bool Uninitialized;
         public bool UseRio;
         public bool Freed;

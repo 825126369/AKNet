@@ -254,7 +254,6 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
-        public static CXPLAT_DATAPATH_RECEIVE_CALLBACK CxPlatPcpRecvCallback;
         static int DataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, out CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
@@ -350,11 +349,6 @@ namespace MSQuic1
             }
 
             Socket.Mtu = CXPLAT_MAX_MTU;
-            if (BoolOk(Config.Flags & CXPLAT_SOCKET_FLAG_PCP))
-            {
-                Socket.PcpBinding = true;
-            }
-
             CxPlatRefInitializeEx(ref Socket.RefCount, SocketCount);
 
             Socket.RecvBufLen = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH;
@@ -523,10 +517,7 @@ namespace MSQuic1
 
             if (IsUnreachableErrorCode(arg.SocketError))
             {
-                if (!SocketProc.Parent.PcpBinding)
-                {
-                    SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
-                }
+                SocketProc.Parent.Datapath.UdpHandlers.Unreachable(SocketProc.Parent, SocketProc.Parent.ClientContext, RemoteAddr);
             }
             else if (arg.SocketError == SocketError.Success)
             {
@@ -591,14 +582,7 @@ namespace MSQuic1
                 IoBlock = null; //不加这个，会导致多个地方释放
 
                 NetLog.Assert(RecvDataChain != null);
-                if (SocketProc.Parent.PcpBinding)
-                {
-                    CxPlatPcpRecvCallback(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
-                }
-                else
-                {
-                    SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
-                }
+                SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
             }
             else
             {
