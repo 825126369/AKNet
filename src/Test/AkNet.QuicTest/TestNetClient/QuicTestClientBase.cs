@@ -18,7 +18,7 @@ namespace TestNetClient
         public abstract QuicClientMainBase Create();
         public abstract void OnTestFinish();
 
-        public const int nClientCount = 2;
+        public const int nClientCount = 100;
         public const int nSingleSendPackageCount = 10000;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
