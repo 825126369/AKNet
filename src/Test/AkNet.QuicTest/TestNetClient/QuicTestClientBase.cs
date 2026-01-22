@@ -18,8 +18,8 @@ namespace TestNetClient
         public abstract QuicClientMainBase Create();
         public abstract void OnTestFinish();
 
-        public const int nClientCount = 100;
-        public const int nSingleSendPackageCount = 100;
+        public const int nClientCount = 2;
+        public const int nSingleSendPackageCount = 10000;
         public const int nSingleCleintSendMaxPackageCount = nSingleSendPackageCount * 100;
         public const double fFrameInternalTime = 0;
         public const int nSumSendPackageCount = nClientCount * nSingleCleintSendMaxPackageCount;
@@ -157,7 +157,7 @@ namespace TestNetClient
 
             if (nReceivePackageCount % 10000 == 0)
             {
-                string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒发送：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
+                string msg = $"接受包数量: {nReceivePackageCount} 总共花费时间: {mStopWatch.Elapsed.TotalSeconds},平均1秒接收：{nReceivePackageCount / mStopWatch.Elapsed.TotalSeconds}";
                 NetLog.Log(msg);
             }
 
