@@ -40,10 +40,10 @@ namespace MSQuic1
 
         public uint Flags;
         public long IdleTimeout; //毫秒
-        public int InitialMaxStreamDataBidiLocal;
-        public int InitialMaxStreamDataBidiRemote;
-        public int InitialMaxStreamDataUni;
-        public int InitialMaxData;
+        public long InitialMaxStreamDataBidiLocal;
+        public long InitialMaxStreamDataBidiRemote;
+        public long InitialMaxStreamDataUni;
+        public long InitialMaxData;
         public int InitialMaxBidiStreams;
         public int InitialMaxUniStreams;
         public int MaxUdpPayloadSize;

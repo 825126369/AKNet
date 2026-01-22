@@ -215,13 +215,13 @@ namespace MSQuic1
                         QuicSendSetSendFlag(Stream.Connection.Send, STREAM_ID_IS_UNI_DIR(Stream.ID) ? QUIC_CONN_SEND_FLAG_UNI_STREAMS_BLOCKED : QUIC_CONN_SEND_FLAG_BIDI_STREAMS_BLOCKED);
                     }
 
-                    int NewMaxAllowedSendOffset = QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Connection), Connection.PeerTransportParams);
+                    long NewMaxAllowedSendOffset = QuicStreamGetInitialMaxDataFromTP(Stream.ID, QuicConnIsServer(Connection), Connection.PeerTransportParams);
 
                     if (Stream.MaxAllowedSendOffset < NewMaxAllowedSendOffset)
                     {
                         Stream.MaxAllowedSendOffset = NewMaxAllowedSendOffset;
                         FlowBlockedFlagsToRemove |= QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL;
-                        Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
+                        Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
                     }
 
                     if (BoolOk(FlowBlockedFlagsToRemove))

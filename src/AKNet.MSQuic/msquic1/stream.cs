@@ -577,7 +577,7 @@ namespace MSQuic1
             {
                 QuicStreamAddOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
             }
-            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset, int.MaxValue);
+            Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset, uint.MaxValue);
         Exit:
 
             if (!IsRemoteStream)
@@ -843,7 +843,7 @@ namespace MSQuic1
             return false;
         }
 
-        static int QuicStreamGetInitialMaxDataFromTP(ulong StreamID, bool IsServer, QUIC_TRANSPORT_PARAMETERS TransportParams)
+        static long QuicStreamGetInitialMaxDataFromTP(ulong StreamID, bool IsServer, QUIC_TRANSPORT_PARAMETERS TransportParams)
         {
             if (STREAM_ID_IS_UNI_DIR(StreamID))
             {

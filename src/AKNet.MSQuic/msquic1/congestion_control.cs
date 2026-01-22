@@ -58,7 +58,7 @@ namespace MSQuic1
         public Action<QUIC_CONGESTION_CONTROL, bool> QuicCongestionControlReset;
         public Func<QUIC_CONGESTION_CONTROL, long, bool, long> QuicCongestionControlGetSendAllowance;
         public Action<QUIC_CONGESTION_CONTROL, long> QuicCongestionControlOnDataSent;
-        public Func<QUIC_CONGESTION_CONTROL, int, bool> QuicCongestionControlOnDataInvalidated;
+        public Func<QUIC_CONGESTION_CONTROL, long, bool> QuicCongestionControlOnDataInvalidated;
         public Func<QUIC_CONGESTION_CONTROL, QUIC_ACK_EVENT, bool> QuicCongestionControlOnDataAcknowledged;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_LOSS_EVENT> QuicCongestionControlOnDataLost;
         public Action<QUIC_CONGESTION_CONTROL, QUIC_ECN_EVENT> QuicCongestionControlOnEcn;

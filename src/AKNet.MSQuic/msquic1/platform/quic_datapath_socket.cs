@@ -534,8 +534,6 @@ namespace MSQuic1
 
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
                 bool FoundLocalAddr = false;
-                int MessageCount = 0;
-                bool IsCoalesced = false;
                 byte TOS = 0;
 
                 IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
@@ -759,6 +757,11 @@ namespace MSQuic1
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)
         {
+            if(arg.SocketError != SocketError.Success)
+            {
+                NetLog.LogError("arg.SocketError: " + arg.SocketError);
+            }
+
             switch (arg.LastOperation)
             {
                 case SocketAsyncOperation.ReceiveMessageFrom:

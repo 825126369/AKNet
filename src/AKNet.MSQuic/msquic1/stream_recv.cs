@@ -372,7 +372,7 @@ namespace MSQuic1
                             Stream.MaxAllowedSendOffset = Frame.MaximumData;
 
                             UpdatedFlowControl = true;
-                            Stream.SendWindow = (int)Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, int.MaxValue);
+                            Stream.SendWindow = Math.Min(Stream.MaxAllowedSendOffset - Stream.UnAckedOffset, uint.MaxValue);
 
                             QuicSendBufferStreamAdjust(Stream);
                             QuicStreamRemoveOutFlowBlockedReason(Stream, QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL);
@@ -382,6 +382,11 @@ namespace MSQuic1
 
                             //NetLog.Log("Receive QUIC_MAX_STREAM_DATA_EX: " + Frame.MaximumData);
                             //NetLog.Log("Stream.SendWindow: " + Stream.SendWindow);
+
+                            if(Stream.SendWindow == 0)
+                            {
+                                throw new Exception($"Stream.SendWindow: {Stream.SendWindow}");
+                            }
                         }
 
                         break;

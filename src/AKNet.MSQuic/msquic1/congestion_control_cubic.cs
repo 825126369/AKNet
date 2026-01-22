@@ -354,7 +354,7 @@ namespace MSQuic1
             CubicCongestionControlUpdateBlockedState(Cc, PreviousCanSendState);
         }
 
-        static bool CubicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, int NumRetransmittableBytes)
+        static bool CubicCongestionControlOnDataInvalidated(QUIC_CONGESTION_CONTROL Cc, long NumRetransmittableBytes)
         {
             QUIC_CONGESTION_CONTROL_CUBIC Cubic = Cc.Cubic;
             bool PreviousCanSendState = CubicCongestionControlCanSend(Cc);
