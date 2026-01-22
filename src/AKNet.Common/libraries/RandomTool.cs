@@ -18,33 +18,34 @@ namespace AKNet.Common
 {
     internal static class RandomTool
     {
+        [ThreadStatic]
         private static readonly Random mRandom = new Random(RandomNumberGenerator.GetInt32(int.MaxValue));
-
-        public static double Random()
-        {
-            return mRandom.NextDouble();
-        }
 
         public static int RandomArrayIndex(int x, int y)
         {
             return mRandom.Next(x, y);
         }
 
-        public static int Random(int x, int y)
+        public static int RandomInt32(int x, int y)
         {
             NetLog.Assert(y < int.MaxValue);
             return mRandom.Next(x, y + 1);
         }
 
-        public static uint Random(uint x, uint y)
+        public static uint RandomUInt32(uint x, uint y)
         {
             NetLog.Assert(y < int.MaxValue);
             return (uint)mRandom.Next((int)x, (int)y + 1);
         }
 
-        public static ulong Random(ulong x, ulong y)
+        public static ulong RandomUInt64(ulong x, ulong y)
         {
             return (ulong)(x + mRandom.NextDouble() * (y - x));
+        }
+
+        public static long RandomInt64(long x, long y)
+        {
+            return (long)(x + mRandom.NextDouble() * (y - x));
         }
 
         public static int GetIndexByRate(int[] mRateList)
@@ -58,7 +59,7 @@ namespace AKNet.Common
             int nTempTargetRate = nSumRate + 1;
             if (nSumRate >= 1)
             {
-                nTempTargetRate = Random(1, nSumRate);
+                nTempTargetRate = RandomInt32(1, nSumRate);
             }
 
             int nTempRate = 0;

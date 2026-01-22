@@ -175,15 +175,14 @@ namespace MSQuic1
             return Range.SubRanges[Index];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        public static long QuicRangeGetMax(QUIC_RANGE Range)
         {
-            return Sub.High;
+            return QuicRangeGet(Range, Range.UsedLength - 1).High;
         }
 
-        static long QuicRangeGetMax(QUIC_RANGE Range)
+        public static long QuicRangeGetMin(QUIC_RANGE Range)
         {
-            return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
+            return QuicRangeGet(Range, 0).Low;
         }
 
         public static void QuicRangeReset(QUIC_RANGE Range)
@@ -293,7 +292,7 @@ namespace MSQuic1
             return true;
         }
 
-        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, int Count, out bool RangeUpdated)
+        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, long Count, out bool RangeUpdated)
         {
             NetLog.Assert(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
             NetLog.Assert(Count >= 1);
@@ -549,13 +548,13 @@ namespace MSQuic1
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetLowByHigh(long High, int nCount)
+        static long QuicRangeGetLowByHigh(long High, long nCount)
         {
             return High + 1 - nCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetHighByLow(long Low, int nCount)
+        static long QuicRangeGetHighByLow(long Low, long nCount)
         {
             return Low + nCount - 1;
         }

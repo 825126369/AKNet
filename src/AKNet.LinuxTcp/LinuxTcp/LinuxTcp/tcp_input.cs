@@ -1753,7 +1753,7 @@ namespace AKNet.LinuxTcp.Common
             {
                 uint half = (ack_limit + 1) >> 1;
                 net.ipv4.tcp_challenge_timestamp = now;
-                net.ipv4.tcp_challenge_count = RandomTool.Random(half, ack_limit + half - 1);
+                net.ipv4.tcp_challenge_count = RandomTool.RandomUInt32(half, ack_limit + half - 1);
             }
 
             if (net.ipv4.tcp_challenge_count > 0)

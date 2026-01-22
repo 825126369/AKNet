@@ -83,7 +83,7 @@ namespace AKNet.Common
 			int nSumLength = mBufferSegment.Length + nPackageFixedHeadSize;
 			EnSureSendBufferOk(nSumLength);
 
-			byte nEncodeToken = (byte)RandomTool.Random(0, 255);
+			byte nEncodeToken = (byte)RandomTool.RandomInt32(0, byte.MaxValue);
 			mCacheSendBuffer[0] = nEncodeToken;
 			for (int i = 0; i < 5; i++)
 			{

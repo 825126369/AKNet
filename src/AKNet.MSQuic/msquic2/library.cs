@@ -109,7 +109,7 @@ namespace MSQuic2
         static int QuicPartitionIdCreate(int BaseIndex)
         {
             NetLog.Assert(BaseIndex < MsQuicLib.PartitionCount);
-            int PartitionId = RandomTool.Random(ushort.MinValue, ushort.MaxValue);
+            int PartitionId = RandomTool.RandomInt32(ushort.MinValue, ushort.MaxValue);
             return (PartitionId & ~MsQuicLib.PartitionMask) | BaseIndex;
         }
 

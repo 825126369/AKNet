@@ -1334,7 +1334,7 @@ namespace AKNet.LinuxTcp.Common
 
             if (tp.write_seq == 0)
             {
-                tp.write_seq = (uint)RandomTool.Random(0, int.MaxValue - 1);
+                tp.write_seq = (uint)RandomTool.RandomInt32(0, int.MaxValue - 1);
                 tp.tsoffset = 0;
             }
 

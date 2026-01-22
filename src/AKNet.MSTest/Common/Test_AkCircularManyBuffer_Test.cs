@@ -13,15 +13,15 @@ namespace MSTest
         {
             for (int i = 0; i < 100; i++)
             {
-                byte[] mBuffer = new byte[RandomTool.Random(1024, ushort.MaxValue)];
+                byte[] mBuffer = new byte[RandomTool.RandomInt32(1024, ushort.MaxValue)];
                 RandomBufTool.Random(mBuffer);
 
                 AkCircularManyBuffer mAkCircularManyBuffer = new AkCircularManyBuffer();
                 mAkCircularManyBuffer.WriteFrom(mBuffer);
 
-                byte[] mBuffer2 = new byte[RandomTool.Random(1024, ushort.MaxValue)];
-                int nCopyOffset = RandomTool.Random(0, byte.MaxValue);
-                int nCopyLength = RandomTool.Random(0, mBuffer2.Length);
+                byte[] mBuffer2 = new byte[RandomTool.RandomInt32(1024, ushort.MaxValue)];
+                int nCopyOffset = RandomTool.RandomInt32(0, byte.MaxValue);
+                int nCopyLength = RandomTool.RandomInt32(0, mBuffer2.Length);
                 nCopyLength = Math.Min(nCopyLength, mBuffer.Length - nCopyOffset);
 
                 mAkCircularManyBuffer.CopyTo(mBuffer2, nCopyOffset, nCopyLength);
