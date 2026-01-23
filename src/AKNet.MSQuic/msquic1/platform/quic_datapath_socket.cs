@@ -15,6 +15,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace MSQuic1
 {
@@ -197,7 +198,7 @@ namespace MSQuic1
         public long ReferenceCount;
 
         public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
-        public SSocketAsyncEventArgs ReceiveArgs;
+        public SocketAsyncEventArgs ReceiveArgs;
         public readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public long nReceiveArgsSyncCount;
 
@@ -465,7 +466,6 @@ namespace MSQuic1
             }
 
             IoBlock.ReceiveArgs.UserToken = IoBlock;
-            IoBlock.ReceiveArgs.SetBuffer(0, SocketProc.Parent.RecvBufLen);
             try
             {
                 bool bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
@@ -651,7 +651,7 @@ namespace MSQuic1
 
             if (SendData.Sqe == null)
             {
-                SendData.Sqe = new SSocketAsyncEventArgs();
+                SendData.Sqe = new SocketAsyncEventArgs();
                 SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
                 SendData.Sqe.Completed += DataPathProcessCqe2;
             }
@@ -670,7 +670,7 @@ namespace MSQuic1
 
             if (IoBlock.ReceiveArgs == null)
             {
-                IoBlock.ReceiveArgs = new SSocketAsyncEventArgs();
+                IoBlock.ReceiveArgs = new SocketAsyncEventArgs();
                 IoBlock.ReceiveArgs.RemoteEndPoint = IoBlock.mEndPointEmpty;
                 byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                 IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
@@ -686,7 +686,7 @@ namespace MSQuic1
             CxPlatSendDataFree(SendData);
         }
 
-        static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
+        static async void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             //NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
             //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
@@ -703,6 +703,11 @@ namespace MSQuic1
             {
                 return;
             }
+
+            //if (++packetCount % 100 == 0)
+            //{
+            //    Thread.Yield();  // 或 await Task.Yield() 如果 async
+            //}
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)

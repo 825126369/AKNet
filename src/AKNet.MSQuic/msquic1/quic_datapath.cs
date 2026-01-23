@@ -220,7 +220,7 @@ namespace MSQuic1
         public readonly List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
         public QUIC_ADDR LocalAddress;
         public QUIC_ADDR MappedRemoteAddress;
-        public SSocketAsyncEventArgs Sqe = null;
+        public SocketAsyncEventArgs Sqe = null;
 
         public CXPLAT_SEND_DATA()
         {
