@@ -510,6 +510,8 @@ namespace MSQuic1
 
         public static void QuicRangeSetMin(QUIC_RANGE Range, long Low)
         {
+            CommonFunc.AssertWithException(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
+
             int i = 0;
             while (i < QuicRangeSize(Range))
             {
