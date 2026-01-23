@@ -254,13 +254,13 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
-        static int DataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, out CXPLAT_DATAPATH NewDatapath)
+        static int DataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, out CXPLAT_DATAPATH NewDatapath)
         {
             int WsaError;
             int Status;
-            int PartitionCount = CxPlatProcCount();
             int DatapathLength;
             CXPLAT_DATAPATH Datapath = NewDatapath = null;
+            int PartitionCount = MsQuicLib.PartitionCount;
 
             if (UdpCallbacks != null)
             {
@@ -270,12 +270,7 @@ namespace MSQuic1
                 }
             }
 
-            if (WorkerPool == null)
-            {
-                return QUIC_STATUS_INVALID_PARAMETER;
-            }
-
-            Datapath = new CXPLAT_DATAPATH(CxPlatWorkerPoolGetCount(WorkerPool));
+            Datapath = new CXPLAT_DATAPATH(PartitionCount);
             if (Datapath == null)
             {
                 Status = QUIC_STATUS_OUT_OF_MEMORY;
@@ -286,9 +281,8 @@ namespace MSQuic1
             {
                 Datapath.UdpHandlers = UdpCallbacks;
             }
-
-            Datapath.WorkerPool = WorkerPool;
-            Datapath.PartitionCount = CxPlatWorkerPoolGetCount(WorkerPool);
+            
+            Datapath.PartitionCount = PartitionCount;
             CxPlatRefInitializeEx(ref Datapath.RefCount, Datapath.PartitionCount);
 
             if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION))
@@ -306,7 +300,6 @@ namespace MSQuic1
 
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
-                Datapath.Partitions[i].mWorker = CxPlatWorkerPoolGetWorker(Datapath.WorkerPool, i);
                 Datapath.Partitions[i].Datapath = Datapath;
                 Datapath.Partitions[i].PartitionIndex = i;
                 CxPlatRefInitialize(ref Datapath.Partitions[i].RefCount);
@@ -669,8 +662,7 @@ namespace MSQuic1
             {
                 SendData.Sqe = new SSocketAsyncEventArgs();
                 SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
-                SendData.Sqe.Completed += DataPathProcessCqe3;
-                SendData.Sqe.Completed2 += DataPathProcessCqe2;
+                SendData.Sqe.Completed += DataPathProcessCqe2;
             }
             return SendData;
         }
@@ -691,8 +683,7 @@ namespace MSQuic1
                 IoBlock.ReceiveArgs.RemoteEndPoint = IoBlock.mEndPointEmpty;
                 byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                 IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
-                IoBlock.ReceiveArgs.Completed += DataPathProcessCqe;
-                IoBlock.ReceiveArgs.Completed2 += DataPathProcessCqe2;
+                IoBlock.ReceiveArgs.Completed += DataPathProcessCqe2;
             }
 
             return IoBlock;
@@ -721,22 +712,6 @@ namespace MSQuic1
             {
                 return;
             }
-        }
-
-        //这是接收
-        static void DataPathProcessCqe(object Cqe, SocketAsyncEventArgs arg)
-        {
-            DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            var mWorker = IoBlock.SocketProc.DatapathProc.mWorker;
-            CxPlatWorkerAddNetEvent(mWorker, arg as SSocketAsyncEventArgs);
-        }
-
-        //这是发送
-        static void DataPathProcessCqe3(object Cqe, SocketAsyncEventArgs arg)
-        {
-            CXPLAT_SEND_DATA SendData = arg.UserToken as CXPLAT_SEND_DATA;
-            var mWorker = SendData.SocketProc.DatapathProc.mWorker;
-            CxPlatWorkerAddNetEvent(mWorker, arg as SSocketAsyncEventArgs);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)

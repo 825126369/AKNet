@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -60,6 +61,16 @@ namespace MSQuic1
             Connection.Worker = Worker;
         }
 
+        static int QuicWorkerPoolGetCount(QUIC_WORKER_POOL WorkerPool)
+        {
+            return WorkerPool.Workers.Count;
+        }
+
+        static QUIC_WORKER QuicWorkerPoolGetWorker(QUIC_WORKER_POOL WorkerPool, int i)
+        {
+            return WorkerPool.Workers[i];
+        }
+
         static int QuicWorkerInitialize(QUIC_REGISTRATION Registration, QUIC_EXECUTION_PROFILE ExecProfile, QUIC_PARTITION Partition, QUIC_WORKER Worker)
         {
             Worker.Enabled = true;
@@ -81,53 +92,45 @@ namespace MSQuic1
             Worker.ExecutionContext.NextTimeUs = long.MaxValue;
             Worker.ExecutionContext.Ready = 1;
             
-            if (!_KERNEL_MODE && ExecProfile != QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT)
+            uint ThreadFlags;
+            switch (ExecProfile)
             {
-                Worker.IsExternal = true;
-                CxPlatWorkerPoolAddExecutionContext(MsQuicLib.WorkerPool, Worker.ExecutionContext, Partition.Index);
+                default:
+                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY:
+                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT:
+                    ThreadFlags = (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
+                    break;
+                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER:
+                    ThreadFlags = (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_NONE;
+                    break;
+                case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME:
+                    ThreadFlags = (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE | (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
+                    break;
             }
-            else
+
+            if (MsQuicLib.ExecutionConfig != null)
             {
-                ushort ThreadFlags;
-                switch (ExecProfile)
+                if (MsQuicLib.ExecutionConfig.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
                 {
-                    default:
-                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_LOW_LATENCY:
-                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_MAX_THROUGHPUT:
-                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_IDEAL_PROC;
-                        break;
-                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_SCAVENGER:
-                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_NONE;
-                        break;
-                    case QUIC_EXECUTION_PROFILE.QUIC_EXECUTION_PROFILE_TYPE_REAL_TIME:
-                        ThreadFlags = (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE | (ushort)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
-                        break;
+                    ThreadFlags |= (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
                 }
 
-                if (MsQuicLib.ExecutionConfig != null)
+                if (MsQuicLib.ExecutionConfig.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE))
                 {
-                    if (MsQuicLib.ExecutionConfig.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_HIGH_PRIORITY))
-                    {
-                        ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_HIGH_PRIORITY;
-                    }
-
-                    if (MsQuicLib.ExecutionConfig.Flags.HasFlag(QUIC_GLOBAL_EXECUTION_CONFIG_FLAGS.QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_AFFINITIZE))
-                    {
-                        ThreadFlags |= (int)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
-                    }
+                    ThreadFlags |= (uint)CXPLAT_THREAD_FLAGS.CXPLAT_THREAD_FLAG_SET_AFFINITIZE;
                 }
+            }
 
-                CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG();
-                ThreadConfig.Flags = ThreadFlags;
-                ThreadConfig.IdealProcessor = Partition.Processor;
-                ThreadConfig.Name = "quic_worker";
-                ThreadConfig.Callback = QuicWorkerThread;
-                ThreadConfig.Context = Worker;
-                Status = CxPlatThreadCreate(ThreadConfig, out Worker.Thread);
-                if (QUIC_FAILED(Status))
-                {
-                    goto Error;
-                }
+            CXPLAT_THREAD_CONFIG ThreadConfig = new CXPLAT_THREAD_CONFIG();
+            ThreadConfig.Flags = ThreadFlags;
+            ThreadConfig.IdealProcessor = Partition.Processor;
+            ThreadConfig.Name = "quic_worker";
+            ThreadConfig.Callback = QuicWorkerThread;
+            ThreadConfig.Context = Worker;
+            Status = CxPlatThreadCreate(ThreadConfig, out Worker.Thread);
+            if (QUIC_FAILED(Status))
+            {
+                goto Error;
             }
 
         Error:
@@ -169,25 +172,15 @@ namespace MSQuic1
             Worker.Enabled = false;
             if (Worker.ExecutionContext.Context != null)
             {
-                if (MsQuicLib.CustomExecutions)
-                {
-                    QuicWorkerLoopCleanup(Worker);
-                }
-                else
-                {
-                    QuicWorkerThreadWake(Worker);
-                    CxPlatEventWaitForever(Worker.Done);
-                }
+                QuicWorkerThreadWake(Worker);
+                CxPlatEventWaitForever(Worker.Done);
             }
             CxPlatEventUninitialize(Worker.Done);
 
-            if (!Worker.IsExternal)
+            if (Worker.Thread != null)
             {
-                if (Worker.Thread != null)
-                {
-                    CxPlatThreadWait(Worker.Thread);
-                    CxPlatThreadDelete(Worker.Thread);
-                }
+                CxPlatThreadWait(Worker.Thread);
+                CxPlatThreadDelete(Worker.Thread);
             }
             CxPlatEventUninitialize(Worker.Ready);
 
@@ -500,6 +493,8 @@ namespace MSQuic1
                 ThreadID = CxPlatCurThreadID()
             };
 
+            SetThreadAffinity(Worker.Partition.Processor);
+
             while (true)
             {
                 ++State.NoWorkCount;
@@ -613,22 +608,8 @@ namespace MSQuic1
 
         static void QuicWorkerThreadWake(QUIC_WORKER Worker)
         {
-            if (_KERNEL_MODE)
-            {
-                NetLog.Assert(false);
-            }
-            else
-            {
-                Worker.ExecutionContext.Ready = 1; // Run the execution context
-                if (Worker.IsExternal)
-                {
-                    CxPlatWakeExecutionContext(Worker.ExecutionContext);
-                }
-                else
-                {
-                    CxPlatEventSet(Worker.Ready);
-                }
-            }
+            Worker.ExecutionContext.Ready = 1; // Run the execution context
+            CxPlatEventSet(Worker.Ready);
         }
 
         static void QuicWorkerPoolUninitialize(QUIC_WORKER_POOL WorkerPool)

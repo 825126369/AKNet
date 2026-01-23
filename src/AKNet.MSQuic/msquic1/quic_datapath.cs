@@ -356,10 +356,10 @@ namespace MSQuic1
             return (ushort)PayloadSize;
         }
 
-        static int CxPlatDataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, CXPLAT_WORKER_POOL WorkerPool, out CXPLAT_DATAPATH NewDataPath)
+        static int CxPlatDataPathInitialize(CXPLAT_UDP_DATAPATH_CALLBACKS UdpCallbacks, out CXPLAT_DATAPATH NewDataPath)
         {
             int Status = QUIC_STATUS_SUCCESS;
-            Status = DataPathInitialize(UdpCallbacks, WorkerPool, out NewDataPath);
+            Status = DataPathInitialize(UdpCallbacks, out NewDataPath);
             if (QUIC_FAILED(Status))
             {
                 goto Error;
@@ -575,7 +575,6 @@ namespace MSQuic1
                 NetLog.Assert(!Datapath.Freed);
                 NetLog.Assert(Datapath.Uninitialized);
                 Datapath.Freed = true;
-                CxPlatWorkerPoolRelease(Datapath.WorkerPool);
             }
         }
 

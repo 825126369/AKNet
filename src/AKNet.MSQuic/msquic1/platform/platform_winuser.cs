@@ -100,7 +100,7 @@ namespace MSQuic1
         //    }
         //}
 
-        static void SetThreadAffinity(ushort nProcessorId)
+        static void SetThreadAffinity(int nProcessorId)
         {
             Thread.BeginThreadAffinity();
 

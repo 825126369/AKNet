@@ -25,7 +25,6 @@ namespace MSQuic1
     {
         public readonly CXPLAT_LIST_ENTRY<CXPLAT_EXECUTION_CONTEXT> Entry;
         public QUIC_WORKER Context;
-        public CXPLAT_WORKER CxPlatContext;
         public Func<QUIC_WORKER, CXPLAT_EXECUTION_STATE, bool> Callback;
         public long NextTimeUs;
         public volatile int Ready; // volatile 总是读的最新的值，而不是缓存， 表示有更多的工作要做了

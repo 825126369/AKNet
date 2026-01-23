@@ -55,9 +55,6 @@ namespace MSQuic1
         public long CurrentHandshakeMemoryUsage;
         public QUIC_GLOBAL_EXECUTION_CONFIG ExecutionConfig;
         public CXPLAT_DATAPATH Datapath;
-
-        public bool CustomExecutions;
-        public bool CustomPartitions;
         public int PartitionCount;
         public int PartitionMask;
         public QUIC_PARTITION[] Partitions;
@@ -75,7 +72,6 @@ namespace MSQuic1
 
         public readonly List<uint> DefaultCompatibilityList = new List<uint>();
         public readonly long[] PerfCounterSamples = new long[(int)QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_MAX];
-        public CXPLAT_WORKER_POOL WorkerPool = null;
         public readonly CXPLAT_TOEPLITZ_HASH ToeplitzHash = new CXPLAT_TOEPLITZ_HASH();
     }
 
@@ -86,17 +82,6 @@ namespace MSQuic1
         static QUIC_PARTITION QuicLibraryGetPartitionFromProcessorIndex(int ProcessorIndex)
         {
             NetLog.Assert(MsQuicLib.Partitions != null);
-            if (MsQuicLib.CustomPartitions)
-            {
-                for (int i = 0; i < MsQuicLib.PartitionCount; ++i)
-                {
-                    if (ProcessorIndex <= MsQuicLib.Partitions[i].Processor)
-                    {
-                        return MsQuicLib.Partitions[i];
-                    }
-                }
-                return MsQuicLib.Partitions[MsQuicLib.PartitionCount - 1];
-            }
             return MsQuicLib.Partitions[ProcessorIndex % MsQuicLib.PartitionCount];
         }
 
@@ -153,31 +138,11 @@ namespace MSQuic1
         {
             NetLog.Assert(MsQuicLib.Partitions == null);
             MsQuicLib.PartitionCount = CxPlatProcCount();
-            NetLog.Assert(MsQuicLib.PartitionCount > 0);
+            if (MsQuicLib.PartitionCount > QUIC_MAX_PARTITION_COUNT)
+            {
+                MsQuicLib.PartitionCount = QUIC_MAX_PARTITION_COUNT;
+            }
 
-            List<int> ProcessorList = null;
-            if (!_KERNEL_MODE && MsQuicLib.WorkerPool != null)
-            {
-                MsQuicLib.CustomPartitions = true;
-                MsQuicLib.PartitionCount = CxPlatWorkerPoolGetCount(MsQuicLib.WorkerPool);
-            }
-            else if (MsQuicLib.ExecutionConfig != null && MsQuicLib.ExecutionConfig.ProcessorList.Count > 0 &&
-                        MsQuicLib.ExecutionConfig.ProcessorList.Count != MsQuicLib.PartitionCount)
-            {
-                MsQuicLib.CustomPartitions = true;
-                MsQuicLib.PartitionCount = MsQuicLib.ExecutionConfig.ProcessorList.Count;
-                ProcessorList = MsQuicLib.ExecutionConfig.ProcessorList;
-            }
-            else
-            {
-                MsQuicLib.CustomPartitions = false;
-                int MaxPartitionCount = QUIC_MAX_PARTITION_COUNT;
-                if (MsQuicLib.PartitionCount > MaxPartitionCount)
-                {
-                    MsQuicLib.PartitionCount = MaxPartitionCount;
-                }
-            }
-            
             NetLog.Assert(MsQuicLib.PartitionCount > 0);
             MsQuicCalculatePartitionMask();
 
@@ -194,30 +159,7 @@ namespace MSQuic1
             int i = 0;
             for (i = 0; i < MsQuicLib.PartitionCount; ++i)
             {
-                int nProcessorId = -1;
-                if (!_KERNEL_MODE)
-                {
-                    if (ProcessorList != null)
-                    {
-                        nProcessorId = ProcessorList[i];
-                    }
-                    else
-                    {
-                        if (MsQuicLib.CustomPartitions)
-                        {
-                            nProcessorId = CxPlatWorkerPoolGetIdealProcessor(MsQuicLib.WorkerPool, i);
-                        }
-                        else
-                        {
-                            nProcessorId = i;
-                        }
-                    }
-                }
-                else
-                {
-                    nProcessorId = ProcessorList != null ? ProcessorList[i] : i;
-                }
-
+                int nProcessorId = i;
                 MsQuicLib.Partitions[i] = new QUIC_PARTITION();
                 Status = QuicPartitionInitialize(MsQuicLib.Partitions[i], i, nProcessorId, CXPLAT_HASH_TYPE.CXPLAT_HASH_SHA256, ResetHashKey);
                 if (QUIC_FAILED(Status))
@@ -228,6 +170,7 @@ namespace MSQuic1
 
             ResetHashKey.AsSpan().Clear();
             return QUIC_STATUS_SUCCESS;
+
         Error:
             ResetHashKey.AsSpan().Clear();
             for (int j = 0; j < i; ++j)
@@ -257,8 +200,6 @@ namespace MSQuic1
             DatapathCallbacks.Unreachable = QuicBindingUnreachable;
 
             int Status = QUIC_STATUS_SUCCESS;
-            bool CreatedWorkerPool = false;
-
             if (AcquireLock)
             {
                 CxPlatLockAcquire(MsQuicLib.Lock);
@@ -278,22 +219,7 @@ namespace MSQuic1
                 goto Exit;
             }
 
-            if (!_KERNEL_MODE)
-            {
-                if (MsQuicLib.WorkerPool == null)
-                {
-                    MsQuicLib.WorkerPool = CxPlatWorkerPoolCreate(MsQuicLib.ExecutionConfig);
-                    if (MsQuicLib.WorkerPool == null)
-                    {
-                        Status = QUIC_STATUS_OUT_OF_MEMORY;
-                        MsQuicLibraryFreePartitions();
-                        goto Exit;
-                    }
-                    CreatedWorkerPool = true;
-                }
-            }
-
-            Status = CxPlatDataPathInitialize(DatapathCallbacks,  MsQuicLib.WorkerPool, out MsQuicLib.Datapath);
+            Status = CxPlatDataPathInitialize(DatapathCallbacks, out MsQuicLib.Datapath);
             if (QUIC_SUCCEEDED(Status))
             {
 
@@ -301,14 +227,6 @@ namespace MSQuic1
             else
             {
                 MsQuicLibraryFreePartitions();
-                if (!_KERNEL_MODE)
-                { 
-                    if (CreatedWorkerPool)
-                    {
-                        CxPlatWorkerPoolDelete(MsQuicLib.WorkerPool);
-                        MsQuicLib.WorkerPool = null;
-                    }
-                }
                 goto Exit;
             }
 
@@ -1029,11 +947,6 @@ namespace MSQuic1
             }
 
             MsQuicLib.LazyInitComplete = false;
-            if (!_KERNEL_MODE)
-            {
-                CxPlatWorkerPoolDelete(MsQuicLib.WorkerPool);
-                MsQuicLib.WorkerPool = null;
-            }
         }
 
     }

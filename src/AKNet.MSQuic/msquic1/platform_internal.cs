@@ -27,7 +27,6 @@ namespace MSQuic1
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
-        public CXPLAT_WORKER_POOL WorkerPool;
         public uint Features;
     }
 
@@ -41,7 +40,6 @@ namespace MSQuic1
         public readonly CXPLAT_Buffer_POOL SendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_Buffer_POOL LargeSendBufferPool = new CXPLAT_Buffer_POOL();
         public readonly CXPLAT_POOL<DATAPATH_RX_PACKET> RecvDatagramPool = new CXPLAT_POOL<DATAPATH_RX_PACKET>();
-        public CXPLAT_WORKER mWorker;
     }
 
     internal class CXPLAT_DATAPATH : CXPLAT_DATAPATH_COMMON
