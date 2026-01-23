@@ -513,7 +513,7 @@ namespace MSQuic1
                     }
                     else if (EC.NextTimeUs > State.TimeNow)
                     {
-                        long Delay = (int)US_TO_MS(EC.NextTimeUs - State.TimeNow) + 1;
+                        long Delay = US_TO_MS(EC.NextTimeUs - State.TimeNow) + 1;
                         if (Delay > int.MaxValue)
                         {
                             Delay = int.MaxValue;
@@ -527,7 +527,6 @@ namespace MSQuic1
                     State.LastWorkTime = State.TimeNow;
                 }
             }
-            return;
         }
 
         static void QuicWorkerQueuePriorityConnection(QUIC_WORKER Worker, QUIC_CONNECTION Connection)
