@@ -100,12 +100,33 @@ namespace MSTest
         {
             QUIC_RANGE mRange = new QUIC_RANGE();
             MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
+            long largeACK = 0;
+            long minACK = long.MaxValue;
+            for (int i = 0; i < 1000; i++)
+            {
+                long A = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+                int nCount = RandomTool.RandomInt32(1, ushort.MaxValue);
+                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _) != null);
+                if (MSQuicFunc.QuicRangeGetHighByLow(A, nCount) > largeACK)
+                {
+                    largeACK = MSQuicFunc.QuicRangeGetHighByLow(A, nCount);
+                }
+
+                if (A < minACK)
+                {
+                    minACK = A;
+                }
+            }
+
+            Assert.IsTrue(MSQuicFunc.QuicRangeGetMin(mRange) == minACK);
+            Assert.IsTrue(MSQuicFunc.QuicRangeGetMax(mRange) == largeACK);
+            MSQuicFunc.QuicRangeReset(mRange);
 
             const int nTestCount = 1000;
             List<long> mList = new List<long>(ushort.MaxValue * nTestCount);
             List<long> mList2 = new List<long>(ushort.MaxValue * nTestCount);
-            long largeACK = 0;
-            long minACK = long.MaxValue;
+            largeACK = 0;
+            minACK = long.MaxValue;
             for (int i = 0; i < nTestCount; i++)
             {
                 long A = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
@@ -119,16 +140,16 @@ namespace MSTest
                     {
                         mList.Add(value);
                     }
+                }
 
-                    if (value > largeACK)
-                    {
-                        largeACK = value;
-                    }
+                if (MSQuicFunc.QuicRangeGetHighByLow(A, nCount) > largeACK)
+                {
+                    largeACK = MSQuicFunc.QuicRangeGetHighByLow(A, nCount);
+                }
 
-                    if (value < minACK)
-                    {
-                        minACK = value;
-                    }
+                if (A < minACK)
+                {
+                    minACK = A;
                 }
             }
 

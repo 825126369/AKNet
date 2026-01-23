@@ -170,7 +170,7 @@ namespace MSQuic1
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
+        public static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
         {
             return Range.SubRanges[Index];
         }
@@ -190,7 +190,7 @@ namespace MSQuic1
             Range.UsedLength = 0;
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out long Value)
+        public static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out long Value)
         {
             Value = 0;
             if (Range.UsedLength > 0)
@@ -382,7 +382,7 @@ namespace MSQuic1
             return Sub;
         }
 
-        static bool QuicRangeRemoveSubranges(QUIC_RANGE Range, int Index, int Count)
+        public static bool QuicRangeRemoveSubranges(QUIC_RANGE Range, int Index, int Count)
         {
             NetLog.Assert(Count > 0);
             NetLog.Assert(Index + Count <= Range.UsedLength);
@@ -419,7 +419,7 @@ namespace MSQuic1
             return false;
         }
 
-        static int QuicRangeCompare(QUIC_RANGE_SEARCH_KEY Key, QUIC_SUBRANGE Sub)
+        public static int QuicRangeCompare(QUIC_RANGE_SEARCH_KEY Key, QUIC_SUBRANGE Sub)
         {
             if (Key.High < Sub.Low)
             {
@@ -433,7 +433,7 @@ namespace MSQuic1
         }
 
 #if QUIC_RANGE_USE_BINARY_SEARCH
-        static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
+        public static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
             int Num = Range.UsedLength;
             int Lo = 0;
@@ -488,7 +488,7 @@ namespace MSQuic1
             return Result > 0 ? FIND_INDEX_TO_INSERT_INDEX(Mid + 1) : FIND_INDEX_TO_INSERT_INDEX(Mid);
         }
 #else
-        static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
+        public static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
             int Result;
             int i;
@@ -535,26 +535,26 @@ namespace MSQuic1
             }
         }
 
-        static bool QuicRangeAddValue(QUIC_RANGE Range, long Value)
+        public static bool QuicRangeAddValue(QUIC_RANGE Range, long Value)
         {
             return QuicRangeAddRange(Range, Value, 1, out _) != null;
         }
 
         //-----------------------2026-01-15 xuke 加的实用方法---------------------
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
+        public static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
         {
             Range.SubRanges[Index] = t;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetLowByHigh(long High, long nCount)
+        public static long QuicRangeGetLowByHigh(long High, long nCount)
         {
             return High + 1 - nCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetHighByLow(long Low, long nCount)
+        public static long QuicRangeGetHighByLow(long Low, long nCount)
         {
             return Low + nCount - 1;
         }
