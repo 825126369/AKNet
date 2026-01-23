@@ -465,6 +465,7 @@ namespace MSQuic1
             if (Sub.Low < Low)
             {
                 Sub.Count = Low - Sub.Low;
+                QuicRangeSet(Range, i, Sub);
                 Sub = QuicRangeGetSafe(Range, ++i);
             }
 
@@ -484,9 +485,8 @@ namespace MSQuic1
             {
                 Sub.Count -= (Low + Count - Sub.Low);
                 Sub.Low = Low + Count;
+                QuicRangeSet(Range, i, Sub);
             }
-
-            QuicRangeSet(Range, i, Sub);
             return true;
         }
 

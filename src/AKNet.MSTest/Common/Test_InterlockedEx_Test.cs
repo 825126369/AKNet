@@ -12,21 +12,16 @@ namespace MSTest
             ulong A = 0;
             ulong B = 0;
 
+            const ulong C = 100000;
+
             //并发逻辑
-            Parallel.For(0, 10000, i =>
+            Parallel.For(0, (long)C, i =>
             {
                 InterlockedEx.Increment(ref A);
                 B++;
             });
 
-            Parallel.For(0, 10000, i =>
-            {
-                InterlockedEx.Increment(ref A);
-                B++;
-            });
-
-            Assert.IsTrue(A == 20000);
-            Assert.IsFalse(B == 20000);
+            Assert.AreEqual(A, C);
         }
     }
 }
