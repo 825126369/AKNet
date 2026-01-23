@@ -509,6 +509,7 @@ namespace MSQuic1
                 {
                     if (EC.NextTimeUs == long.MaxValue)
                     {
+                        // 场景A：连定时器都没有，彻底空闲
                         CxPlatEventWaitForever(Worker.Ready);
                     }
                     else if (EC.NextTimeUs > State.TimeNow)
@@ -518,6 +519,7 @@ namespace MSQuic1
                         {
                             Delay = int.MaxValue;
                         }
+                        // 场景B：有定时器，但还有一段时间才到期
                         CxPlatEventWaitWithTimeout(Worker.Ready, (int)Delay);
                     }
                 }

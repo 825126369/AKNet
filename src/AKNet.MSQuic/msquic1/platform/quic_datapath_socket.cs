@@ -320,8 +320,7 @@ namespace MSQuic1
         {
             int Status = 0;
             bool IsServerSocket = Config.RemoteAddress == null;
-            bool NumPerProcessorSockets = IsServerSocket && Datapath.PartitionCount > 1;
-            int SocketCount = NumPerProcessorSockets ? CxPlatProcCount() : 1;
+            int SocketCount = IsServerSocket ? CxPlatProcCount() : 1;
             int Result;
             bool Option = false;
 
@@ -332,9 +331,7 @@ namespace MSQuic1
             CXPLAT_SOCKET Socket = new CXPLAT_SOCKET();
             Socket.Datapath = Datapath;
             Socket.ClientContext = Config.CallbackContext;
-            Socket.NumPerProcessorSockets = NumPerProcessorSockets ? 1 : 0;
             Socket.HasFixedRemoteAddress = Config.RemoteAddress != null;
-            Socket.Type = CXPLAT_SOCKET_TYPE.CXPLAT_SOCKET_UDP;
 
             if (Config.LocalAddress != null)
             {
@@ -342,7 +339,6 @@ namespace MSQuic1
             }
 
             Socket.Mtu = CXPLAT_MAX_MTU;
-            CxPlatRefInitializeEx(ref Socket.RefCount, SocketCount);
 
             Socket.RecvBufLen = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH;
             Socket.PerProcSockets = new CXPLAT_SOCKET_PROC[SocketCount];
@@ -402,22 +398,7 @@ namespace MSQuic1
                 SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex]; //这里设置 Socket分区
                 CxPlatRefIncrement(ref SocketProc.DatapathProc.RefCount);
 
-                if (Config.RemoteAddress != null)
-                {
-                    var MappedRemoteAddress = Config.RemoteAddress;
-
-                    try
-                    {
-                        SocketProc.Socket.Connect(MappedRemoteAddress.GetIPEndPoint());
-                    }
-                    catch (Exception e)
-                    {
-                        NetLog.LogError(e.ToString());
-                        Status = QUIC_STATUS_INTERNAL_ERROR;
-                        goto Error;
-                    }
-                }
-                else if (Config.LocalAddress != null)
+                if (IsServerSocket)
                 {
                     try
                     {
@@ -433,7 +414,18 @@ namespace MSQuic1
                 }
                 else
                 {
-                    NetLog.Assert(false);
+                    var MappedRemoteAddress = Config.RemoteAddress;
+
+                    try
+                    {
+                        SocketProc.Socket.Connect(MappedRemoteAddress.GetIPEndPoint());
+                    }
+                    catch (Exception e)
+                    {
+                        NetLog.LogError(e.ToString());
+                        Status = QUIC_STATUS_INTERNAL_ERROR;
+                        goto Error;
+                    }
                 }
 
                 if (i == 0)

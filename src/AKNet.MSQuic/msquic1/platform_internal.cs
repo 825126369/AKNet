@@ -19,11 +19,6 @@ namespace MSQuic1
         CXPLAT_DATAPATH_TYPE_RAW,
     }
 
-    internal enum CXPLAT_SOCKET_TYPE
-    {
-        CXPLAT_SOCKET_UDP = 0,
-    }
-
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
@@ -84,17 +79,10 @@ namespace MSQuic1
     
     internal class CXPLAT_SOCKET: CXPLAT_SOCKET_COMMON
     {
-        public long RefCount;
         public int RecvBufLen;
-        public bool Connected;
-        public CXPLAT_SOCKET_TYPE Type;
-        public int NumPerProcessorSockets;
         public bool HasFixedRemoteAddress;
         public byte DisconnectIndicated;
         public bool Uninitialized;
-        public bool UseRio;
-        public bool Freed;
-        public bool RawSocketAvailable;
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;
     }

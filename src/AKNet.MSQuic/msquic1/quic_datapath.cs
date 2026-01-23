@@ -456,8 +456,6 @@ namespace MSQuic1
             {
                 goto Error;
             }
-
-            NewSocket.RawSocketAvailable = false;
         Error:
             return Status;
         }
@@ -480,9 +478,7 @@ namespace MSQuic1
             NetLog.Assert(Socket != null);
             NetLog.Assert(!Socket.Uninitialized);
             Socket.Uninitialized = true;
-
-            int SocketCount = Socket.NumPerProcessorSockets > 0 ? CxPlatProcCount() : 1;
-            for (int i = 0; i < SocketCount; ++i)
+            for (int i = 0; i < Socket.PerProcSockets.Length; ++i)
             {
                 Socket.PerProcSockets[i] = null;
             }
