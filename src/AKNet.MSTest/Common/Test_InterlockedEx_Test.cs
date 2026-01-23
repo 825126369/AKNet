@@ -19,8 +19,14 @@ namespace MSTest
                 B++;
             });
 
-            Assert.IsTrue(A == 10000);
-            Assert.IsFalse(B == 10000);
+            Parallel.For(0, 10000, i =>
+            {
+                InterlockedEx.Increment(ref A);
+                B++;
+            });
+
+            Assert.IsTrue(A == 20000);
+            Assert.IsFalse(B == 20000);
         }
     }
 }

@@ -11,6 +11,7 @@ using AKNet.Common;
 #if true
 using MSQuic1;
 using System;
+using System.Runtime.CompilerServices;
 #else
 using MSQuic2;
 #endif
@@ -109,7 +110,7 @@ namespace MSTest
                 int nCount = RandomTool.RandomInt32(1, ushort.MaxValue);
                 Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _) != null);
 
-                for(int j = 0; j < nCount; j++)
+                for (int j = 0; j < nCount; j++)
                 {
                     long value = A + j;
                     if (!mList.Contains(value))
@@ -117,12 +118,12 @@ namespace MSTest
                         mList.Add(value);
                     }
 
-                    if(value > largeACK)
+                    if (value > largeACK)
                     {
                         largeACK = value;
                     }
 
-                    if(value < minACK)
+                    if (value < minACK)
                     {
                         minACK = value;
                     }
@@ -152,7 +153,7 @@ namespace MSTest
                 bool bFind = false;
                 for (int i = 0; i < mRange.UsedLength; i++)
                 {
-                    if(j >= mRange.SubRanges[i].Low && j <= mRange.SubRanges[i].High)
+                    if (j >= mRange.SubRanges[i].Low && j <= mRange.SubRanges[i].High)
                     {
                         bFind = true;
                     }
@@ -202,7 +203,7 @@ namespace MSTest
             Assert.IsTrue(mRange.UsedLength == 1);
             Assert.IsTrue(mRange.SubRanges[0].Low == 0);
             Assert.IsTrue(mRange.SubRanges[0].High == 999);
-            
+
             mRange = new QUIC_RANGE();
             MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
             MSQuicFunc.QuicRangeAddRange(mRange, 20, 2, out _);
@@ -268,64 +269,6 @@ namespace MSTest
                 QUIC_RANGE mDecodeRange = new QUIC_RANGE();
                 MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mDecodeRange);
                 Assert.IsTrue(MSQuicFunc.QuicAckFrameDecode(
-                    (QUIC_FRAME_TYPE)nFrameType, 
-                    ref mBuffer, 
-                    ref InvalidFrame, 
-                    mDecodeRange, 
-                    ref mECN, 
-                    ref AckDelay));
-
-                Assert.IsTrue(mDecodeRange.SubRanges[0] == new QUIC_SUBRANGE() {Low = 1, Count = 7 });
-                Assert.IsTrue(mECN.ECT_0_Count == 1);
-                Assert.IsTrue(mECN.ECT_1_Count == 2);
-                Assert.IsTrue(mECN.CE_Count == 3);
-                Assert.IsTrue(AckDelay == 1);
-                Assert.IsTrue(AckDelay == 1);
-            }
-
-            Decode(Encode());
-        }
-
-        [TestMethod]
-        public void TestMethod5()
-        {
-            QUIC_RANGE mAckRange = new QUIC_RANGE();
-            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mAckRange);
-            for (int i = 0; i < 100; i++)
-            {
-                long A = RandomTool.RandomInt32(0, int.MaxValue - 1);
-                long nCount = RandomTool.RandomInt32(1, ushort.MaxValue);
-                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mAckRange, A, nCount, out _) != null);
-            }
-
-            QUIC_ACK_ECN_EX mECN = new QUIC_ACK_ECN_EX();
-            mECN.ECT_0_Count = 1;
-            mECN.ECT_1_Count = 2;
-            mECN.CE_Count = 3;
-
-            long AckDelay = RandomTool.RandomInt64(0, long.MaxValue);
-
-            QUIC_SSBuffer Encode()
-            {
-                QUIC_SSBuffer mBuffer = new byte[1024];
-                Assert.IsTrue(MSQuicFunc.QuicAckFrameEncode(mAckRange, AckDelay, mECN, ref mBuffer));
-                mBuffer.Length = mBuffer.Offset;
-                mBuffer.Offset = 0;
-                return mBuffer;
-            }
-
-            void Decode(QUIC_SSBuffer mBuffer)
-            {
-                byte nFrameType = 0;
-                Assert.IsTrue(MSQuicFunc.QuicVarIntDecode(ref mBuffer, ref nFrameType));
-
-                QUIC_ACK_ECN_EX mECN = new QUIC_ACK_ECN_EX();
-                long AckDelay = 0;
-                bool InvalidFrame = false;
-
-                QUIC_RANGE mDecodeRange = new QUIC_RANGE();
-                MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mDecodeRange);
-                Assert.IsTrue(MSQuicFunc.QuicAckFrameDecode(
                     (QUIC_FRAME_TYPE)nFrameType,
                     ref mBuffer,
                     ref InvalidFrame,
@@ -339,15 +282,111 @@ namespace MSTest
                 Assert.IsTrue(mECN.CE_Count == 3);
                 Assert.IsTrue(AckDelay == 1);
                 Assert.IsTrue(AckDelay == 1);
+            }
 
-                Assert.IsTrue(mDecodeRange.UsedLength == mAckRange.UsedLength);
-                for (int i = 0; i < mDecodeRange.UsedLength; i++)
+            Decode(Encode());
+        }
+
+        [TestMethod]
+        public void TestMethod5()
+        {
+            QUIC_RANGE mRange1 = new QUIC_RANGE();
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange1);
+            for (int i = 0; i < 100; i++)
+            {
+                long A = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+                long nCount = RandomTool.RandomInt32(1, ushort.MaxValue);
+                Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange1, A, nCount, out _) != null);
+            }
+
+            QUIC_ACK_ECN_EX mECN1 = new QUIC_ACK_ECN_EX();
+            mECN1.ECT_0_Count = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+            mECN1.ECT_1_Count = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+            mECN1.CE_Count = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+
+            long AckDelay1 = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+
+            QUIC_SSBuffer Encode()
+            {
+                QUIC_SSBuffer mBuffer = new byte[8192];
+                Assert.IsTrue(MSQuicFunc.QuicAckFrameEncode(mRange1, AckDelay1, mECN1, ref mBuffer));
+                mBuffer.Length = mBuffer.Offset;
+                mBuffer.Offset = 0;
+                return mBuffer;
+            }
+
+            void Decode(QUIC_SSBuffer mBuffer)
+            {
+                byte nFrameType = 0;
+                Assert.IsTrue(MSQuicFunc.QuicVarIntDecode(ref mBuffer, ref nFrameType));
+
+                QUIC_ACK_ECN_EX mECN2 = new QUIC_ACK_ECN_EX();
+                long AckDelay2 = 0;
+                bool InvalidFrame = false;
+
+                QUIC_RANGE mRange2 = new QUIC_RANGE();
+                MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange2);
+                Assert.IsTrue(MSQuicFunc.QuicAckFrameDecode(
+                    (QUIC_FRAME_TYPE)nFrameType,
+                    ref mBuffer,
+                    ref InvalidFrame,
+                    mRange2,
+                    ref mECN2,
+                    ref AckDelay2));
+
+                Assert.IsTrue(mECN2.ECT_0_Count == mECN1.ECT_0_Count);
+                Assert.IsTrue(mECN2.ECT_1_Count == mECN1.ECT_1_Count);
+                Assert.IsTrue(mECN2.CE_Count == mECN1.CE_Count);
+                Assert.IsTrue(AckDelay1 == AckDelay2);
+
+                Assert.IsTrue(mRange2.UsedLength == mRange1.UsedLength);
+                for (int i = 0; i < mRange2.UsedLength; i++)
                 {
-                    Assert.IsTrue(mDecodeRange.SubRanges[i] == mAckRange.SubRanges[i]);
+                    Assert.IsTrue(mRange2.SubRanges[i] == mRange1.SubRanges[i]);
                 }
             }
 
             Decode(Encode());
+        }
+
+        [TestMethod]
+        public void TestMethod6()
+        {
+            for (int i = 0; i < 100000; i++)
+            {
+                long A = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+                long B = 0;
+                Span<byte> mBuf = new Span<byte>(new byte[100]);
+                MSQuicFunc.QuicVarIntEncode(A, mBuf);
+
+                ReadOnlySpan<byte> mBuf2 = mBuf;
+                if (MSQuicFunc.QuicVarIntDecode(ref mBuf2, ref B))
+                {
+                    Assert.IsTrue(A == B, $"DoTest Error: {A}, {B}");
+                }
+                else
+                {
+                    Assert.IsTrue(A == B, $"DoTest Error");
+                }
+            }
+
+            for (int i = 0; i < 100000; i++)
+            {
+                long A = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+                long B = 0;
+                QUIC_SSBuffer mBuf = new byte[100];
+                MSQuicFunc.QuicVarIntEncode(A, mBuf);
+
+                QUIC_SSBuffer mBuf2 = mBuf;
+                if (MSQuicFunc.QuicVarIntDecode(ref mBuf2, ref B))
+                {
+                    Assert.IsTrue(A == B, $"DoTest Error: {A}, {B}");
+                }
+                else
+                {
+                    Assert.IsTrue(A == B, $"DoTest Error");
+                }
+            }
         }
 
     }

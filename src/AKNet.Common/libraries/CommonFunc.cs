@@ -6,6 +6,15 @@ namespace AKNet.Common
     internal static class CommonFunc
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void AssertWithException(bool bTrue, object tag = null)
+        {
+            if(!bTrue)
+            {
+                throw new Exception(tag.ToString());
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool BoolOk(long q)
         {
             return q != 0;

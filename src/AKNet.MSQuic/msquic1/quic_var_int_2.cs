@@ -14,22 +14,22 @@ namespace MSQuic1
 {
     internal static partial class MSQuicFunc
     {
-        static Span<byte> QuicVarIntEncode(int Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode(int Value, Span<byte> Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode(uint Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode(uint Value, Span<byte> Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode(long Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode(long Value, Span<byte> Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static Span<byte> QuicVarIntEncode2Bytes(ulong Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode2Bytes(ulong Value, Span<byte> Buffer)
         {
             NetLog.Assert(Value < 0x4000);
             ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
@@ -37,7 +37,7 @@ namespace MSQuic1
             return Buffer.Slice(sizeof(ushort));
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)
+        public static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -45,7 +45,7 @@ namespace MSQuic1
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref int Value)
+        public static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -53,7 +53,7 @@ namespace MSQuic1
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref uint Value)
+        public static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref uint Value)
         {
             ulong value2 = Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -61,7 +61,7 @@ namespace MSQuic1
             return result;
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref long Value)
+        public static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -69,9 +69,9 @@ namespace MSQuic1
             return result;
         }
 
-        static Span<byte> QuicVarIntEncode(ulong Value, Span<byte> Buffer)
+        public static Span<byte> QuicVarIntEncode(ulong Value, Span<byte> Buffer)
         {
-            NetLog.Assert(Value <= QUIC_VAR_INT_MAX);
+            CommonFunc.AssertWithException(Value <= QUIC_VAR_INT_MAX, Value);
             if (Value < 0x40)
             {
                 Buffer[0] = (byte)Value;
@@ -97,7 +97,7 @@ namespace MSQuic1
             }
         }
 
-        static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref ulong Value)
+        public static bool QuicVarIntDecode(ref ReadOnlySpan<byte> Buffer, ref ulong Value)
         {
             if (Buffer.Length < sizeof(byte))
             {
