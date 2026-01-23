@@ -19,7 +19,6 @@ namespace MSQuic1
     {
         internal delegate void QUIC_TRACE_RUNDOWN_CALLBACK();
         static QUIC_TRACE_RUNDOWN_CALLBACK QuicTraceRundownCallback;
-        static CX_PLATFORM CxPlatform = new CX_PLATFORM();
         static int CxPlatProcessorCount;
         static long CxPlatTotalMemory;
 
@@ -39,11 +38,6 @@ namespace MSQuic1
             CryptoInitialized = true;
         Error:
             return Status;
-        }
-
-        static void CxPlatUninitialize()
-        {
-            NetLog.Assert(CxPlatform.Heap != IntPtr.Zero);
         }
 
         public static int CxPlatThreadCreate(CXPLAT_THREAD_CONFIG Config, out Thread mThread)

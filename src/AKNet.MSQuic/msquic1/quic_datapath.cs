@@ -83,7 +83,6 @@ namespace MSQuic1
     internal class CXPLAT_ROUTE
     {
         public CXPLAT_SOCKET_PROC Queue;
-        public CXPLAT_DATAPATH_TYPE DatapathType;
         public CXPLAT_ROUTE_STATE State;
         public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
         public QUIC_ADDR LocalAddress = new QUIC_ADDR();
@@ -93,7 +92,6 @@ namespace MSQuic1
             this.Queue = other.Queue;
             this.RemoteAddress.CopyFrom(other.RemoteAddress);
             this.LocalAddress.CopyFrom(other.LocalAddress);
-            DatapathType = other.DatapathType;
             State = other.State;
         }
     }
@@ -116,7 +114,6 @@ namespace MSQuic1
     internal class CXPLAT_RECV_DATA
     {
         public DATAPATH_RX_PACKET CXPLAT_CONTAINING_RECORD;
-
         public CXPLAT_RECV_DATA Next;
         public CXPLAT_ROUTE Route;
         public readonly QUIC_BUFFER Buffer = new QUIC_BUFFER();
@@ -125,7 +122,6 @@ namespace MSQuic1
         public byte HopLimitTTL;
         public bool Allocated;          // Used for debugging. Set to FALSE on free.
         public bool QueuedOnConnection; // Used for debugging.
-        public CXPLAT_DATAPATH_TYPE DatapathType;       // CXPLAT_DATAPATH_TYPE
         public ushort Reserved;           // PACKET_TYPE (at least 3 bits)
         public ushort ReservedEx;         // Header length
 
@@ -139,7 +135,6 @@ namespace MSQuic1
             HopLimitTTL = 0;
             Allocated = false;
             QueuedOnConnection = false;
-            DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_UNKNOWN; // Default to user datapath
             Reserved = 0;
             ReservedEx = 0;
         }
@@ -217,7 +212,6 @@ namespace MSQuic1
         public CXPLAT_SOCKET_PROC SocketProc;
         public CXPLAT_POOL<CXPLAT_SEND_DATA> SendDataPool;
         public CXPLAT_POOL<QUIC_Pool_BUFFER> BufferPool;
-        public readonly CXPLAT_DATAPATH_TYPE DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
         public byte ECN;
         public byte DSCP;
         public int TotalSize;
@@ -320,7 +314,6 @@ namespace MSQuic1
         //给发送数据分配Buffer
         static QUIC_Pool_BUFFER CxPlatSendDataAllocBuffer(CXPLAT_SEND_DATA SendData, int MaxBufferLength)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL);
             NetLog.Assert(SendData != null);
             NetLog.Assert(MaxBufferLength > 0);
 
@@ -370,22 +363,14 @@ namespace MSQuic1
 
         static void QuicCopyRouteInfo(CXPLAT_ROUTE DstRoute, CXPLAT_ROUTE SrcRoute)
         {
-            if (SrcRoute.DatapathType == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL)
-            {
-                DstRoute.CopyFrom(SrcRoute);
-            }
-            else
-            {
-                NetLog.Assert(false);
-            }
+            DstRoute.CopyFrom(SrcRoute);
         }
 
         static void CxPlatUpdateRoute(CXPLAT_ROUTE DstRoute, CXPLAT_ROUTE SrcRoute)
         {
-            if (DstRoute.DatapathType != SrcRoute.DatapathType || (DstRoute.State == CXPLAT_ROUTE_STATE.RouteResolved && DstRoute.Queue != SrcRoute.Queue))
+            if (DstRoute.State == CXPLAT_ROUTE_STATE.RouteResolved && DstRoute.Queue != SrcRoute.Queue)
             {
                 DstRoute.Queue = SrcRoute.Queue;
-                DstRoute.DatapathType = SrcRoute.DatapathType;
             }
         }
 
@@ -486,8 +471,7 @@ namespace MSQuic1
 
         static bool CxPlatDataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath, CXPLAT_SEND_DATA SendData)
         {
-            NetLog.Assert(DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL || DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_RAW);
-            return DatapathType(SendData) == CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL ? DataPathIsPaddingPreferred(Datapath) : RawDataPathIsPaddingPreferred(Datapath);
+            return DataPathIsPaddingPreferred(Datapath);
         }
 
         static bool DataPathIsPaddingPreferred(CXPLAT_DATAPATH Datapath)
@@ -557,20 +541,14 @@ namespace MSQuic1
         
         static void CxPlatResolveRouteComplete(object Context, CXPLAT_ROUTE Route, byte[] PhysicalAddress, byte PathId)
         {
-            NetLog.Assert(Route.DatapathType !=  CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL);
-            if (Route.State !=  CXPLAT_ROUTE_STATE.RouteResolved) 
-            {
-              
-            }
+            NetLog.Assert(false);
         }
 
         static void CxPlatDataPathRelease(CXPLAT_DATAPATH Datapath)
         {
             if (CxPlatRefDecrement(ref Datapath.RefCount))
             {
-                NetLog.Assert(!Datapath.Freed);
                 NetLog.Assert(Datapath.Uninitialized);
-                Datapath.Freed = true;
             }
         }
 

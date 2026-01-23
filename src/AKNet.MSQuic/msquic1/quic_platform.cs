@@ -194,11 +194,6 @@ namespace MSQuic1
             return (ushort)((value >> 8) | (value << 8));
         }
 
-        static CXPLAT_DATAPATH_TYPE DatapathType(CXPLAT_SEND_DATA SendData)
-        {
-            return SendData.DatapathType;
-        }
-
         static void CxPlatRefInitializeEx(ref long RefCount, long Initial)
         {
             RefCount = Initial;

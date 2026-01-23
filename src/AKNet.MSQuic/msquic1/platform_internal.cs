@@ -7,18 +7,10 @@
 *        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using System.Net.Sockets;
 
 namespace MSQuic1
 {
-    internal enum CXPLAT_DATAPATH_TYPE
-    {
-        CXPLAT_DATAPATH_TYPE_UNKNOWN = 0,
-        CXPLAT_DATAPATH_TYPE_NORMAL,
-        CXPLAT_DATAPATH_TYPE_RAW,
-    }
-
     internal class CXPLAT_DATAPATH_COMMON
     {
         public CXPLAT_UDP_DATAPATH_CALLBACKS UdpHandlers;
@@ -42,9 +34,7 @@ namespace MSQuic1
         public long RefCount;
         public int PartitionCount;
         public byte MaxSendBatchSize;
-        public bool UseRio;
         public bool Uninitialized;
-        public bool Freed;
         public readonly CXPLAT_DATAPATH_PROC[] Partitions = null;
         public int RecvDatagramLength;
         public int RecvPayloadOffset;
@@ -86,15 +76,4 @@ namespace MSQuic1
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;
     }
-
-    internal unsafe class CX_PLATFORM
-    {
-        public IntPtr Heap;
-        public int dwBuildNumber;
-#if DEBUG
-        public int AllocFailDenominator;
-        public long AllocCounter;
-#endif
-    }
-
 }

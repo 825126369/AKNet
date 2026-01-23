@@ -551,7 +551,6 @@ namespace MSQuic1
                 Datagram.PartitionIndex = SocketProc.DatapathProc.PartitionIndex % SocketProc.DatapathProc.Datapath.PartitionCount;
                 Datagram.TypeOfService = TOS;
                 Datagram.Allocated = true;
-                Datagram.Route.DatapathType = Datagram.DatapathType = CXPLAT_DATAPATH_TYPE.CXPLAT_DATAPATH_TYPE_NORMAL;
                 Datagram.QueuedOnConnection = false;
 
                 if (DatagramChainTail == null)
