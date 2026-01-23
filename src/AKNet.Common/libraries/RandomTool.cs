@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
@@ -19,33 +20,53 @@ namespace AKNet.Common
     internal static class RandomTool
     {
         [ThreadStatic]
-        private static readonly Random mRandom = new Random(RandomNumberGenerator.GetInt32(int.MaxValue));
+        private static Random m_Random;
+
+        private static Random RandomGenerator
+        {
+            get
+            {
+                if (m_Random == null)
+                {
+                    m_Random = new Random(RandomNumberGenerator.GetInt32(int.MaxValue));
+                }
+                return m_Random;
+            }
+        }
 
         public static int RandomArrayIndex(int x, int y)
         {
-            return mRandom.Next(x, y);
+            return RandomGenerator.Next(x, y);
         }
 
         public static int RandomInt32(int x, int y)
         {
             NetLog.Assert(y < int.MaxValue);
-            return mRandom.Next(x, y + 1);
+            int A = 0;
+            RandomGenerator.NextBytes(MemoryMarshal.Cast<int, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
+            return A;
         }
 
         public static uint RandomUInt32(uint x, uint y)
         {
             NetLog.Assert(y < int.MaxValue);
-            return (uint)mRandom.Next((int)x, (int)y + 1);
+            uint A = 0;
+            RandomGenerator.NextBytes(MemoryMarshal.Cast<uint, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
+            return A;
         }
 
         public static ulong RandomUInt64(ulong x, ulong y)
         {
-            return (ulong)(x + mRandom.NextDouble() * (y - x));
+            ulong A = 0;
+            RandomGenerator.NextBytes(MemoryMarshal.Cast<ulong, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
+            return A;
         }
 
         public static long RandomInt64(long x, long y)
         {
-            return (long)(x + mRandom.NextDouble() * (y - x));
+            long A = 0;
+            RandomGenerator.NextBytes(MemoryMarshal.Cast<long, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
+            return A;
         }
 
         public static int GetIndexByRate(int[] mRateList)

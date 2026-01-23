@@ -339,6 +339,12 @@ namespace MSTest
                 Assert.IsTrue(mECN.CE_Count == 3);
                 Assert.IsTrue(AckDelay == 1);
                 Assert.IsTrue(AckDelay == 1);
+
+                Assert.IsTrue(mDecodeRange.UsedLength == mAckRange.UsedLength);
+                for (int i = 0; i < mDecodeRange.UsedLength; i++)
+                {
+                    Assert.IsTrue(mDecodeRange.SubRanges[i] == mAckRange.SubRanges[i]);
+                }
             }
 
             Decode(Encode());
