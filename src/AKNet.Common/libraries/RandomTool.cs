@@ -39,34 +39,48 @@ namespace AKNet.Common
             return RandomGenerator.Next(x, y);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long InnerRandomInt64(long x, long y)
+        {
+            return (long)(x + RandomGenerator.NextDouble() * (y - x));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ulong InnerRandomUInt64(ulong x, ulong y)
+        {
+            return (ulong)(x + RandomGenerator.NextDouble() * (y - x));
+        }
+
         public static int RandomInt32(int x, int y)
         {
-            NetLog.Assert(y < int.MaxValue);
-            int A = 0;
-            RandomGenerator.NextBytes(MemoryMarshal.Cast<int, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
-            return A;
+            NetLog.Assert(x >= int.MinValue);
+            NetLog.Assert(y <= int.MaxValue);
+            NetLog.Assert(x <= y);
+            return (int)InnerRandomInt64(x, y);
         }
 
         public static uint RandomUInt32(uint x, uint y)
         {
-            NetLog.Assert(y < int.MaxValue);
-            uint A = 0;
-            RandomGenerator.NextBytes(MemoryMarshal.Cast<uint, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
-            return A;
+            NetLog.Assert(x >= uint.MinValue);
+            NetLog.Assert(y <= uint.MaxValue);
+            NetLog.Assert(x <= y);
+            return (uint)InnerRandomInt64(x, y);
         }
 
         public static ulong RandomUInt64(ulong x, ulong y)
         {
-            ulong A = 0;
-            RandomGenerator.NextBytes(MemoryMarshal.Cast<ulong, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
-            return A;
+            NetLog.Assert(x >= ulong.MinValue);
+            NetLog.Assert(y <= ulong.MaxValue);
+            NetLog.Assert(x <= y);
+            return InnerRandomUInt64(x, y);
         }
 
         public static long RandomInt64(long x, long y)
         {
-            long A = 0;
-            RandomGenerator.NextBytes(MemoryMarshal.Cast<long, byte>(MemoryMarshal.CreateSpan(ref A, 1)));
-            return A;
+            NetLog.Assert(x >= long.MinValue);
+            NetLog.Assert(y <= long.MaxValue);
+            NetLog.Assert(x <= y);
+            return InnerRandomInt64(x, y);
         }
 
         public static int GetIndexByRate(int[] mRateList)
