@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
     internal static class CommonFunc
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         public static void AssertWithException(bool bTrue, object tag = null)
         {
             if(!bTrue)

@@ -101,13 +101,15 @@ namespace MSTest
             QUIC_RANGE mRange = new QUIC_RANGE();
             MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, mRange);
 
-            List<long> mList = new List<long>();
+            const int nTestCount = 1000;
+            List<long> mList = new List<long>(ushort.MaxValue * nTestCount);
+            List<long> mList2 = new List<long>(ushort.MaxValue * nTestCount);
             long largeACK = 0;
             long minACK = long.MaxValue;
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < nTestCount; i++)
             {
-                long A = RandomTool.RandomInt32(0, int.MaxValue - 1);
-                int nCount = RandomTool.RandomInt32(1, ushort.MaxValue);
+                long A = RandomTool.RandomInt64(0, MSQuicFunc.QUIC_VAR_INT_MAX);
+                int nCount = RandomTool.RandomInt32(1, byte.MaxValue);
                 Assert.IsTrue(MSQuicFunc.QuicRangeAddRange(mRange, A, nCount, out _) != null);
 
                 for (int j = 0; j < nCount; j++)
@@ -132,8 +134,6 @@ namespace MSTest
 
             Assert.IsTrue(MSQuicFunc.QuicRangeGetMin(mRange) == minACK);
             Assert.IsTrue(MSQuicFunc.QuicRangeGetMax(mRange) == largeACK);
-
-            List<long> mList2 = new List<long>();
             for (int i = 0; i < mRange.UsedLength; i++)
             {
                 for (int j = 0; j < mRange.SubRanges[i].Count; j++)

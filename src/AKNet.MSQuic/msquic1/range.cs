@@ -294,8 +294,8 @@ namespace MSQuic1
 
         public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, long Count, out bool RangeUpdated)
         {
-            NetLog.Assert(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
-            NetLog.Assert(Count >= 1);
+            CommonFunc.AssertWithException(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
+            CommonFunc.AssertWithException(Count >= 1);
 
             int i;
             QUIC_SUBRANGE Sub;
