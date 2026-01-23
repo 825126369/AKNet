@@ -8,13 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-#if true
 using MSQuic1;
-using System;
-using System.Runtime.CompilerServices;
-#else
-using MSQuic2;
-#endif
 
 namespace MSTest
 {
@@ -329,6 +323,7 @@ namespace MSTest
 
             QUIC_SSBuffer Encode()
             {
+                
                 QUIC_SSBuffer mBuffer = new byte[8192];
                 Assert.IsTrue(MSQuicFunc.QuicAckFrameEncode(mRange1, AckDelay1, mECN1, ref mBuffer));
                 mBuffer.Length = mBuffer.Offset;
