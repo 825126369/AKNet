@@ -460,25 +460,21 @@ namespace MSQuic1
         static bool CxPlatDataPathStartReceiveAsync(CXPLAT_SOCKET_PROC SocketProc)
         {
             DATAPATH_RX_IO_BLOCK IoBlock = CxPlatSocketAllocRxIoBlock(SocketProc);
-            if (IoBlock == null)
-            {
-                return false;
-            }
-
-            IoBlock.ReceiveArgs.UserToken = IoBlock;
+            bool bIOPending = true;
             try
             {
-                bool bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
-                if (!bIOPending)
-                {
-                    NetLog.Assert(IoBlock.ReceiveArgs.BytesTransferred < ushort.MaxValue);
-                    DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
-                }
+                bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
             }
             catch (Exception e)
             {
                 NetLog.LogError(e.ToString());
+                CxPlatSocketFreeRxIoBlock(IoBlock);
                 return false;
+            }
+
+            if (!bIOPending)
+            {
+                DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
             }
             return true;
         }
@@ -508,7 +504,7 @@ namespace MSQuic1
             {
                 if (arg.BytesTransferred == 0)
                 {
-                    NetLog.Assert(false);
+                    throw new Exception();
                     goto Drop;
                 }
 
@@ -570,7 +566,7 @@ namespace MSQuic1
             }
             else
             {
-                NetLog.Assert(false, arg.SocketError); // Not expected in test scenarios
+                throw new Exception(arg.SocketError.ToString()); // Not expected in test scenarios
             }
 
         Drop:
@@ -608,7 +604,6 @@ namespace MSQuic1
 
             SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
             SendData.Sqe.BufferList = mList;
-            SendData.Sqe.UserToken = SendData;
 
             try
             {
@@ -654,7 +649,9 @@ namespace MSQuic1
                 SendData.Sqe = new SocketAsyncEventArgs();
                 SendData.Sqe.BufferList = new List<ArraySegment<byte>>();
                 SendData.Sqe.Completed += DataPathProcessCqe2;
+                SendData.Sqe.UserToken = SendData;
             }
+
             return SendData;
         }
 
@@ -675,6 +672,7 @@ namespace MSQuic1
                 byte[] mBuf = new byte[SocketProc.Parent.Datapath.RecvDatagramLength];
                 IoBlock.ReceiveArgs.SetBuffer(mBuf, 0, mBuf.Length);
                 IoBlock.ReceiveArgs.Completed += DataPathProcessCqe2;
+                IoBlock.ReceiveArgs.UserToken = IoBlock;
             }
 
             return IoBlock;
@@ -698,7 +696,7 @@ namespace MSQuic1
 
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
-
+            
             if (!CxPlatDataPathUdpRecvComplete(arg) || !CxPlatDataPathStartReceiveAsync(SocketProc))
             {
                 return;

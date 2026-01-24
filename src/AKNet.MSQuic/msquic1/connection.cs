@@ -2439,18 +2439,18 @@ namespace MSQuic1
             NetLog.Assert(Packet.PayloadLength <= Packet.AvailBufferLength);
             NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBufferLength);
 
-            int CompressedPacketNumberLength = 0;
+            byte CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
                 Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x1f);
                 Packet.OnAvailBufferChanged();
-                CompressedPacketNumberLength = Packet.SH.PnLength + 1;
+                CompressedPacketNumberLength = (byte)(Packet.SH.PnLength + 1);
             }
             else
             {
                 Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x0f);
                 Packet.OnAvailBufferChanged();
-                CompressedPacketNumberLength = Packet.LH.PnLength + 1;
+                CompressedPacketNumberLength = (byte)(Packet.LH.PnLength + 1);
             }
 
             NetLog.Assert(CompressedPacketNumberLength >= 1 && CompressedPacketNumberLength <= 4);
@@ -2461,7 +2461,7 @@ namespace MSQuic1
                 Packet.AvailBuffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
             }
 
-            ulong CompressedPacketNumber = 0;
+            long CompressedPacketNumber = 0;
             QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.Slice(Packet.HeaderLength), out CompressedPacketNumber);
 
             Packet.HeaderLength += CompressedPacketNumberLength;

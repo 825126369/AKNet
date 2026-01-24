@@ -93,7 +93,7 @@ namespace MSQuic1
 
         //接收窗口大小（默认 512 KB，可动态增长）。
         //它决定 BaseOffset + VirtualBufferLength 这条“右沿”，任何逻辑偏移超过这条线的帧都会被临时拒绝（BUFFER_TOO_SMALL）
-        public int VirtualBufferLength;
+        public long VirtualBufferLength; //uint32
         public int Capacity; //当前已分配的物理内存总大小
         public QUIC_RECV_BUF_MODE RecvMode;
 
@@ -193,7 +193,7 @@ namespace MSQuic1
                 RecvBuffer.Capacity = FirstChunk.Buffer.Length;
             }
 
-            RecvBuffer.VirtualBufferLength = Math.Max(RecvBuffer.VirtualBufferLength, (int)NewBufferLength);
+            RecvBuffer.VirtualBufferLength = Math.Max(RecvBuffer.VirtualBufferLength, NewBufferLength);
             CxPlatListMoveItems(Chunks, RecvBuffer.Chunks);
             return QUIC_STATUS_SUCCESS;
         }
@@ -787,7 +787,7 @@ namespace MSQuic1
             return true;
         }
 
-        static void QuicRecvBufferIncreaseVirtualBufferLength(QUIC_RECV_BUFFER RecvBuffer, int NewLength)
+        static void QuicRecvBufferIncreaseVirtualBufferLength(QUIC_RECV_BUFFER RecvBuffer, long NewLength)
         {
             NetLog.Assert(NewLength >= RecvBuffer.VirtualBufferLength);
             RecvBuffer.VirtualBufferLength = NewLength;

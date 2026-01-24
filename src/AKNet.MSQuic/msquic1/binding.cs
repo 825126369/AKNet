@@ -1308,7 +1308,7 @@ namespace MSQuic1
             return QUIC_SUCCEEDED(Status);
         }
 
-        static void QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
+        static void QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, long BytesToSend, long DatagramsToSend)
         {
             CxPlatSocketSend(Binding.Socket, Route, SendData);
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);
