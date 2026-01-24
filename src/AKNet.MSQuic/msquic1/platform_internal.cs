@@ -75,5 +75,7 @@ namespace MSQuic1
         public bool Uninitialized;
         public CXPLAT_SOCKET_PROC[] PerProcSockets = null;
         public object ClientContext;
+
+        public bool IsClientSocket => HasFixedRemoteAddress;
     }
 }

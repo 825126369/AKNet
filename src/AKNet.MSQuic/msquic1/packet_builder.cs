@@ -301,6 +301,7 @@ namespace MSQuic1
                         goto Error;
                     }
                     SendDataAllocated = true;
+                    NetLog.Assert(Builder.Path.Route.Queue.DatapathProc.PartitionIndex == QuicPartitionIdGetIndex(Builder.Connection.PartitionID));
                 }
 
                 int NewDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), IsPathMtuDiscovery ? Builder.Path.MtuDiscovery.ProbeSize : DatagramSize);

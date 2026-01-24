@@ -232,62 +232,6 @@ namespace MSQuic1
             QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
             switch (Param)
             {
-                case QUIC_PARAM_CONN_LOCAL_ADDRESS:
-                    {
-                        if (Connection.State.ClosedLocally || QuicConnIsServer(Connection))
-                        {
-                            Status = QUIC_STATUS_INVALID_STATE;
-                            break;
-                        }
-
-                        if (Connection.State.Started && !Connection.State.HandshakeConfirmed)
-                        {
-                            Status = QUIC_STATUS_INVALID_STATE;
-                            break;
-                        }
-
-                        QUIC_ADDR LocalAddress = new QUIC_ADDR();
-                        LocalAddress.WriteFrom(Buffer);
-
-                        if (!QuicAddrIsValid(LocalAddress))
-                        {
-                            Status = QUIC_STATUS_INVALID_PARAMETER;
-                            break;
-                        }
-
-                        Connection.State.LocalAddressSet = true;
-                        Connection.Paths[0].Route.LocalAddress.WriteFrom(Buffer);
-
-                        if (Connection.State.Started)
-                        {
-                            NetLog.Assert(Connection.Paths[0].Binding != null);
-                            NetLog.Assert(Connection.State.RemoteAddressSet);
-                            NetLog.Assert(Connection.Configuration != null);
-
-                            QUIC_BINDING OldBinding = Connection.Paths[0].Binding;
-                            CXPLAT_UDP_CONFIG UdpConfig = new CXPLAT_UDP_CONFIG();
-                            UdpConfig.LocalAddress = LocalAddress;
-                            UdpConfig.RemoteAddress = Connection.Paths[0].Route.RemoteAddress;
-                            UdpConfig.Flags = Connection.State.ShareBinding ? CXPLAT_SOCKET_FLAG_SHARE : 0;
-                            UdpConfig.InterfaceIndex = 0;
-                            Status = QuicLibraryGetBinding(UdpConfig, out Connection.Paths[0].Binding);
-                            if (QUIC_FAILED(Status))
-                            {
-                                Connection.Paths[0].Binding = OldBinding;
-                                break;
-                            }
-
-                            Connection.Paths[0].Route.Queue = null;
-                            QuicBindingMoveSourceConnectionIDs(OldBinding, Connection.Paths[0].Binding, Connection);
-                            QuicLibraryReleaseBinding(OldBinding);
-                            QuicBindingGetLocalAddress(Connection.Paths[0].Binding, out Connection.Paths[0].Route.LocalAddress);
-                            QuicSendSetSendFlag(Connection.Send, QUIC_CONN_SEND_FLAG_PING);
-                        }
-
-                        Status = QUIC_STATUS_SUCCESS;
-                        break;
-                    }
-
                 case QUIC_PARAM_CONN_REMOTE_ADDRESS:
                     if (QUIC_CONN_BAD_START_STATE(Connection))
                     {

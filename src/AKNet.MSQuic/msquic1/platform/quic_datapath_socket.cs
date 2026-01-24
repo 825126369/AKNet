@@ -625,10 +625,12 @@ namespace MSQuic1
         {
             NetLog.Assert(Socket != null);
 
-            //if (Config.Route.Queue == null)
-            //{
-            //    Config.Route.Queue = Socket.PerProcSockets[0];
-            //}
+            if (Config.Route.Queue == null)
+            {
+                Config.Route.Queue = Socket.PerProcSockets[0];
+                NetLog.Assert(Socket.IsClientSocket);
+            }
+
             NetLog.Assert(Config.Route.Queue != null);
 
             CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
