@@ -59,8 +59,8 @@ namespace MSQuic1
         public long RttVariance;
         public long OneWayDelay;
         public long OneWayDelayLatest;
-
-        public int Allowance;
+        
+        public long Allowance;
         public readonly byte[] Response = new byte[8];
         public readonly byte[] Challenge = new byte[8];
         public long PathValidationStartTime;
@@ -250,7 +250,7 @@ namespace MSQuic1
         }
 
         //QuicPathSetAllowance 函数负责设置或更新与某个特定网络路径（Path）相关的这个 【允许发送的字节数】。
-        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int NewAllowance)
+        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, long NewAllowance)
         {
             Path.Allowance = NewAllowance;
             bool IsBlocked = Path.Allowance < QUIC_MIN_SEND_ALLOWANCE;

@@ -648,7 +648,7 @@ namespace MSQuic1
                 Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
                 Connection.State.ExternalOwner = true;
                 Path.IsPeerValidated = true;
-                Path.Allowance = int.MaxValue;
+                Path.Allowance = uint.MaxValue;
 
                 Path.DestCid = QuicCidNewRandomDestination();
                 if (Path.DestCid == null)
