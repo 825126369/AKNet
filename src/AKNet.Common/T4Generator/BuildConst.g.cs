@@ -5,9 +5,12 @@ using System;
 
 namespace AKNet.Common
 {
-    public static class VersionPublishConfig
+    public static partial class VersionPublishConfig
     {
-        public static readonly DateTime m_BuildTime = new DateTime(2025, 12, 24, 22, 26, 12);
-        public static readonly System.Version m_Version = new System.Version(0, 0, 0);
+        static VersionPublishConfig()
+        {
+            m_BuildTime = new DateTime(2026, 1, 25, 1, 33, 16);
+            m_Version = new System.Version(0, 0, 0);
+        }
     }
 }

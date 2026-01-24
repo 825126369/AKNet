@@ -168,9 +168,9 @@ namespace MSQuic1
 
     internal class QUIC_BUFFER
     {
-        public int Offset;
-        public int Length;
-        public byte[] Buffer;
+        public int Offset = 0;
+        public int Length = 0;
+        public byte[] Buffer = null;
         
         public QUIC_BUFFER()
         {

@@ -17,9 +17,12 @@ using System;
 
 namespace AKNet.Common
 {
-    public static class VersionPublishConfig
+    public static partial class VersionPublishConfig
     {
-        public static readonly DateTime m_BuildTime = new DateTime(<#= now_Year #>, <#= now_Month #>, <#= now_Day #>, <#= now_Hour #>, <#= now_Minute #>, <#= now_Second #>);
-        public static readonly System.Version m_Version = new System.Version(0, 0, 0);
+        static VersionPublishConfig()
+        {
+            m_BuildTime = new DateTime(<#= now_Year #>, <#= now_Month #>, <#= now_Day #>, <#= now_Hour #>, <#= now_Minute #>, <#= now_Second #>);
+            m_Version = new System.Version(0, 0, 0);
+        }
     }
 }
