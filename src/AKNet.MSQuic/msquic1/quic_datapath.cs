@@ -84,15 +84,15 @@ namespace MSQuic1
     {
         public CXPLAT_SOCKET_PROC Queue;
         public CXPLAT_ROUTE_STATE State;
-        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
-        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
+        public QUIC_ADDR RemoteAddress = null;
+        public QUIC_ADDR LocalAddress = null;
 
         public void CopyFrom(CXPLAT_ROUTE other)
         {
             this.Queue = other.Queue;
-            this.RemoteAddress.CopyFrom(other.RemoteAddress);
-            this.LocalAddress.CopyFrom(other.LocalAddress);
-            State = other.State;
+            this.RemoteAddress = other.RemoteAddress;
+            this.LocalAddress = other.LocalAddress;
+            this.State = other.State;
         }
     }
 
@@ -157,7 +157,7 @@ namespace MSQuic1
         public byte[] PayloadIv = new byte[12];
     }
 
-    internal class CXPLAT_SEND_CONFIG
+    internal ref struct CXPLAT_SEND_CONFIG
     {
         public CXPLAT_ROUTE Route;
         public int MaxPacketSize;

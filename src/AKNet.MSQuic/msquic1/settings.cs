@@ -356,10 +356,6 @@ namespace MSQuic1
             {
                 Settings.HyStartEnabled = QUIC_DEFAULT_HYSTART_ENABLED;
             }
-            if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_EncryptionOffloadAllowed))
-            {
-                Settings.EncryptionOffloadAllowed = QUIC_DEFAULT_ENCRYPTION_OFFLOAD_ALLOWED;
-            }
             if (!HasFlag(Settings.IsSetFlags, E_SETTING_FLAG_ReliableResetEnabled))
             {
                 Settings.ReliableResetEnabled = QUIC_DEFAULT_RELIABLE_RESET_ENABLED;
@@ -1052,12 +1048,6 @@ namespace MSQuic1
             else if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_EcnEnabled))
             {
                 return false;
-            }
-
-            if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_EncryptionOffloadAllowed) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_EncryptionOffloadAllowed) || OverWrite))
-            {
-                Destination.EncryptionOffloadAllowed = Source.EncryptionOffloadAllowed;
-                SetFlag(ref Destination.IsSetFlags, E_SETTING_FLAG_EncryptionOffloadAllowed, true);
             }
 
             if (HasFlag(Source.IsSetFlags, E_SETTING_FLAG_ReliableResetEnabled) && (!HasFlag(Destination.IsSetFlags, E_SETTING_FLAG_ReliableResetEnabled) || OverWrite))

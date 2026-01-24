@@ -647,11 +647,6 @@ namespace MSQuic1
                 QUIC_PATH Path = Connection.Paths[0];
                 NetLog.Assert(Path.IsActive);
 
-                if (HasFlag(Connection.Settings.IsSetFlags, E_SETTING_FLAG_EncryptionOffloadAllowed))
-                {
-                    QuicPathUpdateQeo(Connection, Path, CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_ADD);
-                }
-
                 QuicMtuDiscoveryPeerValidated(Path.MtuDiscovery, Connection);
 
                 if (QuicConnIsServer(Connection) && 

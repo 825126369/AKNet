@@ -648,7 +648,7 @@ namespace MSQuic1
 
         static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
         {
-            return Addr.Family;
+            return Addr != null ? Addr.Family : AddressFamily.Unknown;
         }
 
         static bool QuicAddrIsWildCard(QUIC_ADDR Addr)

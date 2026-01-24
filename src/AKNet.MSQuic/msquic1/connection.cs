@@ -940,10 +940,6 @@ namespace MSQuic1
             QUIC_PATH Path = Connection.Paths[0];
             if (Path.Binding != null)
             {
-                if (Path.EncryptionOffloading)
-                {
-                    QuicPathUpdateQeo(Connection, Path, CXPLAT_QEO_OPERATION.CXPLAT_QEO_OPERATION_REMOVE);
-                }
                 QuicBindingRemoveConnection(Connection.Paths[0].Binding, Connection);
             }
 

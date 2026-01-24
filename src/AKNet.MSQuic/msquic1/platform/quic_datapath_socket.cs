@@ -463,6 +463,7 @@ namespace MSQuic1
             bool bIOPending = true;
             try
             {
+                IoBlock.ReceiveArgs.RemoteEndPoint = IoBlock.mEndPointEmpty;
                 bIOPending = SocketProc.Socket.ReceiveMessageFromAsync(IoBlock.ReceiveArgs);
             }
             catch (Exception e)
@@ -494,7 +495,6 @@ namespace MSQuic1
             IoBlock.Route.LocalAddress = new QUIC_ADDR();
             QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
             QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
-            IoBlock.Route.Queue = SocketProc;
 
             if (IsUnreachableErrorCode(arg.SocketError))
             {
@@ -625,10 +625,11 @@ namespace MSQuic1
         {
             NetLog.Assert(Socket != null);
 
-            if (Config.Route.Queue == null)
-            {
-                Config.Route.Queue = Socket.PerProcSockets[0];
-            }
+            //if (Config.Route.Queue == null)
+            //{
+            //    Config.Route.Queue = Socket.PerProcSockets[0];
+            //}
+            NetLog.Assert(Config.Route.Queue != null);
 
             CXPLAT_SOCKET_PROC SocketProc = Config.Route.Queue;
             CXPLAT_DATAPATH_PROC DatapathProc = SocketProc.DatapathProc;
@@ -661,6 +662,7 @@ namespace MSQuic1
             CXPLAT_POOL<DATAPATH_RX_PACKET> OwningPool = DatapathProc.RecvDatagramPool;
             DATAPATH_RX_IO_BLOCK IoBlock = OwningPool.CxPlatPoolAlloc().IoBlock;
             IoBlock.Route.State = CXPLAT_ROUTE_STATE.RouteResolved;
+            IoBlock.Route.Queue = SocketProc;
             IoBlock.OwningPool = OwningPool;
             IoBlock.ReferenceCount = 0;
             IoBlock.SocketProc = SocketProc;
