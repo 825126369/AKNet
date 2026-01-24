@@ -201,6 +201,7 @@ namespace MSQuic1
         public SocketAsyncEventArgs ReceiveArgs;
         public readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
         public long nReceiveArgsSyncCount;
+        public int nLastReceiveArgsThreadID;
 
         public void Reset()
         {
@@ -475,7 +476,41 @@ namespace MSQuic1
 
             if (!bIOPending)
             {
-                DataPathProcessCqe2(null, IoBlock.ReceiveArgs);
+                ThreadPool.UnsafeQueueUserWorkItem(static (object state) =>
+                {
+                    var args = (SocketAsyncEventArgs)state;
+                    CxPlatDataPathSocketProcessReceive(args);  // 在新线程池线程执行
+                },
+                    IoBlock.ReceiveArgs);  // .NET 9 新参数：强制全局队列，避免同线程
+
+                //if (IoBlock.nLastReceiveArgsThreadID == Thread.CurrentThread.ManagedThreadId)
+                //{
+                //    if (IoBlock.nReceiveArgsSyncCount++ > 0)
+                //    {
+                //        IoBlock.nReceiveArgsSyncCount = 0;
+                //        //// 同步完成！必须延迟处理，避免栈递归
+                //        ThreadPool.UnsafeQueueUserWorkItem(static (object state) =>
+                //        {
+                //            var args = (SocketAsyncEventArgs)state;
+                //            CxPlatDataPathSocketProcessReceive(args);  // 在新线程池线程执行
+                //        },
+                //            IoBlock.ReceiveArgs);  // .NET 9 新参数：强制全局队列，避免同线程
+                //    }
+                //    else
+                //    {
+                //        CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
+                //    }
+                //}
+                //else
+                //{
+                //    IoBlock.nLastReceiveArgsThreadID = Thread.CurrentThread.ManagedThreadId;
+                //    IoBlock.nReceiveArgsSyncCount = 0;
+                //    CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
+                //}
+            }
+            else
+            {
+                IoBlock.nReceiveArgsSyncCount = 0;
             }
             return true;
         }
@@ -688,28 +723,17 @@ namespace MSQuic1
             CxPlatSendDataFree(SendData);
         }
 
-        static async void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
+        static void CxPlatDataPathSocketProcessReceive(SocketAsyncEventArgs arg)
         {
             //NetLog.Log($"ReceiveMessageFrom BytesTransferred:  {arg.BytesTransferred}");
             //NetLogHelper.PrintByteArray($"ReceiveMessageFrom BytesTransferred", arg.Buffer.AsSpan().Slice(arg.Offset, arg.BytesTransferred));
-            NetLog.Assert(arg.BytesTransferred <= ushort.MaxValue);
 
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
-            int BytesTransferred = arg.BytesTransferred;
-            SocketError IoResult = arg.SocketError;
-
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
-            
-            if (!CxPlatDataPathUdpRecvComplete(arg) || !CxPlatDataPathStartReceiveAsync(SocketProc))
-            {
-                return;
-            }
 
-            //if (++packetCount % 100 == 0)
-            //{
-            //    Thread.Yield();  // 或 await Task.Yield() 如果 async
-            //}
+            CxPlatDataPathUdpRecvComplete(arg);
+            CxPlatDataPathStartReceiveAsync(SocketProc);
         }
 
         static void DataPathProcessCqe2(object Cqe, SocketAsyncEventArgs arg)
