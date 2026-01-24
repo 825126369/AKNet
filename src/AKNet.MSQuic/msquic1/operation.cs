@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Threading;
 

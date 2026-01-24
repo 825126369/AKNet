@@ -150,11 +150,6 @@ namespace MSQuic2
             NetLog.Assert(Handle != null);
             NetLog.Assert(Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION);
 
-            if (ErrorCode > (long)QUIC_UINT62_MAX)
-            {
-                return;
-            }
-
             if (Handle != null && Handle.Type == QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_REGISTRATION)
             {
                 QUIC_REGISTRATION Registration = (QUIC_REGISTRATION)Handle;

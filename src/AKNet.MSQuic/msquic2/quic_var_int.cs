@@ -28,23 +28,23 @@ namespace MSQuic2
             return QuicVarIntSize((ulong)Value);
         }
 
-        static QUIC_SSBuffer QuicVarIntEncode(int Value, QUIC_SSBuffer Buffer)
+        public static QUIC_SSBuffer QuicVarIntEncode(int Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
 
-        static QUIC_SSBuffer QuicVarIntEncode(uint Value, QUIC_SSBuffer Buffer)
+        public static QUIC_SSBuffer QuicVarIntEncode(uint Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static QUIC_SSBuffer QuicVarIntEncode(long Value, QUIC_SSBuffer Buffer)
+        public static QUIC_SSBuffer QuicVarIntEncode(long Value, QUIC_SSBuffer Buffer)
         {
             return QuicVarIntEncode((ulong)Value, Buffer);
         }
 
-        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref byte Value)
+        public static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref byte Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -52,7 +52,7 @@ namespace MSQuic2
             return result;
         }
 
-        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref int Value)
+        public static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -60,7 +60,7 @@ namespace MSQuic2
             return result;
         }
 
-        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref long Value)
+        public static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -68,7 +68,7 @@ namespace MSQuic2
             return result;
         }
 
-        static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref ulong value)
+        public static bool QuicVarIntDecode2(QUIC_SSBuffer Buffer, ref ulong value)
         {
             return QuicVarIntDecode(ref Buffer, ref value);
         }
@@ -81,7 +81,7 @@ namespace MSQuic2
             return result;
         }
 
-        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref int Value)
+        public static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref int Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -89,7 +89,7 @@ namespace MSQuic2
             return result;
         }
 
-        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref uint Value)
+        public static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref uint Value)
         {
             ulong value2 = Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -97,7 +97,7 @@ namespace MSQuic2
             return result;
         }
 
-        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref long Value)
+        public static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref long Value)
         {
             ulong value2 = (ulong)Value;
             bool result = QuicVarIntDecode(ref Buffer, ref value2);
@@ -105,7 +105,7 @@ namespace MSQuic2
             return result;
         }
 
-        static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
+        public static QUIC_SSBuffer QuicVarIntEncode2Bytes(ulong Value, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(Value < 0x4000);
             ushort tmp = (ushort)((0x40 << 8) | (ushort)Value);
@@ -113,9 +113,9 @@ namespace MSQuic2
             return Buffer + sizeof(ushort);
         }
 
-        static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
+        public static QUIC_SSBuffer QuicVarIntEncode(ulong Value, QUIC_SSBuffer Buffer)
         {
-            NetLog.Assert(Value <= QUIC_VAR_INT_MAX, Value);
+            CommonFunc.AssertWithException(Value <= QUIC_VAR_INT_MAX, Value);
             if (Value < 0x40) // 64
             {
                 Buffer[0] = (byte)Value;
@@ -141,7 +141,7 @@ namespace MSQuic2
             }
         }
 
-        static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref ulong Value)
+        public static bool QuicVarIntDecode(ref QUIC_SSBuffer Buffer, ref ulong Value)
         {
             if (Buffer.Length < sizeof(byte))
             {

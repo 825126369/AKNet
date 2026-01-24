@@ -114,7 +114,7 @@ namespace MSQuic1
             if (currentThread != null)
             {
                 currentThread.IdealProcessor = nProcessorId;
-                //currentThread.ProcessorAffinity = new IntPtr(1 << nProcessorId); // 二进制 0001 -> CPU 0
+                //currentThread.ProcessorAffinity = new IntPtr(1L << nProcessorId); // 二进制 0001 -> CPU 0
             }
 
             Thread.EndThreadAffinity();

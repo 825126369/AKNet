@@ -609,8 +609,6 @@ namespace MSQuic2
         public const uint QUIC_CLOSE_QUIC_STATUS = 0x00000010U; // QUIC_STATUS used for closing.
         public const uint QUIC_CLOSE_INTERNAL = QUIC_CLOSE_SEND_NOTIFICATION;
         public const uint QUIC_CLOSE_INTERNAL_SILENT = (QUIC_CLOSE_INTERNAL | QUIC_CLOSE_SILENT);
-
-        public const ulong QUIC_UINT62_MAX = ((1 << 62) - 1);
         public const int QUIC_MAX_ALPN_LENGTH = 255;
         public const int QUIC_MAX_SNI_LENGTH = 65535;
         public const int QUIC_MAX_RESUMPTION_APP_DATA_LENGTH = 1000;

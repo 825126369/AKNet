@@ -148,12 +148,6 @@ namespace MSQuic1
                 goto Error;
             }
 
-            if ((ulong)ErrorCode > QUIC_UINT62_MAX)
-            {
-                NetLog.Assert((ulong)ErrorCode <= QUIC_UINT62_MAX);
-                goto Error;
-            }
-
             NetLog.Assert(!Connection.State.Freed);
             NetLog.Assert((Connection.WorkerThreadID == CxPlatCurThreadID()) || !Connection.State.HandleClosed);
 
@@ -558,13 +552,7 @@ namespace MSQuic1
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
-
-            if ((ulong)ErrorCode > QUIC_UINT62_MAX)
-            {
-                Status = QUIC_STATUS_INVALID_PARAMETER;
-                goto Error;
-            }
-
+            
             Stream = (QUIC_STREAM)Handle;
 
             NetLog.Assert(!Stream.Flags.HandleClosed);

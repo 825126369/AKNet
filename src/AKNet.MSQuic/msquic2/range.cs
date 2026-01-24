@@ -12,7 +12,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
-
+[assembly: InternalsVisibleTo("AKNet.MSTest")]
 namespace MSQuic2
 {
     internal struct QUIC_SUBRANGE
@@ -119,36 +119,36 @@ namespace MSQuic2
     internal static partial class MSQuicFunc
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool IS_FIND_INDEX(int i)
+        public static bool IS_FIND_INDEX(int i)
         {
             return i >= 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool IS_INSERT_INDEX(int i)
+        public static bool IS_INSERT_INDEX(int i)
         {
             return (i < 0);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int FIND_INDEX_TO_INSERT_INDEX(int i)
+        public static int FIND_INDEX_TO_INSERT_INDEX(int i)
         {
             return -i - 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int INSERT_INDEX_TO_FIND_INDEX(int i)
+        public static int INSERT_INDEX_TO_FIND_INDEX(int i)
         {
             return (int)(uint)(-(i + 1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int QuicRangeSize(QUIC_RANGE Range)
+        public static int QuicRangeSize(QUIC_RANGE Range)
         {
             return Range.UsedLength;
         }
 
-        static QUIC_SUBRANGE QuicRangeGetSafe(QUIC_RANGE Range, int Index)
+        public static QUIC_SUBRANGE QuicRangeGetSafe(QUIC_RANGE Range, int Index)
         {
             return (Index >= 0 && Index < QuicRangeSize(Range) ? Range.SubRanges[Index] : QUIC_SUBRANGE.Empty);
         }
@@ -161,7 +161,7 @@ namespace MSQuic2
             Range.SubRanges = Range.PreAllocSubRanges;
         }
 
-        static void QuicRangeUninitialize(QUIC_RANGE Range)
+        public static void QuicRangeUninitialize(QUIC_RANGE Range)
         {
             if (Range.AllocLength != QUIC_RANGE_INITIAL_SUB_COUNT)
             {
@@ -170,20 +170,19 @@ namespace MSQuic2
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
+        public static QUIC_SUBRANGE QuicRangeGet(QUIC_RANGE Range, int Index)
         {
             return Range.SubRanges[Index];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetHigh(QUIC_SUBRANGE Sub)
+        public static long QuicRangeGetMax(QUIC_RANGE Range)
         {
-            return Sub.High;
+            return QuicRangeGet(Range, Range.UsedLength - 1).High;
         }
 
-        static long QuicRangeGetMax(QUIC_RANGE Range)
+        public static long QuicRangeGetMin(QUIC_RANGE Range)
         {
-            return QuicRangeGetHigh(QuicRangeGet(Range, Range.UsedLength - 1));
+            return QuicRangeGet(Range, 0).Low;
         }
 
         public static void QuicRangeReset(QUIC_RANGE Range)
@@ -191,7 +190,7 @@ namespace MSQuic2
             Range.UsedLength = 0;
         }
 
-        static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out long Value)
+        public static bool QuicRangeGetMaxSafe(QUIC_RANGE Range, out long Value)
         {
             Value = 0;
             if (Range.UsedLength > 0)
@@ -202,8 +201,20 @@ namespace MSQuic2
             return false;
         }
 
+        public static bool QuicRangeGetMinSafe(QUIC_RANGE Range, out long Value)
+        {
+            Value = 0;
+            if (Range.UsedLength > 0)
+            {
+                Value = QuicRangeGetMin(Range);
+                return true;
+            }
+            return false;
+        }
+
+
         //这里为将要插入的元素，腾出位置
-        static bool QuicRangeGrow(QUIC_RANGE Range, int NextIndex)
+        public static bool QuicRangeGrow(QUIC_RANGE Range, int NextIndex)
         {
             if (Range.AllocLength == QUIC_MAX_RANGE_ALLOC_SIZE / QUIC_SUBRANGE.sizeof_Length)
             {
@@ -249,7 +260,7 @@ namespace MSQuic2
             return true;
         }
 
-        static bool QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index, out QUIC_SUBRANGE result)
+        public static bool QuicRangeMakeSpace(QUIC_RANGE Range, ref int Index, out QUIC_SUBRANGE result)
         {
             NetLog.Assert(Index <= Range.UsedLength);
             if (Range.UsedLength == Range.AllocLength)
@@ -293,10 +304,10 @@ namespace MSQuic2
             return true;
         }
 
-        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, int Count, out bool RangeUpdated)
+        public static QUIC_SUBRANGE QuicRangeAddRange(QUIC_RANGE Range, long Low, long Count, out bool RangeUpdated)
         {
-            NetLog.Assert(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
-            NetLog.Assert(Count >= 1);
+            CommonFunc.AssertWithException(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
+            CommonFunc.AssertWithException(Count >= 1);
 
             int i;
             QUIC_SUBRANGE Sub;
@@ -383,7 +394,7 @@ namespace MSQuic2
             return Sub;
         }
 
-        static bool QuicRangeRemoveSubranges(QUIC_RANGE Range, int Index, int Count)
+        public static bool QuicRangeRemoveSubranges(QUIC_RANGE Range, int Index, int Count)
         {
             NetLog.Assert(Count > 0);
             NetLog.Assert(Index + Count <= Range.UsedLength);
@@ -420,7 +431,66 @@ namespace MSQuic2
             return false;
         }
 
-        static int QuicRangeCompare(QUIC_RANGE_SEARCH_KEY Key, QUIC_SUBRANGE Sub)
+        public static bool QuicRangeRemoveRange(QUIC_RANGE Range, long Low, long Count)
+        {
+            int i;
+            QUIC_SUBRANGE Sub = QUIC_SUBRANGE.Empty;
+            QUIC_SUBRANGE Test;
+            for (i = 0; (Test = QuicRangeGetSafe(Range, i)) != null; i++)
+            {
+                if (Test.Low < Low + Count && Test.Low + Test.Count > Low)
+                {
+                    Sub = Test;
+                    break;
+                }
+            }
+
+            if (Sub == null)
+            {
+                return true;
+            }
+
+            if (Sub.Low + Sub.Count > Low + Count && Sub.Low < Low)
+            {
+                QUIC_SUBRANGE NewSub;
+                if (!QuicRangeMakeSpace(Range, ref i, out NewSub))
+                {
+                    return false;
+                }
+                NewSub = Sub;
+                QuicRangeSet(Range, i, NewSub);
+                Sub = NewSub;
+            }
+
+            if (Sub.Low < Low)
+            {
+                Sub.Count = Low - Sub.Low;
+                QuicRangeSet(Range, i, Sub);
+                Sub = QuicRangeGetSafe(Range, ++i);
+            }
+
+            int prev = i;
+            while (Sub != null && Sub.Low >= Low && Sub.Low + Sub.Count <= Low + Count)
+            {
+                Sub = QuicRangeGetSafe(Range, ++i);
+            }
+
+            if (i > prev)
+            {
+                QuicRangeRemoveSubranges(Range, prev, i - prev);
+                Sub = QuicRangeGetSafe(Range, prev);
+            }
+
+            if (Sub != null && Sub.Low < Low + Count && Sub.Low + Sub.Count > Low + Count)
+            {
+                Sub.Count -= (Low + Count - Sub.Low);
+                Sub.Low = Low + Count;
+                QuicRangeSet(Range, i, Sub);
+            }
+            return true;
+        }
+
+        public static int QuicRangeCompare(QUIC_RANGE_SEARCH_KEY Key, QUIC_SUBRANGE Sub)
         {
             if (Key.High < Sub.Low)
             {
@@ -434,7 +504,7 @@ namespace MSQuic2
         }
 
 #if QUIC_RANGE_USE_BINARY_SEARCH
-        static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
+        public static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
             int Num = Range.UsedLength;
             int Lo = 0;
@@ -489,7 +559,7 @@ namespace MSQuic2
             return Result > 0 ? FIND_INDEX_TO_INSERT_INDEX(Mid + 1) : FIND_INDEX_TO_INSERT_INDEX(Mid);
         }
 #else
-        static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
+        public static int QuicRangeSearch(QUIC_RANGE Range, QUIC_RANGE_SEARCH_KEY Key)
         {
             int Result;
             int i;
@@ -511,6 +581,8 @@ namespace MSQuic2
 
         public static void QuicRangeSetMin(QUIC_RANGE Range, long Low)
         {
+            CommonFunc.AssertWithException(Low >= 0 && Low <= QUIC_VAR_INT_MAX);
+
             int i = 0;
             while (i < QuicRangeSize(Range))
             {
@@ -536,26 +608,26 @@ namespace MSQuic2
             }
         }
 
-        static bool QuicRangeAddValue(QUIC_RANGE Range, long Value)
+        public static bool QuicRangeAddValue(QUIC_RANGE Range, long Value)
         {
             return QuicRangeAddRange(Range, Value, 1, out _) != null;
         }
 
         //-----------------------2026-01-15 xuke 加的实用方法---------------------
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
+        public static void QuicRangeSet(QUIC_RANGE Range, int Index, QUIC_SUBRANGE t)
         {
             Range.SubRanges[Index] = t;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetLowByHigh(long High, int nCount)
+        public static long QuicRangeGetLowByHigh(long High, long nCount)
         {
             return High + 1 - nCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static long QuicRangeGetHighByLow(long Low, int nCount)
+        public static long QuicRangeGetHighByLow(long Low, long nCount)
         {
             return Low + nCount - 1;
         }
