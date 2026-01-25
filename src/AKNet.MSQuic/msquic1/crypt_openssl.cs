@@ -69,16 +69,16 @@ namespace MSQuic1
         public const int TagSize = 16;
 
         //编码和解码是一起的
-        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper)
+        public void Encrypt(byte[] Key, QUIC_SSBuffer plaintext, Span<byte> Ciper)
         {
             using (Aes aesAlg = Aes.Create())
             {
-                aesAlg.Key = Key.GetSpan().ToArray();
+                aesAlg.Key = Key;
                 aesAlg.Mode = CipherMode.ECB;         // 设置 ECB 模式
                 aesAlg.Padding = PaddingMode.None;   // 使用 PKCS7 填充
                 ICryptoTransform encryptor = aesAlg.CreateEncryptor();
                 ReadOnlySpan<byte> temp = encryptor.TransformFinalBlock(plaintext.Buffer, plaintext.Offset, plaintext.Length);
-                temp.CopyTo(Ciper.GetSpan());
+                temp.CopyTo(Ciper);
             }
         }
     }
@@ -214,7 +214,7 @@ namespace MSQuic1
             return QUIC_STATUS_SUCCESS;
         }
 
-        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer outMask)
+        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, Span<byte> outMask)
         {
             if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {

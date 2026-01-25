@@ -2356,7 +2356,7 @@ namespace MSQuic1
 
         static void QuicConnRecvDatagramBatch(QUIC_CONNECTION Connection, QUIC_PATH Path, int BatchCount, QUIC_RX_PACKET[] Packets, QUIC_SSBuffer Cipher, QUIC_RECEIVE_PROCESSING_STATE RecvState)
         {
-            QUIC_SSBuffer HpMask = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
+            Span<byte> HpMask = stackalloc byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
 
             NetLog.Assert(BatchCount > 0 && BatchCount <= QUIC_MAX_CRYPTO_BATCH_COUNT);
             QUIC_RX_PACKET Packet = Packets[0];
@@ -2427,7 +2427,7 @@ namespace MSQuic1
             }
         }
 
-        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, QUIC_SSBuffer HpMask)
+        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> HpMask)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);

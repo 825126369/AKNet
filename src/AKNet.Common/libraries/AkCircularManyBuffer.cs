@@ -52,12 +52,14 @@ namespace AKNet.Common
                 return mBufferMemory.AsSpan().Slice(nOffset, nLength);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Reset()
             {
                 this.nOffset = 0;
                 this.nLength = 0;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
                 if (bDispose) return;
