@@ -20,3 +20,13 @@
 
 1: MsQuic 线程是“黄金线程”——它负责整个 QUIC 协议栈的高效运转。任何阻塞或耗时操作都会影响所有连接的性能。
 因此，必须尽快“逃离”MsQuic 线程，把用户逻辑交给 .NET 的线程池或异步调度器来处理。
+
+# MSQuic 丢包重传设计:
+
+(1): Tracker.PacketNumbersToAck(Range): 收集接收到的包号, 发送ACK帧的时候，把这个Range编码进取
+(2): Tracker.PacketNumbersReceived(Range): 判断是否有重复包发送, 有,则丢弃该包。
+(3): Connection.DecodedAckRanges(Range): 解析对端发送的ACK帧的结果
+(4): LossDetection.SentPackets: 需要进行ACK确认的包，重传包
+(5): LossDetection.LostPackets: 超过约2个RTO时间未接收到ACK, 那么 SentPackets队列中的包移除增加到 LostPackets队列中。
+(6): Stream.SparseAckRanges(Range): 发送端收到ACK后,连接里的流中的确认的发送buffer中的 绝对偏移量。
+(7): RecvBuffer.WrittenRanges(Range):接收端 收到流数据帧后,确认的发送buffer中的 绝对偏移量
