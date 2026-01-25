@@ -10,13 +10,14 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
 namespace MSQuic1
 {
     internal delegate void CXPLAT_DATAPATH_RECEIVE_CALLBACK(CXPLAT_SOCKET Socket, object Context, CXPLAT_RECV_DATA RecvDataChain);
-    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, object Context, QUIC_ADDR RemoteAddress);
+    internal delegate void CXPLAT_DATAPATH_UNREACHABLE_CALLBACK(CXPLAT_SOCKET Socket, object Context, IPEndPoint RemoteAddress);
 
     internal class CXPLAT_UDP_DATAPATH_CALLBACKS
     {
@@ -84,8 +85,8 @@ namespace MSQuic1
     {
         public CXPLAT_SOCKET_PROC Queue;
         public CXPLAT_ROUTE_STATE State;
-        public QUIC_ADDR RemoteAddress = null;
-        public QUIC_ADDR LocalAddress = null;
+        public IPEndPoint RemoteAddress = null;
+        public IPEndPoint LocalAddress = null;
 
         public void CopyFrom(CXPLAT_ROUTE other)
         {
@@ -98,8 +99,8 @@ namespace MSQuic1
 
     internal class CXPLAT_UDP_CONFIG
     {
-        public QUIC_ADDR LocalAddress;      // optional
-        public QUIC_ADDR RemoteAddress;     // optional
+        public IPEndPoint LocalAddress;      // optional
+        public IPEndPoint RemoteAddress;     // optional
         public uint Flags;                     // CXPLAT_SOCKET_FLAG_*
         public int InterfaceIndex;            // 0 means any/all
         public int PartitionIndex;            // Client-only
@@ -149,7 +150,7 @@ namespace MSQuic1
         public uint RESERVED; // Must be set to 0. Don't read.
         public CXPLAT_QEO_CIPHER_TYPE CipherType; // CXPLAT_QEO_CIPHER_TYPE
         public ulong NextPacketNumber;
-        public QUIC_ADDR Address;
+        public IPEndPoint Address;
         public int ConnectionIdLength;
         public byte[] ConnectionId = new byte[20]; // QUIC v1 and v2 max CID size
         public byte[] PayloadKey = new byte[32];   // Length determined by CipherType
@@ -218,8 +219,8 @@ namespace MSQuic1
         public int SegmentSize; //是否分区，如果为0，则不分区
         public byte SendFlags;
         public readonly List<QUIC_Pool_BUFFER> WsaBuffers = new List<QUIC_Pool_BUFFER>();
-        public QUIC_ADDR LocalAddress;
-        public QUIC_ADDR MappedRemoteAddress;
+        public IPEndPoint LocalAddress;
+        public IPEndPoint MappedRemoteAddress;
         public SocketAsyncEventArgs Sqe = null;
 
         public CXPLAT_SEND_DATA()
@@ -494,13 +495,13 @@ namespace MSQuic1
             return Datapath.Features;
         }
 
-        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, out QUIC_ADDR Address)
+        static void CxPlatSocketGetLocalAddress(CXPLAT_SOCKET Socket, out IPEndPoint Address)
         {
             NetLog.Assert(Socket != null);
             Address = Socket.LocalAddress;
         }
 
-        static void CxPlatSocketGetRemoteAddress(CXPLAT_SOCKET Socket, out QUIC_ADDR Address)
+        static void CxPlatSocketGetRemoteAddress(CXPLAT_SOCKET Socket, out IPEndPoint Address)
         {
             NetLog.Assert(Socket != null);
             Address = Socket.RemoteAddress;

@@ -232,24 +232,6 @@ namespace MSQuic1
             QUIC_SETTINGS InternalSettings = new QUIC_SETTINGS();
             switch (Param)
             {
-                case QUIC_PARAM_CONN_REMOTE_ADDRESS:
-                    if (QUIC_CONN_BAD_START_STATE(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_STATE;
-                        break;
-                    }
-
-                    QUIC_ADDR mAddr = (QUIC_ADDR)Buffer;
-                    if (QuicAddrIsWildCard(mAddr) || QuicConnIsServer(Connection))
-                    {
-                        Status = QUIC_STATUS_INVALID_PARAMETER;
-                        break;
-                    }
-
-                    Connection.State.RemoteAddressSet = true;
-                    Connection.Paths[0].Route.RemoteAddress = mAddr;
-                    Status = QUIC_STATUS_SUCCESS;
-                    break;
                 default:
                     Status = QUIC_STATUS_INVALID_PARAMETER;
                     break;

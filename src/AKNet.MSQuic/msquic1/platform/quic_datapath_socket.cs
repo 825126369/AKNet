@@ -20,168 +20,170 @@ using System.Threading;
 namespace MSQuic1
 {
     //一律强制转为IpV6地址
-    internal class QUIC_ADDR
+    internal static class IPEndPointEx
     {
         public const int sizeof_Length = 28;
-        public string ServerName;
-        private IPEndPoint mEndPoint;
-        private byte[] mAddressCache = new byte[16];
-        long m_ScopeId = 0;
+        //public string ServerName;
+        //private IPEndPoint mEndPoint;
+        //private byte[] mAddressCache = new byte[16];
+        //private long m_ScopeId = 0;
 
-        public QUIC_ADDR()
-        {
-            mEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-            CheckFamilyError();
-        }
+        //public QUIC_ADDR()
+        //{
+        //    mEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+        //    CheckFamilyError();
+        //}
 
-        public QUIC_ADDR(IPAddress otherIp, int nPort)
-        {
-            mEndPoint = new IPEndPoint(otherIp, nPort);
-            Ip = otherIp;
-            CheckFamilyError();
-        }
+        //public QUIC_ADDR(IPAddress otherIp, int nPort)
+        //{
+        //    mEndPoint = new IPEndPoint(otherIp, nPort);
+        //    Ip = otherIp;
+        //    CheckFamilyError();
+        //}
 
-        public QUIC_ADDR(IPEndPoint mIPEndPoint)
-        {
-            mEndPoint = mIPEndPoint;
-            if (mEndPoint.AddressFamily == AddressFamily.InterNetwork)
-            {
-                mEndPoint.Address = mEndPoint.Address.MapToIPv6();
-            }
-            CheckFamilyError();
-        }
+        //public QUIC_ADDR(IPEndPoint mIPEndPoint)
+        //{
+        //    mEndPoint = mIPEndPoint;
+        //    if (mEndPoint.AddressFamily == AddressFamily.InterNetwork)
+        //    {
+        //        mEndPoint.Address = mEndPoint.Address.MapToIPv6();
+        //    }
+        //    CheckFamilyError();
+        //}
 
-        public IPEndPoint GetIPEndPoint()
-        {
-            return mEndPoint;
-        }
+        //public IPEndPoint GetIPEndPoint()
+        //{
+        //    return mEndPoint;
+        //}
 
-        public ReadOnlySpan<byte> GetAddressSpan()
-        {
-            int nLength = 0;
-            mEndPoint.Address.TryWriteBytes(mAddressCache, out nLength);
-            return mAddressCache.AsSpan().Slice(0, nLength);
-        }
+        //public ReadOnlySpan<byte> GetAddressSpan()
+        //{
+        //    int nLength = 0;
+        //    mEndPoint.Address.TryWriteBytes(mAddressCache, out nLength);
+        //    return mAddressCache.AsSpan().Slice(0, nLength);
+        //}
 
-        public int nPort
-        {
-            get
-            {
-                return mEndPoint.Port;
-            }
+        //public int nPort
+        //{
+        //    get
+        //    {
+        //        return mEndPoint.Port;
+        //    }
 
-            set
-            {
-                mEndPoint.Port = value;
-            }
-        }
+        //    set
+        //    {
+        //        mEndPoint.Port = value;
+        //    }
+        //}
 
-        //C# IPAddress 会比较 ScopeId，而 QUIC地址比较时，没有考虑这个字段，故而，不直接赋值给IPAddress
-        public long ScopeId
-        {
-            get
-            {
-                return m_ScopeId;
-            }
+        ////C# IPAddress 会比较 ScopeId，而 QUIC地址比较时，没有考虑这个字段，故而，不直接赋值给IPAddress
+        //public long ScopeId
+        //{
+        //    get
+        //    {
+        //        return m_ScopeId;
+        //    }
 
-            set
-            {
-                m_ScopeId = value;
-            }
-        }
+        //    set
+        //    {
+        //        m_ScopeId = value;
+        //    }
+        //}
 
-        public IPAddress Ip
-        {
-            get
-            {
-                return mEndPoint.Address;
-            }
+        //public IPAddress Ip
+        //{
+        //    get
+        //    {
+        //        return mEndPoint.Address;
+        //    }
 
-            set
-            {
-                IPAddress tt = value;
-                if (tt.Equals(IPAddress.Any) || tt.Equals(IPAddress.Any.MapToIPv6()))
-                {
-                    tt = IPAddress.IPv6Any;
-                }
-                else if (tt.AddressFamily == AddressFamily.InterNetwork)
-                {
-                    tt = tt.MapToIPv6();
-                }
-                mEndPoint.Address = tt;
-                CheckFamilyError();
-            }
-        }
+        //    set
+        //    {
+        //        IPAddress tt = value;
+        //        if (tt.Equals(IPAddress.Any) || tt.Equals(IPAddress.Any.MapToIPv6()))
+        //        {
+        //            tt = IPAddress.IPv6Any;
+        //        }
+        //        else if (tt.AddressFamily == AddressFamily.InterNetwork)
+        //        {
+        //            tt = tt.MapToIPv6();
+        //        }
+        //        mEndPoint.Address = tt;
+        //        CheckFamilyError();
+        //    }
+        //}
 
-        public AddressFamily Family
-        {
-            get
-            {
-                CheckFamilyError();
-                return mEndPoint.AddressFamily;
-            }
-        }
+        //public AddressFamily Family
+        //{
+        //    get
+        //    {
+        //        CheckFamilyError();
+        //        return mEndPoint.AddressFamily;
+        //    }
+        //}
 
-        public void CopyFrom(QUIC_ADDR other)
-        {
-            this.WriteFrom(other.ToSSBuffer().GetSpan());
-        }
+        //public void CopyFrom(QUIC_ADDR other)
+        //{
+        //    this.WriteFrom(other.ToSSBuffer().GetSpan());
+        //}
 
-        public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)
-        {
-            QUIC_ADDR mm = new QUIC_ADDR();
-            mm.WriteFrom(ssBuffer);
-            return mm;
-        }
+        //public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)
+        //{
+        //    QUIC_ADDR mm = new QUIC_ADDR();
+        //    mm.WriteFrom(ssBuffer);
+        //    return mm;
+        //}
 
-        public int WriteTo(Span<byte> Buffer)
+        public static int WriteToBuffer(IPEndPoint mEndPoint, Span<byte> Buffer)
         {
             SocketAddress m = mEndPoint.Serialize();
-            for(int i = 0; i< m.Size; i++)
+            for (int i = 0; i < m.Size; i++)
             {
                 Buffer[i] = m[i];
             }
             return m.Size;
         }
 
-        public void WriteFrom(ReadOnlySpan<byte> Buffer)
+        public static IPEndPoint CreateFromBuffer(ReadOnlySpan<byte> Buffer)
         {
             SocketAddress m = new SocketAddress(AddressFamily.InterNetworkV6, sizeof_Length);
             for (int i = 0; i < m.Size; i++)
             {
                 m[i] = Buffer[i];
             }
+
+            IPEndPoint mEndPoint = null;
             mEndPoint = (IPEndPoint)mEndPoint.Create(m);
-            CheckFamilyError();
+            return mEndPoint;
         }
 
-        public QUIC_SSBuffer ToSSBuffer()
-        {
-            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[sizeof_Length]);
-            int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
-            qUIC_SSBuffer.Length = nLength;
-            return qUIC_SSBuffer;
-        }
+        //        public QUIC_SSBuffer ToSSBuffer()
+        //        {
+        //            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[sizeof_Length]);
+        //            int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
+        //            qUIC_SSBuffer.Length = nLength;
+        //            return qUIC_SSBuffer;
+        //        }
 
-        public void Reset()
-        {
-            mEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-            ServerName = string.Empty;
-            CheckFamilyError();
-        }
-        
-        public override string ToString()
-        {
-            return mEndPoint.ToString();
-        }
+        //        public void Reset()
+        //        {
+        //            mEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+        //            ServerName = string.Empty;
+        //            CheckFamilyError();
+        //        }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CheckFamilyError()
-        {
-#if DEBUG
-            NetLog.Assert(mEndPoint.AddressFamily == AddressFamily.InterNetworkV6);
-#endif
-        }
+        //        public override string ToString()
+        //        {
+        //            return mEndPoint.ToString();
+        //        }
+
+        //        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //        private void CheckFamilyError()
+        //        {
+        //#if DEBUG
+        //            NetLog.Assert(mEndPoint.AddressFamily == AddressFamily.InterNetworkV6);
+        //#endif
+        //        }
     }
 
     internal class INET_PORT_RANGE
@@ -404,7 +406,7 @@ namespace MSQuic1
                 {
                     try
                     {
-                        IPEndPoint bindPoint = Socket.LocalAddress.GetIPEndPoint();
+                        IPEndPoint bindPoint = Socket.LocalAddress;
                         SocketProc.Socket.Bind(bindPoint);
                     }
                     catch (Exception e)
@@ -420,7 +422,7 @@ namespace MSQuic1
 
                     try
                     {
-                        SocketProc.Socket.Connect(MappedRemoteAddress.GetIPEndPoint());
+                        SocketProc.Socket.Connect(MappedRemoteAddress);
                     }
                     catch (Exception e)
                     {
@@ -433,10 +435,10 @@ namespace MSQuic1
                 if (i == 0)
                 {
                     //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
-                    Socket.LocalAddress = new QUIC_ADDR(SocketProc.Socket.LocalEndPoint as IPEndPoint);
-                    if (Config.LocalAddress != null && Config.LocalAddress.nPort != 0)
+                    Socket.LocalAddress = SocketProc.Socket.LocalEndPoint as IPEndPoint;
+                    if (Config.LocalAddress != null && Config.LocalAddress.Port != 0)
                     {
-                        NetLog.Assert(Config.LocalAddress.nPort == Socket.LocalAddress.nPort);
+                        NetLog.Assert(Config.LocalAddress.Port == Socket.LocalAddress.Port);
                     }
                 }
             }
@@ -526,10 +528,9 @@ namespace MSQuic1
                 return false;
             }
 
-            IoBlock.Route.RemoteAddress = new QUIC_ADDR(arg.RemoteEndPoint as IPEndPoint);
-            IoBlock.Route.LocalAddress = new QUIC_ADDR();
-            QUIC_ADDR LocalAddr = IoBlock.Route.LocalAddress;
-            QUIC_ADDR RemoteAddr = IoBlock.Route.RemoteAddress;
+            IoBlock.Route.RemoteAddress = arg.RemoteEndPoint as IPEndPoint;
+            IoBlock.Route.LocalAddress = null;
+            IPEndPoint RemoteAddr = IoBlock.Route.RemoteAddress;
 
             if (IsUnreachableErrorCode(arg.SocketError))
             {
@@ -554,12 +555,8 @@ namespace MSQuic1
                 if (mIPPacketInformation != null)
                 {
                     IPAddress Ip = mIPPacketInformation.Address;
-                    LocalAddr.Ip = Ip;
-                    LocalAddr.nPort = SocketProc.Parent.LocalAddress.nPort;
-                    LocalAddr.ScopeId = mIPPacketInformation.Interface;
-
+                    IoBlock.Route.LocalAddress = new IPEndPoint(Ip, SocketProc.Parent.LocalAddress.Port);
                     FoundLocalAddr = true;
-
                     int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService);
                     TOS = (byte)TypeOfService;
                 }
@@ -624,7 +621,7 @@ namespace MSQuic1
                 ErrorCode == SocketError.ConnectionReset; //10054
         }
 
-        static int CxPlatSocketSendInline(QUIC_ADDR LocalAddress, CXPLAT_SEND_DATA SendData)
+        static int CxPlatSocketSendInline(IPEndPoint LocalAddress, CXPLAT_SEND_DATA SendData)
         {
             //NetLog.Log($"SendData.WsaBuffers.Count: {SendData.WsaBuffers.Count} {mList[0].Count}");
             //NetLog.Log($"SendToAsync Length:  {arg.BufferList[0].Count}， {arg.RemoteEndPoint}");
@@ -637,7 +634,7 @@ namespace MSQuic1
                 mList.Add(new ArraySegment<byte>(v.Buffer, 0, v.Length));
             }
 
-            SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress.GetIPEndPoint();
+            SendData.Sqe.RemoteEndPoint = SendData.MappedRemoteAddress;
             SendData.Sqe.BufferList = mList;
 
             try

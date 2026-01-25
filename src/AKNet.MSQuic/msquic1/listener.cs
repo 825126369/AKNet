@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -29,7 +30,7 @@ namespace MSQuic1
         public readonly CXPLAT_LIST_ENTRY RegistrationLink;
         public long RefCount;
         public EventWaitHandle StopEvent;
-        public readonly QUIC_ADDR LocalAddress = new QUIC_ADDR();
+        public IPEndPoint LocalAddress = null;
         public QUIC_LISTENER_CALLBACK ClientCallbackHandler;
         public ulong TotalAcceptedConnections;
         public ulong TotalRejectedConnections;
@@ -165,7 +166,7 @@ namespace MSQuic1
             }
         }
 
-        public static int MsQuicListenerStart(QUIC_LISTENER Listener, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, QUIC_ADDR LocalAddress)
+        public static int MsQuicListenerStart(QUIC_LISTENER Listener, QUIC_BUFFER[] AlpnBuffers, int AlpnBufferCount, IPEndPoint LocalAddress)
         {
             int Status;
             if (LocalAddress != null && !QuicAddrIsValid(LocalAddress))
@@ -219,13 +220,13 @@ namespace MSQuic1
             bool PortUnspecified = false;
             if (LocalAddress != null)
             {
-                Listener.LocalAddress.nPort = LocalAddress.nPort; //这里特殊处理，我默认就用 IPV6.Any
+                Listener.LocalAddress = LocalAddress; //这里特殊处理，我默认就用 IPV6.Any
                 Listener.WildCard = QuicAddrIsWildCard(Listener.LocalAddress);
                 PortUnspecified = QuicAddrGetPort(Listener.LocalAddress) == 0;
             }
             else
             {
-                Listener.LocalAddress.Reset();
+                Listener.LocalAddress = null;
                 Listener.WildCard = true;
                 PortUnspecified = true;
             }

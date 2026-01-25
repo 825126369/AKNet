@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
@@ -99,14 +100,14 @@ namespace MSQuic1
             }
         }
 
-        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, QUIC_ADDR Addr, out uint Key, out int Offset)
+        static void CxPlatToeplitzHashComputeAddr(CXPLAT_TOEPLITZ_HASH Toeplitz, IPEndPoint Addr, out uint Key, out int Offset)
         {
-            NetLog.Assert(Addr.Family == AddressFamily.InterNetworkV6);
+            NetLog.Assert(Addr.AddressFamily == AddressFamily.InterNetworkV6);
 
             Key = 0;
             Offset = 0;
-            ReadOnlySpan<byte> IpBytes = Addr.GetAddressSpan();
-            ushort nPort = (ushort)Addr.nPort;
+            ReadOnlySpan<byte> IpBytes = Addr.Address.GetAddressBytes();
+            ushort nPort = (ushort)Addr.Port;
             ReadOnlySpan<byte> nPortBytes = MemoryMarshal.Cast<ushort, byte>(MemoryMarshal.CreateSpan<ushort>(ref nPort, 1));
             Key ^= CxPlatToeplitzHashCompute(Toeplitz, 0, nPortBytes);
             Key ^= CxPlatToeplitzHashCompute(Toeplitz, 2, IpBytes);

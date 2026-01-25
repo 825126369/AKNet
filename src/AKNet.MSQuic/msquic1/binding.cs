@@ -10,6 +10,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -30,7 +31,7 @@ namespace MSQuic1
         public readonly QUIC_LOOKUP Lookup = new QUIC_LOOKUP();
 
         public readonly object StatelessOperLock = new object();
-        public readonly Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT> StatelessOperTable = new Dictionary<QUIC_ADDR, QUIC_STATELESS_CONTEXT>(128);
+        public readonly Dictionary<IPEndPoint, QUIC_STATELESS_CONTEXT> StatelessOperTable = new Dictionary<IPEndPoint, QUIC_STATELESS_CONTEXT>(128);
         public readonly CXPLAT_LIST_ENTRY StatelessOperList = new CXPLAT_LIST_ENTRY<QUIC_STATELESS_CONTEXT>(null);
         public uint StatelessOperCount;
         public Stats_DATA Stats;
@@ -223,41 +224,23 @@ namespace MSQuic1
 
         public class Encrypted_DATA
         {
-            public const int sizeof_Length = MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + QUIC_ADDR.sizeof_Length;
+            public const int sizeof_Length = MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1 + IPEndPointEx.sizeof_Length;
             private readonly byte[] bindBuffer = new byte[sizeof_Length];
-
-            private QUIC_ADDR m_RemoteAddress;
+            public IPEndPoint RemoteAddress;
             public readonly QUIC_BUFFER OrigConnId = new QUIC_BUFFER(MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1);
-
-            public QUIC_ADDR RemoteAddress
-            {
-                get
-                {
-                    if (m_RemoteAddress == null)
-                    {
-                        m_RemoteAddress = new QUIC_ADDR();
-                    }
-                    return m_RemoteAddress;
-                }
-
-                set
-                {
-                    m_RemoteAddress = value;
-                }
-            }
 
             public void WriteFrom(QUIC_SSBuffer mBuffer)
             {
                 ulong TT = EndianBitConverter.ToUInt64(mBuffer.GetSpan());
-                RemoteAddress.WriteFrom(mBuffer.GetSpan());
-                mBuffer.Slice(QUIC_ADDR.sizeof_Length, MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1).CopyTo(OrigConnId);
+                RemoteAddress = IPEndPointEx.CreateFromBuffer(mBuffer.GetSpan());
+                mBuffer.Slice(IPEndPointEx.sizeof_Length, MSQuicFunc.QUIC_MAX_CONNECTION_ID_LENGTH_V1).CopyTo(OrigConnId);
             }
 
             public QUIC_SSBuffer GetBuffer()
             {
                 QUIC_SSBuffer mBuffer = bindBuffer;
-                RemoteAddress.ToSSBuffer().CopyTo(mBuffer);
-                OrigConnId.CopyTo(mBuffer.Slice(QUIC_ADDR.sizeof_Length));
+                IPEndPointEx.WriteToBuffer(RemoteAddress, mBuffer.GetSpan());
+                OrigConnId.CopyTo(mBuffer.Slice(IPEndPointEx.sizeof_Length));
                 return mBuffer;
             }
         }
@@ -503,7 +486,7 @@ namespace MSQuic1
             QuicPerfCounterIncrement(Partition,  QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_RECV_EVENTS);
         }
 
-        static void QuicBindingUnreachable(CXPLAT_SOCKET Socket, object Context, QUIC_ADDR RemoteAddress)
+        static void QuicBindingUnreachable(CXPLAT_SOCKET Socket, object Context, IPEndPoint RemoteAddress)
         {
             NetLog.Assert(Context != null);
             NetLog.Assert(RemoteAddress != null);
@@ -727,8 +710,7 @@ namespace MSQuic1
 
             QUIC_CID mNewCID = new QUIC_CID(Packet.SourceCid.Data.Length);
             Packet.SourceCid.Data.CopyTo(mNewCID.Data);
-            mNewCID.RemoteAddress = new QUIC_ADDR();
-            mNewCID.RemoteAddress.CopyFrom(Packet.SourceCid.RemoteAddress);
+            mNewCID.RemoteAddress = Packet.SourceCid.RemoteAddress;
             
             if (!QuicLookupAddRemoteHash(
                     Binding.Lookup,
@@ -850,8 +832,8 @@ namespace MSQuic1
         static QUIC_STATELESS_CONTEXT QuicBindingCreateStatelessOperation(QUIC_BINDING Binding, QUIC_WORKER Worker, QUIC_RX_PACKET Packet)
         {
             long TimeMs = CxPlatTimeUs();
-            QUIC_ADDR RemoteAddress = Packet.Route.RemoteAddress;
-            uint Hash = QuicAddrHash(RemoteAddress);
+            IPEndPoint RemoteAddress = Packet.Route.RemoteAddress;
+            int Hash = QuicAddrHash(RemoteAddress);
             QUIC_STATELESS_CONTEXT StatelessCtx = null;
 
             CxPlatDispatchLockAcquire(Binding.StatelessOperLock);
@@ -981,7 +963,7 @@ namespace MSQuic1
         {
             QUIC_LISTENER Listener = null;
 
-            QUIC_ADDR Addr = Info.LocalAddress;
+            IPEndPoint Addr = Info.LocalAddress;
             AddressFamily Family = QuicAddrGetFamily(Addr);
             bool FailedAlpnMatch = false;
             bool FailedAddrMatch = true;
@@ -990,7 +972,7 @@ namespace MSQuic1
             for (CXPLAT_LIST_ENTRY Link = Binding.Listeners.Next; Link != Binding.Listeners; Link = Link.Next)
             {
                 QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
-                QUIC_ADDR ExistingAddr = ExistingListener.LocalAddress;
+                IPEndPoint ExistingAddr = ExistingListener.LocalAddress;
                 bool ExistingWildCard = ExistingListener.WildCard;
                 AddressFamily ExistingFamily = QuicAddrGetFamily(ExistingAddr);
                 FailedAlpnMatch = false;
@@ -1321,7 +1303,7 @@ namespace MSQuic1
             int Status = QUIC_STATUS_SUCCESS;
             bool MaximizeLookup = false;
 
-            QUIC_ADDR NewAddr = NewListener.LocalAddress;
+            IPEndPoint NewAddr = NewListener.LocalAddress;
             bool NewWildCard = NewListener.WildCard;
             AddressFamily NewFamily = QuicAddrGetFamily(NewAddr);
 
@@ -1331,7 +1313,7 @@ namespace MSQuic1
             for (Link = Binding.Listeners.Next; Link != Binding.Listeners; Link = Link.Next)
             {
                 QUIC_LISTENER ExistingListener = CXPLAT_CONTAINING_RECORD<QUIC_LISTENER>(Link);
-                QUIC_ADDR ExistingAddr = ExistingListener.LocalAddress;
+                IPEndPoint ExistingAddr = ExistingListener.LocalAddress;
                 bool ExistingWildCard = ExistingListener.WildCard;
                 AddressFamily ExistingFamily = QuicAddrGetFamily(ExistingAddr);
 
@@ -1385,12 +1367,12 @@ namespace MSQuic1
             return Status;
         }
 
-        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, out QUIC_ADDR Address)
+        static void QuicBindingGetLocalAddress(QUIC_BINDING Binding, out IPEndPoint Address)
         {
             CxPlatSocketGetLocalAddress(Binding.Socket, out Address);
         }
 
-        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, out QUIC_ADDR Address)
+        static void QuicBindingGetRemoteAddress(QUIC_BINDING Binding, out IPEndPoint Address)
         {
             CxPlatSocketGetRemoteAddress(Binding.Socket, out Address);
         }

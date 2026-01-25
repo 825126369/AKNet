@@ -1,6 +1,7 @@
 ﻿using AKNet.Common;
 using AKNet.Extentions.Protobuf;
 using System.Diagnostics;
+using System.Net;
 using TestCommon;
 using TestProtocol;
 
@@ -63,7 +64,7 @@ namespace TestNetClient
                 QuicClientMainBase mNetClient = Create();
                 mClientList.Add(mNetClient);
                 mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveChatMessage);
-                mNetClient.ConnectServer("127.0.0.1", 6000);
+                mNetClient.ConnectServer(IPAddress.Parse("127.0.0.1").MapToIPv6().ToString(), 6000);
                 mNetClient.SetName("C" + i);
                 mNetClient.SetID((uint)i);
 

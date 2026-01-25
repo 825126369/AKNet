@@ -7,7 +7,6 @@
 *        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
 using AKNet.Platform;
 using System;
 using System.Diagnostics;
@@ -17,7 +16,7 @@ namespace MSQuic1
 {
     internal static partial class MSQuicFunc
     {
-        readonly static Stopwatch mStopwatch = Stopwatch.StartNew();
+        static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static long CxPlatTimeDiff(long T1, long T2)

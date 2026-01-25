@@ -600,8 +600,8 @@ namespace MSQuic1
                 if (MsQuicLib.Settings.LoadBalancingMode == QUIC_LOAD_BALANCING_MODE.QUIC_LOAD_BALANCING_SERVER_ID_IP)
                 {
                     Connection.ServerID[0] = CxPlatRandom.RandomByte();
-                    ReadOnlySpan<byte> IP_Array = Packet.Route.LocalAddress.GetAddressSpan();
-                    if (Packet.Route.LocalAddress.Family == AddressFamily.InterNetwork)
+                    ReadOnlySpan<byte> IP_Array = Packet.Route.LocalAddress.Address.GetAddressBytes();
+                    if (Packet.Route.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
                     {
                         IP_Array.CopyTo(Connection.ServerID.AsSpan().Slice(1, 4));
                     }
@@ -966,7 +966,7 @@ namespace MSQuic1
             }
         }
 
-        static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
+        static void QuicConnQueueUnreachable(QUIC_CONNECTION Connection, IPEndPoint RemoteAddress)
         {
             if (Connection.Crypto.TlsState.ReadKey > QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
             {
@@ -1389,10 +1389,7 @@ namespace MSQuic1
                     Status = QuicConnStart(
                             Connection,
                             ApiCtx.CONN_START.Configuration,
-                            ApiCtx.CONN_START.Family,
-                            ApiCtx.CONN_START.ServerName,
-                            ApiCtx.CONN_START.ServerPort);
-                    ApiCtx.CONN_START.ServerName = null;
+                            ApiCtx.CONN_START.mIPEndPoint);
                     break;
 
                 case QUIC_API_TYPE.QUIC_API_TYPE_CONN_SET_CONFIGURATION:
@@ -1474,9 +1471,10 @@ namespace MSQuic1
             }
         }
 
-        static int QuicConnStart(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration, AddressFamily Family, string ServerName, int ServerPort)
+        static int QuicConnStart(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration, IPEndPoint mIPEndPoint)
         {
             int Status;
+            Connection.Paths[0].Route.RemoteAddress = mIPEndPoint;
             QUIC_PATH Path = Connection.Paths[0];
             NetLog.Assert(QuicConnIsClient(Connection));
 
@@ -1501,10 +1499,8 @@ namespace MSQuic1
 
             NetLog.Assert(Path.Binding == null);
             QuicConnApplyNewSettings(Connection, false, Configuration.Settings);
-
             if (!Connection.State.RemoteAddressSet)
             {
-                NetLog.Assert(ServerName != null);
                 Connection.State.RemoteAddressSet = true;
             }
 
@@ -1518,7 +1514,7 @@ namespace MSQuic1
             UdpConfig.LocalAddress = Connection.State.LocalAddressSet ? Path.Route.LocalAddress : null;
             UdpConfig.RemoteAddress = Path.Route.RemoteAddress;
             UdpConfig.Flags = Connection.State.ShareBinding ? CXPLAT_SOCKET_FLAG_SHARE : 0;
-            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.ScopeId : 0;
+            UdpConfig.InterfaceIndex = Connection.State.LocalInterfaceSet ? (int)Path.Route.LocalAddress.Address.ScopeId : 0;
             UdpConfig.PartitionIndex = QuicPartitionIdGetIndex(Connection.PartitionID);
             Status = QuicLibraryGetBinding(UdpConfig, out Path.Binding);
 
@@ -1556,7 +1552,7 @@ namespace MSQuic1
 
             Connection.State.LocalAddressSet = true;
             QuicBindingGetLocalAddress(Path.Binding, out Path.Route.LocalAddress);
-            Connection.RemoteServerName = ServerName;
+            Connection.RemoteServerName = mIPEndPoint.ToString();
 
             Status = QuicCryptoInitialize(Connection.Crypto);
             if (QUIC_FAILED(Status))
@@ -4635,7 +4631,7 @@ namespace MSQuic1
             QuicPerfCounterDecrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_ACTIVE);
         }
 
-        static void QuicConnProcessUdpUnreachable(QUIC_CONNECTION Connection, QUIC_ADDR RemoteAddress)
+        static void QuicConnProcessUdpUnreachable(QUIC_CONNECTION Connection, IPEndPoint RemoteAddress)
         {
             if (Connection.Crypto.TlsState.ReadKey > QUIC_PACKET_KEY_TYPE.QUIC_PACKET_KEY_INITIAL)
             {

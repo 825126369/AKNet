@@ -70,7 +70,8 @@ namespace AKNet.MSQuic.Common
             {
                 mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes(v)));
             }
-            QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
+
+            IPEndPoint address = options.ListenEndPoint;
 
 #if USE_MSQUIC_2
             if(options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))

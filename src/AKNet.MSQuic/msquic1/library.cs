@@ -10,6 +10,7 @@
 using AKNet.Common;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 
 namespace MSQuic1
@@ -392,18 +393,18 @@ namespace MSQuic1
             QuicLibraryEvaluateSendRetryState();
         }
 
-        static QUIC_BINDING QuicLibraryLookupBinding(QUIC_ADDR LocalAddress, QUIC_ADDR RemoteAddress)
+        static QUIC_BINDING QuicLibraryLookupBinding(IPEndPoint LocalAddress, IPEndPoint RemoteAddress)
         {
             for (CXPLAT_LIST_ENTRY Link = MsQuicLib.Bindings.Next; Link != MsQuicLib.Bindings; Link = Link.Next)
             {
                 QUIC_BINDING Binding = CXPLAT_CONTAINING_RECORD<QUIC_BINDING>(Link);
-                QUIC_ADDR BindingLocalAddr = null;
+                IPEndPoint BindingLocalAddr = null;
                 QuicBindingGetLocalAddress(Binding, out BindingLocalAddr);
                 if (Binding.Connected)
                 {
                     if (RemoteAddress != null && QuicAddrCompare(LocalAddress, BindingLocalAddr))
                     {
-                        QUIC_ADDR BindingRemoteAddr = null;
+                        IPEndPoint BindingRemoteAddr = null;
                         QuicBindingGetRemoteAddress(Binding, out BindingRemoteAddr);
                         if (QuicAddrCompare(RemoteAddress, BindingRemoteAddr))
                         {
@@ -427,7 +428,7 @@ namespace MSQuic1
             int Status;
             NewBinding = null;
             QUIC_BINDING Binding;
-            QUIC_ADDR NewLocalAddress = new QUIC_ADDR();
+            IPEndPoint NewLocalAddress = null;
             bool PortUnspecified = UdpConfig.LocalAddress == null || QuicAddrGetPort(UdpConfig.LocalAddress) == 0;
             bool ShareBinding = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_FLAG_SHARE);
             bool ServerOwned = BoolOk(UdpConfig.Flags & CXPLAT_SOCKET_SERVER_OWNED);

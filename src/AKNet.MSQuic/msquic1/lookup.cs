@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 
 namespace MSQuic1
@@ -93,7 +94,7 @@ namespace MSQuic1
             return null;
         }
 
-        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteAddr(QUIC_LOOKUP Lookup, QUIC_ADDR RemoteAddress)
+        static QUIC_CONNECTION QuicLookupFindConnectionByRemoteAddr(QUIC_LOOKUP Lookup, IPEndPoint RemoteAddress)
         {
             QUIC_CONNECTION ExistingConnection = null;
             Lookup.RwLock.EnterReadLock();

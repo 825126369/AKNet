@@ -18,9 +18,6 @@ using System.Threading.Tasks;
 using System;
 using System.Threading;
 
-
-
-
 #if USE_MSQUIC_2
 using MSQuic2;
 #else
@@ -76,7 +73,7 @@ namespace AKNet.MSQuic.Common
         {
             this.mOption = mOption;
             this._handle = handle;
-            this.RemoteEndPoint = info.RemoteAddress.GetIPEndPoint();
+            this.RemoteEndPoint = info.RemoteAddress;
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_CONNECTION(handle, NativeCallback, this);
         }
 
@@ -106,8 +103,6 @@ namespace AKNet.MSQuic.Common
             }
             
             IPEndPoint m = new IPEndPoint(address, port);
-            QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
-            MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
             this._sslConnectionOptions = new SslConnectionOptions(
                 this,
                 isClient: true,
@@ -118,6 +113,10 @@ namespace AKNet.MSQuic.Common
                 null);
 
             _configuration = ClientConfig.Create(true);
+
+#if USE_MSQUIC_2
+            QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
+            MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
             string sni = mOption.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString();
             remoteQuicAddress.ServerName = sni;
 
@@ -125,7 +124,12 @@ namespace AKNet.MSQuic.Common
             {
                 NetLog.LogError("ConnectionStart failed");
             }
-
+#else
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicConnectionStart(_handle, _configuration, m)))
+            {
+                NetLog.LogError("ConnectionStart failed");
+            }
+#endif
             await FinishHandshakeAsync();
         }
 

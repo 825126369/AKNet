@@ -43,11 +43,13 @@ namespace AKNet.MSQuic.Common
             return false;
         }
 
+#if USE_MSQUIC_2
         public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
         {
             QUIC_ADDR result = new QUIC_ADDR(ipEndPoint);
             return result;
         }
+#endif
 
         internal static T GetMsQuicParameter<T>(QUIC_HANDLE handle, uint parameter)
         {

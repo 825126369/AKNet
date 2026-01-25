@@ -11,6 +11,7 @@ using AKNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net;
 using System.Text;
 
 namespace MSQuic1
@@ -31,7 +32,7 @@ namespace MSQuic1
         public readonly byte[] ResetToken = new byte[MSQuicFunc.QUIC_STATELESS_RESET_TOKEN_LENGTH];
         public readonly CXPLAT_LIST_ENTRY Link;
         public QUIC_CONNECTION Connection;
-        public QUIC_ADDR RemoteAddress;
+        public IPEndPoint RemoteAddress;
         public int Hash;
 
         private QUIC_BUFFER m_Data;
@@ -58,7 +59,7 @@ namespace MSQuic1
             Link = new CXPLAT_LIST_ENTRY<QUIC_CID>(this);
         }
 
-        public QUIC_CID(QUIC_SSBuffer Buffer, QUIC_ADDR Address = null)
+        public QUIC_CID(QUIC_SSBuffer Buffer, IPEndPoint Address = null)
         {
             this.Data.SetData(Buffer);
             this.RemoteAddress = Address;
@@ -147,7 +148,7 @@ namespace MSQuic1
             return MSQuicFunc.QuicPacketHash(obj.RemoteAddress, obj.Data);
         }
 
-        public static int GetHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer CidData)
+        public static int GetHash(IPEndPoint RemoteAddress, QUIC_SSBuffer CidData)
         {
             return MSQuicFunc.QuicPacketHash(RemoteAddress, CidData);
         }

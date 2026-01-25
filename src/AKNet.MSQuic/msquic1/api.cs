@@ -8,6 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -175,19 +176,19 @@ namespace MSQuic1
             return;
         }
 
-        public static int MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, QUIC_ADDR ServerAddr)
+        public static int MsQuicConnectionStart(QUIC_CONNECTION Handle, QUIC_CONFIGURATION ConfigHandle, IPEndPoint ServerAddr)
         {
             int Status;
             QUIC_CONNECTION Connection;
             QUIC_CONFIGURATION Configuration;
 
-            if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION || ServerAddr.nPort == 0)
+            if (ConfigHandle == null || ConfigHandle.Type != QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONFIGURATION || ServerAddr.Port == 0)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
             }
 
-            if (ServerAddr.Family != AddressFamily.InterNetwork && ServerAddr.Family != AddressFamily.InterNetworkV6)
+            if (ServerAddr.AddressFamily != AddressFamily.InterNetwork && ServerAddr.AddressFamily != AddressFamily.InterNetworkV6)
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -195,7 +196,7 @@ namespace MSQuic1
 
             Connection = (QUIC_CONNECTION)Handle;
             NetLog.Assert(!Connection.State.Freed);
-            if (QuicConnIsServer(Connection) || (Connection.State.RemoteAddressSet == false && ServerAddr.ServerName == null))
+            if (QuicConnIsServer(Connection)) //服务器生成的连接，不走这个方法
             {
                 Status = QUIC_STATUS_INVALID_PARAMETER;
                 goto Error;
@@ -208,19 +209,9 @@ namespace MSQuic1
             }
 
             Configuration = ConfigHandle;
-            if (ServerAddr.ServerName != null)
-            {
-                int ServerNameLength = ServerAddr.ServerName.Length;
-                if (ServerNameLength == QUIC_MAX_SNI_LENGTH + 1)
-                {
-                    Status = QUIC_STATUS_INVALID_PARAMETER;
-                    goto Error;
-                }
-            }
-
             NetLog.Assert(!Connection.State.HandleClosed);
             NetLog.Assert(QuicConnIsClient(Connection));
-             
+            
             //发送开始连接指令
             QUIC_OPERATION Oper = QuicOperationAlloc(Connection.Partition, QUIC_OPERATION_TYPE.QUIC_OPER_TYPE_API_CALL);
             if (Oper == null)
@@ -232,9 +223,7 @@ namespace MSQuic1
             QuicConfigurationAddRef(Configuration);
             Oper.API_CALL.Context.Type = QUIC_API_TYPE.QUIC_API_TYPE_CONN_START;
             Oper.API_CALL.Context.CONN_START.Configuration = Configuration;
-            Oper.API_CALL.Context.CONN_START.ServerName = ServerAddr.ServerName;
-            Oper.API_CALL.Context.CONN_START.ServerPort = (ushort)ServerAddr.nPort;
-            Oper.API_CALL.Context.CONN_START.Family = ServerAddr.Family;
+            Oper.API_CALL.Context.CONN_START.mIPEndPoint = ServerAddr;
             QuicConnQueueOper(Connection, Oper);
             Status = QUIC_STATUS_PENDING;
 

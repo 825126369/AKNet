@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net;
 using System.Threading;
 
 namespace MSQuic1
@@ -511,7 +512,7 @@ namespace MSQuic1
             NetLog.LogWarning(Reason);
         }
 
-        public static int QuicPacketHash(QUIC_ADDR RemoteAddress, QUIC_SSBuffer RemoteCid)
+        public static int QuicPacketHash(IPEndPoint RemoteAddress, QUIC_SSBuffer RemoteCid)
         {
             uint Key = 0;
             int Offset = 0;

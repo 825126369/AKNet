@@ -9,6 +9,7 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -86,7 +87,7 @@ namespace MSQuic1
 
         public QUIC_BINDING Binding;
         public QUIC_WORKER Worker;
-        public QUIC_ADDR RemoteAddress;
+        public IPEndPoint RemoteAddress;
         public QUIC_RX_PACKET Packet;
         public long CreationTimeMs;
         public bool HasBindingRef;
@@ -196,9 +197,10 @@ namespace MSQuic1
                 
             }
         }
+
         public struct UNREACHABLE_DATA
         {
-            public QUIC_ADDR RemoteAddress;
+            public IPEndPoint RemoteAddress;
 
             public void Reset()
             {
@@ -341,9 +343,7 @@ namespace MSQuic1
         public struct CONN_START_DATA
         {
             public QUIC_CONFIGURATION Configuration;
-            public string ServerName;
-            public ushort ServerPort;
-            public AddressFamily Family;
+            public IPEndPoint mIPEndPoint;
         }
 
         public struct CONN_SET_CONFIGURATION_DATA
@@ -636,7 +636,6 @@ namespace MSQuic1
                 if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_START)
                 {
                     QuicConfigurationRelease(ApiCtx.CONN_START.Configuration);
-                    ApiCtx.CONN_START.ServerName = null;
                 }
                 else if (ApiCtx.Type == QUIC_API_TYPE.QUIC_API_TYPE_CONN_SET_CONFIGURATION)
                 {

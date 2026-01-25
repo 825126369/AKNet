@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:18
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Net;
 using System.Net.Sockets;
 
 namespace MSQuic1
@@ -61,8 +62,8 @@ namespace MSQuic1
 
     internal class CXPLAT_SOCKET_COMMON
     {
-        public QUIC_ADDR LocalAddress = new QUIC_ADDR();
-        public QUIC_ADDR RemoteAddress = new QUIC_ADDR();
+        public IPEndPoint LocalAddress;
+        public IPEndPoint RemoteAddress;
         public CXPLAT_DATAPATH Datapath;
         public ushort Mtu;
     }

@@ -362,8 +362,8 @@ namespace MSQuic1
     internal class QUIC_NEW_CONNECTION_INFO
     {
         public uint QuicVersion;
-        public QUIC_ADDR LocalAddress;
-        public QUIC_ADDR RemoteAddress;
+        public IPEndPoint LocalAddress;
+        public IPEndPoint RemoteAddress;
         public QUIC_BUFFER CryptoBuffer;
         public QUIC_ALPN_BUFFER ClientAlpnList;
         public QUIC_BUFFER NegotiatedAlpn;
@@ -427,11 +427,11 @@ namespace MSQuic1
         }
         public struct LOCAL_ADDRESS_CHANGED_DATA
         {
-            public QUIC_ADDR Address;
+            public IPEndPoint Address;
         }
         public struct PEER_ADDRESS_CHANGED_DATA
         {
-            public QUIC_ADDR Address;
+            public IPEndPoint Address;
         }
 
         public struct PEER_STREAM_STARTED_DATA
@@ -626,58 +626,59 @@ namespace MSQuic1
         public const byte QUIC_FLOW_BLOCKED_STREAM_FLOW_CONTROL = 0x40;
         public const byte QUIC_FLOW_BLOCKED_APP = 0x80;
 
-        internal static bool QuicAddrCompare(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool QuicAddrCompare(IPEndPoint Addr1, IPEndPoint Addr2)
         {
-            return Addr1.GetIPEndPoint().Equals(Addr2.GetIPEndPoint()); //这里会比较 Scord Id
+            return Addr1.Equals(Addr2); //这里会比较 Scord Id
         }
 
-        static bool QuicAddrCompareIp(QUIC_ADDR Addr1, QUIC_ADDR Addr2)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool QuicAddrCompareIp(IPEndPoint Addr1, IPEndPoint Addr2)
         {
-            return Addr1.Ip.Equals(Addr2.Ip);
+            return Addr1.Address.Equals(Addr2.Address);
         }
 
-        static int QuicAddrGetPort(QUIC_ADDR Addr)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int QuicAddrGetPort(IPEndPoint Addr)
         {
-            return Addr.nPort;
+            return Addr.Port;
         }
 
-        static void QuicAddrSetPort(QUIC_ADDR Addr, int Port)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void QuicAddrSetPort(IPEndPoint Addr, int Port)
         {
-            Addr.nPort = Port;
+            Addr.Port = Port;
         }
 
-        static AddressFamily QuicAddrGetFamily(QUIC_ADDR Addr)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static AddressFamily QuicAddrGetFamily(IPEndPoint Addr)
         {
-            return Addr != null ? Addr.Family : AddressFamily.Unknown;
+            return Addr != null ? Addr.AddressFamily : AddressFamily.Unknown;
         }
 
-        static bool QuicAddrIsWildCard(QUIC_ADDR Addr)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool QuicAddrIsWildCard(IPEndPoint Addr)
         {
-            return Addr.Ip.Equals(IPAddress.IPv6Any) || Addr.Ip.Equals(IPAddress.Any) || Addr.Ip.Equals(IPAddress.Any.MapToIPv6());
+            return Addr.Address.Equals(IPAddress.IPv6Any) || Addr.Address.Equals(IPAddress.Any) || Addr.Address.Equals(IPAddress.Any.MapToIPv6());
         }
 
-        static bool QuicAddrIsValid(QUIC_ADDR Addr)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool QuicAddrIsValid(IPEndPoint Addr)
         {
-            return Addr.Family == AddressFamily.InterNetwork ||
-                Addr.Family == AddressFamily.InterNetworkV6;
+            return Addr.AddressFamily == AddressFamily.InterNetwork ||
+                Addr.AddressFamily == AddressFamily.InterNetworkV6;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void UPDATE_HASH(uint value, ref uint Hash)
         {
              Hash = (Hash << 5) - Hash + value;
         }
 
-        static uint QuicAddrHash(QUIC_ADDR Addr)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int QuicAddrHash(IPEndPoint Addr)
         {
-            uint Hash = 5387;
-            UPDATE_HASH((uint)(Addr.nPort & 0xFF), ref Hash);
-            UPDATE_HASH((uint)Addr.nPort >> 8, ref Hash);
-            ReadOnlySpan<byte> addr_bytes = Addr.GetAddressSpan();
-            for (int i = 0; i < addr_bytes.Length; ++i)
-            {
-                UPDATE_HASH(addr_bytes[i], ref Hash);
-            }
-            return Hash;
+            return Addr.GetHashCode();
         }
     }
 }
