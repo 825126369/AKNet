@@ -1473,8 +1473,10 @@ namespace MSQuic1
 
         static int QuicConnStart(QUIC_CONNECTION Connection, QUIC_CONFIGURATION Configuration, IPEndPoint mIPEndPoint)
         {
-            int Status;
+            //2026-01-26 xuke 加上远程地址
             Connection.Paths[0].Route.RemoteAddress = mIPEndPoint;
+
+            int Status;
             QUIC_PATH Path = Connection.Paths[0];
             NetLog.Assert(QuicConnIsClient(Connection));
 
@@ -1522,6 +1524,9 @@ namespace MSQuic1
             {
                 goto Exit;
             }
+
+            //2026-01-26 xuke 加上远程地址
+            Connection.Paths[0].Route.RemoteAddress = Path.Binding.Socket.RemoteAddress;
 
             QUIC_CID SourceCid;
             if (Connection.State.ShareBinding)

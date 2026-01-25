@@ -154,10 +154,7 @@ namespace MSQuic1
             {
                 for (int i = Connection.PathsCount - 1; i > 0; i--)
                 {
-                    if (!Connection.Paths[i].IsActive
-                        && QuicAddrGetFamily(Packet.Route.RemoteAddress) == QuicAddrGetFamily(Connection.Paths[i].Route.RemoteAddress)
-                        && QuicAddrCompareIp(Packet.Route.RemoteAddress, Connection.Paths[i].Route.RemoteAddress)
-                        && QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress))
+                    if (!Connection.Paths[i].IsActive && QuicAddrCompare(Packet.Route.LocalAddress, Connection.Paths[i].Route.LocalAddress))
                     {
                         QuicPathRemove(Connection, i);
                     }

@@ -288,21 +288,21 @@ namespace MSQuic1
 
                 if (i == 0)
                 {
-                    //如果客户端/服务器 没有指定端口,也就是端口==0的时候，Socket bind 后，会自动分配一个本地端口
+                    //有可能 IPV4和 IPV6 相互映射,所以真正的绑定的IPEndPoint 和原来不一样
                     Socket.LocalAddress = SocketProc.Socket.LocalEndPoint as IPEndPoint;
                     if (Config.LocalAddress != null && Config.LocalAddress.Port != 0)
                     {
                         NetLog.Assert(Config.LocalAddress.Port == Socket.LocalAddress.Port);
                     }
+
+                    Socket.RemoteAddress = SocketProc.Socket.RemoteEndPoint as IPEndPoint;
+                    if (Config.RemoteAddress != null && Config.RemoteAddress.Port != 0)
+                    {
+                        NetLog.Assert(Config.RemoteAddress.Port == Socket.RemoteAddress.Port);
+                    }
                 }
             }
         Skip:
-
-            if (Config.RemoteAddress != null)
-            {
-                Socket.RemoteAddress = Config.RemoteAddress;
-            }
-
             NewSocket = Socket;
             for (int i = 0; i < SocketCount; i++)
             {
