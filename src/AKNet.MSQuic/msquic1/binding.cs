@@ -976,17 +976,13 @@ namespace MSQuic1
                 bool ExistingWildCard = ExistingListener.WildCard;
                 AddressFamily ExistingFamily = QuicAddrGetFamily(ExistingAddr);
                 FailedAlpnMatch = false;
-
-                if (ExistingFamily != AddressFamily.Unspecified)
+                //{::ffff:127.0.0.1:0}      {::ffff:0:0:6000}
+                if (Family != ExistingFamily || (!ExistingWildCard && !QuicAddrCompare(Addr, ExistingAddr)))
                 {
-                    //{::ffff:127.0.0.1:0}      {::ffff:0:0:6000}
-                    if (Family != ExistingFamily || (!ExistingWildCard && !QuicAddrCompareIp(Addr,ExistingAddr)))
-                    {
-                        FailedAddrMatch = true;
-                        continue;
-                    }
+                    FailedAddrMatch = true;
+                    continue;
                 }
-
+                
                 FailedAddrMatch = false;
                 if (QuicListenerMatchesAlpn(ExistingListener, Info))
                 {

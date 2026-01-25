@@ -258,6 +258,9 @@ namespace MSQuic1
             {
                 goto Error;
             }
+            
+            //2026-01-25 xuke修改: 启动Socket后，比如绑定了1个IPV4的地址，但是Socket是IPV6, 那么这个IPV4地址会被自动映射为IPV6地址
+            Listener.LocalAddress = Listener.Binding.Socket.LocalAddress;
 
             Listener.Stopped = false;
             CxPlatEventReset(Listener.StopEvent);

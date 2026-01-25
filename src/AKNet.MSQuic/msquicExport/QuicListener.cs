@@ -71,20 +71,19 @@ namespace AKNet.MSQuic.Common
                 mAlpnList.Add(new QUIC_BUFFER(Encoding.ASCII.GetBytes(v)));
             }
 
-            IPEndPoint address = options.ListenEndPoint;
-
 #if USE_MSQUIC_2
             if(options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
             {
                 address.Family = System.Net.Sockets.AddressFamily.Unspecified;
             }
-#endif
-
+#else
+            IPEndPoint address = options.ListenEndPoint;
             if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, mAlpnList.ToArray(), mAlpnList.Count, address)))
             {
                 NetLog.LogError("ListenerStart failed");
                 return null;
             }
+#endif
             mListenerer.Init(_handle, options);
             return mListenerer;
         }

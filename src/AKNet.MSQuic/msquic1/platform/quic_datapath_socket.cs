@@ -529,7 +529,7 @@ namespace MSQuic1
             }
 
             IoBlock.Route.RemoteAddress = arg.RemoteEndPoint as IPEndPoint;
-            IoBlock.Route.LocalAddress = null;
+            IoBlock.Route.LocalAddress = SocketProc.Parent.LocalAddress;
             IPEndPoint RemoteAddr = IoBlock.Route.RemoteAddress;
 
             if (IsUnreachableErrorCode(arg.SocketError))
@@ -546,29 +546,20 @@ namespace MSQuic1
 
                 CXPLAT_RECV_DATA RecvDataChain = null;
                 CXPLAT_RECV_DATA DatagramChainTail = null;
-
                 CXPLAT_DATAPATH Datapath = SocketProc.Parent.Datapath;
-                bool FoundLocalAddr = false;
+
                 byte TOS = 0;
+                //int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService);
+                //TOS = (byte)TypeOfService;
 
-                IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
-                if (mIPPacketInformation != null)
-                {
-                    IPAddress Ip = mIPPacketInformation.Address;
-                    IoBlock.Route.LocalAddress = new IPEndPoint(Ip, SocketProc.Parent.LocalAddress.Port);
-                    FoundLocalAddr = true;
-                    int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService);
-                    TOS = (byte)TypeOfService;
-                }
-
-                if (!FoundLocalAddr)
-                {
-                    NetLog.Assert(false); // Not expected in tests
-                    goto Drop;
-                }
+                //IPPacketInformation mIPPacketInformation = arg.ReceiveMessageFromPacketInfo;
+                //if (mIPPacketInformation != null)
+                //{
+                //    int TypeOfService = (int)SocketProc.Socket.GetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService);
+                //    TOS = (byte)TypeOfService;
+                //}
 
                 NetLog.Assert(arg.BytesTransferred <= SocketProc.Parent.RecvBufLen);
-
                 CXPLAT_RECV_DATA Datagram = IoBlock.CXPLAT_CONTAINING_RECORD.Data;
                 Datagram.CXPLAT_CONTAINING_RECORD = IoBlock.CXPLAT_CONTAINING_RECORD;
                 Datagram.Next = null;
