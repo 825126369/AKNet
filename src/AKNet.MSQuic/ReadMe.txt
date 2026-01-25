@@ -10,6 +10,10 @@
 
 4: 今天测试不小心 用了超过 int.MaxValue个字节的Buffer, 结果程序没报任何错。但也不执行任何其他方法了。能用long就用，少出点问题。
 
+5: MSQuic2 如果客户端 连接的IPEndPoint IPV4 映射为 IPV6 使用后,会出现 Max paths already tracked 的问题。
+
+6：GC还是太严重了,得持续的查
+
 # MSQuic 2.5 重要特征：
 
 1：Packet Number(包号): 从0开始，永不重复,无论是重传包还是不同流的包，包号严格递增，从而精确计算 RTT。
