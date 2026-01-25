@@ -540,7 +540,6 @@ namespace MSQuic1
             {
                 if (arg.BytesTransferred == 0)
                 {
-                    throw new Exception();
                     goto Drop;
                 }
 
@@ -586,10 +585,6 @@ namespace MSQuic1
 
                 NetLog.Assert(RecvDataChain != null);
                 SocketProc.Parent.Datapath.UdpHandlers.Receive(SocketProc.Parent, SocketProc.Parent.ClientContext, RecvDataChain);
-            }
-            else
-            {
-                throw new Exception(arg.SocketError.ToString()); // Not expected in test scenarios
             }
 
         Drop:

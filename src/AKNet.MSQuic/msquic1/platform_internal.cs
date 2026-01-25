@@ -51,8 +51,8 @@ namespace MSQuic1
 
     internal class CXPLAT_SOCKET_PROC
     {
-        public CXPLAT_DATAPATH_PROC DatapathProc;
         public CXPLAT_SOCKET Parent;
+        public CXPLAT_DATAPATH_PROC DatapathProc;
         public Socket Socket;
         public bool Freed;
         public bool RecvFailure;
