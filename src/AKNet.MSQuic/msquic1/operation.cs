@@ -501,11 +501,12 @@ namespace MSQuic1
 
         static QUIC_OPERATION QuicOperationDequeue(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition)
         {
-            QUIC_OPERATION Oper = null;
+            QUIC_OPERATION Oper;
             CxPlatDispatchLockAcquire(OperQ.Lock);
             if (CxPlatListIsEmpty(OperQ.List))
             {
                 OperQ.ActivelyProcessing = false;
+                Oper = null;
             }
             else
             {

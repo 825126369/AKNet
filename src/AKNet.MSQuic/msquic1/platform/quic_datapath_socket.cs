@@ -40,7 +40,7 @@ namespace MSQuic1
                 m[i] = Buffer[i];
             }
 
-            IPEndPoint mEndPoint = null;
+            IPEndPoint mEndPoint = new IPEndPoint(IPAddress.Any, 0);
             mEndPoint = (IPEndPoint)mEndPoint.Create(m);
             return mEndPoint;
         }

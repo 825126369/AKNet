@@ -38,19 +38,19 @@ namespace MSQuic2
         public byte EncryptionOverhead; //加密开销（如 AEAD tag 长度）
         public QUIC_ENCRYPT_LEVEL EncryptLevel;
         public byte PacketType; //数据包类型（如 Initial/Handshake/1RTT）
-        public int PacketNumberLength;//包号编码后的长度                       
-        public int TotalDatagramsLength;//所有数据报总长度
-        public int MinimumDatagramLength;//最小数据报长度（用于填充）
-        public int PacketStart;// 当前数据包起始偏移, (因为一个1500数据包里，有可能存了很多包，那么每个包的偏移就不一样)
-        public int HeaderLength;//数据包头部长度
-        public int PayloadLengthOffset;//负载长度字段偏移
-        public int SendAllowance;//当前还剩下多少字节，即还能允许发送的字节数
+        public byte PacketNumberLength;//uint8_t,包号编码后的长度                       
+        public long TotalDatagramsLength;//uint32_t, 所有数据报总长度
+        public int MinimumDatagramLength;//uint16_t, 最小数据报长度（用于填充）
+        public int PacketStart;// uint16_t,当前数据包起始偏移, (因为一个1500数据包里，有可能存了很多包，那么每个包的偏移就不一样)
+        public int HeaderLength;//数据包头部长度,uint16_t
+        public int PayloadLengthOffset;//负载长度字段偏移,uint16_t
+        public long SendAllowance;//当前还剩下多少字节，即还能允许发送的字节数
         public ulong BatchId;//批次 ID，用于调试或跟踪
         public QUIC_SENT_PACKET_METADATA Metadata = null;//已发送数据包的元数据指针
         public readonly QUIC_MAX_SENT_PACKET_METADATA MetadataStorage = new QUIC_MAX_SENT_PACKET_METADATA();
 
         //Datagram的偏移值Offset，用DatagramLength来表示
-        public int DatagramLength; //这个代码现在数据报的长度，相当于 Datagram 的 Offset偏移值
+        public int DatagramLength; //uint16_t, 这个代码现在数据报的长度，相当于 Datagram 的 Offset偏移值
 
         public QUIC_SSBuffer GetDatagramCanWriteSSBufer()
         {
@@ -95,7 +95,7 @@ namespace MSQuic2
                 TimeSinceLastSend = 0;
             }
 
-            Builder.SendAllowance = (int)QuicCongestionControlGetSendAllowance(Connection.CongestionControl, TimeSinceLastSend, Connection.Send.LastFlushTimeValid);
+            Builder.SendAllowance = QuicCongestionControlGetSendAllowance(Connection.CongestionControl, TimeSinceLastSend, Connection.Send.LastFlushTimeValid);
             if (Builder.SendAllowance > Path.Allowance)
             {
                 Builder.SendAllowance = Path.Allowance;
@@ -301,6 +301,7 @@ namespace MSQuic2
                         goto Error;
                     }
                     SendDataAllocated = true;
+                    NetLog.Assert(Builder.Path.Route.Queue.DatapathProc.PartitionIndex == QuicPartitionIdGetIndex(Builder.Connection.PartitionID));
                 }
 
                 int NewDatagramLength = MaxUdpPayloadSizeForFamily(QuicAddrGetFamily(Builder.Path.Route.RemoteAddress), IsPathMtuDiscovery ? Builder.Path.MtuDiscovery.ProbeSize : DatagramSize);
@@ -459,7 +460,7 @@ namespace MSQuic2
                     }
                 }
 
-                if (Builder.Path.Allowance != int.MaxValue)
+                if (Builder.Path.Allowance != uint.MaxValue)
                 {
                     QuicConnAddOutFlowBlockedReason(Connection, QUIC_FLOW_BLOCKED_AMPLIFICATION_PROT);
                 }

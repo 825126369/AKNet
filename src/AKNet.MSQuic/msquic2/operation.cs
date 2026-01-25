@@ -448,37 +448,41 @@ namespace MSQuic2
             NetLog.Assert(OperQ.PriorityTail == OperQ.List);
         }
 
+        //进入队列
         static bool QuicOperationEnqueue(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
             CxPlatDispatchLockAcquire(OperQ.Lock);
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
+
             CxPlatListInsertTail(OperQ.List, Oper.Link);
             CxPlatDispatchLockRelease(OperQ.Lock);
 
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
         }
 
+        //普通优先级
         static bool QuicOperationEnqueuePriority(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
-
             CxPlatDispatchLockAcquire(OperQ.Lock);
 #if DEBUG
             NetLog.Assert(Oper.Link.Next == null);
 #endif
             StartProcessing = CxPlatListIsEmpty(OperQ.List) && !OperQ.ActivelyProcessing;
+
             CxPlatListInsertMiddle(OperQ.List, OperQ.PriorityTail, Oper.Link);
             OperQ.PriorityTail = Oper.Link;
-            CxPlatDispatchLockRelease(OperQ.Lock);
 
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
+            CxPlatDispatchLockRelease(OperQ.Lock);
+            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterIncrement(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
         }
 
+        //最高优先级
         static bool QuicOperationEnqueueFront(QUIC_OPERATION_QUEUE OperQ, QUIC_PARTITION Partition, QUIC_OPERATION Oper)
         {
             bool StartProcessing;
@@ -492,8 +496,8 @@ namespace MSQuic2
             }
             CxPlatDispatchLockRelease(OperQ.Lock);
 
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED, 1);
-            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH, 1);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUED);
+            QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_CONN_OPER_QUEUE_DEPTH);
             return StartProcessing;
         }
 

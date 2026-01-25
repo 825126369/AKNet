@@ -1326,10 +1326,10 @@ namespace MSQuic1
             if (NewLargestAckRetransmittable && !NewLargestAckDifferentPath)
             {
                 NetLog.Assert(MinRtt != long.MaxValue);
-                //if (MinRtt >= AckDelay)
-                //{
-                //    MinRtt -= AckDelay;
-                //}
+                if (MinRtt >= AckDelay)
+                {
+                    MinRtt -= AckDelay;
+                }
 
                 NetLog.Assert(NewLargestAckTimestamp != 0);
                 QuicConnUpdateRtt(

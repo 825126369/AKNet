@@ -648,7 +648,7 @@ namespace MSQuic2
                 Connection.Type = QUIC_HANDLE_TYPE.QUIC_HANDLE_TYPE_CONNECTION_CLIENT;
                 Connection.State.ExternalOwner = true;
                 Path.IsPeerValidated = true;
-                Path.Allowance = int.MaxValue;
+                Path.Allowance = uint.MaxValue;
 
                 Path.DestCid = QuicCidNewRandomDestination();
                 if (Path.DestCid == null)
@@ -2366,7 +2366,7 @@ namespace MSQuic2
 
         static void QuicConnRecvDatagramBatch(QUIC_CONNECTION Connection, QUIC_PATH Path, int BatchCount, QUIC_RX_PACKET[] Packets, QUIC_SSBuffer Cipher, QUIC_RECEIVE_PROCESSING_STATE RecvState)
         {
-            QUIC_SSBuffer HpMask = new byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
+            Span<byte> HpMask = stackalloc byte[CXPLAT_HP_SAMPLE_LENGTH * QUIC_MAX_CRYPTO_BATCH_COUNT];
 
             NetLog.Assert(BatchCount > 0 && BatchCount <= QUIC_MAX_CRYPTO_BATCH_COUNT);
             QUIC_RX_PACKET Packet = Packets[0];
@@ -2437,7 +2437,7 @@ namespace MSQuic2
             }
         }
 
-        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, QUIC_SSBuffer HpMask)
+        static bool QuicConnRecvPrepareDecrypt(QUIC_CONNECTION Connection, QUIC_RX_PACKET Packet, ReadOnlySpan<byte> HpMask)
         {
             NetLog.Assert(Packet.ValidatedHeaderInv);
             NetLog.Assert(Packet.ValidatedHeaderVer);
@@ -2445,18 +2445,18 @@ namespace MSQuic2
             NetLog.Assert(Packet.PayloadLength <= Packet.AvailBufferLength);
             NetLog.Assert(Packet.HeaderLength + Packet.PayloadLength <= Packet.AvailBufferLength);
 
-            int CompressedPacketNumberLength = 0;
+            byte CompressedPacketNumberLength = 0;
             if (Packet.IsShortHeader)
             {
                 Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x1f);
                 Packet.OnAvailBufferChanged();
-                CompressedPacketNumberLength = Packet.SH.PnLength + 1;
+                CompressedPacketNumberLength = (byte)(Packet.SH.PnLength + 1);
             }
             else
             {
                 Packet.AvailBuffer[0] ^= (byte)(HpMask[0] & 0x0f);
                 Packet.OnAvailBufferChanged();
-                CompressedPacketNumberLength = Packet.LH.PnLength + 1;
+                CompressedPacketNumberLength = (byte)(Packet.LH.PnLength + 1);
             }
 
             NetLog.Assert(CompressedPacketNumberLength >= 1 && CompressedPacketNumberLength <= 4);
@@ -2467,7 +2467,7 @@ namespace MSQuic2
                 Packet.AvailBuffer[Packet.HeaderLength + i] ^= HpMask[1 + i];
             }
 
-            ulong CompressedPacketNumber = 0;
+            long CompressedPacketNumber = 0;
             QuicPktNumDecode(CompressedPacketNumberLength, Packet.AvailBuffer.Slice(Packet.HeaderLength), out CompressedPacketNumber);
 
             Packet.HeaderLength += CompressedPacketNumberLength;

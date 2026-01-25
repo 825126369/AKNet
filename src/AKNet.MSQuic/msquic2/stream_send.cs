@@ -571,6 +571,7 @@ namespace MSQuic2
             }
         }
 
+        [Conditional("DEBUG")]
         static void QuicStreamSendDumpState(QUIC_STREAM Stream)
         {
             //这里都是日志

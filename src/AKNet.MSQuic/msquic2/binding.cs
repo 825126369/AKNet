@@ -204,7 +204,6 @@ namespace MSQuic2
     
     internal class QUIC_TOKEN_CONTENTS
     {
-        public const int sizeof_QUIC_TOKEN_CONTENTS = byte.MaxValue;
         public class Authenticated_DATA
         {
             public const int sizeof_Length = 8;
@@ -719,7 +718,7 @@ namespace MSQuic2
             }
 
             bool BindingRefAdded = false;
-            NetLog.Assert(NewConnection.SourceCids.Next != null);
+            NetLog.Assert(!CxPlatListIsEmpty(NewConnection.SourceCids));
             QuicConnAddRef(NewConnection, QUIC_CONNECTION_REF.QUIC_CONN_REF_LOOKUP_RESULT);
             if (!QuicLibraryTryAddRefBinding(Binding))
             {
@@ -1317,7 +1316,7 @@ namespace MSQuic2
             return QUIC_SUCCEEDED(Status);
         }
 
-        static void QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, int BytesToSend, int DatagramsToSend)
+        static void QuicBindingSend(QUIC_BINDING Binding, QUIC_PARTITION Partition, CXPLAT_ROUTE Route, CXPLAT_SEND_DATA SendData, long BytesToSend, long DatagramsToSend)
         {
             CxPlatSocketSend(Binding.Socket, Route, SendData);
             QuicPerfCounterAdd(Partition, QUIC_PERFORMANCE_COUNTERS.QUIC_PERF_COUNTER_UDP_SEND, DatagramsToSend);

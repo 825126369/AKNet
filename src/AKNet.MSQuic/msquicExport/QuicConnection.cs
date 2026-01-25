@@ -73,7 +73,11 @@ namespace AKNet.MSQuic.Common
         {
             this.mOption = mOption;
             this._handle = handle;
+#if USE_MSQUIC_2
+            this.RemoteEndPoint = info.RemoteAddress.GetIPEndPoint();
+#else
             this.RemoteEndPoint = info.RemoteAddress;
+#endif
             MSQuicFunc.MsQuicSetCallbackHandler_For_QUIC_CONNECTION(handle, NativeCallback, this);
         }
 
@@ -115,7 +119,7 @@ namespace AKNet.MSQuic.Common
             _configuration = ClientConfig.Create(true);
 
 #if USE_MSQUIC_2
-            QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(address, port);
+            QUIC_ADDR remoteQuicAddress = new QUIC_ADDR(m);
             MsQuicHelpers.SetMsQuicParameter(_handle, MSQuicFunc.QUIC_PARAM_CONN_REMOTE_ADDRESS, remoteQuicAddress.ToSSBuffer());
             string sni = mOption.ClientAuthenticationOptions.TargetHost ?? host ?? address.ToString();
             remoteQuicAddress.ServerName = sni;

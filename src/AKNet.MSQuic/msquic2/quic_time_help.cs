@@ -17,7 +17,7 @@ namespace MSQuic2
 {
     internal static partial class MSQuicFunc
     {
-        readonly static Stopwatch mStopwatch = Stopwatch.StartNew();
+        static readonly Stopwatch mStopwatch = Stopwatch.StartNew();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static long CxPlatTimeDiff(long T1, long T2)

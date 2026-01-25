@@ -8,6 +8,8 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -30,6 +32,10 @@ namespace MSQuic2
 
     internal class QUIC_PATH
     {
+        public readonly QUIC_MTU_DISCOVERY MtuDiscovery = new QUIC_MTU_DISCOVERY();
+        public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
+        public QUIC_BINDING Binding;
+
         public byte ID;
         public bool InUse;
         public bool IsActive;
@@ -47,9 +53,6 @@ namespace MSQuic2
         public long EcnTestingEndingTime;
         public ushort Mtu;
         public ushort LocalMtu;
-        public readonly QUIC_MTU_DISCOVERY MtuDiscovery = new QUIC_MTU_DISCOVERY();
-        public QUIC_BINDING Binding;
-        public readonly CXPLAT_ROUTE Route = new CXPLAT_ROUTE();
         public QUIC_CID DestCid;
 
         public long SmoothedRtt;
@@ -59,8 +62,8 @@ namespace MSQuic2
         public long RttVariance;
         public long OneWayDelay;
         public long OneWayDelayLatest;
-
-        public int Allowance;
+        
+        public long Allowance;
         public readonly byte[] Response = new byte[8];
         public readonly byte[] Challenge = new byte[8];
         public long PathValidationStartTime;
@@ -179,13 +182,9 @@ namespace MSQuic2
                 QUIC_CID_CLEAR_PATH(Path.DestCid);
             }
 #endif
-
             if (Index + 1 < Connection.PathsCount)
             {
-                for (int i = 0; i < Connection.PathsCount - Index - 1; i++)
-                {
-                    Connection.Paths[Index + i] = Connection.Paths[Index + 1 + i];
-                }
+                Connection.Paths.AsSpan().Slice(Index + 1, Connection.PathsCount - Index - 1).CopyTo(Connection.Paths.AsSpan().Slice(Index));
             }
 
             Connection.PathsCount--;
@@ -229,10 +228,7 @@ namespace MSQuic2
 
             if (Connection.PathsCount > 1)
             {
-                for (int i = 0; i < Connection.PathsCount - 1; i++)
-                {
-                    Connection.Paths[2 + i] = Connection.Paths[i + 1];
-                }
+                Connection.Paths.AsSpan().Slice(1, Connection.PathsCount - 1).CopyTo(Connection.Paths.AsSpan().Slice(2));
             }
 
             NetLog.Assert(Connection.PathsCount < QUIC_MAX_PATH_COUNT);
@@ -250,7 +246,7 @@ namespace MSQuic2
         }
 
         //QuicPathSetAllowance 函数负责设置或更新与某个特定网络路径（Path）相关的这个 【允许发送的字节数】。
-        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, int NewAllowance)
+        static void QuicPathSetAllowance(QUIC_CONNECTION Connection,QUIC_PATH Path, long NewAllowance)
         {
             Path.Allowance = NewAllowance;
             bool IsBlocked = Path.Allowance < QUIC_MIN_SEND_ALLOWANCE;
@@ -282,12 +278,6 @@ namespace MSQuic2
             {
                 return;
             }
-
-            string[] ReasonStrings = {
-                "Initial Token",
-                "Handshake Packet",
-                "Path Response"
-            };
 
             Path.IsPeerValidated = true;
             QuicPathSetAllowance(Connection, Path, int.MaxValue);
@@ -345,8 +335,8 @@ namespace MSQuic2
         {
             QuicPathSetAllowance(Connection, Path, Path.Allowance <= Amount ? 0 : (Path.Allowance - Amount));
         }
-
-#if DEBUG
+        
+        [Conditional("DEBUG")]
         static void QuicPathValidate(QUIC_PATH Path)
         {
             NetLog.Assert(Path.DestCid == null ||
@@ -354,8 +344,5 @@ namespace MSQuic2
                 (Path.DestCid.AssignedPath == Path && Path.DestCid.UsedLocally)
             );
         }
-#else
-        static void QuicPathValidate(QUIC_PATH Path) {}
-#endif
     }
 }

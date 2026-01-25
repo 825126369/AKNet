@@ -10,16 +10,11 @@
 using AKNet.Common;
 using System.Collections.Concurrent;
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
-
-
-
-
 
 #if USE_MSQUIC_2
 using MSQuic2;
@@ -72,9 +67,15 @@ namespace AKNet.MSQuic.Common
             }
 
 #if USE_MSQUIC_2
-            if(options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
+            QUIC_ADDR address = new QUIC_ADDR(options.ListenEndPoint);
+            if (options.ListenEndPoint.Address.Equals(IPAddress.IPv6Any))
             {
                 address.Family = System.Net.Sockets.AddressFamily.Unspecified;
+            }
+            if (MSQuicFunc.QUIC_FAILED(MSQuicFunc.MsQuicListenerStart(_handle, mAlpnList.ToArray(), mAlpnList.Count, address)))
+            {
+                NetLog.LogError("ListenerStart failed");
+                return null;
             }
 #else
             IPEndPoint address = options.ListenEndPoint;

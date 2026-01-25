@@ -742,6 +742,7 @@ namespace MSQuic1
                     Oper.API_CALL.Context.CONN_SHUTDOWN.ErrorCode = QUIC_STATUS_INTERNAL_ERROR;
                     Oper.API_CALL.Context.CONN_SHUTDOWN.RegistrationShutdown = false;
                     Oper.API_CALL.Context.CONN_SHUTDOWN.TransportShutdown = true;
+                    NetLog.LogError("QuicBindingCreateConnection QUIC_API_TYPE_CONN_SHUTDOWN");
                     QuicConnQueueOper(NewConnection, Oper);
                 }
             }

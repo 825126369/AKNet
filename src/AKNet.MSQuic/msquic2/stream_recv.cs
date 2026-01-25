@@ -78,7 +78,7 @@ namespace MSQuic2
                 if (TotalRecvLength < FinalSize)
                 {
                     long FlowControlIncrease = FinalSize - TotalRecvLength;
-                    Stream.Connection.Send.OrderedStreamBytesReceived += (int)FlowControlIncrease;
+                    Stream.Connection.Send.OrderedStreamBytesReceived += FlowControlIncrease;
                     if (Stream.Connection.Send.OrderedStreamBytesReceived < FlowControlIncrease ||
                         Stream.Connection.Send.OrderedStreamBytesReceived > Stream.Connection.Send.MaxData)
                     {

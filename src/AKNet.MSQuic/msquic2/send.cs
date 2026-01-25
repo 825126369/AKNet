@@ -396,7 +396,8 @@ namespace MSQuic2
                 {
                     SendFlags &= QUIC_CONN_SEND_FLAG_ALLOWED_HANDSHAKE;
                 }
-                if (Path.Allowance != int.MaxValue)
+
+                if (Path.Allowance != uint.MaxValue)
                 {
                     SendFlags &= ~QUIC_CONN_SEND_FLAG_DATAGRAM;
                 }

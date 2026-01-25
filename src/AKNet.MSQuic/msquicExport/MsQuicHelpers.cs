@@ -43,31 +43,6 @@ namespace AKNet.MSQuic.Common
             return false;
         }
 
-#if USE_MSQUIC_2
-        public static QUIC_ADDR ToQuicAddr(this IPEndPoint ipEndPoint)
-        {
-            QUIC_ADDR result = new QUIC_ADDR(ipEndPoint);
-            return result;
-        }
-#endif
-
-        internal static T GetMsQuicParameter<T>(QUIC_HANDLE handle, uint parameter)
-        {
-            //T value;
-            //GetMsQuicParameter(handle, parameter, (uint)sizeof(T), (byte*)&value);
-            //return value;
-            return default;
-        }
-
-        public static void GetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
-        {
-            int status = MSQuicFunc.MsQuicGetParam(handle, parameter, value);
-            if (MSQuicFunc.QUIC_FAILED(status))
-            {
-                NetLog.LogError($"GetParam({handle}, {parameter}) failed");
-            }
-        }
-
         public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
             int status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);

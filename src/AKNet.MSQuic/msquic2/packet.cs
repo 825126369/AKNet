@@ -606,7 +606,7 @@ namespace MSQuic2
             }
 
             Packet.HeaderLength = HeaderLength; //现在这里头部长度，刚好可以解析 Packet Number
-            Packet.PayloadLength = (int)LengthVarInt;
+            Packet.PayloadLength = LengthVarInt;
             Packet.AvailBufferLength = Packet.HeaderLength + Packet.PayloadLength;
             Packet.ValidatedHeaderVer = true;
             return true;
@@ -816,7 +816,7 @@ namespace MSQuic2
         }
 
         //这里编码 比较特殊，这里只编码了 64位包号的一部分， 所以后面接收的时候，需要解压缩
-        static void QuicPktNumEncode(long PacketNumber, int PacketNumberLength, QUIC_SSBuffer Buffer)
+        static void QuicPktNumEncode(long PacketNumber, byte PacketNumberLength, QUIC_SSBuffer Buffer)
         {
             for (int i = 0; i < PacketNumberLength; i++)
             {
@@ -824,12 +824,12 @@ namespace MSQuic2
             }
         }
 
-        static void QuicPktNumDecode(int PacketNumberLength, QUIC_SSBuffer Buffer, out ulong PacketNumber)
+        static void QuicPktNumDecode(byte PacketNumberLength, QUIC_SSBuffer Buffer, out long PacketNumber)
         {
             PacketNumber = 0;
             for (int i = 0; i < PacketNumberLength; i++)
             {
-                PacketNumber |= (ulong)Buffer[i] << ((PacketNumberLength - i - 1) * 8);
+                PacketNumber |= (long)Buffer[i] << ((PacketNumberLength - i - 1) * 8);
             }
         }
 
@@ -867,7 +867,7 @@ namespace MSQuic2
             Token = new QUIC_SSBuffer(Packet.AvailBuffer.Buffer, 0, TokenLengthVarInt);
         }
 
-        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, long PacketNumber, int PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
+        static int QuicPacketEncodeShortHeaderV1(QUIC_CID DestCid, long PacketNumber, byte PacketNumberLength, bool SpinBit, bool KeyPhase, bool FixedBit, QUIC_SSBuffer Buffer)
         {
             NetLog.Assert(PacketNumberLength != 0 && PacketNumberLength <= 4);
             int RequiredBufferLength = QUIC_SHORT_HEADER_V1.sizeof_Length + DestCid.Data.Length + PacketNumberLength;
@@ -898,7 +898,7 @@ namespace MSQuic2
         }
 
         static int QuicPacketEncodeLongHeaderV1(uint Version, byte PacketType, bool FixedBit, QUIC_CID DestCid, QUIC_CID SourceCid, 
-            QUIC_SSBuffer Token, uint PacketNumber, QUIC_SSBuffer Buffer, ref int PayloadLengthOffset, ref int PacketNumberLength
+            QUIC_SSBuffer Token, uint PacketNumber, QUIC_SSBuffer Buffer, ref int PayloadLengthOffset, ref byte PacketNumberLength
             )
         {
             bool IsInitial =

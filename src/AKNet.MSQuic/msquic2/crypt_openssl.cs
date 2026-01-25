@@ -68,22 +68,18 @@ namespace MSQuic2
         public const int NonceSize = 12;
         public const int TagSize = 16;
 
-        public void Encrypt(QUIC_SSBuffer Key, QUIC_SSBuffer plaintext, QUIC_SSBuffer Ciper)
+        //编码和解码是一起的
+        public void Encrypt(byte[] Key, QUIC_SSBuffer plaintext, Span<byte> Ciper)
         {
             using (Aes aesAlg = Aes.Create())
             {
-                aesAlg.Key = Key.GetSpan().ToArray();
+                aesAlg.Key = Key;
                 aesAlg.Mode = CipherMode.ECB;         // 设置 ECB 模式
                 aesAlg.Padding = PaddingMode.None;   // 使用 PKCS7 填充
                 ICryptoTransform encryptor = aesAlg.CreateEncryptor();
                 ReadOnlySpan<byte> temp = encryptor.TransformFinalBlock(plaintext.Buffer, plaintext.Offset, plaintext.Length);
-                temp.CopyTo(Ciper.GetSpan());
+                temp.CopyTo(Ciper);
             }
-        }
-
-        public void Decrypt(QUIC_SSBuffer Key, QUIC_SSBuffer nonce, QUIC_SSBuffer AuthData, QUIC_SSBuffer plaintext, QUIC_SSBuffer Cipher, QUIC_SSBuffer Tag)
-        {
-
         }
     }
 
@@ -105,7 +101,7 @@ namespace MSQuic2
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM:
                     return true;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM:
-                    return false;
+                    return true;
                 case CXPLAT_AEAD_TYPE.CXPLAT_AEAD_CHACHA20_POLY1305:
                     return false;
                 default:
@@ -215,14 +211,10 @@ namespace MSQuic2
             {
                 CXPLAT_AES_256_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
             }
-            else
-            {
-                NetLog.Assert(false, Key.nType);
-            }
             return QUIC_STATUS_SUCCESS;
         }
 
-        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, QUIC_SSBuffer outMask)
+        static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, Span<byte> outMask)
         {
             if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
             {
@@ -230,11 +222,11 @@ namespace MSQuic2
             }
             else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
             {
-                Debug.Assert(false);
+                NetLog.Assert(false);
             }
             else
             {
-                Debug.Assert(false);
+                NetLog.Assert(false);
             }
             return QUIC_STATUS_SUCCESS;
         }
