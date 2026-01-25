@@ -23,7 +23,7 @@
 
 # MSQuic 丢包重传设计:
 
-(1): Tracker.PacketNumbersToAck(Range): 收集接收到的包号, 发送ACK帧的时候，把这个Range编码进取
+(1): Tracker.PacketNumbersToAck(Range): 收集接收到的包号, 发送ACK帧的时候，把这个Range编码进去。
 (2): Tracker.PacketNumbersReceived(Range): 判断是否有重复包发送, 有,则丢弃该包。
 (3): Connection.DecodedAckRanges(Range): 解析对端发送的ACK帧的结果
 (4): LossDetection.SentPackets: 需要进行ACK确认的包，重传包
