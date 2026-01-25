@@ -13,126 +13,14 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace MSQuic1
 {
-    //一律强制转为IpV6地址
     internal static class IPEndPointEx
     {
         public const int sizeof_Length = 28;
-        //public string ServerName;
-        //private IPEndPoint mEndPoint;
-        //private byte[] mAddressCache = new byte[16];
-        //private long m_ScopeId = 0;
-
-        //public QUIC_ADDR()
-        //{
-        //    mEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-        //    CheckFamilyError();
-        //}
-
-        //public QUIC_ADDR(IPAddress otherIp, int nPort)
-        //{
-        //    mEndPoint = new IPEndPoint(otherIp, nPort);
-        //    Ip = otherIp;
-        //    CheckFamilyError();
-        //}
-
-        //public QUIC_ADDR(IPEndPoint mIPEndPoint)
-        //{
-        //    mEndPoint = mIPEndPoint;
-        //    if (mEndPoint.AddressFamily == AddressFamily.InterNetwork)
-        //    {
-        //        mEndPoint.Address = mEndPoint.Address.MapToIPv6();
-        //    }
-        //    CheckFamilyError();
-        //}
-
-        //public IPEndPoint GetIPEndPoint()
-        //{
-        //    return mEndPoint;
-        //}
-
-        //public ReadOnlySpan<byte> GetAddressSpan()
-        //{
-        //    int nLength = 0;
-        //    mEndPoint.Address.TryWriteBytes(mAddressCache, out nLength);
-        //    return mAddressCache.AsSpan().Slice(0, nLength);
-        //}
-
-        //public int nPort
-        //{
-        //    get
-        //    {
-        //        return mEndPoint.Port;
-        //    }
-
-        //    set
-        //    {
-        //        mEndPoint.Port = value;
-        //    }
-        //}
-
-        ////C# IPAddress 会比较 ScopeId，而 QUIC地址比较时，没有考虑这个字段，故而，不直接赋值给IPAddress
-        //public long ScopeId
-        //{
-        //    get
-        //    {
-        //        return m_ScopeId;
-        //    }
-
-        //    set
-        //    {
-        //        m_ScopeId = value;
-        //    }
-        //}
-
-        //public IPAddress Ip
-        //{
-        //    get
-        //    {
-        //        return mEndPoint.Address;
-        //    }
-
-        //    set
-        //    {
-        //        IPAddress tt = value;
-        //        if (tt.Equals(IPAddress.Any) || tt.Equals(IPAddress.Any.MapToIPv6()))
-        //        {
-        //            tt = IPAddress.IPv6Any;
-        //        }
-        //        else if (tt.AddressFamily == AddressFamily.InterNetwork)
-        //        {
-        //            tt = tt.MapToIPv6();
-        //        }
-        //        mEndPoint.Address = tt;
-        //        CheckFamilyError();
-        //    }
-        //}
-
-        //public AddressFamily Family
-        //{
-        //    get
-        //    {
-        //        CheckFamilyError();
-        //        return mEndPoint.AddressFamily;
-        //    }
-        //}
-
-        //public void CopyFrom(QUIC_ADDR other)
-        //{
-        //    this.WriteFrom(other.ToSSBuffer().GetSpan());
-        //}
-
-        //public static implicit operator QUIC_ADDR(ReadOnlySpan<byte> ssBuffer)
-        //{
-        //    QUIC_ADDR mm = new QUIC_ADDR();
-        //    mm.WriteFrom(ssBuffer);
-        //    return mm;
-        //}
 
         public static int WriteToBuffer(IPEndPoint mEndPoint, Span<byte> Buffer)
         {
@@ -156,40 +44,6 @@ namespace MSQuic1
             mEndPoint = (IPEndPoint)mEndPoint.Create(m);
             return mEndPoint;
         }
-
-        //        public QUIC_SSBuffer ToSSBuffer()
-        //        {
-        //            QUIC_SSBuffer qUIC_SSBuffer = new QUIC_SSBuffer(new byte[sizeof_Length]);
-        //            int nLength = WriteTo(qUIC_SSBuffer.GetSpan());
-        //            qUIC_SSBuffer.Length = nLength;
-        //            return qUIC_SSBuffer;
-        //        }
-
-        //        public void Reset()
-        //        {
-        //            mEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-        //            ServerName = string.Empty;
-        //            CheckFamilyError();
-        //        }
-
-        //        public override string ToString()
-        //        {
-        //            return mEndPoint.ToString();
-        //        }
-
-        //        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //        private void CheckFamilyError()
-        //        {
-        //#if DEBUG
-        //            NetLog.Assert(mEndPoint.AddressFamily == AddressFamily.InterNetworkV6);
-        //#endif
-        //        }
-    }
-
-    internal class INET_PORT_RANGE
-    {
-        public ushort StartPort;
-        public ushort NumberOfPorts;
     }
 
     internal class DATAPATH_RX_IO_BLOCK
