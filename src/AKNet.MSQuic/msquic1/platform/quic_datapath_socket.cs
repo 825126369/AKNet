@@ -579,8 +579,9 @@ namespace MSQuic1
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
 
+#if DEBUG
             mSocketStatistic.NET_ADD_STATS(SocketProc.DatapathProc.PartitionIndex);
-
+#endif
             CxPlatDataPathUdpRecvComplete(arg);
             CxPlatDataPathStartReceiveAsync(SocketProc);
         }

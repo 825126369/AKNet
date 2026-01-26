@@ -50,11 +50,13 @@ namespace MSQuic1
         public long[] mibs = new long[byte.MaxValue];
 
         //统计状态
+        [Conditional("DEBUG")]
         public void NET_ADD_STATS(int nSocketIndex)
         {
             mibs[nSocketIndex]++;
         }
 
+        [Conditional("DEBUG")]
         public void PRINT_NET_STATS()
         {
             for (int i = 0; i < mibs.Length; i++)
@@ -202,7 +204,9 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
+#if DEBUG
         public static readonly udp_socket_statistic mSocketStatistic = new udp_socket_statistic();
+#endif
 
         [Conditional("DEBUG")]
         public static void NET_ADD_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib)
