@@ -323,7 +323,7 @@ namespace MSTest
 
             QUIC_SSBuffer Encode()
             {
-                
+
                 QUIC_SSBuffer mBuffer = new byte[8192];
                 Assert.IsTrue(MSQuicFunc.QuicAckFrameEncode(mRange1, AckDelay1, mECN1, ref mBuffer));
                 mBuffer.Length = mBuffer.Offset;
@@ -403,6 +403,150 @@ namespace MSTest
                     Assert.IsTrue(A == B, $"DoTest Error");
                 }
             }
+        }
+
+        [TestMethod]
+        public void TestMethod7()
+        {
+            //初始化 ACK 确认块
+            QUIC_RANGE AckBlocks = new QUIC_RANGE();
+            MSQuicFunc.QuicRangeInitialize(QUIC_SUBRANGE.sizeof_Length * 1024, AckBlocks);
+            for(int k = 0; k < 100; k++)
+            {
+                MSQuicFunc.QuicRangeAddRange(AckBlocks, k, 1, out _);
+            }
+
+            for (int k = 101; k < 200; k++)
+            {
+                MSQuicFunc.QuicRangeAddRange(AckBlocks, k, 1, out _);
+            }
+
+            //初始化 发送包 队列
+            QUIC_LOSS_DETECTION LossDetection = new QUIC_LOSS_DETECTION();
+            QUIC_SENT_PACKET_METADATA SentPackets = LossDetection.SentPackets;
+            for (long k = 0; k < 200; k++)
+            {
+                QUIC_SENT_PACKET_METADATA mTemp = new QUIC_SENT_PACKET_METADATA();
+                mTemp.PacketNumber = k;
+                if (LossDetection.SentPackets == null)
+                {
+                    LossDetection.SentPackets = LossDetection.SentPacketsTail = mTemp;
+                }
+                else
+                {
+                    LossDetection.SentPacketsTail.Next = mTemp;
+                    LossDetection.SentPacketsTail = mTemp;
+                }
+            }
+
+            QUIC_SENT_PACKET_METADATA SentPacketsStart = LossDetection.SentPackets;
+            QUIC_SENT_PACKET_METADATA SentPacketsStart_Prev = null;
+
+            QUIC_SENT_PACKET_METADATA AckedPackets = null;//ACK确认包的队头
+            QUIC_SENT_PACKET_METADATA AckedPacketsTail = AckedPackets;
+
+            int i = 0;
+            QUIC_SUBRANGE AckBlock;
+            while ((AckBlock = MSQuicFunc.QuicRangeGetSafe(AckBlocks, i++)) != null)
+            {
+                //等待重传的发送队列，接收到ACK后，从队列中删除这些无用包
+                if (SentPacketsStart != null)
+                {
+                    //它们还没被确认，保持原位
+                    //如果多个ACK,这个 BeginRemovePre 值有可能不为null啊
+                    QUIC_SENT_PACKET_METADATA BeginRemovePre = SentPacketsStart_Prev;
+                    QUIC_SENT_PACKET_METADATA BeginRemove = null;
+                    QUIC_SENT_PACKET_METADATA EndRemove = null;
+                    QUIC_SENT_PACKET_METADATA EndRemoveNext = null;
+                    while (SentPacketsStart != null)
+                    {
+                        if (SentPacketsStart.PacketNumber < AckBlock.Low)
+                        {
+                            BeginRemovePre = SentPacketsStart;
+                            SentPacketsStart = SentPacketsStart.Next;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (SentPacketsStart != null && SentPacketsStart.PacketNumber >= AckBlock.Low)
+                    {
+                        //如果接收到的 ACK 块，大于等于发送包的 包号，那么刚好是正要等待确认的
+                        while (SentPacketsStart != null && SentPacketsStart.PacketNumber <= AckBlock.High)
+                        {
+                            if (BeginRemove == null)
+                            {
+                                BeginRemove = SentPacketsStart;
+                            }
+
+                            EndRemove = SentPacketsStart;
+                            EndRemoveNext = SentPacketsStart.Next;
+                            SentPacketsStart = SentPacketsStart.Next;
+                        }
+                    }
+
+                    if (BeginRemove != null)
+                    {
+                        //确认的包，加到ACK确认队列里
+                        if (AckedPacketsTail == null)
+                        {
+                            AckedPackets = BeginRemove;
+                            AckedPacketsTail = EndRemove;
+                        }
+                        else
+                        {
+                            AckedPacketsTail.Next = BeginRemove;
+                            AckedPacketsTail = EndRemove;
+                        }
+
+                        EndRemove.Next = null;
+
+                        //移除/拼接 剩余块
+                        if (BeginRemove == LossDetection.SentPackets && EndRemove == LossDetection.SentPacketsTail)
+                        {
+                            LossDetection.SentPackets = LossDetection.SentPacketsTail = null;
+                        }
+                        else if (BeginRemove == LossDetection.SentPackets)
+                        {
+                            LossDetection.SentPackets = EndRemoveNext;
+                        }
+                        else if (EndRemove == LossDetection.SentPacketsTail)
+                        {
+                            LossDetection.SentPacketsTail = BeginRemovePre;
+                        }
+
+                        if (BeginRemovePre != null)
+                        {
+                            BeginRemovePre.Next = EndRemoveNext;
+                        }
+                        NetLog.Assert(SentPacketsStart == EndRemoveNext);
+                    }
+
+                    SentPacketsStart_Prev = BeginRemovePre;
+                }
+            }
+
+            //-------------------------------------------打印信息-------------------------------------------------
+            List<long> mNumberList = new List<long>();
+            QUIC_SENT_PACKET_METADATA mPackage = LossDetection.SentPackets;
+            while (mPackage != null)
+            {
+                mNumberList.Add(mPackage.PacketNumber);
+                mPackage = mPackage.Next;
+            }
+
+            Assert.IsTrue(mNumberList.Count == 1 && mNumberList[0] == 100);
+            mNumberList = new List<long>();
+            mPackage = AckedPackets;
+            while (mPackage != null)
+            {
+                mNumberList.Add(mPackage.PacketNumber);
+                mPackage = mPackage.Next;
+            }
+            Assert.IsTrue(mNumberList.Count == 199);
+
         }
 
     }
