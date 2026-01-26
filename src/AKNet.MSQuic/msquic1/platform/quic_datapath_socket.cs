@@ -219,24 +219,11 @@ namespace MSQuic1
                 {
                     //这里是把每个Socket 分配到不同的CPU 核心上，否则只会第一个Socket 接收数据
                     uint SIO_CPU_AFFINITY = 0x98000015;
-                    NetLog.Assert(SIO_CPU_AFFINITY == OSPlatformFunc.SIO_CPU_AFFINITY);
                     ushort Processor = (ushort)i; // API only supports 16-bit proc index.
-                    Result = Interop.Winsock.WSAIoctl(
-                            SocketProc.Socket.Handle,
-                            OSPlatformFunc.SIO_CPU_AFFINITY,
-                            &Processor,
-                            sizeof(ushort),
-                            null,
-                            0,
-                            out _,
-                            null,
-                            null);
-
                     Result = SocketProc.Socket.IOControl((int)SIO_CPU_AFFINITY, BitConverter.GetBytes(Processor), null);
 
-                    if (Result != OSPlatformFunc.NO_ERROR)
+                    if (Result != 0)
                     {
-                        int WsaError = Marshal.GetLastWin32Error();
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
@@ -257,9 +244,9 @@ namespace MSQuic1
                 }
                 else
                 {
-                    int OP_ECN = 50;
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)OP_ECN, true);
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)OP_ECN, true);
+                    //int OP_ECN = 50;
+                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)OP_ECN, true);
+                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)OP_ECN, true);
                 }
 
                 if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_TTL))
@@ -591,6 +578,8 @@ namespace MSQuic1
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
             NetLog.Assert(!SocketProc.Uninitialized);
+
+            mSocketStatistic.NET_ADD_STATS(SocketProc.DatapathProc.PartitionIndex);
 
             CxPlatDataPathUdpRecvComplete(arg);
             CxPlatDataPathStartReceiveAsync(SocketProc);

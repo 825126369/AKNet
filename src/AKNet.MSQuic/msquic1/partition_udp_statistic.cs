@@ -45,6 +45,28 @@ namespace MSQuic1
         MAX, //统计数量
     }
 
+    internal class udp_socket_statistic
+    {
+        public long[] mibs = new long[byte.MaxValue];
+
+        //统计状态
+        public void NET_ADD_STATS(int nSocketIndex)
+        {
+            mibs[nSocketIndex]++;
+        }
+
+        public void PRINT_NET_STATS()
+        {
+            for (int i = 0; i < mibs.Length; i++)
+            {
+                if (mibs[i] != 0)
+                {
+                    NetLog.Log($"接收数据的Socket: {i} : {mibs[i]}");
+                }
+            }
+        }
+    }
+
     internal class quic_partition_udp_statistic
     {
         internal enum MIB_LOG_TYPE
@@ -180,6 +202,8 @@ namespace MSQuic1
 
     internal static partial class MSQuicFunc
     {
+        public static readonly udp_socket_statistic mSocketStatistic = new udp_socket_statistic();
+
         [Conditional("DEBUG")]
         public static void NET_ADD_STATS(QUIC_PARTITION Partition, UDP_STATISTIC_TYPE mMib)
         {
@@ -202,6 +226,7 @@ namespace MSQuic1
             }
 
             mm.PRINT_NET_STATS();
+            mSocketStatistic.PRINT_NET_STATS();
         }
     }
 }
