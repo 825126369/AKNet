@@ -232,6 +232,8 @@ namespace MSQuic1
                             null,
                             null);
 
+                    Result = SocketProc.Socket.IOControl((int)SIO_CPU_AFFINITY, BitConverter.GetBytes(Processor), null);
+
                     if (Result != OSPlatformFunc.NO_ERROR)
                     {
                         int WsaError = Marshal.GetLastWin32Error();
@@ -241,16 +243,37 @@ namespace MSQuic1
                 }
 
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false); //同时接收IPV4 和IPV6数据包
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.TypeOfService, 46);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.TypeOfService, 46);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HopLimit, true);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.HopLimit, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-                //SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);;
+
+                if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_RECV_DSCP))
+                {
+                    int OP_TOS = 40;
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)OP_TOS, true);
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)OP_TOS, true);
+                }
+                else
+                {
+                    int OP_ECN = 50;
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)OP_ECN, true);
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)OP_ECN, true);
+                }
+
+                if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_TTL))
+                {
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.HopLimit, true);
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HopLimit, true);
+                }
+
+                //接收侧缩放
+                if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_RECV_COALESCING))
+                {
+                    int UDP_RECV_MAX_COALESCED_SIZE = 3;
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_RECV_MAX_COALESCED_SIZE, MAX_URO_PAYLOAD_LENGTH);
+                }
 
                 NetLog.Assert(PartitionIndex < Datapath.PartitionCount);
                 SocketProc.DatapathProc = Datapath.Partitions[PartitionIndex]; //这里设置 Socket分区
