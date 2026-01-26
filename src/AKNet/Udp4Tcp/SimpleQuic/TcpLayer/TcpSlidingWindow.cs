@@ -15,8 +15,7 @@ namespace AKNet.Udp4Tcp.Common
     {
         public uint nBeginOrderId; //待确认的OrderId
 
-        public TcpSlidingWindow(int nInitBlockCount = 1, int nMaxBlockCount = -1, int nBlockSize = Config.nUdpPackageFixedBodySize):
-            base(nInitBlockCount, nMaxBlockCount, nBlockSize)
+        public TcpSlidingWindow():base(Config.nUdpPackageFixedBodySize)
         {
             nBeginOrderId = Config.nUdpMinOrderId;
         }
