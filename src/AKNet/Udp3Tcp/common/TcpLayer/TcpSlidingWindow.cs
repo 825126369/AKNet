@@ -11,7 +11,7 @@ using AKNet.Common;
 
 namespace AKNet.Udp3Tcp.Common
 {
-    internal class TcpSlidingWindow:AkCircularManyBuffer
+    internal class TcpSlidingWindow : AkCircularManyBuffer
     {
         public uint nBeginOrderId; //待确认的OrderId
 
