@@ -98,7 +98,7 @@ namespace AKNet.Common
             {
                 if (nSumByteCount > int.MaxValue)
                 {
-                    throw new OverflowException($"nSumByteCount: {nSumByteCount}, int.MaxValue: {int.MaxValue}");
+                    throw new OverflowException($"nSumByteCount: {nSumByteCount}");
                 }
                 return (int)nSumByteCount;
             }
