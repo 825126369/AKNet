@@ -164,69 +164,90 @@ namespace MSQuic1
 
         static int CxPlatEncrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
-            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
-            int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
+            if (_KK_Encode)
+            {
+                NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
+                int PlainTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
 
-            QUIC_SSBuffer Ciper = out_Buffer.Slice(0, PlainTextLength);
-            QUIC_SSBuffer Tag = out_Buffer + PlainTextLength;
-            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
-            {
-                //NetLog.Log("CxPlatEncrypt");
-                //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
-                //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
-                //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
-                //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
-                //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
-                CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
-            }
-            else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
-            {
-                CXPLAT_AES_256_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+                QUIC_SSBuffer Ciper = out_Buffer.Slice(0, PlainTextLength);
+                QUIC_SSBuffer Tag = out_Buffer + PlainTextLength;
+                if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+                {
+                    //NetLog.Log("CxPlatEncrypt");
+                    //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
+                    //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
+                    //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
+                    //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
+                    //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
+                    CXPLAT_AES_128_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+                }
+                else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+                {
+                    CXPLAT_AES_256_GCM_ALG_HANDLE.Encrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+                }
+                else
+                {
+                    NetLog.Assert(false, Key.nType);
+                }
             }
             else
             {
-                NetLog.Assert(false, Key.nType);
+                
             }
             return QUIC_STATUS_SUCCESS;
         }
 
         static int CxPlatDecrypt(CXPLAT_KEY Key, QUIC_SSBuffer Iv, QUIC_SSBuffer AuthData, QUIC_SSBuffer out_Buffer)
         {
-            NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
-            int CipherTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
+            if (_KK_Encode)
+            {
+                NetLog.Assert(CXPLAT_ENCRYPTION_OVERHEAD <= out_Buffer.Length);
+                int CipherTextLength = out_Buffer.Length - CXPLAT_ENCRYPTION_OVERHEAD;
 
-            QUIC_SSBuffer Ciper = out_Buffer.Slice(0, CipherTextLength);
-            QUIC_SSBuffer Tag = out_Buffer + CipherTextLength;
-            if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
-            {
-                // NetLog.Log("CxPlatDecrypt");
-                //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
-                //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
-                //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
-                //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
-                //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
-                CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+                QUIC_SSBuffer Ciper = out_Buffer.Slice(0, CipherTextLength);
+                QUIC_SSBuffer Tag = out_Buffer + CipherTextLength;
+                if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+                {
+                    // NetLog.Log("CxPlatDecrypt");
+                    //NetLogHelper.PrintByteArray("Key", Key.Key.GetSpan());
+                    //NetLogHelper.PrintByteArray("Iv", Iv.GetSpan());
+                    //NetLogHelper.PrintByteArray("AuthData", AuthData.GetSpan());
+                    //NetLogHelper.PrintByteArray("Tag", Tag.GetSpan());
+                    //NetLogHelper.PrintByteArray("Ciper", Ciper.GetSpan());
+                    CXPLAT_AES_128_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag);
+                }
+                else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+                {
+                    CXPLAT_AES_256_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+                }
             }
-            else if (Key.nType == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+            else
             {
-                CXPLAT_AES_256_GCM_ALG_HANDLE.Decrypt(Key.Key, Iv, AuthData, Ciper, Ciper, Tag); //这里输出Tag
+
             }
             return QUIC_STATUS_SUCCESS;
         }
 
         static int CxPlatHpComputeMask(CXPLAT_HP_KEY Key, int BatchSize, QUIC_SSBuffer Cipher, Span<byte> outMask)
         {
-            if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+            if (_KK_Encode)
             {
-                CXPLAT_AES_128_ECB_ALG_HANDLE.Encrypt(Key.Key, Cipher.Slice(0, CXPLAT_HP_SAMPLE_LENGTH * BatchSize), outMask);
-            }
-            else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
-            {
-                NetLog.Assert(false);
+                if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_128_GCM)
+                {
+                    CXPLAT_AES_128_ECB_ALG_HANDLE.Encrypt(Key.Key, Cipher.Slice(0, CXPLAT_HP_SAMPLE_LENGTH * BatchSize), outMask);
+                }
+                else if (Key.Aead == CXPLAT_AEAD_TYPE.CXPLAT_AEAD_AES_256_GCM)
+                {
+                    NetLog.Assert(false);
+                }
+                else
+                {
+                    NetLog.Assert(false);
+                }
             }
             else
             {
-                NetLog.Assert(false);
+                
             }
             return QUIC_STATUS_SUCCESS;
         }
