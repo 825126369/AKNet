@@ -56,6 +56,9 @@ namespace MSQuic1
         public readonly CXPLAT_LIST_ENTRY SendStreams = new CXPLAT_LIST_ENTRY<QUIC_STREAM>(null);
         public QUIC_BUFFER InitialToken;
         public QUIC_CONNECTION mConnection;
+
+        //2026-01-28 xuke 加一个类Cache，减少GC
+        public readonly QUIC_PACKET_BUILDER Builder = new QUIC_PACKET_BUILDER();
     }
 
     internal enum QUIC_SEND_RESULT
@@ -352,7 +355,8 @@ namespace MSQuic1
                 QuicSendPathChallenges(Send);
             }
 
-            QUIC_PACKET_BUILDER Builder = new QUIC_PACKET_BUILDER();
+            QUIC_PACKET_BUILDER Builder = Send.Builder;
+            Builder.Reset();
             if (!QuicPacketBuilderInitialize(Builder, Connection, Path))
             {
                 return true;
@@ -537,7 +541,8 @@ namespace MSQuic1
                     continue;
                 }
 
-                QUIC_PACKET_BUILDER Builder = new QUIC_PACKET_BUILDER();
+                QUIC_PACKET_BUILDER Builder = Send.Builder;
+                Builder.Reset();
                 if (!QuicPacketBuilderInitialize(Builder, Connection, Path))
                 {
                     continue;

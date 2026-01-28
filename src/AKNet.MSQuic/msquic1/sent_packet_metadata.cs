@@ -277,6 +277,11 @@ namespace MSQuic1
     internal class QUIC_MAX_SENT_PACKET_METADATA
     {
         public readonly QUIC_SENT_PACKET_METADATA Metadata = new QUIC_SENT_PACKET_METADATA();
+
+        public void Reset()
+        {
+            Metadata.Reset();
+        }
     }
 
     internal static partial class MSQuicFunc

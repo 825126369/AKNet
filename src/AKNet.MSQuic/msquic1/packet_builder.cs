@@ -23,11 +23,11 @@ namespace MSQuic1
         public QUIC_PACKET_KEY Key;//当前使用的加密密钥
 
         //加密批处理数据（用于头保护)
-        public byte[] CipherBatch = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+        public readonly byte[] CipherBatch = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
         //头保护掩码
-        public byte[] HpMask = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+        public readonly byte[] HpMask = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
         //批量数据包头的指针数组
-        public QUIC_BUFFER[] HeaderBatch = new QUIC_BUFFER[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+        public readonly QUIC_BUFFER[] HeaderBatch = new QUIC_BUFFER[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
 
         public bool PacketBatchSent;//是否已经发送了一个批次的数据包
         public bool PacketBatchRetransmittable;//当前批次是否包含可重传的数据包
@@ -51,6 +51,11 @@ namespace MSQuic1
 
         //Datagram的偏移值Offset，用DatagramLength来表示
         public int DatagramLength; //uint16_t, 这个代码现在数据报的长度，相当于 Datagram 的 Offset偏移值
+        
+        public QUIC_PACKET_BUILDER()
+        {
+
+        }
 
         public QUIC_SSBuffer GetDatagramCanWriteSSBufer()
         {
@@ -61,6 +66,40 @@ namespace MSQuic1
         {
             DatagramLength = mBuffer.Offset;
         }
+
+        public void Reset()
+        {
+            Connection = null;
+            Path = null;
+            SourceCid = null;
+            SendData = null;//表示一组 UDP 数据报
+            Datagram = null;//当前构建的 UDP 数据报缓冲区
+            Key = null;//当前使用的加密密钥
+            CipherBatch.AsSpan().Clear();
+            HpMask.AsSpan().Clear();
+            HeaderBatch.AsSpan().Clear();
+            PacketBatchSent = false;
+            PacketBatchRetransmittable = false;
+            BatchCount = 0;
+            EcnEctSet = false;
+            WrittenConnectionCloseFrame = false;
+            TotalCountDatagrams = 0;
+            EncryptionOverhead = 0;
+            EncryptLevel = (QUIC_ENCRYPT_LEVEL)(0);
+            PacketType = 0;
+            PacketNumberLength = 0;
+            TotalDatagramsLength = 0;
+            MinimumDatagramLength = 0;
+            PacketStart = 0;
+            HeaderLength = 0;
+            PayloadLengthOffset = 0;
+            SendAllowance = 0;
+            BatchId = 0;
+            Metadata = null;
+            MetadataStorage.Reset();
+            DatagramLength = 0;
+        }
+
     }
 
     internal static partial class MSQuicFunc
