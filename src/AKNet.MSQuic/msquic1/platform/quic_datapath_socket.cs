@@ -342,37 +342,16 @@ namespace MSQuic1
 
             if (!bIOPending)
             {
+#if NET9_0_OR_GREATER
                 ThreadPool.UnsafeQueueUserWorkItem(static (object state) =>
                 {
                     var args = (SocketAsyncEventArgs)state;
                     CxPlatDataPathSocketProcessReceive(args);  // 在新线程池线程执行
                 },
                     IoBlock.ReceiveArgs);  // .NET 9 新参数：强制全局队列，避免同线程
-
-                //if (IoBlock.nLastReceiveArgsThreadID == Thread.CurrentThread.ManagedThreadId)
-                //{
-                //    if (IoBlock.nReceiveArgsSyncCount++ > 0)
-                //    {
-                //        IoBlock.nReceiveArgsSyncCount = 0;
-                //        //// 同步完成！必须延迟处理，避免栈递归
-                //        ThreadPool.UnsafeQueueUserWorkItem(static (object state) =>
-                //        {
-                //            var args = (SocketAsyncEventArgs)state;
-                //            CxPlatDataPathSocketProcessReceive(args);  // 在新线程池线程执行
-                //        },
-                //            IoBlock.ReceiveArgs);  // .NET 9 新参数：强制全局队列，避免同线程
-                //    }
-                //    else
-                //    {
-                //        CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
-                //    }
-                //}
-                //else
-                //{
-                //    IoBlock.nLastReceiveArgsThreadID = Thread.CurrentThread.ManagedThreadId;
-                //    IoBlock.nReceiveArgsSyncCount = 0;
-                //    CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
-                //}
+#else
+                CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
+#endif
             }
             else
             {
