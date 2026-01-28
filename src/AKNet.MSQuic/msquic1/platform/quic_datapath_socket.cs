@@ -353,10 +353,6 @@ namespace MSQuic1
                 CxPlatDataPathSocketProcessReceive(IoBlock.ReceiveArgs);
 #endif
             }
-            else
-            {
-                IoBlock.nReceiveArgsSyncCount = 0;
-            }
             return true;
         }
 
