@@ -1437,14 +1437,6 @@ namespace MSQuic1
                     Status = QuicStreamRecvSetEnabledState(ApiCtx.STRM_RECV_SET_ENABLED.Stream, ApiCtx.STRM_RECV_SET_ENABLED.IsEnabled);
                     break;
 
-                case QUIC_API_TYPE.QUIC_API_TYPE_SET_PARAM:
-                    Status = QuicLibrarySetParam(ApiCtx.SET_PARAM.Handle, ApiCtx.SET_PARAM.Param, ApiCtx.SET_PARAM.Buffer.GetSpan());
-                    break;
-
-                case QUIC_API_TYPE.QUIC_API_TYPE_GET_PARAM:
-                    Status = QuicLibraryGetParam(ApiCtx.GET_PARAM.Handle, ApiCtx.GET_PARAM.Param, ApiCtx.GET_PARAM.Buffer);
-                    break;
-
                 case QUIC_API_TYPE.QUIC_API_TYPE_DATAGRAM_SEND:
                     QuicDatagramSendFlush(Connection.Datagram);
                     break;

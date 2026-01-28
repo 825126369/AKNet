@@ -45,11 +45,13 @@ namespace AKNet.MSQuic.Common
 
         public static void SetMsQuicParameter(QUIC_HANDLE handle, uint parameter, QUIC_SSBuffer value)
         {
+#if USE_MSQUIC_2
             int status = MSQuicFunc.MsQuicSetParam(handle, parameter, value);
             if (MSQuicFunc.QUIC_FAILED(status))
             {
                 NetLog.LogError($"SetParam({handle}, {parameter}) failed");
             }
+#endif
         }
 
     }
