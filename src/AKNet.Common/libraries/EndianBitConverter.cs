@@ -10,6 +10,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
@@ -279,39 +280,7 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetBytes(byte[] mBuffer, int nBeginIndex, string value)
         {
-            ReadOnlySpan<char> chars = value.AsSpan();
-            for (int i = 0; i < chars.Length; i++)
-            {
-                mBuffer[nBeginIndex + i] = (byte)chars[i];
-            }
+            MemoryMarshal.Cast<char, byte>(value.AsSpan()).CopyTo(mBuffer.AsSpan().Slice(nBeginIndex));
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ushort ToUInt16(AkCircularBuffer mBuffer, int nBeginIndex)
-        {
-            return (ushort)(mBuffer[nBeginIndex + 0] << 8 | mBuffer[nBeginIndex + 1]);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ToInt32(AkCircularBuffer mBuffer, int nBeginIndex)
-        {
-            return (int)(
-                mBuffer[nBeginIndex + 0] << 24 |
-                mBuffer[nBeginIndex + 1] << 16 |
-                mBuffer[nBeginIndex + 2] << 8 |
-                mBuffer[nBeginIndex + 3]
-                );
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ToUInt32(AkCircularBuffer mBuffer, int nBeginIndex)
-        {
-            return
-                (uint)mBuffer[nBeginIndex + 0] << 24 |
-                (uint)mBuffer[nBeginIndex + 1] << 16 |
-                (uint)mBuffer[nBeginIndex + 2] << 8 |
-                (uint)mBuffer[nBeginIndex + 3];
-        }
-
     }
 }
