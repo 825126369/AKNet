@@ -11,6 +11,7 @@ using System;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 [assembly: InternalsVisibleTo("AKNet")]
 [assembly: InternalsVisibleTo("AKNet.MSQuic")]
 [assembly: InternalsVisibleTo("AKNet.LinuxTcp")]
@@ -271,16 +272,18 @@ namespace AKNet.Common
                     (ulong)mBuffer[7 + nBeginIndex];
             }
         }
-
-
-
-
+        
         //---------------------------------扩展-------------------------------------------
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetBytes(byte[] mBuffer, int nBeginIndex, string value)
         {
-            MemoryMarshal.Cast<char, byte>(value.AsSpan()).CopyTo(mBuffer.AsSpan().Slice(nBeginIndex));
+            //C# 的 string 内部是 UTF-16 小端序（UTF-16 LE） 编码，每个 char 占 2 个字节
+            //var mSpan = MemoryMarshal.Cast<char, byte>(value.AsSpan());
+
+            Span<byte> value2 = stackalloc byte[value.Length];
+            int nLength = Encoding.ASCII.GetBytes(value, value2);
+            NetLog.Assert(value.Length == nLength);
+            value2.CopyTo(mBuffer.AsSpan().Slice(nBeginIndex));
         }
     }
 }
