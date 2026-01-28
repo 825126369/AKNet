@@ -118,10 +118,10 @@ namespace MSQuic1
                 {
                     if (Req.InternalBuffer.Buffer == null)
                     {
-                        Req.InternalBuffer.Buffer = new byte[2048];
+                        Req.InternalBuffer.Buffer = new byte[1024];
                     }
 
-                    Debug.Assert(Req.TotalLength < 2048);
+                    Debug.Assert(Req.TotalLength <= 1024);
                     CurBuf = Req.InternalBuffer.Buffer;
                 }
                 else
