@@ -27,7 +27,7 @@ namespace MSQuic1
         //头保护掩码
         public readonly byte[] HpMask = new byte[MSQuicFunc.CXPLAT_HP_SAMPLE_LENGTH * MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
         //批量数据包头的指针数组
-        public readonly QUIC_BUFFER[] HeaderBatch = new QUIC_BUFFER[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
+        public readonly Memory<byte>[] HeaderBatch = new Memory<byte>[MSQuicFunc.QUIC_MAX_CRYPTO_BATCH_COUNT];
 
         public bool PacketBatchSent;//是否已经发送了一个批次的数据包
         public bool PacketBatchRetransmittable;//当前批次是否包含可重传的数据包
@@ -578,7 +578,7 @@ namespace MSQuic1
                     {
                         NetLog.Assert(Builder.BatchCount < QUIC_MAX_CRYPTO_BATCH_COUNT);
                         PnStart.Slice(4, CXPLAT_HP_SAMPLE_LENGTH).GetSpan().CopyTo(Builder.CipherBatch.AsSpan().Slice(Builder.BatchCount * CXPLAT_HP_SAMPLE_LENGTH));
-                        Builder.HeaderBatch[Builder.BatchCount] = Header;
+                        Builder.HeaderBatch[Builder.BatchCount] = new Memory<byte>(Header.Buffer, Header.Offset, Header.Length);
 
                         if (++Builder.BatchCount == QUIC_MAX_CRYPTO_BATCH_COUNT)
                         {
@@ -719,12 +719,12 @@ namespace MSQuic1
             for (int i = 0; i < Builder.BatchCount; ++i)
             {
                 int Offset = i * CXPLAT_HP_SAMPLE_LENGTH;
-                QUIC_SSBuffer Header = Builder.HeaderBatch[i];
-                Header[0] ^= (byte)(Builder.HpMask[Offset] & 0x1f); //// Bottom 5 bits for SH
-                Header += (1 + Builder.Path.DestCid.Data.Length);
+                var Header = Builder.HeaderBatch[i];
+                Header.Span[0] ^= (byte)(Builder.HpMask[Offset] & 0x1f); //// Bottom 5 bits for SH
+                Header = Header.Slice(1 + Builder.Path.DestCid.Data.Length);
                 for (int j = 0; j < Builder.PacketNumberLength; ++j)
                 {
-                    Header[j] ^= Builder.HpMask[Offset + 1 + j];
+                    Header.Span[j] ^= Builder.HpMask[Offset + j + 1];
                 }
             }
 
