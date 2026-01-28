@@ -1,4 +1,3 @@
-using AKNet.Common;
 using MSQuic1;
 
 namespace MSTest
