@@ -151,9 +151,8 @@ namespace MSQuic1
                 Datapath.MaxSendBatchSize = 1;
             }
 
-            int MessageCount = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ? URO_MAX_DATAGRAMS_PER_INDICATION : 1;
-            Datapath.RecvDatagramLength = MessageCount * (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
-                MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH);
+            Datapath.RecvDatagramLength = BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_RECV_COALESCING) ?
+                MAX_URO_PAYLOAD_LENGTH : MAX_RECV_PAYLOAD_LENGTH;
 
             for (int i = 0; i < Datapath.PartitionCount; i++)
             {
@@ -365,6 +364,11 @@ namespace MSQuic1
         {
             DATAPATH_RX_IO_BLOCK IoBlock = arg.UserToken as DATAPATH_RX_IO_BLOCK;
             CXPLAT_SOCKET_PROC SocketProc = IoBlock.SocketProc;
+
+            if (arg.BytesTransferred > 1500)
+            {
+                NetLog.Log("arg.: " + arg.BytesTransferred);
+            }
 
             if (arg.SocketError == SocketError.NotSocket || arg.SocketError == SocketError.OperationAborted)
             {
