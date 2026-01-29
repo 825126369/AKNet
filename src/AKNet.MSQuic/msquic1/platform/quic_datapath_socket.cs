@@ -8,12 +8,10 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Platform;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace MSQuic1
@@ -142,6 +140,7 @@ namespace MSQuic1
             
             Datapath.PartitionCount = PartitionCount;
             CxPlatRefInitializeEx(ref Datapath.RefCount, Datapath.PartitionCount);
+            CxPlatDataPathQuerySockoptSupport(Datapath);
 
             if (BoolOk(Datapath.Features & CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION))
             {
@@ -163,7 +162,7 @@ namespace MSQuic1
                 CxPlatRefInitialize(ref Datapath.Partitions[i].RefCount);
 
                 Datapath.Partitions[i].SendDataPool.CxPlatPoolInitialize();
-                Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize(MAX_UDP_PAYLOAD_LENGTH);
+                Datapath.Partitions[i].SendBufferPool.CxPlatPoolInitialize(MAX_RECV_PAYLOAD_LENGTH);
                 Datapath.Partitions[i].LargeSendBufferPool.CxPlatPoolInitialize(CXPLAT_LARGE_SEND_BUFFER_SIZE);
                 Datapath.Partitions[i].RecvDatagramPool.CxPlatPoolInitialize();
             }
@@ -172,6 +171,25 @@ namespace MSQuic1
             Status = QUIC_STATUS_SUCCESS;
         Error:
             return Status;
+        }
+
+        static void CxPlatDataPathQuerySockoptSupport(CXPLAT_DATAPATH Datapath)
+        {
+            {
+                Socket UdpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                int SegmentSize = (int)UdpSocket.GetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_SEND_MSG_SIZE);
+                if (SegmentSize != 0)
+                {
+                    Datapath.Features |= CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION;
+                }
+
+                int UroMaxCoalescedMsgSize = (int)UdpSocket.GetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_RECV_MAX_COALESCED_SIZE, true);
+                if (UroMaxCoalescedMsgSize != 0)
+                {
+                    Datapath.Features |= CXPLAT_DATAPATH_FEATURE_RECV_COALESCING;
+                }
+                UdpSocket.Close();
+            }
         }
 
         static unsafe int SocketCreateUdp(CXPLAT_DATAPATH Datapath, CXPLAT_UDP_CONFIG Config, out CXPLAT_SOCKET NewSocket)
@@ -217,6 +235,7 @@ namespace MSQuic1
 
                 if (Config.RemoteAddress == null && Datapath.PartitionCount > 1)
                 {
+#if TARGET_WINDOWS
                     //这里是把每个Socket 分配到不同的CPU 核心上，否则只会第一个Socket 接收数据
                     uint SIO_CPU_AFFINITY = 0x98000015;
                     ushort Processor = (ushort)i; // API only supports 16-bit proc index.
@@ -227,6 +246,9 @@ namespace MSQuic1
                         Status = QUIC_STATUS_INTERNAL_ERROR;
                         goto Error;
                     }
+#else
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);;
+#endif
                 }
 
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false); //同时接收IPV4 和IPV6数据包
@@ -234,26 +256,7 @@ namespace MSQuic1
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.DontFragment, true);
                 SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
-                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);;
-
-                if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_RECV_DSCP))
-                {
-                    int OP_TOS = 40;
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)OP_TOS, true);
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)OP_TOS, true);
-                }
-                else
-                {
-                    //int OP_ECN = 50;
-                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, (SocketOptionName)OP_ECN, true);
-                    //SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, (SocketOptionName)OP_ECN, true);
-                }
-
-                if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_TTL))
-                {
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.HopLimit, true);
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HopLimit, true);
-                }
+                SocketProc.Socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
 
                 //接收侧缩放
                 if (HasFlag(Datapath.Features, (uint)CXPLAT_DATAPATH_FEATURES.CXPLAT_DATAPATH_FEATURE_RECV_COALESCING))
