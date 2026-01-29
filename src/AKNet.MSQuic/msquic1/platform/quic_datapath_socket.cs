@@ -177,17 +177,19 @@ namespace MSQuic1
         {
             {
                 Socket UdpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                int SegmentSize = (int)UdpSocket.GetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_SEND_MSG_SIZE);
-                if (SegmentSize != 0)
+                try
                 {
+                    UdpSocket.GetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_SEND_MSG_SIZE);
                     Datapath.Features |= CXPLAT_DATAPATH_FEATURE_SEND_SEGMENTATION;
                 }
+                catch { }
 
-                int UroMaxCoalescedMsgSize = (int)UdpSocket.GetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_RECV_MAX_COALESCED_SIZE, true);
-                if (UroMaxCoalescedMsgSize != 0)
+                try
                 {
+                    UdpSocket.GetSocketOption(SocketOptionLevel.Udp, (SocketOptionName)UDP_RECV_MAX_COALESCED_SIZE);
                     Datapath.Features |= CXPLAT_DATAPATH_FEATURE_RECV_COALESCING;
                 }
+                catch { }
                 UdpSocket.Close();
             }
         }
