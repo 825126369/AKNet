@@ -26,7 +26,7 @@
 
 # MSQuic Build步骤
 
-1：cmake -B build -S . -G "Visual Studio 17 2022" -A x64  => 生成VS工程
+1：cmake -B build => 生成VS工程
 
 2：在VS工程中添加 sample 工程，手动创建 Sample 工程，然后添加项目引用和头文件路径。这样我们就可以在Sample工程中对Quic进行调试。
 
@@ -34,7 +34,7 @@
 
 4:启动服务器: quicsample.exe -server -cert_hash:86BCF870DDE25B24E0655FA51137E633175E5A2F
 
-5：接下来发现了一个先前发生了，我改过了，但我现在忘了，该怎么解决的问题：断点无效问题
+5：断点无效问题: 新建的的 sample 工程 输出目录 要和 msquic 工程输出目录一致，否则断电无效(5个小时浪费了) 2次问题该忘记还是忘记。
 
 
 # MSQuic/Quic 性能统计:
