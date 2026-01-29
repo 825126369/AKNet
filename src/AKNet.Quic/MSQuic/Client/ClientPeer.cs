@@ -88,7 +88,7 @@ namespace AKNet.MSQuic.Client
 					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
                         fSendHeartBeatTime = 0.0;
-                        SendHeartBeat();
+                        //SendHeartBeat();
 					}
 
                     double fHeatTime = Math.Min(0.3, elapsed);
@@ -97,9 +97,9 @@ namespace AKNet.MSQuic.Client
                     {
                         fReceiveHeartBeatTime = 0.0;
                         fReConnectServerCdTime = 0.0;
-                        mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                        //mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
 #if DEBUG
-                        NetLog.Log($"{GetName()} 心跳超时");
+                        //NetLog.Log($"{GetName()} 心跳超时");
 #endif
                     }
                     
