@@ -26,18 +26,6 @@ This repository is licensed with the [MIT](LICENSE) license.
 
 UDP/QUIC 的优势，主要体现在 用户空间的灵活性/没有历史包袱/释放多核优势/高度定制。很多新推出的更安全算法/性能更优的库，可以立刻在UDP 上应用。
 
-# MSQuic Build步骤
-
-1：cmake -B build -S . -G "Visual Studio 17 2022" -A x64  => 生成VS工程
-
-2：在VS工程中添加 sample 工程，手动创建 Sample 工程，然后添加项目引用和头文件路径。这样我们就可以在Sample工程中对Quic进行调试。
-
-3: New-SelfSignedCertificate -DnsName $env:computername,localhost -FriendlyName MsQuic-Test -KeyUsageProperty Sign -KeyUsage DigitalSignature -CertStoreLocation cert:\CurrentUser\My -HashAlgorithm SHA256 -Provider "Microsoft Software Key Storage Provider" -KeyExportPolicy Exportable 生成服务器证书
-
-4:启动服务器: quicsample.exe -server -cert_hash:86BCF870DDE25B24E0655FA51137E633175E5A2F
-
-5：接下来发现了一个先前发生了，我改过了，但我现在忘了，该怎么解决的问题：断点无效问题
-
 # 找份工作
 找份工作20K左右: 10多年Unity游戏开发经验  邮箱：1426186059@qq.com, 微信: AAA-2025-666-888
 

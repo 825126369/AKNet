@@ -24,6 +24,18 @@
 (6): Stream.SparseAckRanges(Range): 发送端收到ACK后,连接里的流中的确认的发送buffer中的 绝对偏移量。
 (7): RecvBuffer.WrittenRanges(Range):接收端 收到流数据帧后,确认的发送buffer中的 绝对偏移量
 
+# MSQuic Build步骤
+
+1：cmake -B build -S . -G "Visual Studio 17 2022" -A x64  => 生成VS工程
+
+2：在VS工程中添加 sample 工程，手动创建 Sample 工程，然后添加项目引用和头文件路径。这样我们就可以在Sample工程中对Quic进行调试。
+
+3: New-SelfSignedCertificate -DnsName $env:computername,localhost -FriendlyName MsQuic-Test -KeyUsageProperty Sign -KeyUsage DigitalSignature -CertStoreLocation cert:\CurrentUser\My -HashAlgorithm SHA256 -Provider "Microsoft Software Key Storage Provider" -KeyExportPolicy Exportable 生成服务器证书
+
+4:启动服务器: quicsample.exe -server -cert_hash:86BCF870DDE25B24E0655FA51137E633175E5A2F
+
+5：接下来发现了一个先前发生了，我改过了，但我现在忘了，该怎么解决的问题：断点无效问题
+
 
 # MSQuic/Quic 性能统计:
  
