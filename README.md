@@ -2,7 +2,7 @@
 
 This repository is licensed with the [MIT](LICENSE) license.
 
-# AKNet
+# AKNet的特点
 
 这是一个包括 TCP，UDP 的C#游戏网络库, 支持Unity游戏引擎以及.Net 8.0更高版本。
 
@@ -13,6 +13,10 @@ This repository is licensed with the [MIT](LICENSE) license.
 特点2： 实现了一个C# Udp版的Linux TCP 缩略版，原封不动的保留了Linux TCP 最精华的代码，可以很轻松的与Linux TCP保持代码同步。
 
 特点3： 实现了一个C# Quic版本，原封不动的保留了MSQuic最精华的代码，可以很轻松的与 MSQuic 保持代码同步。（Demo阶段）
+
+# AKNet的劣势
+
+追求极致性能/省钱/工程企业级的方式 就是用 C/C++/Rust。
 
 # UDP和TCP总结
 
