@@ -7,6 +7,7 @@
 *        ModifyTime:2025/11/30 19:43:15
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 [assembly: InternalsVisibleTo("AKNet")]
@@ -25,7 +26,7 @@ namespace AKNet.Common
             return Thread.CurrentThread.ManagedThreadId == nMainThreadId;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Conditional("DEBUG")]
         public static void Check()
         {
             int nThreadId = Thread.CurrentThread.ManagedThreadId;
