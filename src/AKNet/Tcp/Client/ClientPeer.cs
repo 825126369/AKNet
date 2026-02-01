@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Tcp.Client
 {
-    internal partial class ClientPeer : NetClientInterface, ClientPeerBase
+    internal partial class NetClientMain : NetClientInterface, ClientPeerBase
     {
         private readonly CryptoMgr mCryptoMgr;
         private readonly ListenNetPackageMgr mPackageManager = null;
@@ -30,8 +30,8 @@ namespace AKNet.Tcp.Client
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
         private string Name = string.Empty;
         private uint ID = 0;
-
-        //Receive
+        
+        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private readonly NetStreamReceivePackage mNetPackage = new NetStreamReceivePackage();
 
@@ -44,14 +44,13 @@ namespace AKNet.Tcp.Client
         private bool bDisConnectIOContexUsed = false;
         private bool bSendIOContextUsed = false;
         private bool bReceiveIOContextUsed = false;
-        private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
         private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
 
-        public ClientPeer()
+        public NetClientMain()
         {
             mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();

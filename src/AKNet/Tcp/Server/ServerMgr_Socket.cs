@@ -63,6 +63,7 @@ namespace AKNet.Tcp.Server
 
 				this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+                this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, int.MaxValue);
                 this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
                 this.mListenSocket.Bind(localEndPoint);
 				this.mListenSocket.Listen(Config.MaxPlayerCount);

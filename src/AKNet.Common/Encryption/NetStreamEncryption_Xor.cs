@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
-    internal class NetStreamEncryption_Xor : NetStreamEncryptionInterface
+    internal class NetStreamEncryption_Xor
     {
 		private const int nPackageFixedHeadSize = 10;
         private readonly XORCrypto mCryptoInterface = null;

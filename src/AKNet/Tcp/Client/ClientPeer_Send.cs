@@ -12,7 +12,7 @@ using System;
 
 namespace AKNet.Tcp.Client
 {
-	internal partial class ClientPeer
+	internal partial class NetClientMain
     {
         public void SendNetData(ushort nPackageId)
         {

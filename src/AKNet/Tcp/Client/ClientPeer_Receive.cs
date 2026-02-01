@@ -13,7 +13,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
-	internal partial class ClientPeer
+	internal partial class NetClientMain
     {
         private void MultiThreadingReceiveSocketStream(SocketAsyncEventArgs e)
 		{

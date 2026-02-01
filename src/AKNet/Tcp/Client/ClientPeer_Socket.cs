@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
 		public void ReConnectServer()
 		{
@@ -58,6 +58,7 @@ namespace AKNet.Tcp.Client
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, int.MaxValue);
 
             if (mIPEndPoint == null)
 			{

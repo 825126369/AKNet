@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
-    internal class NetStreamEncryption:NetStreamEncryptionInterface
+    internal class NetStreamEncryption
     {
         private const int nPackageFixedHeadSize = 9;
         private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };

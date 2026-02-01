@@ -11,15 +11,9 @@ using System;
 
 namespace AKNet.Common
 {
-    internal interface NetStreamEncryptionInterface
+    internal class CryptoMgr
     {
-        ReadOnlySpan<byte> Encode(ushort nPackageId, ReadOnlySpan<byte> mBufferSegment);
-        bool Decode(NetStreamCircularBuffer mReceiveStreamList, NetStreamReceivePackage mPackage);
-    }
-
-    internal class CryptoMgr : NetStreamEncryptionInterface
-    {
-        readonly NetStreamEncryptionInterface mNetPackageEncryption = null;
+        readonly NetStreamEncryption_Xor mNetPackageEncryption = null;
         public CryptoMgr()
         {
             mNetPackageEncryption = new NetStreamEncryption_Xor();
