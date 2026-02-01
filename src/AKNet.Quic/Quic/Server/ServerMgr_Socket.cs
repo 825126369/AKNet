@@ -91,7 +91,7 @@ namespace AKNet.Quic.Server
 
         private ValueTask<QuicServerConnectionOptions> ConnectionOptionsCallback(QuicConnection mQuicConnection, SslClientHelloInfo mSslClientHelloInfo, CancellationToken mCancellationToken)
         {
-            var mCert = X509CertTool.GetCert();
+            var mCert = X509CertTool.GetQuicCert();
 
             //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
             NetLog.Assert(mCert != null, "GetCert() == null");

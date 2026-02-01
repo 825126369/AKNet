@@ -39,12 +39,12 @@ namespace AKNet.Common
         private const string pfx_fileName = "aknet_quic_test_cert.pfx";
         private const string cert_fileName = "aknet_quic_test_cert.cert";
 
-        public static X509Certificate2 GetCert()
+        public static X509Certificate2 GetQuicCert()
         {
             X509Certificate2 ori_X509Certificate2 = GetCertFromX509Store();
             if (ori_X509Certificate2 == null)
             {
-                ori_X509Certificate2 = CreateCert();
+                ori_X509Certificate2 = CreateAndSaveQuicCert();
             }
 
             NetLog.Assert(GetCertByHash(ori_X509Certificate2.GetCertHash()) != null);
@@ -222,23 +222,31 @@ namespace AKNet.Common
             return isValid;
         }
 
-        static X509Certificate2 CreateCert()
+        static X509Certificate2 CreateAndSaveQuicCert()
         {
-            X509Certificate2 certificate = CreateSelfSignedCertificate();
-            certificate = CreateCert_Cert_ForQuic(certificate);
+            X509Certificate2 ori_cert = CreateSelfSignedCertificate();
 
-            if (orCertValid(certificate))
+            byte[] Data = ori_cert.Export(X509ContentType.Pfx);
+            string path = Path.Combine(AppContext.BaseDirectory, cert_fileName);
+            File.WriteAllBytes(path, Data);
+
+            X509Certificate2 new_cert = new X509Certificate2(Data);
+            NetLog.Log("证书已导出到：" + path);
+            NetLog.Log("ori_cert 哈希值：" + ori_cert.GetCertHashString());
+            NetLog.Log("new_cert 哈希值：" + new_cert.GetCertHashString());
+
+            if (orCertValid(ori_cert))
             {
                 X509Store mX509Store = new X509Store(storeName, StoreLocation.CurrentUser);
                 mX509Store.Open(OpenFlags.ReadWrite);
-                mX509Store.Add(certificate);
+                mX509Store.Add(ori_cert);
                 mX509Store.Close();
 
-                return certificate;
+                return ori_cert;
             }
             else
             {
-                NetLog.LogError("CreateCert Error: " + certificate);
+                NetLog.LogError("CreateCert Error: " + ori_cert);
             }
             return null;
         }
@@ -289,21 +297,6 @@ namespace AKNet.Common
 
             X509Certificate2 new_cert = new X509Certificate2(Data);
             // X509Certificate2 new_cert = X509CertificateLoader.LoadCertificate(Data);
-
-            NetLog.Log("证书已导出到：" + path);
-            NetLog.Log("ori_cert 哈希值：" + ori_cert.GetCertHashString());
-            NetLog.Log("new_cert 哈希值：" + new_cert.GetCertHashString());
-            return ori_cert;
-        }
-        
-        //这个适合 Quic
-        static X509Certificate2 CreateCert_Cert_ForQuic(X509Certificate2 ori_cert)
-        {
-            byte[] Data = ori_cert.Export(X509ContentType.Pfx);
-            string path = Path.Combine(AppContext.BaseDirectory, cert_fileName);
-            File.WriteAllBytes(path, Data);
-
-            X509Certificate2 new_cert = new X509Certificate2(Data);
 
             NetLog.Log("证书已导出到：" + path);
             NetLog.Log("ori_cert 哈希值：" + ori_cert.GetCertHashString());
