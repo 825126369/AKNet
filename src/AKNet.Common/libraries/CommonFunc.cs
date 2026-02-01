@@ -71,5 +71,11 @@ namespace AKNet.Common
         {
             return string.Join<byte>(' ', buffer.ToArray());
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsPowerOf2(int n)
+        {
+            return n > 0 && (n & (n - 1)) == 0;
+        }
     }
 }

@@ -21,6 +21,7 @@ namespace AKNet.Common
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void EnSureBufferOk_Power2(ref byte[] mCacheBuffer, int nSumLength)
         {
+            NetLog.Assert(CommonFunc.IsPowerOf2(mCacheBuffer.Length));
             if (mCacheBuffer.Length < nSumLength)
             {
                 byte[] mOldBuffer = mCacheBuffer;

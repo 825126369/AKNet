@@ -34,11 +34,10 @@ namespace AKNet.Common
     //发现问题: 第一次创建有 私钥， 接下来从 X509Store 中取出时，私钥就没有了
     internal static class X509CertTool
     {
-        private static string storeName = "xuke_quic_test_cert";
-        //public static StoreName storeName = StoreName.My;
-        private const string pem_fileName = "xuke_quic_test_cert.pem";
-        private const string pfx_fileName = "xuke_quic_test_cert.pfx";
-        private const string cert_fileName = "xuke_quic_test_cert.cert";
+        private static string storeName = "aknet_quic_test_cert";
+        private const string pem_fileName = "aknet_quic_test_cert.pem";
+        private const string pfx_fileName = "aknet_quic_test_cert.pfx";
+        private const string cert_fileName = "aknet_quic_test_cert.cert";
 
         public static X509Certificate2 GetCert()
         {
