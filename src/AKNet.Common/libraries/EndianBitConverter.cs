@@ -279,11 +279,9 @@ namespace AKNet.Common
         {
             //C# 的 string 内部是 UTF-16 小端序（UTF-16 LE） 编码，每个 char 占 2 个字节
             //var mSpan = MemoryMarshal.Cast<char, byte>(value.AsSpan());
-
-            Span<byte> value2 = stackalloc byte[value.Length];
-            int nLength = Encoding.ASCII.GetBytes(value, value2);
+            //使用 Encoding.ASCII 才能保证取到的char 是一个字节
+            int nLength = Encoding.ASCII.GetBytes(value, mBuffer);
             NetLog.Assert(value.Length == nLength);
-            value2.CopyTo(mBuffer.AsSpan().Slice(nBeginIndex));
         }
     }
 }
