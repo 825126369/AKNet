@@ -248,7 +248,7 @@ namespace MSQuic1
                         goto Error;
                     }
 #else
-                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);;
+                    SocketProc.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 #endif
                 }
 
