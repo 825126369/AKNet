@@ -4,10 +4,11 @@ using System.Security.Cryptography;
 
 namespace AKNet.Benchmark
 {
-    [SimpleJob(RuntimeMoniker.Net472, baseline: true)]
-    [SimpleJob(RuntimeMoniker.NetCoreApp30)]
-    [SimpleJob(RuntimeMoniker.NativeAot70)]
-    [SimpleJob(RuntimeMoniker.Mono)]
+    [SimpleJob(RuntimeMoniker.NetCoreApp21)]
+    [SimpleJob(RuntimeMoniker.Net80, baseline: true)]
+    [SimpleJob(RuntimeMoniker.NativeAot80)]
+    [SimpleJob(RuntimeMoniker.NetCoreApp21)]
+    [SimpleJob(RuntimeMoniker.Mono80)]
     [RPlotExporter]
     public class Md5VsSha256
     {
