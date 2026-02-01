@@ -52,7 +52,7 @@ namespace AKNet.MSQuic.Client
 
         private QuicConnectionOptions GetQuicClientConnectionOptions(IPEndPoint mIPEndPoint)
         {
-            var mCert = X509CertTool.GetQuicCert();
+            var mCert = X509CertTool.GetPfxCert();
             NetLog.Assert(mCert != null, "GetCert() == null");
 
             var ApplicationProtocols = new List<SslApplicationProtocol>();

@@ -80,7 +80,7 @@ namespace AKNet.MSQuic.Server
 
         private QuicConnectionOptions ConnectionOptionsCallback()
         {
-            var mCert = X509CertTool.GetQuicCert();
+            var mCert = X509CertTool.GetPfxCert();
 
             //mCert = X509CertificateLoader.LoadCertificateFromFile("D:\\Me\\OpenSource\\AKNet2\\cert.pfx");
             NetLog.Assert(mCert != null, "GetCert() == null");
