@@ -1,0 +1,39 @@
+﻿using System.Collections.Generic;
+
+namespace AKNet.Common
+{
+    public static class ConfigMgr
+    {
+        private static bool bInit = false;
+        private static readonly Dictionary<string, ConfigInstance> mConfigDic = new Dictionary<string, ConfigInstance>();
+        private static TextParser mTextParser = null;
+
+        public static void Init(string path = "AKNet.Config.text")
+        {
+            if (bInit) return;
+            bInit = true;
+            mTextParser = new TextParser(path);
+        }
+
+        public static ConfigInstance FindConfig(string configId)
+        {
+            if (!mConfigDic.TryGetValue(configId, out ConfigInstance mInstance))
+            {
+                mInstance = new ConfigInstance();
+                mInstance.Init(mTextParser, configId);
+                mConfigDic[configId] = mInstance;
+            }
+            return mInstance;
+        }
+    }
+
+    public class ConfigInstance
+    {
+        public bool bAutoReConnect = false;
+
+        public void Init(TextParser mTextParser, string configId)
+        {
+            bAutoReConnect = mTextParser.ReadBoolean(configId, "bAutoReConnect", false);
+        }
+    }
+}

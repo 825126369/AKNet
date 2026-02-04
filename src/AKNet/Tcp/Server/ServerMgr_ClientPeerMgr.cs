@@ -9,7 +9,6 @@
 ************************************Copyright*****************************************/
 using AKNet.Common;
 using AKNet.Tcp.Common;
-using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace AKNet.Tcp.Server
