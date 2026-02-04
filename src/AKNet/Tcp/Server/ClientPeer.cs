@@ -23,7 +23,7 @@ namespace AKNet.Tcp.Server
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
 		
-		private ServerMgr mNetServer;
+		private ServerMgr mServerMgr;
 		private string Name = string.Empty;
         private uint ID = 0;
 
@@ -36,9 +36,9 @@ namespace AKNet.Tcp.Server
         private Socket mSocket = null;
         private bool bSendIOContextUsed = false;
 
-        public ClientPeer(ServerMgr mNetServer)
+        public ClientPeer(ServerMgr mServerMgr)
 		{
-			this.mNetServer = mNetServer;
+			this.mServerMgr = mServerMgr;
 
             mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
             mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
@@ -96,7 +96,7 @@ namespace AKNet.Tcp.Server
             if (this.mSocketPeerState != this.mLastSocketPeerState)
             {
                 this.mLastSocketPeerState = mSocketPeerState;
-                mNetServer.OnSocketStateChanged(this);
+                mServerMgr.OnSocketStateChanged(this);
             }
         }
 

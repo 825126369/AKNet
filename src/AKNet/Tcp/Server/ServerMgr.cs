@@ -28,7 +28,6 @@ namespace AKNet.Tcp.Server
 
         private int nPort;
         private Socket mListenSocket = null;
-        private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs mAcceptIOContex = new SocketAsyncEventArgs();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
 

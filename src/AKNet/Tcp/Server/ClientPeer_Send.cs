@@ -7,10 +7,8 @@
 *        ModifyTime:2026/2/1 20:26:47
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
-using System.Net.Sockets;
 using AKNet.Common;
-using AKNet.Tcp.Common;
+using System;
 
 namespace AKNet.Tcp.Server
 {
@@ -21,7 +19,7 @@ namespace AKNet.Tcp.Server
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
+                ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
                 SendNetStream(mBufferSegment);
             }
         }
@@ -31,7 +29,7 @@ namespace AKNet.Tcp.Server
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, data);
+                ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, data);
                 SendNetStream(mBufferSegment);
             }
         }
@@ -41,7 +39,7 @@ namespace AKNet.Tcp.Server
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
+                ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
                 SendNetStream(mBufferSegment);
             }
         }
@@ -51,7 +49,7 @@ namespace AKNet.Tcp.Server
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ResetSendHeartBeatTime();
-                ReadOnlySpan<byte> mBufferSegment = mNetServer.mCryptoMgr.Encode(nPackageId, buffer);
+                ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, buffer);
                 SendNetStream(mBufferSegment);
             }
         }

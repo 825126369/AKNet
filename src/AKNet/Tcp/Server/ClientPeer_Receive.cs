@@ -26,11 +26,11 @@ namespace AKNet.Tcp.Server
 
 		private bool NetPackageExecute()
 		{
-			NetStreamReceivePackage mNetPackage = mNetServer.mNetPackage;
+			NetStreamReceivePackage mNetPackage = mServerMgr.mNetPackage;
 			bool bSuccess = false;
 			lock (mReceiveStreamList)
 			{
-				bSuccess = mNetServer.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
+				bSuccess = mServerMgr.mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
 			}
 
 			if (bSuccess)
@@ -41,7 +41,7 @@ namespace AKNet.Tcp.Server
 				}
 				else
 				{
-                    mNetServer.mPackageManager.NetPackageExecute(this, mNetPackage);
+                    mServerMgr.mPackageManager.NetPackageExecute(this, mNetPackage);
 				}
 			}
 

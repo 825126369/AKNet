@@ -44,7 +44,6 @@ namespace AKNet.Tcp.Client
         private bool bDisConnectIOContexUsed = false;
         private bool bSendIOContextUsed = false;
         private bool bReceiveIOContextUsed = false;
-        private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs mConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mDisConnectIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
@@ -168,8 +167,7 @@ namespace AKNet.Tcp.Client
             {
                 mSendStreamList.Reset();
             }
-
-            //接受
+            
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
