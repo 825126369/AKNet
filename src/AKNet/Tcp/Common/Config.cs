@@ -12,7 +12,6 @@ namespace AKNet.Tcp.Common
     public static class Config
     {
         //Common
-        public const bool bUseSocketLock = false;
         public const int nIOContexBufferLength = 1024;
         public const int nDataMaxLength = ushort.MaxValue;
         public const double fReceiveHeartBeatTimeOut = 5.0;

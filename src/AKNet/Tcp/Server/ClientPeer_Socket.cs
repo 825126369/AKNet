@@ -8,9 +8,7 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using System;
-using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 
@@ -32,31 +30,19 @@ namespace AKNet.Tcp.Server
 		private void StartReceiveEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
-			{
-				lock (lock_mSocket_object)
-				{
-					if (mSocket != null)
-					{
-						bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
-					}
-				}
-			}
-			else
-			{
-				if (mSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
-					}
-					catch (Exception e)
-					{
-						DisConnectedWithException(e);
-					}
-				}
-			}
 
+			if (mSocket != null)
+			{
+				try
+				{
+					bIOSyncCompleted = !mSocket.ReceiveAsync(mReceiveIOContex);
+				}
+				catch (Exception e)
+				{
+					DisConnectedWithException(e);
+				}
+			}
+			
 			if (bIOSyncCompleted)
 			{
 				this.ProcessReceive(mReceiveIOContex);
@@ -67,40 +53,23 @@ namespace AKNet.Tcp.Server
 		private void StartSendEventArg()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (mSocket != null)
 			{
-				lock (lock_mSocket_object)
+				try
 				{
-					if (mSocket != null)
-					{
-						bIOSyncCompleted = !mSocket.SendAsync(mSendIOContex);
-					}
-					else
-					{
-						bSendIOContextUsed = false;
-					}
+					bIOSyncCompleted = !mSocket.SendAsync(mSendIOContex);
+				}
+				catch (Exception e)
+				{
+					bSendIOContextUsed = false;
+					DisConnectedWithException(e);
 				}
 			}
 			else
 			{
-				if (mSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mSocket.SendAsync(mSendIOContex);
-					}
-					catch (Exception e)
-					{
-						bSendIOContextUsed = false;
-						DisConnectedWithException(e);
-					}
-				}
-				else
-				{
-					bSendIOContextUsed = false;
-				}
+				bSendIOContextUsed = false;
 			}
-
+			
 			if (bIOSyncCompleted)
 			{
 				this.ProcessSend(mSendIOContex);
@@ -110,29 +79,14 @@ namespace AKNet.Tcp.Server
 		public IPEndPoint GetIPEndPoint()
 		{
 			IPEndPoint mRemoteEndPoint = null;
-
-			if (Config.bUseSocketLock)
+			try
 			{
-				lock (lock_mSocket_object)
+				if (mSocket != null && mSocket.RemoteEndPoint != null)
 				{
-					if (mSocket != null && mSocket.RemoteEndPoint != null)
-					{
-						mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
-					}
+					mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
 				}
 			}
-			else
-			{
-				try
-				{
-					if (mSocket != null && mSocket.RemoteEndPoint != null)
-					{
-						mRemoteEndPoint = mSocket.RemoteEndPoint as IPEndPoint;
-					}
-				}
-				catch { }
-			}
-
+			catch { }
 			return mRemoteEndPoint;
 		}
 
@@ -257,46 +211,23 @@ namespace AKNet.Tcp.Server
 
 		void CloseSocket()
 		{
-			if (Config.bUseSocketLock)
+			if (mSocket != null)
 			{
-				lock (lock_mSocket_object)
-				{
-					if (mSocket != null)
-					{
-						Socket mSocket2 = mSocket;
-						mSocket = null;
+				Socket mSocket2 = mSocket;
+				mSocket = null;
 
-						try
-						{
-							mSocket2.Shutdown(SocketShutdown.Both);
-						}
-						catch { }
-						finally
-						{
-							mSocket2.Close();
-						}
-					}
+				try
+				{
+					mSocket2.Shutdown(SocketShutdown.Both);
 				}
-			}
-			else
-			{
-				if (mSocket != null)
+				catch { }
+				finally
 				{
-					Socket mSocket2 = mSocket;
-					mSocket = null;
-
-					try
-					{
-						mSocket2.Shutdown(SocketShutdown.Both);
-					}
-					catch { }
-					finally
-					{
-						mSocket2.Close();
-					}
+					mSocket2.Close();
 				}
 			}
 		}
+
 	}
 
 }

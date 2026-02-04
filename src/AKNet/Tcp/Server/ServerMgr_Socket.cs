@@ -100,34 +100,22 @@ namespace AKNet.Tcp.Server
 		{
 			bool bIOSyncCompleted = false;
 			mAcceptIOContex.AcceptSocket = null;
-			if (Config.bUseSocketLock)
+
+			if (mListenSocket != null)
 			{
-				lock (lock_mSocket_object)
+				try
+				{
+					bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
+				}
+				catch (Exception e)
 				{
 					if (mListenSocket != null)
 					{
-						bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
+						NetLog.LogException(e);
 					}
 				}
 			}
-			else
-			{
-				if (mListenSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mListenSocket.AcceptAsync(mAcceptIOContex);
-					}
-					catch (Exception e)
-					{
-						if (mListenSocket != null)
-						{
-							NetLog.LogException(e);
-						}
-					}
-				}
-			}
-
+			
 			if (bIOSyncCompleted)
 			{
 				this.ProcessAccept(mAcceptIOContex);
@@ -185,45 +173,22 @@ namespace AKNet.Tcp.Server
 		public void CloseNet()
 		{
 			MainThreadCheck.Check();
-			if (Config.bUseSocketLock)
+			if (mListenSocket != null)
 			{
-				lock (lock_mSocket_object)
-				{
-					if (mListenSocket != null)
-					{
-						Socket mSocket = mListenSocket;
-						mListenSocket = null;
+				Socket mSocket = mListenSocket;
+				mListenSocket = null;
 
-						try
-						{
-							mSocket.Close();
-						}
-						catch { }
-						finally
-						{
-							mSocket.Close();
-						}
-					}
+				try
+				{
+					mSocket.Close();
+				}
+				catch { }
+				finally
+				{
+					mSocket.Close();
 				}
 			}
-			else
-			{
-				if (mListenSocket != null)
-				{
-					Socket mSocket = mListenSocket;
-					mListenSocket = null;
 
-					try
-					{
-						mSocket.Close();
-					}
-					catch { }
-					finally
-					{
-						mSocket.Close();
-					}
-				}
-			}
 		}
 
 	}

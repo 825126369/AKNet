@@ -4,14 +4,18 @@ namespace TestNetClient
 {
     public class NetHandler : NetTestClientBase
     {
+        NetType mNetType = NetType.TCP;
         public override NetClientMainBase Create()
         {
-            return new NetClientMain(NetType.Udp4Tcp);
+            return new NetClientMain(mNetType);
         }
 
         public override void OnTestFinish()
         {
-            AKNet.Udp4Tcp.Common.UdpStatistical.PrintLog();
+            if (mNetType == NetType.Udp4Tcp)
+            {
+                AKNet.Udp4Tcp.Common.UdpStatistical.PrintLog();
+            }
         }
     }
 
