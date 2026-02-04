@@ -15,16 +15,11 @@ namespace AKNet.Common
     internal class NetStreamEncryption_Xor
     {
 		private const int nPackageFixedHeadSize = 10;
-        private readonly XORCrypto mCryptoInterface = null;
-        private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
+        private readonly XORCrypto mCryptoInterface = new XORCrypto();
+        private static readonly byte[] mCheck = new byte[] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
 		private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
         private byte[] mCacheHead = new byte[nPackageFixedHeadSize];
-
-        public NetStreamEncryption_Xor()
-		{
-			this.mCryptoInterface = new XORCrypto();
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureSendBufferOk(int nSumLength)
@@ -47,9 +42,14 @@ namespace AKNet.Common
 
             int nHeadLength = mReceiveStreamList.CopyTo(mCacheHead);
             byte nEncodeToken = mCacheHead[0];
-			for (int i = 0; i < 5 ; i++)
+			for (int i = 1; i < nPackageFixedHeadSize - 1; i++)
 			{
-				if (mCacheHead[i + 1] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
+                mCacheHead[i] = mCryptoInterface.Encode(i, mCacheHead[i], nEncodeToken);
+			}
+
+			for(int i = 0; i < mCheck.Length; i++)
+			{
+				if (mCheck[i] != mCacheHead[i + 1])
 				{
 					return false;
 				}
@@ -85,15 +85,16 @@ namespace AKNet.Common
 
 			byte nEncodeToken = (byte)RandomTool.RandomInt32(0, byte.MaxValue);
 			mCacheSendBuffer[0] = nEncodeToken;
-			for (int i = 0; i < 5; i++)
-			{
-				mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
-			}
-
-			EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)nPackageId);
+			mCheck.CopyTo(mCacheSendBuffer, 1);
+            EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)nPackageId);
 			EndianBitConverter.SetBytes(mCacheSendBuffer, 8, (ushort)mBufferSegment.Length);
 
-			Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
+            for (int i = 1; i < nPackageFixedHeadSize - 1; i++)
+            {
+                mCacheSendBuffer[i] = mCryptoInterface.Encode(i, mCacheSendBuffer[i], nEncodeToken);
+            }
+			
+            Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();
 			if (mBufferSegment.Length > 0)
 			{
 				mBufferSegment.CopyTo(mCacheSendBufferSpan.Slice(nPackageFixedHeadSize));
