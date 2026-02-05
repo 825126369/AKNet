@@ -2,6 +2,7 @@
 
 namespace AKNet.Common
 {
+    //不一定有用，先放这吧
     public static class ConfigMgr
     {
         private static bool bInit = false;
