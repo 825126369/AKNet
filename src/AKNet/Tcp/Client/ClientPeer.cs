@@ -167,7 +167,7 @@ namespace AKNet.Tcp.Client
             {
                 mSendStreamList.Reset();
             }
-            
+
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
@@ -176,9 +176,6 @@ namespace AKNet.Tcp.Client
             fReConnectServerCdTime = 0.0f;
             fSendHeartBeatTime = 0.0;
             fReceiveHeartBeatTime = 0.0;
-            
-            this.Name = string.Empty;
-            this.ID = 0;
         }
 
 		public void Release()
