@@ -313,7 +313,9 @@ namespace AKNet.Tcp.Client
 
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
-			lock (mSendStreamList)
+            ResetSendHeartBeatTime();
+
+            lock (mSendStreamList)
 			{
 				mSendStreamList.WriteFrom(mBufferSegment);
 			}

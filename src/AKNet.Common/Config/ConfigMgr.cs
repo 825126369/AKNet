@@ -3,7 +3,7 @@
 namespace AKNet.Common
 {
     //不一定有用，先放这吧
-    public static class ConfigMgr
+    public static class AKNetConfigMgr
     {
         private static bool bInit = false;
         private static readonly Dictionary<string, ConfigInstance> mConfigDic = new Dictionary<string, ConfigInstance>();
@@ -16,7 +16,7 @@ namespace AKNet.Common
             mTextParser = new TextParser(path);
         }
 
-        public static ConfigInstance FindConfig(string configId)
+        internal static ConfigInstance FindConfig(string configId)
         {
             if (!mConfigDic.TryGetValue(configId, out ConfigInstance mInstance))
             {
@@ -28,7 +28,7 @@ namespace AKNet.Common
         }
     }
 
-    public class ConfigInstance
+    internal class ConfigInstance
     {
         public bool bAutoReConnect = false;
 

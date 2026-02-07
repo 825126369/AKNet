@@ -15,7 +15,6 @@ namespace AKNet.Common
     internal class NetStreamEncryption_Xor
     {
 		private const int nPackageFixedHeadSize = 10;
-        private static readonly XORCrypto mCryptoInterface = new XORCrypto();
         private static readonly byte[] mCheck = new byte[] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
 		private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
@@ -44,7 +43,7 @@ namespace AKNet.Common
             byte nEncodeToken = mCacheHead[0];
 			for (int i = 1; i < nPackageFixedHeadSize - 1; i++)
 			{
-                mCacheHead[i] = mCryptoInterface.Encode(i, mCacheHead[i], nEncodeToken);
+                mCacheHead[i] = XORCrypto.Encode(i, mCacheHead[i], nEncodeToken);
 			}
 
 			for(int i = 0; i < mCheck.Length; i++)
@@ -91,7 +90,7 @@ namespace AKNet.Common
 
             for (int i = 1; i < nPackageFixedHeadSize - 1; i++)
             {
-                mCacheSendBuffer[i] = mCryptoInterface.Encode(i, mCacheSendBuffer[i], nEncodeToken);
+                mCacheSendBuffer[i] = XORCrypto.Encode(i, mCacheSendBuffer[i], nEncodeToken);
             }
 			
             Span<byte> mCacheSendBufferSpan = mCacheSendBuffer.AsSpan();

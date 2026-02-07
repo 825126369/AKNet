@@ -18,7 +18,6 @@ namespace AKNet.Tcp.Server
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, ReadOnlySpan<byte>.Empty);
                 SendNetStream(mBufferSegment);
             }
@@ -28,7 +27,6 @@ namespace AKNet.Tcp.Server
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, data);
                 SendNetStream(mBufferSegment);
             }
@@ -38,7 +36,6 @@ namespace AKNet.Tcp.Server
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(mNetPackage.GetPackageId(), mNetPackage.GetData());
                 SendNetStream(mBufferSegment);
             }
@@ -48,7 +45,6 @@ namespace AKNet.Tcp.Server
         {
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
-                ResetSendHeartBeatTime();
                 ReadOnlySpan<byte> mBufferSegment = mServerMgr.mCryptoMgr.Encode(nPackageId, buffer);
                 SendNetStream(mBufferSegment);
             }

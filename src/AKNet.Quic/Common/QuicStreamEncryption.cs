@@ -14,16 +14,10 @@ namespace AKNet.Common
     internal class QuicStreamEncryption
     {
 		private const int nPackageFixedHeadSize = 11;
-        private readonly XORCrypto mCryptoInterface = null;
-        private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
+        private static readonly byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
 		private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
         private byte[] mCacheHead = new byte[nPackageFixedHeadSize];
-
-        public QuicStreamEncryption()
-		{
-			this.mCryptoInterface = new XORCrypto();
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnSureSendBufferOk(int nSumLength)
@@ -48,7 +42,7 @@ namespace AKNet.Common
             byte nEncodeToken = mCacheHead[0];
 			for (int i = 0; i < 5 ; i++)
 			{
-				if (mCacheHead[i + 1] != mCryptoInterface.Encode(i, mCheck[i], nEncodeToken))
+				if (mCacheHead[i + 1] != XORCrypto.Encode(i, mCheck[i], nEncodeToken))
 				{
 					return false;
 				}
@@ -88,7 +82,7 @@ namespace AKNet.Common
 			mCacheSendBuffer[0] = nEncodeToken;
 			for (int i = 0; i < 5; i++)
 			{
-				mCacheSendBuffer[i + 1] = mCryptoInterface.Encode(i, mCheck[i], nEncodeToken);
+				mCacheSendBuffer[i + 1] = XORCrypto.Encode(i, mCheck[i], nEncodeToken);
 			}
 
 			EndianBitConverter.SetBytes(mCacheSendBuffer, 6, (ushort)nPackageId);

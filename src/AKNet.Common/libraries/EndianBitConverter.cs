@@ -45,6 +45,26 @@ namespace AKNet.Common
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetBytes(Span<byte> mBuffer, int nBeginIndex, Int64 value)
+        {
+            if (bUseBinaryPrimitives)
+            {
+                BinaryPrimitives.WriteInt64BigEndian(mBuffer.Slice(nBeginIndex), value);
+            }
+            else
+            {
+                mBuffer[nBeginIndex + 0] = (byte)(value >> 56);
+                mBuffer[nBeginIndex + 1] = (byte)(value >> 48);
+                mBuffer[nBeginIndex + 2] = (byte)(value >> 40);
+                mBuffer[nBeginIndex + 3] = (byte)(value >> 32);
+                mBuffer[nBeginIndex + 4] = (byte)(value >> 24);
+                mBuffer[nBeginIndex + 5] = (byte)(value >> 16);
+                mBuffer[nBeginIndex + 6] = (byte)(value >> 8);
+                mBuffer[nBeginIndex + 7] = (byte)(value);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetBytes(Span<byte> mBuffer, int nBeginIndex, Int32 value)
         {
             if (bUseBinaryPrimitives)

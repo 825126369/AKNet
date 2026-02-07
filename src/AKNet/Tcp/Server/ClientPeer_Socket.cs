@@ -148,7 +148,8 @@ namespace AKNet.Tcp.Server
 
 		public void SendNetStream(ReadOnlySpan<byte> mBufferSegment)
 		{
-			lock (mSendStreamList)
+            ResetSendHeartBeatTime();
+            lock (mSendStreamList)
 			{
 				mSendStreamList.WriteFrom(mBufferSegment);
 			}
@@ -186,7 +187,7 @@ namespace AKNet.Tcp.Server
 					mSendStreamList.CopyTo(mSendIOContex.MemoryBuffer.Span.Slice(0, nLength));
 				}
 				mSendIOContex.SetBuffer(0, nLength);
-				StartSendEventArg();
+                StartSendEventArg();
 			}
 			else
 			{

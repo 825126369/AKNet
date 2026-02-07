@@ -15,7 +15,7 @@ namespace AKNet.Common
     internal class NetStreamEncryption
     {
         private const int nPackageFixedHeadSize = 9;
-        private byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
+        private static readonly byte[] mCheck = new byte[5] { (byte)'A', (byte)'K', (byte)'N', (byte)'E', (byte)'T' };
         private byte[] mCacheSendBuffer = new byte[1024];
 		private byte[] mCacheReceiveBuffer = new byte[1024];
         private byte[] mCacheHead = new byte[nPackageFixedHeadSize];
@@ -51,8 +51,8 @@ namespace AKNet.Common
 				}
 			}
 
-            ushort nPackageId = EndianBitConverter.ToUInt16(mCacheHead, 4);
-			int nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 6);
+            ushort nPackageId = EndianBitConverter.ToUInt16(mCacheHead, 5);
+			int nBodyLength = EndianBitConverter.ToUInt16(mCacheHead, 7);
 			NetLog.Assert(nBodyLength >= 0);
 
 			int nSumLength = nBodyLength + nPackageFixedHeadSize;
