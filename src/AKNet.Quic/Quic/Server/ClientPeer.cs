@@ -17,8 +17,8 @@ namespace AKNet.Quic.Server
 {
     internal partial class ClientPeer : QuicClientPeerBase, IPoolItemInterface
 	{
-		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+		private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
 
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
@@ -35,7 +35,7 @@ namespace AKNet.Quic.Server
         public ClientPeer(ServerMgr mNetServer)
 		{
 			this.mServerMgr = mNetServer;
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
 		public void Update(double elapsed)
@@ -107,7 +107,6 @@ namespace AKNet.Quic.Server
         private void SendHeartBeat()
 		{
 			SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
-            //NetLog.Log("发送心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -120,13 +119,13 @@ namespace AKNet.Quic.Server
         private void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
-            //NetLog.Log("接收心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        public void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            this.mSocketPeerState = mSocketPeerState;
+            NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
+            this.mSocketPeerState = mState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()

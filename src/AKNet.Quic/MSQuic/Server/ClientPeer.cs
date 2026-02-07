@@ -16,8 +16,8 @@ namespace AKNet.MSQuic.Server
 {
     internal partial class ClientPeer : QuicClientPeerBase, IPoolItemInterface
 	{
-		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+		private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
 
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
@@ -34,7 +34,7 @@ namespace AKNet.MSQuic.Server
         public ClientPeer(ServerMgr mNetServer)
 		{
 			this.mServerMgr = mNetServer;
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
 		public void Update(double elapsed)
@@ -75,7 +75,7 @@ namespace AKNet.MSQuic.Server
                     fSendHeartBeatTime += elapsed;
 					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
-						//SendHeartBeat();
+						SendHeartBeat();
 						fSendHeartBeatTime = 0.0;
 					}
 
@@ -83,10 +83,10 @@ namespace AKNet.MSQuic.Server
                     fReceiveHeartBeatTime += fHeatTime;
 					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 					{
-						//mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 						fReceiveHeartBeatTime = 0.0;
 #if DEBUG
-                        //NetLog.Log($"{GetName()} 心跳超时");
+                        NetLog.Log($"{GetName()} 心跳超时");
 #endif
                     }
 
@@ -106,7 +106,6 @@ namespace AKNet.MSQuic.Server
         private void SendHeartBeat()
 		{
 			SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
-            //NetLog.Log("发送心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -119,13 +118,13 @@ namespace AKNet.MSQuic.Server
         private void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0.0;
-            //NetLog.Log("接收心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        public void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            this.mSocketPeerState = mSocketPeerState;
+            NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
+            this.mSocketPeerState = mState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()

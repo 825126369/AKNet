@@ -32,8 +32,8 @@ namespace AKNet.Quic.Client
         private double fSendHeartBeatTime = 0.0;
         private double fReceiveHeartBeatTime = 0.0;
 
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private string Name = string.Empty;
         private uint ID = 0;
 
@@ -43,7 +43,7 @@ namespace AKNet.Quic.Client
 
         public ClientPeer()
         {
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
 		public void Update(double elapsed)
@@ -130,7 +130,6 @@ namespace AKNet.Quic.Client
         private void SendHeartBeat()
         {
             SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
-            //NetLog.Log("发送心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -143,7 +142,6 @@ namespace AKNet.Quic.Client
         public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0f;
-            //NetLog.Log("接收心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

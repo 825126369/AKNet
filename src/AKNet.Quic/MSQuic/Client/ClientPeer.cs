@@ -30,8 +30,8 @@ namespace AKNet.MSQuic.Client
         private double fSendHeartBeatTime = 0.0;
         private double fReceiveHeartBeatTime = 0.0;
 
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private string Name = string.Empty;
         private uint ID = 0;
 
@@ -41,7 +41,7 @@ namespace AKNet.MSQuic.Client
 
         public ClientPeer()
         {
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
 		public void Update(double elapsed)
@@ -88,7 +88,7 @@ namespace AKNet.MSQuic.Client
 					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
 					{
                         fSendHeartBeatTime = 0.0;
-                        //SendHeartBeat();
+                        SendHeartBeat();
 					}
 
                     double fHeatTime = Math.Min(0.3, elapsed);
@@ -97,9 +97,9 @@ namespace AKNet.MSQuic.Client
                     {
                         fReceiveHeartBeatTime = 0.0;
                         fReConnectServerCdTime = 0.0;
-                        //mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                        mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
 #if DEBUG
-                        //NetLog.Log($"{GetName()} 心跳超时");
+                        NetLog.Log($"{GetName()} 心跳超时");
 #endif
                     }
                     
@@ -128,7 +128,6 @@ namespace AKNet.MSQuic.Client
         private void SendHeartBeat()
         {
             SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
-            //NetLog.Log("发送心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -141,7 +140,6 @@ namespace AKNet.MSQuic.Client
         public void ReceiveHeartBeat()
 		{
 			fReceiveHeartBeatTime = 0f;
-            //NetLog.Log("接收心跳");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
