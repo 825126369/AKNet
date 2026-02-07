@@ -16,7 +16,7 @@ namespace AKNet.LinuxTcp.Server
 	{
         private UdpServer mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
-        private readonly List<ClientPeer> mClientList = new List<ClientPeer>();
+        private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 
         public ClientPeerMgr(UdpServer mNetServer)
         {
@@ -66,7 +66,7 @@ namespace AKNet.LinuxTcp.Server
 
             if (mSocket != null)
             {
-                ClientPeer clientPeer = new ClientPeer(mNetServer);
+                ClientPeerWrap clientPeer = new ClientPeerWrap(mNetServer);
                 clientPeer.HandleConnectedSocket(mSocket);
                 mClientList.Add(clientPeer);
                 PrintAddClientMsg(clientPeer);
@@ -75,7 +75,7 @@ namespace AKNet.LinuxTcp.Server
             return false;
         }
 
-        private void PrintAddClientMsg(ClientPeer clientPeer)
+        private void PrintAddClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();
@@ -90,7 +90,7 @@ namespace AKNet.LinuxTcp.Server
 #endif
         }
 
-        private void PrintRemoveClientMsg(ClientPeer clientPeer)
+        private void PrintRemoveClientMsg(ClientPeerWrap clientPeer)
         {
 #if DEBUG
             var mRemoteEndPoint = clientPeer.GetIPEndPoint();

@@ -14,12 +14,12 @@ namespace AKNet.LinuxTcp.Server
 {
     internal class ClientPeerPool
     {
-        readonly Stack<ClientPeerPrivate> mObjectPool = new Stack<ClientPeerPrivate>();
+        readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
         UdpServer mServer = null;
         private int nMaxCapacity = 0;
-        private ClientPeerPrivate GenerateObject()
+        private ClientPeer GenerateObject()
         {
-            ClientPeerPrivate clientPeer = new ClientPeerPrivate(this.mServer);
+            ClientPeer clientPeer = new ClientPeer(this.mServer);
             return clientPeer;
         }
 
@@ -43,11 +43,11 @@ namespace AKNet.LinuxTcp.Server
             return mObjectPool.Count;
         }
 
-        public ClientPeerPrivate Pop()
+        public ClientPeer Pop()
         {
             MainThreadCheck.Check();
 
-            ClientPeerPrivate t = null;
+            ClientPeer t = null;
             if (!mObjectPool.TryPop(out t))
             {
                 t = GenerateObject();
@@ -55,7 +55,7 @@ namespace AKNet.LinuxTcp.Server
             return t;
         }
 
-        public void recycle(ClientPeerPrivate t)
+        public void recycle(ClientPeer t)
         {
             MainThreadCheck.Check();
 #if DEBUG

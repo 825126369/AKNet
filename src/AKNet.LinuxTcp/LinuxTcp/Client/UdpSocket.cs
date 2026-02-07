@@ -34,7 +34,6 @@ namespace AKNet.LinuxTcp.Client
         public SocketUdp(ClientPeer mClientPeer)
         {
             this.mClientPeer = mClientPeer;
-            mClientPeer.SetSocketState(SOCKET_PEER_STATE.NONE);
 
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);

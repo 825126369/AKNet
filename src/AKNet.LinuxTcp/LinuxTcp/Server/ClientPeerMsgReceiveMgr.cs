@@ -15,11 +15,11 @@ namespace AKNet.LinuxTcp.Server
     internal class MsgReceiveMgr
 	{
         private UdpServer mNetServer = null;
-        private ClientPeerPrivate mClientPeer = null;
+        private ClientPeer mClientPeer = null;
         private readonly NetStreamCircularBuffer mReceiveStreamList = null;
         private readonly msghdr mTcpMsg = null; 
 
-        public MsgReceiveMgr(UdpServer mNetServer, ClientPeerPrivate mClientPeer)
+        public MsgReceiveMgr(UdpServer mNetServer, ClientPeer mClientPeer)
         {
 			this.mNetServer = mNetServer;
 			this.mClientPeer = mClientPeer;
