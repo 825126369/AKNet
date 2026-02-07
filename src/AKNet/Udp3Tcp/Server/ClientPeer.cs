@@ -82,13 +82,13 @@ namespace AKNet.Udp3Tcp.Server
                     break;
             }
 
+            mUdpCheckPool.Update(elapsed);
+
             if (this.mSocketPeerState != this.mLastSocketPeerState)
             {
                 this.mLastSocketPeerState = mSocketPeerState;
                 mServerMgr.OnSocketStateChanged(this);
             }
-
-            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)

@@ -142,15 +142,13 @@ namespace AKNet.Udp3Tcp.Client
                     break;
             }
 
+            mUdpCheckPool.Update(elapsed);
+
             if (this.mSocketPeerState != this.mLastSocketPeerState)
             {
                 this.mLastSocketPeerState = mSocketPeerState;
                 mListenClientPeerStateMgr.OnSocketStateChanged(this);
             }
-
-
-            
-            mUdpCheckPool.Update(elapsed);
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
