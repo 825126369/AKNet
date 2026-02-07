@@ -24,8 +24,8 @@ namespace AKNet.Udp3Tcp.Client
         private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
 
         private readonly ObjectPoolManager mObjectPoolManager = new ObjectPoolManager();
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private string Name = string.Empty;
         private uint ID = 0;
 
@@ -58,7 +58,7 @@ namespace AKNet.Udp3Tcp.Client
             MainThreadCheck.Check();
             mUdpCheckPool = new UdpCheckMgr(this);
 
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
             mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);

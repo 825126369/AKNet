@@ -29,8 +29,8 @@ namespace AKNet.Udp1Tcp.Client
         internal readonly CryptoMgr mCryptoMgr;
 
         private readonly ObjectPoolManager mObjectPoolManager;
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private bool b_SOCKET_PEER_STATE_Changed = false;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private string Name = string.Empty;
         private uint ID = 0;
 
@@ -46,6 +46,7 @@ namespace AKNet.Udp1Tcp.Client
             mSocketMgr = new SocketUdp(this);
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(this);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
         public void Update(double elapsed)
@@ -55,32 +56,20 @@ namespace AKNet.Udp1Tcp.Client
                 NetLog.LogWarning("NetClient 帧 时间 太长: " + elapsed);
             }
 
-            if (b_SOCKET_PEER_STATE_Changed)
-            {
-                OnSocketStateChanged();
-                b_SOCKET_PEER_STATE_Changed = false;
-            }
-
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
+
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mListenClientPeerStateMgr.OnSocketStateChanged(this);
+            }
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            if (this.mSocketPeerState != mState)
-            {
-                this.mSocketPeerState = mState;
-
-                if (MainThreadCheck.orInMainThread())
-                {
-                    OnSocketStateChanged();
-                }
-                else
-                {
-                    b_SOCKET_PEER_STATE_Changed = true;
-                }
-            }
+            this.mSocketPeerState = mState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()
@@ -103,7 +92,7 @@ namespace AKNet.Udp1Tcp.Client
             mMsgReceiveMgr.Release();
             mUdpCheckPool.Release();
 
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         public void ConnectServer(string Ip, int nPort)

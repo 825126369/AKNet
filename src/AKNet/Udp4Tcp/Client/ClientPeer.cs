@@ -21,8 +21,8 @@ namespace AKNet.Udp4Tcp.Client
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
         private readonly CryptoMgr mCryptoMgr = new CryptoMgr();
 
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private string Name = string.Empty;
         private uint ID = 0;
                
@@ -46,7 +46,7 @@ namespace AKNet.Udp4Tcp.Client
         public ClientPeer()
         {
             MainThreadCheck.Check();
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
         public void Update(double elapsed)

@@ -17,8 +17,8 @@ namespace AKNet.Tcp.Server
 {
     internal partial class ClientPeer : ClientPeerBase, IPoolItemInterface
 	{
-		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
@@ -46,7 +46,7 @@ namespace AKNet.Tcp.Server
             mReceiveIOContex.Completed += OnIOCompleted;
             bSendIOContextUsed = false;
 
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
 		public void Update(double elapsed)
@@ -119,9 +119,10 @@ namespace AKNet.Tcp.Server
 		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetSocketState(SOCKET_PEER_STATE mSocketPeerState)
+        private void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            this.mSocketPeerState = mSocketPeerState;
+            NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
+            this.mSocketPeerState = mState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()

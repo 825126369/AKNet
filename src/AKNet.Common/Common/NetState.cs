@@ -29,8 +29,6 @@ namespace AKNet.Common
 
     public enum SOCKET_PEER_STATE : uint
 	{
-		NONE = 0,
-
 		CONNECTING = 1,
 		CONNECTED = 2,
 

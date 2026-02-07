@@ -16,8 +16,8 @@ namespace AKNet.Udp4Tcp.Server
 {
     internal partial class ClientPeer : ClientPeerBase
 	{
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private ServerMgr mServerMgr;
 
         private string Name = string.Empty;
@@ -36,8 +36,7 @@ namespace AKNet.Udp4Tcp.Server
         public ClientPeer(ServerMgr mNetServer)
         {
             this.mServerMgr = mNetServer;
-            SetSocketState(SOCKET_PEER_STATE.NONE);
-            
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
             bSendIOContexUsed = false;
         }
 
@@ -91,6 +90,7 @@ namespace AKNet.Udp4Tcp.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetSocketState(SOCKET_PEER_STATE mState)
         {
+            NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
             this.mSocketPeerState = mState;
         }
 

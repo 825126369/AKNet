@@ -22,7 +22,8 @@ namespace AKNet.Udp1Tcp.Server
 
         internal UdpCheckMgr mUdpCheckPool = null;
 		internal UDPLikeTCPMgr mUDPLikeTCPMgr = null;
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         private UdpServer mNetServer;
         private string Name = string.Empty;
         private uint ID = 0;
@@ -37,36 +38,27 @@ namespace AKNet.Udp1Tcp.Server
             mMsgSendMgr = new MsgSendMgr(mNetServer, this);
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
         public void Update(double elapsed)
         {
-            if (b_SOCKET_PEER_STATE_Changed)
-            {
-                this.mNetServer.OnSocketStateChanged(this);
-                b_SOCKET_PEER_STATE_Changed = false;
-            }
-
             mMsgReceiveMgr.Update(elapsed);
             mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
+
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mNetServer.OnSocketStateChanged(this);
+            }
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
-            if (this.mSocketPeerState != mState)
-            {
-                this.mSocketPeerState = mState;
-                if (MainThreadCheck.orInMainThread())
-                {
-                    this.mNetServer.OnSocketStateChanged(this);
-                }
-                else
-                {
-                    b_SOCKET_PEER_STATE_Changed = true;
-                }
-            }
+            NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
+            this.mSocketPeerState = mState;
         }
 
         public SOCKET_PEER_STATE GetSocketState()

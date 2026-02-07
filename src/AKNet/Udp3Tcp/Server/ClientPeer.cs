@@ -18,8 +18,8 @@ namespace AKNet.Udp3Tcp.Server
     internal partial class ClientPeer : UdpClientPeerCommonBase, ClientPeerBase
 	{
         internal UdpCheckMgr mUdpCheckPool = null;
-        private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.NONE;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.NONE;
+        private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private ServerMgr mServerMgr;
 
         private string Name = string.Empty;
@@ -40,7 +40,7 @@ namespace AKNet.Udp3Tcp.Server
         {
             this.mServerMgr = mNetServer;
             mUdpCheckPool = new UdpCheckMgr(this);
-            SetSocketState(SOCKET_PEER_STATE.NONE);
+            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
 
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
@@ -93,6 +93,7 @@ namespace AKNet.Udp3Tcp.Server
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
+            NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
             this.mSocketPeerState = mState;
         }
 
