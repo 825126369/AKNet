@@ -8,17 +8,31 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using System;
+using System.Text;
 
 namespace AKNet.Common
 {
     internal static class XORCrypto
     {
-        static readonly byte[] key = new byte[8];
+        static readonly byte[] key = null;
         static XORCrypto()
         {
-            EndianBitConverter.SetBytes(key, 0, TimeTool.GetTimeStamp(VersionPublishConfig.m_BuildTime));
-            //VersionPublishConfig.GetBuildTimeStr() 在不同的应用上，虽然DateTime 一样，但转为ToString() 后，字符串不一样。
-            //NetLogHelper.PrintByteArray("XORCrypto Key: ", key);
+            //时间戳也不行。因为不同时区，相同的 DateTime, 返回的时间戳不一样。
+            //直接 m_BuildTime.ToString() 也不行。在不同的应用上，虽然DateTime 一样，但转为ToString() 后，字符串不一样。
+            if (VersionPublishConfig.m_BuildTime.Day % 2 == 0)
+            {
+                //具体化格式化字符串
+                string t = VersionPublishConfig.m_BuildTime.ToString("yyyy/mm/dd HH:mm:ss");
+                key = new byte[t.Length];
+                EndianBitConverter.SetBytes(key, 0, t);
+            }
+            else
+            {
+                //不使用时间戳
+                key = new byte[8];
+                var mTimeSpan = VersionPublishConfig.m_BuildTime - new DateTime(2000, 1, 1, 0, 0, 0);
+                EndianBitConverter.SetBytes(key, 0, (long)mTimeSpan.TotalMilliseconds);
+            }
         }
 
         public static byte Encode(int i, byte input, byte token)
