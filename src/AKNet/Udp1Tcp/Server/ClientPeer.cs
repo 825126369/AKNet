@@ -11,6 +11,7 @@ using AKNet.Common;
 using AKNet.Udp1Tcp.Common;
 using System;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp1Tcp.Server
 {
@@ -39,7 +40,7 @@ namespace AKNet.Udp1Tcp.Server
             mUdpCheckPool = new UdpCheckMgr(this);
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
 
-            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+            ResetSocketState();
         }
 
         public void Update(double elapsed)
@@ -48,13 +49,10 @@ namespace AKNet.Udp1Tcp.Server
             mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
 
-            if (this.mSocketPeerState != this.mLastSocketPeerState)
-            {
-                this.mLastSocketPeerState = mSocketPeerState;
-                mNetServer.OnSocketStateChanged(this);
-            }
+            OnSocketStateChanged();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetSocketState(SOCKET_PEER_STATE mState)
         {
             NetLog.Assert(mState == SOCKET_PEER_STATE.CONNECTED || mState == SOCKET_PEER_STATE.DISCONNECTED);
@@ -66,8 +64,27 @@ namespace AKNet.Udp1Tcp.Server
 			return mSocketPeerState;
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnSocketStateChanged()
+        {
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mNetServer.OnSocketStateChanged(this);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSocketState()
+        {
+            this.mSocketPeerState = this.mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        }
+
         public void Reset()
         {
+            OnSocketStateChanged();
+            ResetSocketState();
+
             mUDPLikeTCPMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();

@@ -36,8 +36,8 @@ namespace AKNet.Udp4Tcp.Server
         public ClientPeer(ServerMgr mNetServer)
         {
             this.mServerMgr = mNetServer;
-            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
             bSendIOContexUsed = false;
+            ResetSocketState();
         }
 
         public void Update(double elapsed)
@@ -80,11 +80,7 @@ namespace AKNet.Udp4Tcp.Server
                     break;
             }
 
-            if (this.mSocketPeerState != this.mLastSocketPeerState)
-            {
-                this.mLastSocketPeerState = mSocketPeerState;
-                mServerMgr.OnSocketStateChanged(this);
-            }
+            OnSocketStateChanged();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -98,6 +94,23 @@ namespace AKNet.Udp4Tcp.Server
 		{
 			return mSocketPeerState;
 		}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnSocketStateChanged()
+        {
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mServerMgr.OnSocketStateChanged(this);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSocketState()
+        {
+            this.mSocketPeerState = this.mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
@@ -119,7 +132,8 @@ namespace AKNet.Udp4Tcp.Server
 
         public void Reset()
         {
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            OnSocketStateChanged();
+            ResetSocketState();
             CloseSocket();
 
             lock (mReceiveStreamList)

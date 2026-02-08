@@ -11,6 +11,7 @@ using AKNet.Common;
 using AKNet.Udp2Tcp.Common;
 using System;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.Udp2Tcp.Server
 {
@@ -38,10 +39,10 @@ namespace AKNet.Udp2Tcp.Server
         {
             this.mServerMgr = mNetServer;
             mUdpCheckPool = new UdpCheckMgr(this);
-            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-
             SendArgs.Completed += ProcessSend;
             SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+
+            ResetSocketState();
         }
 
         public void Update(double elapsed)
@@ -85,12 +86,7 @@ namespace AKNet.Udp2Tcp.Server
             }
 
             mUdpCheckPool.Update(elapsed);
-
-            if (mLastSocketPeerState != mSocketPeerState)
-            {
-                mLastSocketPeerState = mSocketPeerState;
-                this.mServerMgr.OnSocketStateChanged(this);
-            }
+            OnSocketStateChanged();
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -103,6 +99,22 @@ namespace AKNet.Udp2Tcp.Server
 		{
 			return mSocketPeerState;
 		}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnSocketStateChanged()
+        {
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mServerMgr.OnSocketStateChanged(this);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSocketState()
+        {
+            this.mSocketPeerState = this.mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        }
 
         private void OnConnectReset()
         {
@@ -128,7 +140,8 @@ namespace AKNet.Udp2Tcp.Server
 
         public void Reset()
         {
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            OnSocketStateChanged();
+            ResetSocketState();
             CloseSocket();
 
             this.mUdpCheckPool.Reset();

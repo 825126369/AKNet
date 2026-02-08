@@ -17,9 +17,8 @@ namespace AKNet.Tcp.Server
 {
     internal partial class ClientPeer : ClientPeerBase, IPoolItemInterface
 	{
-		private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-        private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-
+		private SOCKET_PEER_STATE mSocketPeerState;
+        private SOCKET_PEER_STATE mLastSocketPeerState;
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
 		
@@ -29,10 +28,8 @@ namespace AKNet.Tcp.Server
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
         private readonly AkCircularBuffer mSendStreamList = new AkCircularBuffer();
-
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
-        private readonly object lock_mSocket_object = new object();
         private Socket mSocket = null;
         private bool bSendIOContextUsed = false;
 
@@ -46,14 +43,14 @@ namespace AKNet.Tcp.Server
             mReceiveIOContex.Completed += OnIOCompleted;
             bSendIOContextUsed = false;
 
-            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+            ResetSocketState();
         }
 
 		public void Update(double elapsed)
 		{
-			switch (mSocketPeerState)
-			{
-				case SOCKET_PEER_STATE.CONNECTED:
+            switch (mSocketPeerState)
+            {
+                case SOCKET_PEER_STATE.CONNECTED:
                     int nPackageCount = 0;
                     while (NetPackageExecute())
                     {
@@ -65,39 +62,35 @@ namespace AKNet.Tcp.Server
                         ReceiveHeartBeat();
                     }
 
-                    //if (nPackageCount > 100)
-                    //{
-                    //	NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
-                    //}
+                    if (nPackageCount > 100)
+                    {
+                        NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
+                    }
 
                     fSendHeartBeatTime += elapsed;
-					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
-					{
-						SendHeartBeat();
-						fSendHeartBeatTime = 0.0;
-					}
+                    if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+                    {
+                        SendHeartBeat();
+                        fSendHeartBeatTime = 0.0;
+                    }
 
                     double fHeatTime = Math.Min(0.3, elapsed);
                     fReceiveHeartBeatTime += fHeatTime;
-					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
-					{
-						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-						fReceiveHeartBeatTime = 0.0;
+                    if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                    {
+                        fReceiveHeartBeatTime = 0.0;
+                        SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 #if DEBUG
 						NetLog.Log("心跳超时");
 #endif
-					}
+                    }
 
-					break;
-				default:
-					break;
-			}
-
-            if (this.mSocketPeerState != this.mLastSocketPeerState)
-            {
-                this.mLastSocketPeerState = mSocketPeerState;
-                mServerMgr.OnSocketStateChanged(this);
+                    break;
+                default:
+                    break;
             }
+
+            OnSocketStateChanged();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -130,11 +123,28 @@ namespace AKNet.Tcp.Server
             return mSocketPeerState;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnSocketStateChanged()
+        {
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mServerMgr.OnSocketStateChanged(this);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSocketState()
+        {
+            this.mSocketPeerState = this.mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        }
+
         public void Reset()
 		{
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            OnSocketStateChanged();
+            ResetSocketState();
+
             CloseSocket();
-            
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();

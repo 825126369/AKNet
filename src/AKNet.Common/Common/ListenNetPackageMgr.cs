@@ -19,7 +19,7 @@ namespace AKNet.Common
     internal class ListenNetPackageMgr
 	{
 		private readonly Dictionary<ushort, Action<ClientPeerBase, NetPackage>> mNetEventDic = null;
-		private event Action<ClientPeerBase, NetPackage> mCommonListenFunc = null;
+		private event Action<ClientPeerBase, NetPackage> mCommonListenFunc;
 
 		public ListenNetPackageMgr()
 		{
@@ -28,21 +28,16 @@ namespace AKNet.Common
 
 		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
-			if (mCommonListenFunc != null)
+            mCommonListenFunc?.Invoke(peer, mPackage);
+
+            ushort nPackageId = mPackage.GetPackageId();
+			if (mNetEventDic.ContainsKey(nPackageId) && mNetEventDic[nPackageId] != null)
 			{
-				mCommonListenFunc(peer, mPackage);
+				mNetEventDic[nPackageId](peer, mPackage);
 			}
 			else
 			{
-				ushort nPackageId = mPackage.GetPackageId();
-				if (mNetEventDic.ContainsKey(nPackageId) && mNetEventDic[nPackageId] != null)
-				{
-					mNetEventDic[nPackageId](peer, mPackage);
-				}
-				else
-				{
-					NetLog.Log("不存在的包Id: " + nPackageId);
-				}
+				NetLog.Log("不存在的包Id: " + nPackageId);
 			}
 		}
 		
