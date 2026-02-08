@@ -143,22 +143,7 @@ namespace AKNet.Udp1Tcp.Server
 
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
-			bool bIOPending = true;
-			if (mSocket != null)
-			{
-				try
-				{
-                    bIOPending = mSocket.SendToAsync(e);
-				}
-				catch (Exception ex)
-				{
-					if (mSocket != null)
-					{
-						NetLog.LogException(ex);
-					}
-				}
-			}
-			
+			bool bIOPending = mSocket.SendToAsync(e);
 			UdpStatistical.AddSendIOCount(!bIOPending);
 			return bIOPending;
 		}

@@ -24,9 +24,7 @@ namespace AKNet.Udp1Tcp.Server
 
             this.mSocket = mSocket;
             this.mIPEndPoint = mSocket.RemoteEndPoint;
-
             SendArgs.RemoteEndPoint = this.mIPEndPoint;
-
             SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
@@ -64,10 +62,7 @@ namespace AKNet.Udp1Tcp.Server
                 catch (Exception ex)
                 {
                     bSendIOContexUsed = false;
-                    if (mSocket != null)
-                    {
-                        NetLog.LogException(ex);
-                    }
+                    DisConnectedWithException(ex);
                 }
             }
 
@@ -89,8 +84,7 @@ namespace AKNet.Udp1Tcp.Server
             }
             else
             {
-                NetLog.LogError(e.SocketError);
-                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                DisConnectedWithSocketError(e.SocketError);
                 bSendIOContexUsed = false;
             }
         }
@@ -186,18 +180,9 @@ namespace AKNet.Udp1Tcp.Server
                 bSendIOContexUsed = false;
             }
         }
-
-        int nLastSendBytesCount = 0;
-        private void SendNetStream2(int BytesTransferred = -1)
+        
+        private void SendNetStream2()
         {
-            if (BytesTransferred >= 0)
-            {
-                if (BytesTransferred != nLastSendBytesCount)
-                {
-                    NetLog.LogError("UDP 发生短写");
-                }
-            }
-
             var mSendArgSpan = SendArgs.Buffer.AsSpan();
             int nSendBytesCount = 0;
             if (Config.bSocketSendMultiPackage)
@@ -217,7 +202,6 @@ namespace AKNet.Udp1Tcp.Server
 
             if (nSendBytesCount > 0)
             {
-                nLastSendBytesCount = nSendBytesCount;
                 SendArgs.SetBuffer(0, nSendBytesCount);
                 if (!SendToAsync(SendArgs))
                 {
@@ -228,6 +212,25 @@ namespace AKNet.Udp1Tcp.Server
             {
                 bSendIOContexUsed = false;
             }
+        }
+
+        private void DisConnectedWithException(Exception e)
+        {
+            if (mSocket != null)
+            {
+                NetLog.LogException(e);
+            }
+            DisConnectedWithError();
+        }
+
+        private void DisConnectedWithSocketError(SocketError e)
+        {
+            DisConnectedWithError();
+        }
+
+        private void DisConnectedWithError()
+        {
+            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
         }
 
         public void CloseSocket()
