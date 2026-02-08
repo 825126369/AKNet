@@ -13,10 +13,10 @@ namespace AKNet.Udp1Tcp.Common
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
-        public const bool bUseSendStream = true;
+        public const bool bUseSendStream = false;
         public const bool bSocketSendMultiPackage = true;
 
-        public const int nUseFakeSocketMgrType = 2;
+        public const int nUseFakeSocketMgrType = 4;
         public const bool bFakeSocketManageConnectState = false;
 
         public const ushort nUdpMinOrderId = 1;

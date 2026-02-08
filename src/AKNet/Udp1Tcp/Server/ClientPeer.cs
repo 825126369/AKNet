@@ -129,10 +129,22 @@ namespace AKNet.Udp1Tcp.Server
         private void OnConnectReset()
         {
             this.mUdpCheckPool.Reset();
-            lock (mSendStreamList)
+
+            if (Config.bUseSendStream)
             {
-                this.mSendStreamList.Reset();
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.Reset();
+                }
             }
+            else
+            {
+                while (mSendPackageQueue.TryDequeue(out var mPackage))
+                {
+                    mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
+            }
+
             this.fReceiveHeartBeatTime = 0;
             this.fMySendHeartBeatCdTime = 0;
         }
@@ -140,10 +152,22 @@ namespace AKNet.Udp1Tcp.Server
         private void OnDisConnectReset()
         {
             this.mUdpCheckPool.Reset();
-            lock (mSendStreamList)
+
+            if (Config.bUseSendStream)
             {
-                this.mSendStreamList.Reset();
+                lock (mSendStreamList)
+                {
+                    mSendStreamList.Reset();
+                }
             }
+            else
+            {
+                while (mSendPackageQueue.TryDequeue(out var mPackage))
+                {
+                    mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                }
+            }
+
             this.fReceiveHeartBeatTime = 0;
             this.fMySendHeartBeatCdTime = 0;
         }
