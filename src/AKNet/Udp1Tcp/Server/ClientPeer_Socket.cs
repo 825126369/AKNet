@@ -54,7 +54,7 @@ namespace AKNet.Udp1Tcp.Server
 
         public bool SendToAsync(SocketAsyncEventArgs e)
         {
-            bool bIOPending = false;
+            bool bIOPending = true;
             if (mSocket != null)
             {
                 try
