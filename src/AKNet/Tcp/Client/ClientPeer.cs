@@ -180,8 +180,8 @@ namespace AKNet.Tcp.Client
 
 		public void Release()
 		{
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            CloseSocket();
+            Reset();
+
             lock (mSendStreamList)
             {
                 mSendStreamList.Dispose();
@@ -191,6 +191,11 @@ namespace AKNet.Tcp.Client
             {
                 mReceiveStreamList.Dispose();
             }
+
+            mSendIOContex.Dispose();
+            mReceiveIOContex.Dispose();
+            mConnectIOContex.Dispose();
+            mDisConnectIOContex.Dispose();
         }
 
         public void addNetListenFunc(ushort nPackageId, Action<ClientPeerBase, NetPackage> fun)
