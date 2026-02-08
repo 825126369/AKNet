@@ -174,14 +174,18 @@ namespace AKNet.Common
             mItem.AddSpan(readOnlySpan);
             FinishSpan();
         }
-        
+
         public int WriteTo(Span<byte> readBuffer)
-		{
-			ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetCanReadSpan();
-            mReadSpan.CopyTo(readBuffer);
-            RemoveFirstNodeToLast();
-            return mReadSpan.Length;
-		}
+        {
+            if (Length > 0)
+            {
+                ReadOnlySpan<byte> mReadSpan = nCurrentReadBlock.Value.GetCanReadSpan();
+                mReadSpan.CopyTo(readBuffer);
+                RemoveFirstNodeToLast();
+                return mReadSpan.Length;
+            }
+            return 0;
+        }
 
 		public int WriteToMax(Span<byte> readBuffer)
 		{

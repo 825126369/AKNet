@@ -33,7 +33,7 @@ namespace AKNet.Udp1Tcp.Server
         FakeSocket mSocket = null;
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
-        readonly AkCircularSpanBuffer mSendStreamList = null;
+        readonly AkCircularManySpanBuffer mSendStreamList = null;
         bool bSendIOContexUsed = false;
 
         IPEndPoint mIPEndPoint;
@@ -48,7 +48,7 @@ namespace AKNet.Udp1Tcp.Server
 
             if (Config.bUseSendStream)
             {
-                mSendStreamList = new AkCircularSpanBuffer();
+                mSendStreamList = new AkCircularManySpanBuffer();
             }
             else
             {

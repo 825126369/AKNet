@@ -43,10 +43,9 @@ namespace AKNet.Udp1Tcp.Client
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly SocketAsyncEventArgs SendArgs;
-        private readonly object lock_mSocket_object = new object();
 
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
-        readonly AkCircularSpanBuffer mSendStreamList = null;
+        readonly AkCircularManySpanBuffer mSendStreamList = null;
 
         private Socket mSocket = null;
         private IPEndPoint remoteEndPoint = null;
@@ -85,7 +84,7 @@ namespace AKNet.Udp1Tcp.Client
 
             if (Config.bUseSendStream)
             {
-                mSendStreamList = new AkCircularSpanBuffer();
+                mSendStreamList = new AkCircularManySpanBuffer();
             }
             else
             {

@@ -19,7 +19,7 @@ namespace AKNet.Udp1Tcp.Server
     internal class FakeSocket : IPoolItemInterface
     {
         private readonly ServerMgr mNetServer;
-        private readonly AkCircularSpanBuffer mWaitCheckStreamList = new AkCircularSpanBuffer();
+        private readonly AkCircularManySpanBuffer mWaitCheckStreamList = new AkCircularManySpanBuffer();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
 
@@ -72,7 +72,7 @@ namespace AKNet.Udp1Tcp.Server
         {
             lock (mWaitCheckStreamList)
             {
-                mWaitCheckStreamList.WriteFrom(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                mWaitCheckStreamList.WriteFromOneSpan(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
             }
         }
 
@@ -101,7 +101,10 @@ namespace AKNet.Udp1Tcp.Server
 
             lock (mWaitCheckStreamList)
             {
-                nLength = mWaitCheckStreamList.WriteTo(mBuff);
+                if (mWaitCheckStreamList.Length > 0)
+                {
+                    nLength = mWaitCheckStreamList.WriteTo(mBuff);
+                }
             }
 
             if (nLength > 0)

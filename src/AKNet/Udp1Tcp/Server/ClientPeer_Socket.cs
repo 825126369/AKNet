@@ -101,7 +101,7 @@ namespace AKNet.Udp1Tcp.Server
                 {
                     lock (mSendStreamList)
                     {
-                        mSendStreamList.WriteFrom(mPackage.GetBufferSpan());
+                        mSendStreamList.WriteFromOneSpan(mPackage.GetBufferSpan());
                     }
 
                     if (!bSendIOContexUsed)
