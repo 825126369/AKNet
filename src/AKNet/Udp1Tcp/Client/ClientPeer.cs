@@ -84,7 +84,7 @@ namespace AKNet.Udp1Tcp.Client
 
             if (Config.bUseSendStream)
             {
-                mSendStreamList = new AkCircularManySpanBuffer();
+                mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
             }
             else
             {

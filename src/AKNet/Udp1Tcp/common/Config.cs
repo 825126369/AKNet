@@ -13,15 +13,15 @@ namespace AKNet.Udp1Tcp.Common
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
-        public const bool bUseSendStream = false;
+        public const bool bUseSendStream = true;
         public const bool bSocketSendMultiPackage = true;
 
-        public const int nUseFakeSocketMgrType = 4;
+        public const int nUseFakeSocketMgrType = 2;
         public const bool bFakeSocketManageConnectState = false;
 
         public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
-		public const int nUdpPackageFixedSize = 1024;
+		public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 14;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
         public const int nMaxDataLength = ushort.MaxValue;
