@@ -59,7 +59,8 @@ namespace AKNet.Udp3Tcp.Client
             mUdpCheckPool = new UdpCheckMgr(this);
 
             mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+            mSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
 
