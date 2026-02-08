@@ -34,7 +34,7 @@ namespace AKNet.MSQuic.Server
         public ClientPeer(ServerMgr mNetServer)
 		{
 			this.mServerMgr = mNetServer;
-            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+            ResetSocketState();
         }
 
 		public void Update(double elapsed)
@@ -67,10 +67,10 @@ namespace AKNet.MSQuic.Server
                         ReceiveHeartBeat();
                     }
 
-                    //if (nPackageCount > 100)
-                    //{
-                    //	NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
-                    //}
+                    if (nPackageCount > 100)
+                    {
+                        NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
+                    }
 
                     fSendHeartBeatTime += elapsed;
 					if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
@@ -83,7 +83,7 @@ namespace AKNet.MSQuic.Server
                     fReceiveHeartBeatTime += fHeatTime;
 					if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
 					{
-						mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+						SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
 						fReceiveHeartBeatTime = 0.0;
 #if DEBUG
                         NetLog.Log($"{GetName()} 心跳超时");
@@ -95,11 +95,7 @@ namespace AKNet.MSQuic.Server
 					break;
 			}
 
-            if (this.mSocketPeerState != this.mLastSocketPeerState)
-            {
-                this.mLastSocketPeerState = mSocketPeerState;
-                mServerMgr.mListenClientPeerStateMgr.OnSocketStateChanged(this);
-            }
+            OnSocketStateChanged();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -132,9 +128,27 @@ namespace AKNet.MSQuic.Server
             return mSocketPeerState;
         }
 
-		public void Reset()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnSocketStateChanged()
+        {
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mServerMgr.OnSocketStateChanged(this);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSocketState()
+        {
+            this.mSocketPeerState = this.mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        }
+
+        public void Reset()
 		{
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+            OnSocketStateChanged();
+            ResetSocketState();
+
             CloseSocket();
 			this.Name = string.Empty;
 			this.ID = 0;
