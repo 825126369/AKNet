@@ -14,7 +14,7 @@ using System.Net;
 
 namespace AKNet.Udp1Tcp.Client
 {
-    internal class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
+    internal partial class ClientPeer : UdpClientPeerCommonBase, UdpClientPeerBase, ClientPeerBase
     {
         internal readonly ListenNetPackageMgr mPackageManager = new ListenNetPackageMgr();
         internal readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = new ListenClientPeerStateMgr();

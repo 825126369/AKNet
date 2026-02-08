@@ -62,20 +62,20 @@ namespace AKNet.Udp3Tcp.Server
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
 				mSocket.Bind(bindEndPoint);
 
-				NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
+				NetLog.Log($"{NetType.Udp3Tcp.ToString()} 服务器 初始化成功: {bindEndPoint}");
 				StartReceiveFromAsync();
 			}
 			catch (SocketException ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+				NetLog.LogError($"{NetType.Udp3Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 			catch (Exception ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+				NetLog.LogError($"{NetType.Udp3Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 		}
 

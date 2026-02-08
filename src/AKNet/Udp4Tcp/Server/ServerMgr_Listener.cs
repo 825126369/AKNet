@@ -64,20 +64,20 @@ namespace AKNet.Udp4Tcp.Server
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
                 mListener.Bind(bindEndPoint);
 
-                NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
+                NetLog.Log($"{NetType.Udp4Tcp.ToString()} 服务器 初始化成功: {bindEndPoint}");
                 StartAcceptEventArg();
             }
             catch (SocketException ex)
             {
                 mState = SOCKET_SERVER_STATE.EXCEPTION;
                 NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-                NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+                NetLog.LogError($"{NetType.Udp4Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
             }
             catch (Exception ex)
             {
                 mState = SOCKET_SERVER_STATE.EXCEPTION;
                 NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-                NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+                NetLog.LogError($"{NetType.Udp4Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
             }
         }
 

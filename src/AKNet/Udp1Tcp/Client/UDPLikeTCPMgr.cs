@@ -113,7 +113,7 @@ namespace AKNet.Udp1Tcp.Client
             this.Reset();
             mClientPeer.Reset();
 			mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client: Udp 正在连接服务器: " + mClientPeer.mSocketMgr.GetIPEndPoint());
+			NetLog.Log($"{NetType.Udp1Tcp.ToString()} 客户端 正在连接服务器: {remoteEndPoint}");
 			mClientPeer.SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
@@ -130,10 +130,10 @@ namespace AKNet.Udp1Tcp.Client
 		{
 			if (mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED)
 			{
-                this.Reset();
-                mClientPeer.Reset();
+				this.Reset();
+				mClientPeer.Reset();
 				mClientPeer.SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-				NetLog.Log("Client: Udp连接服务器 成功 ! ");
+				NetLog.Log($"{NetType.Udp1Tcp.ToString()} 客户端 连接服务器 成功");
 			}
 		}
 

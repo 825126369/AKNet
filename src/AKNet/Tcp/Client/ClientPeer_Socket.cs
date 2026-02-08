@@ -58,7 +58,7 @@ namespace AKNet.Tcp.Client
 				bConnectIOContexUsed = true;
 				mConnectIOContex.RemoteEndPoint = mIPEndPoint;
 
-                NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+                NetLog.Log($"{NetType.TCP.ToString()} 客户端 正在连接服务器: {mIPEndPoint}");
                 StartConnectEventArg();
 			}
 		}
@@ -226,31 +226,31 @@ namespace AKNet.Tcp.Client
             }
         }
 
-        private void ProcessConnect(SocketAsyncEventArgs e)
-        {
-            if (e.SocketError == SocketError.Success)
-            {
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
-                SetSocketState(SOCKET_PEER_STATE.CONNECTED);
+		private void ProcessConnect(SocketAsyncEventArgs e)
+		{
+			if (e.SocketError == SocketError.Success)
+			{
+				NetLog.Log($"{NetType.TCP.ToString()} 客户端 连接服务器: {mIPEndPoint} 成功");
+				SetSocketState(SOCKET_PEER_STATE.CONNECTED);
 
 				if (!bReceiveIOContextUsed)
 				{
-                    bReceiveIOContextUsed = true;
-                    StartReceiveEventArg();
+					bReceiveIOContextUsed = true;
+					StartReceiveEventArg();
 				}
-            }
-            else
-            {
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 失败：{2}", this.ServerIp, this.nServerPort, e.SocketError));
-                if (GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
-                {
-                    SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
-                }
-            }
+			}
+			else
+			{
+				NetLog.Log($"{NetType.TCP.ToString()} 客户端 连接服务器: {mIPEndPoint} 失败：{e.SocketError}");
+				if (GetSocketState() == SOCKET_PEER_STATE.CONNECTING)
+				{
+					SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+				}
+			}
 
-            e.RemoteEndPoint = null;
-            bConnectIOContexUsed = false;
-        }
+			e.RemoteEndPoint = null;
+			bConnectIOContexUsed = false;
+		}
 
         private void ProcessDisconnect(SocketAsyncEventArgs e)
         {
