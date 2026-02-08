@@ -15,6 +15,5 @@ namespace AKNet.Common
     {
         public static readonly DateTime m_BuildTime;
         public static readonly System.Version m_Version;
-        // 在不同的应用上，虽然DateTime 一样，但转为ToString() 后，字符串不一样
     }
 }
