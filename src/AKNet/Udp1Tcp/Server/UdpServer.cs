@@ -15,8 +15,6 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class UdpServer:NetServerInterface
 	{
-        private event Action<ClientPeerBase> mListenSocketStateFunc = null;
-
         private readonly ListenClientPeerStateMgr mListenClientPeerStateMgr = null;
         private readonly ListenNetPackageMgr mPackageManager = null;
 
