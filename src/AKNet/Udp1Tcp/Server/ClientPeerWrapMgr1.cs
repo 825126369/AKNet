@@ -95,7 +95,7 @@ namespace AKNet.Udp1Tcp.Server
                 }
                 else if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                 {
-                    if (mClientDic.Count >= mNetServer.GetConfig().MaxPlayerCount)
+                    if (mClientDic.Count >= Config.MaxPlayerCount)
                     {
 #if DEBUG
                         NetLog.Log($"服务器爆满, 客户端总数: {mClientDic.Count}");

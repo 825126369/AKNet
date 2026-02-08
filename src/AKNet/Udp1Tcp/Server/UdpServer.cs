@@ -28,21 +28,19 @@ namespace AKNet.Udp1Tcp.Server
         private readonly ClientPeerWrapMgr2 mClientPeerMgr2 = null;
         private readonly ObjectPoolManager mObjectPoolManager;
         private readonly SocketUdp_Server mSocketMgr;
-        private readonly Config mConfig;
         internal readonly CryptoMgr mCryptoMgr;
 
         public UdpServer()
         {
             NetLog.Init();
             MainThreadCheck.Check();
-            mConfig = new Config();
             mCryptoMgr = new CryptoMgr();
             mSocketMgr = new SocketUdp_Server(this);
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, 0, mConfig.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
 
             if (Config.nUseFakeSocketMgrType == 1)
             {
@@ -77,11 +75,6 @@ namespace AKNet.Udp1Tcp.Server
             }
             mClientPeerMgr1.Update(elapsed);
             mClientPeerMgr2.Update(elapsed);
-        }
-
-        public Config GetConfig()
-        {
-            return mConfig;
         }
 
         public CryptoMgr GetCryptoMgr()

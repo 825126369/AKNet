@@ -10,45 +10,13 @@
 using AKNet.Common;
 using AKNet.Udp1Tcp.Common;
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
 namespace AKNet.Udp1Tcp.Server
 {
-    internal class ClientPeerSocketMgr
+    internal partial class ClientPeer
     {
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
-
-        FakeSocket mSocket = null;
-        readonly object lock_mSocket_object =new object();
-
-        readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = null;
-        readonly AkCircularSpanBuffer mSendStreamList = null;
-        bool bSendIOContexUsed = false;
-
-        IPEndPoint mIPEndPoint;
-
-        public ClientPeerSocketMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-        {
-            this.mNetServer = mNetServer;
-            this.mClientPeer = mClientPeer;
-
-            SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-
-            if (Config.bUseSendStream)
-            {
-                mSendStreamList = new AkCircularSpanBuffer();
-            }
-            else
-            {
-                mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
-            }
-        }
-
         public void HandleConnectedSocket(FakeSocket mSocket)
         {
             MainThreadCheck.Check();
@@ -58,6 +26,8 @@ namespace AKNet.Udp1Tcp.Server
             this.mIPEndPoint = mSocket.RemoteEndPoint;
 
             SendArgs.RemoteEndPoint = this.mIPEndPoint;
+
+            SetSocketState(SOCKET_PEER_STATE.CONNECTED);
         }
 
         public IPEndPoint GetIPEndPoint()
@@ -85,34 +55,22 @@ namespace AKNet.Udp1Tcp.Server
         public bool SendToAsync(SocketAsyncEventArgs e)
         {
             bool bIOSyncCompleted = false;
-            if (Config.bUseSocketLock)
+            if (mSocket != null)
             {
-                lock (lock_mSocket_object)
+                try
                 {
+                    bIOSyncCompleted = !mSocket.SendToAsync(e);
+                }
+                catch (Exception ex)
+                {
+                    bSendIOContexUsed = false;
                     if (mSocket != null)
                     {
-                        bIOSyncCompleted = !mSocket.SendToAsync(e);
+                        NetLog.LogException(ex);
                     }
                 }
             }
-            else
-            {
-                if (mSocket != null)
-                {
-                    try
-                    {
-                        bIOSyncCompleted = !mSocket.SendToAsync(e);
-                    }
-                    catch (Exception ex)
-                    {
-                        bSendIOContexUsed = false;
-                        if (mSocket != null)
-                        {
-                            NetLog.LogException(ex);
-                        }
-                    }
-                }
-            }
+
             return !bIOSyncCompleted;
         }
 
@@ -132,12 +90,12 @@ namespace AKNet.Udp1Tcp.Server
             else
             {
                 NetLog.LogError(e.SocketError);
-                mClientPeer.SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 bSendIOContexUsed = false;
             }
         }
 
-        public void SendNetPackage(NetUdpFixedSizePackage mPackage)
+        public void SendNetPackage1(NetUdpFixedSizePackage mPackage)
         {
             mPackage.remoteEndPoint = GetIPEndPoint();
             UdpPackageEncryption.Encode(mPackage);
@@ -170,10 +128,10 @@ namespace AKNet.Udp1Tcp.Server
             }
             else
             {
-                mNetServer.GetSocketMgr().SendTo(mPackage);
+                mServerMgr.GetSocketMgr().SendTo(mPackage);
                 if (!Config.bUseSendStream)
                 {
-                    mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
             }
         }
@@ -194,7 +152,7 @@ namespace AKNet.Udp1Tcp.Server
                             {
                                 Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
                                 nSendBytesCount += mPackage.Length;
-                                mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                                GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                             }
                             else
                             {
@@ -213,7 +171,7 @@ namespace AKNet.Udp1Tcp.Server
                     {
                         Buffer.BlockCopy(mPackage.buffer, 0, SendArgs.Buffer, nSendBytesCount, mPackage.Length);
                         nSendBytesCount += mPackage.Length;
-                        mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                        GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                     }
                 }
 
@@ -226,25 +184,6 @@ namespace AKNet.Udp1Tcp.Server
             else
             {
                 bSendIOContexUsed = false;
-            }
-        }
-
-        public void Reset()
-        {
-            if (Config.bUseSendStream)
-            {
-                lock (mSendStreamList)
-                {
-                    mSendStreamList.Reset();
-                }
-            }
-            else
-            {
-                NetUdpFixedSizePackage mPackage = null;
-                while (mSendPackageQueue.TryDequeue(out mPackage))
-                {
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                }
             }
         }
 
@@ -291,7 +230,7 @@ namespace AKNet.Udp1Tcp.Server
             }
         }
 
-        public void Release()
+        public void CloseSocket()
         {
             if (mSocket != null)
             {

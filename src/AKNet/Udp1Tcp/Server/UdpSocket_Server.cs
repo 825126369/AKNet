@@ -121,36 +121,23 @@ namespace AKNet.Udp1Tcp.Server
 		private void StartReceiveFromAsync()
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (mSocket != null)
 			{
-				lock (lock_mSocket_object)
+				try
+				{
+					bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+				}
+				catch (Exception e)
 				{
 					if (mSocket != null)
 					{
-						bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+						NetLog.LogException(e);
 					}
 				}
 			}
-			else
-			{
-				if (mSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-					}
-					catch (Exception e)
-					{
-						if (mSocket != null)
-						{
-							NetLog.LogException(e);
-						}
-					}
-				}
-			}
-
-            UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
-            if (bIOSyncCompleted)
+			
+			UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
+			if (bIOSyncCompleted)
 			{
 				ProcessReceive(null, ReceiveArgs);
 			}
@@ -169,94 +156,50 @@ namespace AKNet.Udp1Tcp.Server
 
 		public void SendTo(NetUdpFixedSizePackage mPackage)
 		{
-			if (Config.bUseSocketLock)
+			try
 			{
-				lock (lock_mSocket_object)
-				{
-					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-					NetLog.Assert(nLength > mPackage.Length);
-				}
+				int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+				NetLog.Assert(nLength > mPackage.Length);
 			}
-			else
-			{
-				try
-				{
-					int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
-                    NetLog.Assert(nLength > mPackage.Length);
-                }
-				catch { }
-			}
+			catch { }
 		}
 
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
 			bool bIOSyncCompleted = false;
-			if (Config.bUseSocketLock)
+			if (mSocket != null)
 			{
-				lock (lock_mSocket_object)
+				try
+				{
+					bIOSyncCompleted = !mSocket.SendToAsync(e);
+				}
+				catch (Exception ex)
 				{
 					if (mSocket != null)
 					{
-						bIOSyncCompleted = !mSocket.SendToAsync(e);
+						NetLog.LogException(ex);
 					}
 				}
 			}
-			else
-			{
-				if (mSocket != null)
-				{
-					try
-					{
-						bIOSyncCompleted = !mSocket.SendToAsync(e);
-					}
-					catch (Exception ex)
-					{
-						if (mSocket != null)
-						{
-							NetLog.LogException(ex);
-						}
-					}
-				}
-			}
-
+			
 			UdpStatistical.AddSendIOCount(bIOSyncCompleted);
 			return !bIOSyncCompleted;
 		}
 
-        public void Release()
+		public void Release()
 		{
-			if (Config.bUseSocketLock) 
+			if (mSocket != null)
 			{
-				lock (lock_mSocket_object)
+				Socket mSocket2 = mSocket;
+				mSocket = null;
+
+				try
 				{
-					if (mSocket != null)
-					{
-						Socket mSocket2 = mSocket;
-                        mSocket = null;
-
-                        try
-						{
-                            mSocket2.Close();
-						}
-						catch (Exception) { }
-					}
+					mSocket2.Close();
 				}
+				catch (Exception) { }
 			}
-			else
-			{
-                if (mSocket != null)
-                {
-                    Socket mSocket2 = mSocket;
-                    mSocket = null;
-
-                    try
-                    {
-                        mSocket2.Close();
-                    }
-                    catch (Exception) { }
-                }
-            }
-        }
+		}
 	}
 
 }

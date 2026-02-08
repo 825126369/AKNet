@@ -8,18 +8,16 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp1Tcp.Common;
 using System;
 using System.Net;
-using System.Xml.Linq;
 
 namespace AKNet.Udp1Tcp.Client
 {
-    public class UdpNetClientMain:NetClientInterface, ClientPeerBase,PrivateConfigInterface
+    public class NetClientMain:NetClientInterface
 	{
         private readonly ClientPeer mNetClientPeer;
 
-        public UdpNetClientMain()
+        public NetClientMain()
         {
             this.mNetClientPeer = new ClientPeer();
         }
@@ -117,11 +115,6 @@ namespace AKNet.Udp1Tcp.Client
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase> mFunc)
         {
             mNetClientPeer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mNetClientPeer.GetConfig();
         }
 
         public void SetName(string name)

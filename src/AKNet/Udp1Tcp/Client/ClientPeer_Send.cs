@@ -13,45 +13,39 @@ using System;
 
 namespace AKNet.Udp1Tcp.Client
 {
-    internal class MsgSendMgr
-	{
-        private ClientPeer mClientPeer;
-        public MsgSendMgr(ClientPeer mClientPeer)
-        {
-            this.mClientPeer = mClientPeer;
-        }
-
+    internal partial class ClientPeer
+    {
 		public void SendInnerNetData(UInt16 id)
 		{
 			NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-			NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+			NetUdpFixedSizePackage mPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
 			mPackage.nPackageId = id;
 			mPackage.Length = Config.nUdpPackageFixedHeadSize;
-			mClientPeer.SendNetPackage(mPackage);
+			SendNetPackage(mPackage);
 		}
 
 		public void SendNetData(NetPackage mNetPackage)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
                 SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
             }
 			else
 			{
-				NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
+				NetLog.LogError("SendNetData Failed: " + GetSocketState());
 			}
 		}
 
         public void SendNetData(UInt16 id)
 		{
-			if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
 				NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-				mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
+				mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
 			}
             else
             {
-                NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
 
@@ -62,14 +56,14 @@ namespace AKNet.Udp1Tcp.Client
 
         public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
+                mUdpCheckPool.SendLogicPackage(id, data);
             }
             else
             {
-                NetLog.LogError("SendNetData Failed: " + mClientPeer.GetSocketState());
+                NetLog.LogError("SendNetData Failed: " + GetSocketState());
             }
         }
     }

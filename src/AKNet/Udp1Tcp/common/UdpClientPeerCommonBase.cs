@@ -27,7 +27,6 @@ namespace AKNet.Udp1Tcp.Common
         public ObjectPoolManager GetObjectPoolManager();
         IPEndPoint GetIPEndPoint();
         TcpStanardRTOFunc GetTcpStanardRTOFunc();
-        Config GetConfig();
         int GetCurrentFrameRemainPackageCount();
     }
 }

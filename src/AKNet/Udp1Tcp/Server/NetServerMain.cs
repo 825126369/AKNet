@@ -7,16 +7,15 @@
 *        ModifyTime:2026/2/1 20:26:49
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using System;
 using AKNet.Common;
-using AKNet.Udp1Tcp.Common;
+using System;
 
 namespace AKNet.Udp1Tcp.Server
 {
-    public class UdpNetServerMain : NetServerInterface, PrivateConfigInterface
+    public class NetServerMain : NetServerInterface
     {
         private readonly UdpServer mNetServer;
-        public UdpNetServerMain()
+        public NetServerMain()
         {
             mNetServer = new UdpServer();
         }
@@ -94,11 +93,6 @@ namespace AKNet.Udp1Tcp.Server
         public void removeListenClientPeerStateFunc(Action<ClientPeerBase, SOCKET_PEER_STATE> mFunc)
         {
             mNetServer.removeListenClientPeerStateFunc(mFunc);
-        }
-
-        public Config GetConfig()
-        {
-            return mNetServer.GetConfig();
         }
     }
 

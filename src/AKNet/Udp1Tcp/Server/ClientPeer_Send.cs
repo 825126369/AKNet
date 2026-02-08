@@ -13,29 +13,20 @@ using System;
 
 namespace AKNet.Udp1Tcp.Server
 {
-    internal class MsgSendMgr
-	{
-        private UdpServer mNetServer = null;
-        private ClientPeer mClientPeer = null;
-
-		public MsgSendMgr(UdpServer mNetServer, ClientPeer mClientPeer)
-		{
-			this.mNetServer = mNetServer;
-			this.mClientPeer = mClientPeer;
-		}
-
+    internal partial class ClientPeer
+    {
         public void SendInnerNetData(UInt16 id)
         {
             NetLog.Assert(UdpNetCommand.orInnerCommand(id));
-            NetUdpFixedSizePackage mPackage = mClientPeer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+            NetUdpFixedSizePackage mPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
             mPackage.nPackageId = id;
             mPackage.Length = Config.nUdpPackageFixedHeadSize;
-            mClientPeer.SendNetPackage(mPackage);
+            SendNetPackage(mPackage);
         }
 
         public void SendNetData(NetPackage mNetPackage)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 SendNetData(mNetPackage.GetPackageId(), mNetPackage.GetData());
             }
@@ -43,10 +34,10 @@ namespace AKNet.Udp1Tcp.Server
 
         public void SendNetData(UInt16 id)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                mClientPeer.mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
+                mUdpCheckPool.SendLogicPackage(id, ReadOnlySpan<byte>.Empty);
             }
         }
 
@@ -57,10 +48,10 @@ namespace AKNet.Udp1Tcp.Server
 
         public void SendNetData(UInt16 id, ReadOnlySpan<byte> data)
         {
-            if (mClientPeer.GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
+            if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-                mClientPeer.mUdpCheckPool.SendLogicPackage(id, data);
+                mUdpCheckPool.SendLogicPackage(id, data);
             }
         }
     }

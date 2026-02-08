@@ -19,7 +19,7 @@ namespace AKNet.Common
             }
             else if (nNetType == NetType.Udp1Tcp)
             {
-                mInterface = new AKNet.Udp1Tcp.Client.UdpNetClientMain();
+                mInterface = new AKNet.Udp1Tcp.Client.NetClientMain();
             }
             else if (nNetType == NetType.Udp2Tcp)
             {
