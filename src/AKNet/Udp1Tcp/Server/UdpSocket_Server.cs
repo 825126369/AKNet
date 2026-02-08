@@ -31,7 +31,8 @@ namespace AKNet.Udp1Tcp.Server
 		{
 			this.mNetServer = mNetServer;
 
-            mSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            mSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+			mSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
 
@@ -82,23 +83,23 @@ namespace AKNet.Udp1Tcp.Server
 				mState = SOCKET_SERVER_STATE.NORMAL;
 				this.nPort = nPort;
 
-                EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
+				EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
 				mSocket.Bind(bindEndPoint);
 
-				NetLog.Log("Udp Server 初始化成功:  " + mIPAddress + " | " + nPort);
+				NetLog.Log($"{NetType.Udp1Tcp.ToString()} 服务器 初始化成功: {bindEndPoint}");
 				StartReceiveFromAsync();
 			}
 			catch (SocketException ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+				NetLog.LogError($"{NetType.Udp1Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 			catch (Exception ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+				NetLog.LogError($"{NetType.Udp1Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 		}
 

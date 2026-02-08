@@ -28,7 +28,6 @@ namespace AKNet.Udp1Tcp.Server
         private UdpServer mNetServer;
         private string Name = string.Empty;
         private uint ID = 0;
-        private bool b_SOCKET_PEER_STATE_Changed = false;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
 
         public ClientPeer(UdpServer mNetServer)

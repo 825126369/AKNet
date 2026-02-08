@@ -61,28 +61,28 @@ namespace AKNet.Tcp.Server
 				mState = SOCKET_SERVER_STATE.NORMAL;
 				IPEndPoint localEndPoint = new IPEndPoint(mIPAddress, nPort);
 
-				this.mListenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
-                this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, int.MaxValue);
-                this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-                this.mListenSocket.Bind(localEndPoint);
+				this.mListenSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
+                this.mListenSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
+                this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, int.MaxValue);
+				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
+				this.mListenSocket.Bind(localEndPoint);
 				this.mListenSocket.Listen(Config.MaxPlayerCount);
 
-				NetLog.Log("服务器 初始化成功: " + mIPAddress + " | " + nPort);
-
+				NetLog.Log($"{NetType.TCP.ToString()} 服务器 初始化成功: {localEndPoint}");
 				StartAcceptEventArg();
 			}
 			catch (SocketException ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+				NetLog.LogError($"{NetType.TCP.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 			catch (Exception ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError("服务器 初始化失败: " + mIPAddress + " | " + nPort);
+				NetLog.LogError($"{NetType.TCP.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 		}
 
