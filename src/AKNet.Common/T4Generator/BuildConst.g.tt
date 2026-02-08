@@ -24,5 +24,6 @@ namespace AKNet.Common
             m_BuildTime = new DateTime(<#= now_Year #>, <#= now_Month #>, <#= now_Day #>, <#= now_Hour #>, <#= now_Minute #>, <#= now_Second #>);
             m_Version = new System.Version(0, 0, 0);
         }
+
     }
 }
