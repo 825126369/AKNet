@@ -11,6 +11,7 @@ using AKNet.Common;
 using AKNet.LinuxTcp.Common;
 using System;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 namespace AKNet.LinuxTcp.Server
 {
@@ -39,7 +40,7 @@ namespace AKNet.LinuxTcp.Server
             mUDPLikeTCPMgr = new UDPLikeTCPMgr(mNetServer, this);
 
             mObjectPoolManager = new ObjectPoolManager();
-            mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+            ResetSocketState();
         }
 
         public void Update(double elapsed)
@@ -48,11 +49,7 @@ namespace AKNet.LinuxTcp.Server
             mUDPLikeTCPMgr.Update(elapsed);
             mUdpCheckPool.Update(elapsed);
 
-            if (this.mSocketPeerState != this.mLastSocketPeerState)
-            {
-                this.mLastSocketPeerState = mSocketPeerState;
-                mNetServer.OnSocketStateChanged(this);
-            }
+            OnSocketStateChanged();
         }
 
         public void SetSocketState(SOCKET_PEER_STATE mState)
@@ -66,8 +63,27 @@ namespace AKNet.LinuxTcp.Server
 			return mSocketPeerState;
 		}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnSocketStateChanged()
+        {
+            if (this.mSocketPeerState != this.mLastSocketPeerState)
+            {
+                this.mLastSocketPeerState = mSocketPeerState;
+                mNetServer.OnSocketStateChanged(this);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetSocketState()
+        {
+            this.mSocketPeerState = this.mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+        }
+
         public void Reset()
         {
+            OnSocketStateChanged();
+            ResetSocketState();
+
             mUDPLikeTCPMgr.Reset();
             mMsgReceiveMgr.Reset();
             mUdpCheckPool.Reset();
@@ -78,6 +94,9 @@ namespace AKNet.LinuxTcp.Server
 
         public void Release()
         {
+            OnSocketStateChanged();
+            ResetSocketState();
+
             mMsgReceiveMgr.Release();
             mSocketMgr.Release();
         }
