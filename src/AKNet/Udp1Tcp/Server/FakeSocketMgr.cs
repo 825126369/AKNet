@@ -22,8 +22,8 @@ namespace AKNet.Udp1Tcp.Server
 
     internal class FakeSocketMgr:FakeSocketMgrInterface
     {
-        private UdpServer mNetServer = null;
-        public FakeSocketMgr(UdpServer mNetServer)
+        private ServerMgr mNetServer = null;
+        public FakeSocketMgr(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
         }

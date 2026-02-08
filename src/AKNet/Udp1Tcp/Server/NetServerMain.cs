@@ -14,10 +14,10 @@ namespace AKNet.Udp1Tcp.Server
 {
     public class NetServerMain : NetServerInterface
     {
-        private readonly UdpServer mNetServer;
+        private readonly ServerMgr mNetServer;
         public NetServerMain()
         {
-            mNetServer = new UdpServer();
+            mNetServer = new ServerMgr();
         }
 
         public void Update(double elapsed)

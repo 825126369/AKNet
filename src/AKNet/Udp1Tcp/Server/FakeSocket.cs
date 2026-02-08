@@ -18,12 +18,12 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly UdpServer mNetServer;
+        private readonly ServerMgr mNetServer;
         private readonly AkCircularSpanBuffer mWaitCheckStreamList = new AkCircularSpanBuffer();
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
 
-        public FakeSocket(UdpServer mNetServer)
+        public FakeSocket(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
             this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
@@ -137,7 +137,7 @@ namespace AKNet.Udp1Tcp.Server
 
         public bool SendToAsync(SocketAsyncEventArgs mArg)
         {
-            return this.mNetServer.GetSocketMgr().SendToAsync(mArg);
+            return this.mNetServer.SendToAsync(mArg);
         }
 
         public void Reset()

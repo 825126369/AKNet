@@ -22,7 +22,7 @@ namespace AKNet.Udp1Tcp.Server
         internal UdpCheckMgr mUdpCheckPool = null;
         private SOCKET_PEER_STATE mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
         private SOCKET_PEER_STATE mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
-        private UdpServer mServerMgr;
+        private ServerMgr mServerMgr;
         private string Name = string.Empty;
         private uint ID = 0;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
@@ -38,7 +38,7 @@ namespace AKNet.Udp1Tcp.Server
 
         IPEndPoint mIPEndPoint;
 
-        public ClientPeer(UdpServer mNetServer)
+        public ClientPeer(ServerMgr mNetServer)
         {
             this.mServerMgr = mNetServer;
             mUdpCheckPool = new UdpCheckMgr(this);

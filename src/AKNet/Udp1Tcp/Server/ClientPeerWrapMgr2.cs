@@ -14,11 +14,11 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class ClientPeerWrapMgr2
 	{
-        private UdpServer mNetServer = null;
+        private ServerMgr mNetServer = null;
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
 
-        public ClientPeerWrapMgr2(UdpServer mNetServer)
+        public ClientPeerWrapMgr2(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
         }

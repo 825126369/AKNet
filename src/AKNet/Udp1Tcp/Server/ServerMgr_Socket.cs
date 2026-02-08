@@ -17,31 +17,8 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp1Tcp.Server
 {
-    internal class SocketUdp_Server
-	{
-		private int nPort = 0;
-		private Socket mSocket = null;
-		private UdpServer mNetServer = null;
-		
-        private readonly SocketAsyncEventArgs ReceiveArgs;
-        private readonly object lock_mSocket_object = new object();
-		private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
-        public SocketUdp_Server(UdpServer mNetServer)
-		{
-			this.mNetServer = mNetServer;
-
-            mSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-			mSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            mSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
-
-            ReceiveArgs = new SocketAsyncEventArgs();
-            ReceiveArgs.Completed += ProcessReceive;
-            ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
-            ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
-        }
-
+    internal partial class ServerMgr
+    {
 		public void InitNet()
 		{
 			List<int> mPortList = IPAddressHelper.GetAvailableUdpPortList();
@@ -120,12 +97,12 @@ namespace AKNet.Udp1Tcp.Server
 
 		private void StartReceiveFromAsync()
 		{
-			bool bIOSyncCompleted = false;
+			bool bIOPending = true;
 			if (mSocket != null)
 			{
 				try
 				{
-					bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
+                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
 				}
 				catch (Exception e)
 				{
@@ -136,8 +113,8 @@ namespace AKNet.Udp1Tcp.Server
 				}
 			}
 			
-			UdpStatistical.AddReceiveIOCount(bIOSyncCompleted);
-			if (bIOSyncCompleted)
+			UdpStatistical.AddReceiveIOCount(!bIOPending);
+			if (!bIOPending)
 			{
 				ProcessReceive(null, ReceiveArgs);
 			}
@@ -148,7 +125,7 @@ namespace AKNet.Udp1Tcp.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-                mNetServer.GetFakeSocketMgr().MultiThreadingReceiveNetPackage(e);
+                GetFakeSocketMgr().MultiThreadingReceiveNetPackage(e);
                 e.RemoteEndPoint = mEndPointEmpty;
 			}
 			StartReceiveFromAsync();
@@ -166,12 +143,12 @@ namespace AKNet.Udp1Tcp.Server
 
 		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
-			bool bIOSyncCompleted = false;
+			bool bIOPending = true;
 			if (mSocket != null)
 			{
 				try
 				{
-					bIOSyncCompleted = !mSocket.SendToAsync(e);
+                    bIOPending = mSocket.SendToAsync(e);
 				}
 				catch (Exception ex)
 				{
@@ -182,8 +159,8 @@ namespace AKNet.Udp1Tcp.Server
 				}
 			}
 			
-			UdpStatistical.AddSendIOCount(bIOSyncCompleted);
-			return !bIOSyncCompleted;
+			UdpStatistical.AddSendIOCount(!bIOPending);
+			return bIOPending;
 		}
 
 		public void Release()

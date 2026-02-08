@@ -19,9 +19,9 @@ namespace AKNet.Udp1Tcp.Server
         private readonly Dictionary<string, ClientPeerWrap> mClientDic = new Dictionary<string, ClientPeerWrap>();
         private readonly List<string> mRemovePeerList = new List<string>();
         private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
-        private UdpServer mNetServer = null;
+        private ServerMgr mNetServer = null;
 
-        public ClientPeerWrapMgr1(UdpServer mNetServer)
+        public ClientPeerWrapMgr1(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
         }

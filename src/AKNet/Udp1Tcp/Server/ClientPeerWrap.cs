@@ -18,8 +18,8 @@ namespace AKNet.Udp1Tcp.Server
     internal class ClientPeerWrap : ClientPeerBase
 	{
         private ClientPeer mInstance = null;
-        private UdpServer mNetServer;
-        public ClientPeerWrap(UdpServer mNetServer)
+        private ServerMgr mNetServer;
+        public ClientPeerWrap(ServerMgr mNetServer)
 		{
             this.mNetServer = mNetServer;
             this.mInstance = mNetServer.mClientPeerPool.Pop();

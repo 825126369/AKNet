@@ -22,10 +22,10 @@ namespace AKNet.Udp1Tcp.Server
         readonly SafeObjectPool<NetUdpFixedSizePackage> mPackagePool = new SafeObjectPool<NetUdpFixedSizePackage>();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
 
-        private readonly UdpServer mNetServer = null;
+        private readonly ServerMgr mNetServer = null;
         private bool bSendIOContexUsed = false;
 
-        public InnerCommandSendMgr(UdpServer mNetServer)
+        public InnerCommandSendMgr(ServerMgr mNetServer)
         {
             this.mNetServer = mNetServer;
             SendArgs.Completed += ProcessSend;
@@ -71,7 +71,7 @@ namespace AKNet.Udp1Tcp.Server
             }
             else
             {
-                mNetServer.GetSocketMgr().SendTo(mPackage);
+                mNetServer.SendTo(mPackage);
                 mPackagePool.recycle(mPackage);
             }
         }
@@ -86,7 +86,7 @@ namespace AKNet.Udp1Tcp.Server
                 e.RemoteEndPoint = mPackage.remoteEndPoint;
                 mPackagePool.recycle(mPackage);
 
-                if (!mNetServer.GetSocketMgr().SendToAsync(e))
+                if (!mNetServer.SendToAsync(e))
                 {
                     ProcessSend(null, e);
                 }

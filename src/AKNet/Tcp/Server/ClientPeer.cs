@@ -62,11 +62,6 @@ namespace AKNet.Tcp.Server
                         ReceiveHeartBeat();
                     }
 
-                    if (nPackageCount > 100)
-                    {
-                        NetLog.LogWarning("Server ClientPeer 处理逻辑包的数量： " + nPackageCount);
-                    }
-
                     fSendHeartBeatTime += elapsed;
                     if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
                     {

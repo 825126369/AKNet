@@ -54,12 +54,12 @@ namespace AKNet.Udp1Tcp.Server
 
         public bool SendToAsync(SocketAsyncEventArgs e)
         {
-            bool bIOSyncCompleted = false;
+            bool bIOPending = false;
             if (mSocket != null)
             {
                 try
                 {
-                    bIOSyncCompleted = !mSocket.SendToAsync(e);
+                    bIOPending = mSocket.SendToAsync(e);
                 }
                 catch (Exception ex)
                 {
@@ -71,7 +71,7 @@ namespace AKNet.Udp1Tcp.Server
                 }
             }
 
-            return !bIOSyncCompleted;
+            return bIOPending;
         }
 
         private void ProcessSend(object sender, SocketAsyncEventArgs e)
@@ -128,7 +128,7 @@ namespace AKNet.Udp1Tcp.Server
             }
             else
             {
-                mServerMgr.GetSocketMgr().SendTo(mPackage);
+                mServerMgr.SendTo(mPackage);
                 if (!Config.bUseSendStream)
                 {
                     GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
