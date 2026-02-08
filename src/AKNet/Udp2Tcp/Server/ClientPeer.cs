@@ -142,8 +142,8 @@ namespace AKNet.Udp2Tcp.Server
         {
             OnSocketStateChanged();
             ResetSocketState();
-            CloseSocket();
 
+            CloseSocket();
             this.mUdpCheckPool.Reset();
             lock (mSendStreamList)
             {

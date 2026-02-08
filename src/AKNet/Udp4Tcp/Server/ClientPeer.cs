@@ -134,8 +134,8 @@ namespace AKNet.Udp4Tcp.Server
         {
             OnSocketStateChanged();
             ResetSocketState();
-            CloseSocket();
 
+            CloseSocket();
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Reset();
@@ -155,8 +155,7 @@ namespace AKNet.Udp4Tcp.Server
 
         public void Release()
         {
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            CloseSocket();
+            Reset();
 
             lock (mReceiveStreamList)
             {

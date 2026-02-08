@@ -95,6 +95,8 @@ namespace AKNet.Udp1Tcp.Server
 
         public void Release()
         {
+            OnSocketStateChanged();
+            ResetSocketState();
             mSocketMgr.Release();
         }
 

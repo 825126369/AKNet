@@ -164,8 +164,7 @@ namespace AKNet.Tcp.Server
 
 		public void Release()
 		{
-            SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-            CloseSocket();
+            Reset();
 
             lock (mReceiveStreamList)
             {

@@ -140,8 +140,8 @@ namespace AKNet.Udp3Tcp.Server
         {
             OnSocketStateChanged();
             ResetSocketState();
-            CloseSocket();
 
+            CloseSocket();
             this.mUdpCheckPool.Reset();
             lock (mSendStreamList)
             {
