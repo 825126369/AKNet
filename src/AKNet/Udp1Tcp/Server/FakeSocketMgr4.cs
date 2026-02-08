@@ -19,7 +19,7 @@ namespace AKNet.Udp1Tcp.Server
     internal class FakeSocketMgr4:FakeSocketMgrInterface
     {
         private ServerMgr mNetServer = null;
-        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = new Dictionary<string, FakeSocket>();
+        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>();
         private readonly FakeSocketPool mFakeSocketPool = null;
 
         public FakeSocketMgr4(ServerMgr mNetServer)
@@ -88,7 +88,7 @@ namespace AKNet.Udp1Tcp.Server
             IPEndPoint endPoint = (IPEndPoint)mPackage.remoteEndPoint;
             FakeSocket mFakeSocket = null;
 
-            string nPeerId = endPoint.ToString();
+            IPEndPoint nPeerId = endPoint;
 
             lock (mAcceptSocketDic)
             {
@@ -130,7 +130,7 @@ namespace AKNet.Udp1Tcp.Server
 
         public void RemoveFakeSocket(FakeSocket mFakeSocket)
         {
-            string peerId = mFakeSocket.RemoteEndPoint.ToString();
+            IPEndPoint peerId = mFakeSocket.RemoteEndPoint;
             lock (mAcceptSocketDic)
             {
                 mAcceptSocketDic.Remove(peerId);

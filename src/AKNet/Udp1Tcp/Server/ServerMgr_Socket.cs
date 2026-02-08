@@ -124,7 +124,6 @@ namespace AKNet.Udp1Tcp.Server
 		{
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
-				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
                 GetFakeSocketMgr().MultiThreadingReceiveNetPackage(e);
                 e.RemoteEndPoint = mEndPointEmpty;
 			}

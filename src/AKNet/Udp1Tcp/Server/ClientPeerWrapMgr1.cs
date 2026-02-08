@@ -16,8 +16,8 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class ClientPeerWrapMgr1
     {
-        private readonly Dictionary<string, ClientPeerWrap> mClientDic = new Dictionary<string, ClientPeerWrap>();
-        private readonly List<string> mRemovePeerList = new List<string>();
+        private readonly Dictionary<IPEndPoint, ClientPeerWrap> mClientDic = new Dictionary<IPEndPoint, ClientPeerWrap>();
+        private readonly List<IPEndPoint> mRemovePeerList = new List<IPEndPoint>();
         private readonly Queue<NetUdpFixedSizePackage> mPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private ServerMgr mNetServer = null;
 
@@ -86,7 +86,7 @@ namespace AKNet.Udp1Tcp.Server
             IPEndPoint endPoint = (IPEndPoint)mPackage.remoteEndPoint;
 
             ClientPeerWrap mClientPeer = null;
-            string nPeerId = endPoint.ToString();
+            IPEndPoint nPeerId = endPoint;
             if (!mClientDic.TryGetValue(nPeerId, out mClientPeer))
             {
                 if (mPackage.nPackageId == UdpNetCommand.COMMAND_DISCONNECT)

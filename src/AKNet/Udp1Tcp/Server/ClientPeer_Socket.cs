@@ -75,11 +75,11 @@ namespace AKNet.Udp1Tcp.Server
             {
                 if (Config.bUseSendStream)
                 {
-                    SendNetStream2(e.BytesTransferred);
+                    SendNetStream2();
                 }
                 else
                 {
-                    SendNetPackage2(e.BytesTransferred);
+                    SendNetPackage2();
                 }
             }
             else
@@ -130,7 +130,7 @@ namespace AKNet.Udp1Tcp.Server
             }
         }
 
-        private void SendNetPackage2(int BytesTransferred = -1)
+        private void SendNetPackage2()
         {
             NetUdpFixedSizePackage mPackage = null;
             if (mSendPackageQueue.Count > 0)

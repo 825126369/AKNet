@@ -19,7 +19,7 @@ namespace AKNet.Udp1Tcp.Server
     internal class FakeSocketMgr3: FakeSocketMgrInterface
     {
         private ServerMgr mNetServer = null;
-        private readonly Dictionary<string, FakeSocket> mAcceptSocketDic = null;
+        private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private readonly InnectCommandPeekPackage mInnerCommandCheckPackage = new InnectCommandPeekPackage();
@@ -28,7 +28,7 @@ namespace AKNet.Udp1Tcp.Server
         {
             this.mNetServer = mNetServer;
             mFakeSocketPool = new FakeSocketPool(mNetServer, Config.MaxPlayerCount, Config.MaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<string, FakeSocket>(Config.MaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
             mDisConnectSendMgr = new InnerCommandSendMgr(mNetServer);
         }
 
@@ -101,7 +101,7 @@ namespace AKNet.Udp1Tcp.Server
             IPEndPoint endPoint = (IPEndPoint)e.RemoteEndPoint;
 
             FakeSocket mFakeSocket = null;
-            string nPeerId = endPoint.ToString();
+            IPEndPoint nPeerId = endPoint;
 
             lock (mAcceptSocketDic)
             {
@@ -150,8 +150,7 @@ namespace AKNet.Udp1Tcp.Server
 
         public void RemoveFakeSocket(FakeSocket mFakeSocket)
         {
-            string peerId = mFakeSocket.RemoteEndPoint.ToString();
-
+            IPEndPoint peerId = mFakeSocket.RemoteEndPoint;
             lock (mAcceptSocketDic)
             {
                 mAcceptSocketDic.Remove(peerId);
