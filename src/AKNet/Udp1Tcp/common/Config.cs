@@ -14,6 +14,7 @@ namespace AKNet.Udp1Tcp.Common
         public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
         public const bool bUseSendStream = true;
+        public const bool bUseReceiveCheckStream = false;
         public const bool bSocketSendMultiPackage = true;
 
         public const int nUseFakeSocketMgrType = 2;

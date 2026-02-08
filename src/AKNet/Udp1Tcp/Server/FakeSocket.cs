@@ -18,14 +18,14 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly ServerMgr mNetServer;
+        private readonly ServerMgr mServerMgr;
         private readonly AkCircularManySpanBuffer mWaitCheckStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
 
-        public FakeSocket(ServerMgr mNetServer)
+        public FakeSocket(ServerMgr mServerMgr)
         {
-            this.mNetServer = mNetServer;
+            this.mServerMgr = mServerMgr;
             this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;
         }
 
@@ -39,7 +39,7 @@ namespace AKNet.Udp1Tcp.Server
                 {
                     if (mPackage.nPackageId == UdpNetCommand.COMMAND_CONNECT)
                     {
-                        mNetServer.GetClientPeerMgr2().MultiThreadingHandleConnectedSocket(this);
+                        mServerMgr.GetClientPeerMgr2().MultiThreadingHandleConnectedSocket(this);
                         this.mConnectionState = SOCKET_PEER_STATE.CONNECTED;
                     }
                 }
@@ -70,9 +70,50 @@ namespace AKNet.Udp1Tcp.Server
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
-            lock (mWaitCheckStreamList)
+            if (Config.bUseReceiveCheckStream)
             {
-                mWaitCheckStreamList.WriteFromOneSpan(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                lock (mWaitCheckStreamList)
+                {
+                    mWaitCheckStreamList.WriteFromOneSpan(e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred));
+                }
+            }
+            else
+            {
+                Span<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
+                while (true)
+                {
+                    var mPackage = mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                    bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
+                    if (bSucccess)
+                    {
+                        int nReadBytesCount = mPackage.Length;
+
+                        lock (mWaitCheckPackageQueue)
+                        {
+                            mWaitCheckPackageQueue.Enqueue(mPackage);
+                            if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                            {
+                                //nCurrentCheckPackageCount++;
+                            }
+                        }
+
+                        if (mBuff.Length > nReadBytesCount)
+                        {
+                            mBuff = mBuff.Slice(nReadBytesCount);
+                        }
+                        else
+                        {
+                            NetLog.Assert(mBuff.Length == nReadBytesCount);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                        NetLog.LogError("解码失败 !!!");
+                        break;
+                    }
+                }
             }
         }
 
@@ -89,50 +130,53 @@ namespace AKNet.Udp1Tcp.Server
                 return mWaitCheckPackageQueue.TryDequeue(out mPackage);
             }
         }
-        
+
         private readonly Memory<byte> mCacheBuffer = new byte[Config.nUdpPackageFixedSize];
         private void GetReceivePackage()
         {
             MainThreadCheck.Check();
 
-            Span<byte> mBuff = mCacheBuffer.Span;
-
-            int nLength = 0;
-
-            lock (mWaitCheckStreamList)
+            if (Config.bUseReceiveCheckStream)
             {
-                if (mWaitCheckStreamList.Length > 0)
-                {
-                    nLength = mWaitCheckStreamList.WriteTo(mBuff);
-                }
-            }
+                Span<byte> mBuff = mCacheBuffer.Span;
 
-            if (nLength > 0)
-            {
-                mBuff = mBuff.Slice(0, nLength);
-                while (true)
+                int nLength = 0;
+
+                lock (mWaitCheckStreamList)
                 {
-                    var mPackage = mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
-                    bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
-                    if (bSucccess)
+                    if (mWaitCheckStreamList.Length > 0)
                     {
-                        int nReadBytesCount = mPackage.Length;
-                        mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (mBuff.Length > nReadBytesCount)
+                        nLength = mWaitCheckStreamList.WriteTo(mBuff);
+                    }
+                }
+
+                if (nLength > 0)
+                {
+                    mBuff = mBuff.Slice(0, nLength);
+                    while (true)
+                    {
+                        var mPackage = mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                        bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
+                        if (bSucccess)
                         {
-                            mBuff = mBuff.Slice(nReadBytesCount);
+                            int nReadBytesCount = mPackage.Length;
+                            mWaitCheckPackageQueue.Enqueue(mPackage);
+                            if (mBuff.Length > nReadBytesCount)
+                            {
+                                mBuff = mBuff.Slice(nReadBytesCount);
+                            }
+                            else
+                            {
+                                NetLog.Assert(mBuff.Length == nReadBytesCount);
+                                break;
+                            }
                         }
                         else
                         {
-                            NetLog.Assert(mBuff.Length == nReadBytesCount);
+                            mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                            NetLog.LogError("解码失败 !!!");
                             break;
                         }
-                    }
-                    else
-                    {
-                        mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                        NetLog.LogError("解码失败 !!!");
-                        break;
                     }
                 }
             }
@@ -140,7 +184,7 @@ namespace AKNet.Udp1Tcp.Server
 
         public bool SendToAsync(SocketAsyncEventArgs mArg)
         {
-            return this.mNetServer.SendToAsync(mArg);
+            return this.mServerMgr.SendToAsync(mArg);
         }
 
         public void Reset()
@@ -149,7 +193,7 @@ namespace AKNet.Udp1Tcp.Server
             {
                 while (mWaitCheckPackageQueue.TryDequeue(out var mPackage))
                 {
-                    mNetServer.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
+                    mServerMgr.GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
                 }
             }
 
@@ -161,7 +205,7 @@ namespace AKNet.Udp1Tcp.Server
 
         public void Close()
         {
-            this.mNetServer.GetFakeSocketMgr().RemoveFakeSocket(this);
+            this.mServerMgr.GetFakeSocketMgr().RemoveFakeSocket(this);
         }
     }
 }
