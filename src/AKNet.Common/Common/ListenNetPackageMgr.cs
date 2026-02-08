@@ -28,16 +28,21 @@ namespace AKNet.Common
 
 		public void NetPackageExecute(ClientPeerBase peer, NetPackage mPackage)
 		{
-            mCommonListenFunc?.Invoke(peer, mPackage);
-
-            ushort nPackageId = mPackage.GetPackageId();
-			if (mNetEventDic.ContainsKey(nPackageId) && mNetEventDic[nPackageId] != null)
+			if (mCommonListenFunc != null)
 			{
-				mNetEventDic[nPackageId](peer, mPackage);
+				mCommonListenFunc(peer, mPackage);
 			}
 			else
 			{
-				NetLog.Log("不存在的包Id: " + nPackageId);
+				ushort nPackageId = mPackage.GetPackageId();
+				if (mNetEventDic.ContainsKey(nPackageId) && mNetEventDic[nPackageId] != null)
+				{
+					mNetEventDic[nPackageId](peer, mPackage);
+				}
+				else
+				{
+					NetLog.Log("不存在的包Id: " + nPackageId);
+				}
 			}
 		}
 		
