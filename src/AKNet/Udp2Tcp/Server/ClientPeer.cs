@@ -166,6 +166,7 @@ namespace AKNet.Udp2Tcp.Server
         {
             Reset();
 
+            SendArgs.Dispose();
             lock (mSendStreamList)
             {
                 this.mSendStreamList.Dispose();

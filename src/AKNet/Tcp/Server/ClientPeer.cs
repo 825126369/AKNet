@@ -166,6 +166,9 @@ namespace AKNet.Tcp.Server
 		{
             Reset();
 
+            mReceiveIOContex.Dispose();
+            mSendIOContex.Dispose();
+
             lock (mReceiveStreamList)
             {
                 mReceiveStreamList.Dispose();

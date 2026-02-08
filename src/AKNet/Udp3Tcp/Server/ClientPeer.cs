@@ -31,7 +31,6 @@ namespace AKNet.Udp3Tcp.Server
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
 
         private FakeSocket mSocket = null;
-        private readonly object lock_mSocket_object = new object();
         private readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
         private readonly AkCircularManySpanBuffer mSendStreamList = null;
         private bool bSendIOContexUsed = false;
@@ -164,6 +163,7 @@ namespace AKNet.Udp3Tcp.Server
         {
             Reset();
 
+            SendArgs.Dispose();
             lock (mSendStreamList)
             {
                 this.mSendStreamList.Dispose();
