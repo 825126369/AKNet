@@ -16,7 +16,9 @@ This repository is licensed with the [MIT](LICENSE) license.
 
 # AKNet的劣势
 
-追求极致性能/省钱/工程企业级的方式 就是用 C/C++/Rust。
+1: 追求极致性能/省钱/工程企业级的方式 就是用 C/C++/Rust。
+
+2: 只支持长连接游戏。
 
 # UDP和TCP总结
 
