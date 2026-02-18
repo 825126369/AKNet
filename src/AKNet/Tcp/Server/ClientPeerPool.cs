@@ -14,8 +14,8 @@ namespace AKNet.Tcp.Server
 {
     internal class ClientPeerPool
     {
-        readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
-        NetServerMain mServerMgr = null;
+        private readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
+        private NetServerMain mServerMgr = null;
         private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
