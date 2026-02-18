@@ -25,7 +25,6 @@ namespace AKNet.Tcp.Client
 		private bool NetPackageExecute()
 		{
 			bool bSuccess = false;
-
 			lock (mReceiveStreamList)
 			{
 				bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);

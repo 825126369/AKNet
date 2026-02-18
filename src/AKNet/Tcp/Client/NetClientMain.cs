@@ -125,7 +125,7 @@ namespace AKNet.Tcp.Client
             if (this.mSocketPeerState != this.mLastSocketPeerState)
             {
                 this.mLastSocketPeerState = mSocketPeerState;
-                mListenClientPeerStateMgr.OnSocketStateChanged(this);
+                this.mListenClientPeerStateMgr.OnSocketStateChanged(this);
             }
         }
 
