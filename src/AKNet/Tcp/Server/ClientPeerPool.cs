@@ -15,17 +15,17 @@ namespace AKNet.Tcp.Server
     internal class ClientPeerPool
     {
         readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
-        NetServerMain mTcpServer = null;
+        NetServerMain mServerMgr = null;
         private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
-            ClientPeer clientPeer = new ClientPeer(this.mTcpServer);
+            ClientPeer clientPeer = new ClientPeer(this.mServerMgr);
             return clientPeer;
         }
 
-        public ClientPeerPool(NetServerMain mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPool(NetServerMain mServerMgr, int initCapacity = 0, int nMaxCapacity = 0)
         {
-            this.mTcpServer = mTcpServer;
+            this.mServerMgr = mServerMgr;
             SetMaxCapacity(nMaxCapacity);
             for (int i = 0; i < initCapacity; i++)
             {
