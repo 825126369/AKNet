@@ -39,7 +39,7 @@ namespace AKNet.Udp4Tcp.Client
         private bool bSendIOContexUsed = false;
         
         private Connection mConnection = new Connection();
-        private IPEndPoint mIPEndPoint = null;
+        private IPEndPoint RemoteEndPoint = null;
         private string ServerIp;
         private int nServerPort;
 

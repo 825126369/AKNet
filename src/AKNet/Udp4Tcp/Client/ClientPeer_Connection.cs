@@ -38,26 +38,24 @@ namespace AKNet.Udp4Tcp.Client
 
         public async void ConnectServer(string ServerAddr, int ServerPort)
         {
+            Reset();
+
             this.ServerIp = ServerAddr;
             this.nServerPort = ServerPort;
-
-            Reset();
             mConnection = new Connection();
-            if (mIPEndPoint == null)
+            if (RemoteEndPoint == null)
             {
                 IPAddress mIPAddress = IPAddress.Parse(ServerAddr);
-                mIPEndPoint = new IPEndPoint(mIPAddress, ServerPort);
+                RemoteEndPoint = new IPEndPoint(mIPAddress, ServerPort);
             }
 
             SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-            NetLog.Log("Client 正在连接服务器: " + this.ServerIp + " | " + this.nServerPort);
+            NetLog.Log($"{NetType.Udp4Tcp.ToString()} 客户端 正在连接服务器: {RemoteEndPoint}");
             try
             {
-                await mConnection.ConnectAsync(mIPEndPoint).ConfigureAwait(false);
-
+                await mConnection.ConnectAsync(RemoteEndPoint).ConfigureAwait(false);
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-                NetLog.Log(string.Format("Client 连接服务器: {0}:{1} 成功", this.ServerIp, this.nServerPort));
-
+                NetLog.Log($"{NetType.Udp4Tcp.ToString()} 客户端 连接服务器 成功");
                 StartReceiveEventArg();
             }
             catch
