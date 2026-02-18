@@ -19,17 +19,17 @@ namespace AKNet.Tcp.Server
     internal class ClientPeerWrap : ClientPeerBase
 	{
         private ClientPeer mInstance = null;
-        private NetServerMain mNetServer;
+        private NetServerMain mServerMgr;
         public ClientPeerWrap(NetServerMain mNetServer)
 		{
-            this.mNetServer = mNetServer;
+            this.mServerMgr = mNetServer;
             this.mInstance = mNetServer.mClientPeerPool.Pop();
         }
 
         public void Reset()
         {
-            mNetServer.mClientPeerPool.recycle(mInstance);
-            mNetServer = null;
+            mServerMgr.mClientPeerPool.recycle(mInstance);
+            mServerMgr = null;
             mInstance = null;
         }
 
