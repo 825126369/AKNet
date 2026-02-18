@@ -22,7 +22,7 @@ namespace AKNet.Tcp.Server
         private double fSendHeartBeatTime = 0.0;
 		private double fReceiveHeartBeatTime = 0.0;
 		
-		private ServerMgr mServerMgr;
+		private NetServerMain mServerMgr;
 		private string Name = string.Empty;
         private uint ID = 0;
 
@@ -33,7 +33,7 @@ namespace AKNet.Tcp.Server
         private Socket mSocket = null;
         private bool bSendIOContextUsed = false;
 
-        public ClientPeer(ServerMgr mServerMgr)
+        public ClientPeer(NetServerMain mServerMgr)
 		{
 			this.mServerMgr = mServerMgr;
 
