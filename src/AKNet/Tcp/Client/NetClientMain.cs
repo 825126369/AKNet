@@ -81,12 +81,12 @@ namespace AKNet.Tcp.Client
                         {
                             nPackageCount++;
                         }
+
                         if (nPackageCount > 0)
                         {
                             ReceiveHeartBeat();
                         }
-
-
+                        
                         fSendHeartBeatTime += elapsed;
                         if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
                         {
