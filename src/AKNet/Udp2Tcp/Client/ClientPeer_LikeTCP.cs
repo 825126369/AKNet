@@ -33,16 +33,16 @@ namespace AKNet.Udp2Tcp.Client
 		{
             this.Reset();
 			SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-			NetLog.Log("Client: Udp 正在连接服务器: " + GetIPEndPoint());
-			SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
+            NetLog.Log($"{NetType.Udp2Tcp.ToString()} 客户端 正在连接服务器: {remoteEndPoint}");
+            SendInnerNetData(UdpNetCommand.COMMAND_CONNECT);
 		}
 
 		public void SendDisConnect()
 		{
 			this.Reset();
 			SetSocketState(SOCKET_PEER_STATE.DISCONNECTING);
-			NetLog.Log("Client: Udp 正在 断开服务器: " + GetIPEndPoint());
-			SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
+            NetLog.Log($"{NetType.Udp2Tcp.ToString()} 客户端 正在 断开服务器: {remoteEndPoint}");
+            SendInnerNetData(UdpNetCommand.COMMAND_DISCONNECT);
 		}
 
 		public void ReceiveConnect()
@@ -51,8 +51,8 @@ namespace AKNet.Udp2Tcp.Client
 			{
                 this.Reset();
 				SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-				NetLog.Log("Client: Udp连接服务器 成功 ! ");
-			}
+                NetLog.Log($"{NetType.Udp2Tcp.ToString()} 客户端 连接服务器 成功");
+            }
 		}
 
 		public void ReceiveDisConnect()
@@ -61,8 +61,8 @@ namespace AKNet.Udp2Tcp.Client
 			{
 				this.Reset();
 				SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-				NetLog.Log("Client: Udp 断开服务器 成功 ! ");
-			}
+                NetLog.Log($"{NetType.Udp2Tcp.ToString()} 客户端 断开服务器 成功!");
+            }
 		}
 	}
 

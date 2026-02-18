@@ -32,7 +32,7 @@ namespace AKNet.Udp2Tcp.Server
         private Socket mSocket = null;
         private readonly SocketAsyncEventArgs ReceiveArgs = new SocketAsyncEventArgs();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.IPv6Any, 0);
 
         public ServerMgr()
         {

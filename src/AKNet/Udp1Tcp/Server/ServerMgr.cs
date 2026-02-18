@@ -34,7 +34,7 @@ namespace AKNet.Udp1Tcp.Server
         private readonly SocketAsyncEventArgs ReceiveArgs;
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
-        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.Any, 0);
+        private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.IPv6Any, 0);
 
         public ServerMgr()
         {
