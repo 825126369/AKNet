@@ -1,7 +1,6 @@
-﻿UDP4TCP:框架设计 渐进思考 完整过程:
+﻿UDP4TCP: 简单的多线程模型
 
-CPU核心数 => N个Thread Worker
-每个 Thread Worker => 包含N个 Logic Worker(这种做法 和 MSQUIC 不一致)
+框架设计 渐进思考 完整过程:
 
 1: 我首先利用 Socket的 SocketAsyncEventArgs 把 SocketAsyncEventArgs这个事件路由到 SocketItem 的指定线程上。
 2：我直接在这个线程上处理丢包逻辑：报错了: System.StackOverflowException

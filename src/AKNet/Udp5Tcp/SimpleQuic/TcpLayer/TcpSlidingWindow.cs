@@ -1,0 +1,41 @@
+﻿/************************************Copyright*****************************************
+*        ProjectName:AKNet
+*        Web:https://github.com/825126369/AKNet
+*        Description:C#游戏网络库
+*        Author:许珂
+*        StartTime:2024/11/01 00:00:00
+*        ModifyTime:2026/2/1 20:26:54
+*        Copyright:MIT软件许可证
+************************************Copyright*****************************************/
+using AKNet.Common;
+
+namespace AKNet.Udp5Tcp.Common
+{
+    internal class TcpSlidingWindow:AkCircularManyBuffer
+    {
+        public uint nBeginOrderId; //待确认的OrderId
+
+        public TcpSlidingWindow():base(Config.nUdpPackageFixedBodySize)
+        {
+            nBeginOrderId = Config.nUdpMinOrderId;
+        }
+
+        public void DoWindowForward(uint nRequestOrderId)
+        {
+            int nClearLength = GetWindowOffset(nRequestOrderId);
+            ClearBuffer(nClearLength);
+            nBeginOrderId = nRequestOrderId;
+        }
+
+        public int GetWindowOffset(uint nOrderId)
+        {
+            return OrderIdHelper.GetOrderIdLength(nBeginOrderId, nOrderId);
+        }
+
+        public void WindowReset()
+        {
+            base.Reset();
+            nBeginOrderId = Config.nUdpMinOrderId;
+        }
+    }
+}
