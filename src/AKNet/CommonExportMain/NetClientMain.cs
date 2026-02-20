@@ -33,6 +33,10 @@ namespace AKNet.Common
             {
                 mInterface = new AKNet.Udp4Tcp.Client.NetClientMain();
             }
+            else if (nNetType == NetType.Udp5Tcp)
+            {
+                mInterface = new AKNet.Udp5Tcp.Client.NetClientMain();
+            }
             else
             {
                 NetLog.LogError("Unsupported network type: " + nNetType);
