@@ -17,7 +17,7 @@
         public const int nIOContexBufferLength = 1024;
         public const int nDataMaxLength = ushort.MaxValue;
         public const double fReceiveHeartBeatTimeOut = 5.0;
-        public const double fMySendHeartBeatMaxTime = 2.0;
+        public const double fSendHeartBeatMaxTime = 2.0;
         public const double fReConnectMaxCdTime = 3.0;
     }
 

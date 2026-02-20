@@ -109,7 +109,7 @@ namespace AKNet.Udp2Tcp.Client
                         }
 
                         fMySendHeartBeatCdTime += elapsed;
-                        if (fMySendHeartBeatCdTime >= CommonTcpLayerConfig.fMySendHeartBeatMaxTime)
+                        if (fMySendHeartBeatCdTime >= CommonTcpLayerConfig.fSendHeartBeatMaxTime)
                         {
                             SendHeartBeat();
                             fMySendHeartBeatCdTime = 0.0;

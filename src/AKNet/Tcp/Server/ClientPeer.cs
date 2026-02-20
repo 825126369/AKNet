@@ -62,7 +62,7 @@ namespace AKNet.Tcp.Server
                     }
 
                     fSendHeartBeatTime += elapsed;
-                    if (fSendHeartBeatTime >= CommonTcpLayerConfig.fMySendHeartBeatMaxTime)
+                    if (fSendHeartBeatTime >= CommonTcpLayerConfig.fSendHeartBeatMaxTime)
                     {
                         SendHeartBeat();
                         fSendHeartBeatTime = 0.0;

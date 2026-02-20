@@ -38,16 +38,16 @@ namespace AKNet.Udp3Tcp.Server
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();
         private readonly ConfigInstance mConfigInstance;
-        public NetServerMain(ConfigInstance mConfigInstance = null)
+        public NetServerMain(ConfigInstance mConfig = null)
         {
             MainThreadCheck.Check();
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
 
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, this.mConfigInstance.MaxPlayerCount);
 
             mSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
             mSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
@@ -58,8 +58,8 @@ namespace AKNet.Udp3Tcp.Server
             ReceiveArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
             ReceiveArgs.RemoteEndPoint = mEndPointEmpty;
             
-            mFakeSocketPool = new FakeSocketPool(this, 0, Config.MaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
+            mFakeSocketPool = new FakeSocketPool(this, 0, this.mConfigInstance.MaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(this.mConfigInstance.MaxPlayerCount);
         }
 
         public NetStreamReceivePackage GetLikeTcpNetPackage()

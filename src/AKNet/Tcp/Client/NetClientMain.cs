@@ -91,7 +91,7 @@ namespace AKNet.Tcp.Client
                         }
                         
                         fSendHeartBeatTime += elapsed;
-                        if (fSendHeartBeatTime >= CommonTcpLayerConfig.fMySendHeartBeatMaxTime)
+                        if (fSendHeartBeatTime >= CommonTcpLayerConfig.fSendHeartBeatMaxTime)
                         {
                             fSendHeartBeatTime = 0.0;
                             SendHeartBeat();
