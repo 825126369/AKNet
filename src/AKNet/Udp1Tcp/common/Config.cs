@@ -9,7 +9,7 @@
 ************************************Copyright*****************************************/
 namespace AKNet.Udp1Tcp.Common
 {
-    public static class Config
+    internal static class Config
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
