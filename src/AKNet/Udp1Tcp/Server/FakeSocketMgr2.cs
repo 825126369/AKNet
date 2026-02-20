@@ -17,12 +17,12 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class FakeSocketMgr2:FakeSocketMgrInterface
     {
-        private ServerMgr mNetServer = null;
+        private NetServerMain mNetServer = null;
         private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly NetUdpFixedSizePackage mInnerCommandCheckPackage = new NetUdpFixedSizePackage();
 
-        public FakeSocketMgr2(ServerMgr mNetServer)
+        public FakeSocketMgr2(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
             mFakeSocketPool = new FakeSocketPool(mNetServer, 0, Config.MaxPlayerCount);

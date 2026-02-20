@@ -22,10 +22,10 @@ namespace AKNet.Udp1Tcp.Server
         readonly SafeObjectPool<NetUdpFixedSizePackage> mPackagePool = new SafeObjectPool<NetUdpFixedSizePackage>();
         readonly ConcurrentQueue<NetUdpFixedSizePackage> mSendPackageQueue = new ConcurrentQueue<NetUdpFixedSizePackage>();
 
-        private readonly ServerMgr mNetServer = null;
+        private readonly NetServerMain mNetServer = null;
         private bool bSendIOContexUsed = false;
 
-        public InnerCommandSendMgr(ServerMgr mNetServer)
+        public InnerCommandSendMgr(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
             SendArgs.Completed += ProcessSend;

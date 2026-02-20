@@ -17,7 +17,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp1Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
 		public void InitNet()
 		{

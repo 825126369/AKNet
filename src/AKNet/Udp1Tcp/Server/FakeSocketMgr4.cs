@@ -18,11 +18,11 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class FakeSocketMgr4:FakeSocketMgrInterface
     {
-        private ServerMgr mNetServer = null;
+        private NetServerMain mNetServer = null;
         private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>();
         private readonly FakeSocketPool mFakeSocketPool = null;
 
-        public FakeSocketMgr4(ServerMgr mNetServer)
+        public FakeSocketMgr4(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
             mFakeSocketPool = new FakeSocketPool(mNetServer);

@@ -18,12 +18,12 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly ServerMgr mServerMgr;
+        private readonly NetServerMain mServerMgr;
         private readonly AkCircularManySpanBuffer mWaitCheckStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
         private readonly Queue<NetUdpFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpFixedSizePackage>();
         private SOCKET_PEER_STATE mConnectionState;
 
-        public FakeSocket(ServerMgr mServerMgr)
+        public FakeSocket(NetServerMain mServerMgr)
         {
             this.mServerMgr = mServerMgr;
             this.mConnectionState = SOCKET_PEER_STATE.DISCONNECTED;

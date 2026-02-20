@@ -18,13 +18,13 @@ namespace AKNet.Udp1Tcp.Server
 {
     internal class FakeSocketMgr3: FakeSocketMgrInterface
     {
-        private ServerMgr mNetServer = null;
+        private NetServerMain mNetServer = null;
         private readonly Dictionary<IPEndPoint, FakeSocket> mAcceptSocketDic = null;
         private readonly FakeSocketPool mFakeSocketPool = null;
         private readonly InnerCommandSendMgr mDisConnectSendMgr = null;
         private readonly InnectCommandPeekPackage mInnerCommandCheckPackage = new InnectCommandPeekPackage();
 
-        public FakeSocketMgr3(ServerMgr mNetServer)
+        public FakeSocketMgr3(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
             mFakeSocketPool = new FakeSocketPool(mNetServer, Config.MaxPlayerCount, Config.MaxPlayerCount);

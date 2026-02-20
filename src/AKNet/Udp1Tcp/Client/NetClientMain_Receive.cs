@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp1Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
         public int GetCurrentFrameRemainPackageCount()
         {
