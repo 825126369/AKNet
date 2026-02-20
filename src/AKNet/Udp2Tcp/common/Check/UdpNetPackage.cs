@@ -41,7 +41,7 @@ namespace AKNet.Udp2Tcp.Common
 		public NetUdpFixedSizePackage()
 		{
 			mEntry = new LinkedListNode<NetUdpFixedSizePackage>(this);
-            buffer = new byte[Config.nUdpPackageFixedSize];
+            buffer = new byte[CommonUdpLayerConfig.nUdpPackageFixedSize];
             mTcpStanardRTOTimer = new TcpStanardRTOTimer();
             mTimeOutGenerator_ReSend = new CheckPackageInfo_TimeOutGenerator();
         }

@@ -4,26 +4,16 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2026/2/1 20:26:50
+*        ModifyTime:2026/2/1 20:26:51
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp3Tcp.Common;
 using System;
 
-namespace AKNet.Udp3Tcp.Client
+namespace AKNet.Udp4Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
-		public void SendInnerNetData(byte nInnerCommandId)
-		{
-			NetLog.Assert(UdpNetCommand.orInnerCommand(nInnerCommandId));
-			var mPackage = GetObjectPoolManager().UdpSendPackage_Pop();
-			mPackage.SetInnerCommandId(nInnerCommandId);
-			SendNetPackage(mPackage);
-            GetObjectPoolManager().UdpSendPackage_Recycle(mPackage);
-        }
-
 		public void SendNetData(NetPackage mNetPackage)
 		{
 			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
@@ -36,8 +26,8 @@ namespace AKNet.Udp3Tcp.Client
 		{
 			if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
 			{
-				ReadOnlySpan<byte> mData = mCryptoMgr.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
-				mUdpCheckPool.SendTcpStream(mData);
+                ReadOnlySpan<byte> mData = mCryptoMgr.Encode(nLogicPackageId, ReadOnlySpan<byte>.Empty);
+                SendNetStream(mData);
 			}
 		}
 
@@ -51,7 +41,7 @@ namespace AKNet.Udp3Tcp.Client
             if (GetSocketState() == SOCKET_PEER_STATE.CONNECTED)
             {
                 ReadOnlySpan<byte> mData = mCryptoMgr.Encode(nLogicPackageId, data);
-                mUdpCheckPool.SendTcpStream(mData);
+                SendNetStream(mData);
             }
         }
     }

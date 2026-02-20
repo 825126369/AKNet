@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace AKNet.Udp4Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
 		public void InitNet()
 		{

@@ -4,19 +4,20 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2026/2/1 20:26:51
+*        ModifyTime:2026/2/1 20:26:50
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 
 using AKNet.Common;
+using AKNet.Udp2Tcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace AKNet.Udp3Tcp.Server
+namespace AKNet.Udp2Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
 		public void InitNet()
 		{
@@ -62,57 +63,42 @@ namespace AKNet.Udp3Tcp.Server
                 EndPoint bindEndPoint = new IPEndPoint(mIPAddress, nPort);
 				mSocket.Bind(bindEndPoint);
 
-				NetLog.Log($"{NetType.Udp3Tcp.ToString()} 服务器 初始化成功: {bindEndPoint}");
+				NetLog.Log($"{NetType.Udp2Tcp.ToString()} 服务器 初始化成功:  {bindEndPoint}");
 				StartReceiveFromAsync();
 			}
 			catch (SocketException ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.SocketErrorCode + " | " + ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError($"{NetType.Udp3Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
+				NetLog.LogError($"{NetType.Udp2Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
 			catch (Exception ex)
 			{
 				mState = SOCKET_SERVER_STATE.EXCEPTION;
 				NetLog.LogError(ex.Message + " | " + ex.StackTrace);
-				NetLog.LogError($"{NetType.Udp3Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
+				NetLog.LogError($"{NetType.Udp2Tcp.ToString()} 服务器 初始化失败: {mIPAddress} | {nPort}");
 			}
-		}
-
-		public int GetPort()
-		{
-			return this.nPort;
-		}
-
-        public SOCKET_SERVER_STATE GetServerState()
-        {
-            return mState;
-        }
-
-		public Socket GetSocket()
-		{
-			return mSocket;
 		}
 
 		private void StartReceiveFromAsync()
 		{
-			bool bIOSyncCompleted = false;
-            if (mSocket != null)
-            {
-                try
-                {
-                    bIOSyncCompleted = !mSocket.ReceiveFromAsync(ReceiveArgs);
-                }
-                catch (Exception e)
-                {
-                    if (mSocket != null)
-                    {
-                        NetLog.LogException(e);
-                    }
-                }
-            }
+			bool bIOPending = false;
+			if (mSocket != null)
+			{
+				try
+				{
+                    bIOPending = mSocket.ReceiveFromAsync(ReceiveArgs);
+				}
+				catch (Exception e)
+				{
+					if (mSocket != null)
+					{
+						NetLog.LogException(e);
+					}
+				}
+			}
 			
-            if (bIOSyncCompleted)
+            if (!bIOPending)
 			{
 				ProcessReceive(null, ReceiveArgs);
 			}
@@ -123,47 +109,44 @@ namespace AKNet.Udp3Tcp.Server
 			if (e.SocketError == SocketError.Success && e.BytesTransferred > 0)
 			{
 				NetLog.Assert(e.RemoteEndPoint != mEndPointEmpty);
-				MultiThreadingReceiveNetPackage(e);
+                MultiThreadingReceiveNetPackage(e);
                 e.RemoteEndPoint = mEndPointEmpty;
 			}
 			StartReceiveFromAsync();
 		}
 
-		public bool SendToAsync(SocketAsyncEventArgs e)
+		public void SendTo(NetUdpFixedSizePackage mPackage)
 		{
-			bool bIOSyncCompleted = false;
-			if (mSocket != null)
+			try
 			{
-				try
+				int nLength = mSocket.SendTo(mPackage.buffer, 0, mPackage.Length, SocketFlags.None, mPackage.remoteEndPoint);
+				if (nLength < mPackage.Length)
 				{
-					bIOSyncCompleted = !mSocket.SendToAsync(e);
-				}
-				catch (Exception ex)
-				{
-					if (mSocket != null)
-					{
-						NetLog.LogException(ex);
-					}
+					NetLog.LogError("短写发生了: " + nLength + " | " + mPackage.Length);
 				}
 			}
-			
-			return !bIOSyncCompleted;
+			catch { }
 		}
 
-        public void CloseSocket()
+		public bool SendToAsync(SocketAsyncEventArgs e)
 		{
-            if (mSocket != null)
-            {
-                Socket mSocket2 = mSocket;
-                mSocket = null;
+			return mSocket.SendToAsync(e);
+		}
 
-                try
-                {
-                    mSocket2.Close();
-                }
-                catch (Exception) { }
-            }
-        }
+		public void CloseSocket()
+		{
+			if (mSocket != null)
+			{
+				Socket mSocket2 = mSocket;
+				mSocket = null;
+
+				try
+				{
+					mSocket2.Close();
+				}
+				catch (Exception) { }
+			}
+		}
 	}
 
 }

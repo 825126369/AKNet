@@ -7,23 +7,17 @@
 *        ModifyTime:2026/2/1 20:26:49
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+
 namespace AKNet.Udp2Tcp.Common
 {
-    public static class Config
+    internal static class Config
 	{
         public const bool bUdpCheck = true;
         public const bool bUseSendAsync = true;
-
         public const ushort nUdpMinOrderId = UdpNetCommand.COMMAND_MAX + 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
-		public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 8;
-        public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
-        public const int nMaxDataLength = ushort.MaxValue;
-
-		public static readonly double fReceiveHeartBeatTimeOut = 5.0;
-		public static readonly double fMySendHeartBeatMaxTime = 2.0;
-        public static readonly double fReConnectMaxCdTime = 3.0;
-        public static readonly int MaxPlayerCount = 10000;
+        public const int nUdpPackageFixedBodySize = CommonUdpLayerConfig.nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
 	}
 }

@@ -20,7 +20,7 @@ namespace AKNet.Udp2Tcp.Server
         internal UdpCheckMgr mUdpCheckPool = null;
         private SOCKET_PEER_STATE mSocketPeerState;
         private SOCKET_PEER_STATE mLastSocketPeerState;
-        private ServerMgr mServerMgr;
+        private NetServerMain mServerMgr;
         private string Name = string.Empty;
         private uint ID = 0;
         internal readonly TcpStanardRTOFunc mTcpStanardRTOFunc = new TcpStanardRTOFunc();
@@ -30,17 +30,17 @@ namespace AKNet.Udp2Tcp.Server
 
         FakeSocket mSocket = null;
         readonly SocketAsyncEventArgs SendArgs = new SocketAsyncEventArgs();
-        readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(Config.nUdpPackageFixedSize);
+        readonly AkCircularManySpanBuffer mSendStreamList = new AkCircularManySpanBuffer(CommonUdpLayerConfig.nUdpPackageFixedSize);
         bool bSendIOContexUsed = false;
 
         private readonly NetStreamCircularBuffer mReceiveStreamList = new NetStreamCircularBuffer();
 
-        public ClientPeer(ServerMgr mNetServer)
+        public ClientPeer(NetServerMain mNetServer)
         {
             this.mServerMgr = mNetServer;
             mUdpCheckPool = new UdpCheckMgr(this);
             SendArgs.Completed += ProcessSend;
-            SendArgs.SetBuffer(new byte[Config.nUdpPackageFixedSize], 0, Config.nUdpPackageFixedSize);
+            SendArgs.SetBuffer(new byte[CommonUdpLayerConfig.nUdpPackageFixedSize], 0, CommonUdpLayerConfig.nUdpPackageFixedSize);
 
             ResetSocketState();
         }
@@ -62,7 +62,7 @@ namespace AKNet.Udp2Tcp.Server
                         }
 
                         fMySendHeartBeatCdTime += elapsed;
-                        if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
+                        if (fMySendHeartBeatCdTime >= CommonTcpLayerConfig.fMySendHeartBeatMaxTime)
                         {
                             fMySendHeartBeatCdTime = 0.0;
                             SendHeartBeat();
@@ -71,7 +71,7 @@ namespace AKNet.Udp2Tcp.Server
                         // 有可能网络流量大的时候，会while循环卡住
                         double fHeatTime = Math.Min(0.3, elapsed);
                         fReceiveHeartBeatTime += fHeatTime;
-                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        if (fReceiveHeartBeatTime >= CommonTcpLayerConfig.fReceiveHeartBeatTimeOut)
                         {
                             fReceiveHeartBeatTime = 0.0;
 #if DEBUG

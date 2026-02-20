@@ -4,17 +4,18 @@
 *        Description:C#游戏网络库
 *        Author:许珂
 *        StartTime:2024/11/01 00:00:00
-*        ModifyTime:2026/2/1 20:26:49
+*        ModifyTime:2026/2/1 20:26:50
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
-using AKNet.Common;
-using AKNet.Udp2Tcp.Common;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
+using AKNet.Common;
+using AKNet.Udp3Tcp.Common;
 
-namespace AKNet.Udp2Tcp.Client
+namespace AKNet.Udp3Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
         public int GetCurrentFrameRemainPackageCount()
         {
@@ -23,12 +24,12 @@ namespace AKNet.Udp2Tcp.Client
 
         private bool NetCheckPackageExecute()
         {
-            NetUdpFixedSizePackage mPackage = null;
+            NetUdpReceiveFixedSizePackage mPackage = null;
             lock (mWaitCheckPackageQueue)
             {
                 if (mWaitCheckPackageQueue.TryDequeue(out mPackage))
                 {
-                    if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                    if (!mPackage.orInnerCommandPackage())
                     {
                         nCurrentCheckPackageCount--;
                     }
@@ -47,19 +48,18 @@ namespace AKNet.Udp2Tcp.Client
 
         public void MultiThreading_ReceiveWaitCheckNetPackage(SocketAsyncEventArgs e)
         {
-            var mBuff = new ReadOnlySpan<byte>(e.Buffer, e.Offset, e.BytesTransferred);
+            ReadOnlySpan<byte> mBuff = e.MemoryBuffer.Span.Slice(e.Offset, e.BytesTransferred);
             while (true)
             {
-                var mPackage = GetObjectPoolManager().NetUdpFixedSizePackage_Pop();
+                var mPackage = GetObjectPoolManager().UdpReceivePackage_Pop();
                 bool bSucccess = UdpPackageEncryption.Decode(mBuff, mPackage);
                 if (bSucccess)
                 {
-                    int nReadBytesCount = mPackage.Length;
-
+                    int nReadBytesCount = mPackage.nBodyLength + Config.nUdpPackageFixedHeadSize;
                     lock (mWaitCheckPackageQueue)
                     {
                         mWaitCheckPackageQueue.Enqueue(mPackage);
-                        if (UdpNetCommand.orNeedCheck(mPackage.GetPackageId()))
+                        if (!mPackage.orInnerCommandPackage())
                         {
                             nCurrentCheckPackageCount++;
                         }
@@ -76,8 +76,8 @@ namespace AKNet.Udp2Tcp.Client
                 }
                 else
                 {
-                    GetObjectPoolManager().NetUdpFixedSizePackage_Recycle(mPackage);
-                    NetLog.LogError($"解码失败: {e.Buffer.Length} {e.BytesTransferred} | {mBuff.Length}");
+                    GetObjectPoolManager().UdpReceivePackage_Recycle(mPackage);
+                    NetLog.LogError($"解码失败: {e.MemoryBuffer.Length} {e.BytesTransferred} | {mBuff.Length}");
                     break;
                 }
             }
@@ -88,15 +88,18 @@ namespace AKNet.Udp2Tcp.Client
             bool bSuccess = mCryptoMgr.Decode(mReceiveStreamList, mNetPackage);
             if (bSuccess)
             {
-                mPackageManager.NetPackageExecute(this, mNetPackage);
+                NetPackageExecute(mNetPackage);
             }
             return bSuccess;
         }
 
-        public void ReceiveTcpStream(NetUdpFixedSizePackage mPackage)
+        public void ReceiveTcpStream(NetUdpReceiveFixedSizePackage mPackage)
         {
             mReceiveStreamList.WriteFrom(mPackage.GetTcpBufferSpan());
+            while (NetTcpPackageExecute())
+            {
+
+            }
         }
     }
-
 }

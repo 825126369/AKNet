@@ -13,7 +13,7 @@ using System;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
 		private void SendHeartBeat()
 		{

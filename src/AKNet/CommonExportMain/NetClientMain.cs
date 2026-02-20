@@ -23,19 +23,19 @@ namespace AKNet.Common
             }
             else if (nNetType == NetType.Udp2Tcp)
             {
-                mInterface = new AKNet.Udp2Tcp.Client.NetClientMain();
+                mInterface = new AKNet.Udp2Tcp.Client.NetClientMain(mConfigInstance);
             }
             else if (nNetType == NetType.Udp3Tcp)
             {
-                mInterface = new AKNet.Udp3Tcp.Client.NetClientMain();
+                mInterface = new AKNet.Udp3Tcp.Client.NetClientMain(mConfigInstance);
             }
             else if (nNetType == NetType.Udp4Tcp)
             {
-                mInterface = new AKNet.Udp4Tcp.Client.NetClientMain();
+                mInterface = new AKNet.Udp4Tcp.Client.NetClientMain(mConfigInstance);
             }
             else if (nNetType == NetType.Udp5Tcp)
             {
-                mInterface = new AKNet.Udp5Tcp.Client.NetClientMain();
+                mInterface = new AKNet.Udp5Tcp.Client.NetClientMain(mConfigInstance);
             }
             else
             {

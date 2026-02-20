@@ -15,7 +15,7 @@ using AKNet.Udp3Tcp.Common;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {

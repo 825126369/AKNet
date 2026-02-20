@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
 	{
         private readonly Queue<FakeSocket> mConnectSocketQueue = new Queue<FakeSocket>();
         private readonly List<ClientPeerWrap> mClientList = new List<ClientPeerWrap>();

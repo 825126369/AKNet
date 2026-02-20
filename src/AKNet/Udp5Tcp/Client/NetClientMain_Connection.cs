@@ -8,14 +8,14 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp4Tcp.Common;
+using AKNet.Udp5Tcp.Common;
 using System;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace AKNet.Udp4Tcp.Client
+namespace AKNet.Udp5Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
         public void ReConnectServer()
         {
@@ -50,12 +50,12 @@ namespace AKNet.Udp4Tcp.Client
             }
 
             SetSocketState(SOCKET_PEER_STATE.CONNECTING);
-            NetLog.Log($"{NetType.Udp4Tcp.ToString()} 客户端 正在连接服务器: {RemoteEndPoint}");
+            NetLog.Log($"{NetType.Udp5Tcp.ToString()} 客户端 正在连接服务器: {RemoteEndPoint}");
             try
             {
                 await mConnection.ConnectAsync(RemoteEndPoint).ConfigureAwait(false);
                 SetSocketState(SOCKET_PEER_STATE.CONNECTED);
-                NetLog.Log($"{NetType.Udp4Tcp.ToString()} 客户端 连接服务器 成功");
+                NetLog.Log($"{NetType.Udp5Tcp.ToString()} 客户端 连接服务器 成功");
                 StartReceiveEventArg();
             }
             catch

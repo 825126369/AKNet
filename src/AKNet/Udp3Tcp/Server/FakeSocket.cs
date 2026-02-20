@@ -18,12 +18,12 @@ namespace AKNet.Udp3Tcp.Server
 {
     internal class FakeSocket : IPoolItemInterface
     {
-        private readonly ServerMgr mNetServer;
+        private readonly NetServerMain mNetServer;
         private readonly Queue<NetUdpReceiveFixedSizePackage> mWaitCheckPackageQueue = new Queue<NetUdpReceiveFixedSizePackage>();
         private int nCurrentCheckPackageCount = 0;
         public IPEndPoint RemoteEndPoint;
 
-        public FakeSocket(ServerMgr mNetServer)
+        public FakeSocket(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
         }

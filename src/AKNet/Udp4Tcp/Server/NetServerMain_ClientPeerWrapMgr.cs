@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp4Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
         public void Update(double elapsed)
         {

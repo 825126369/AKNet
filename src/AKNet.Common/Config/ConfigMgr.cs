@@ -20,4 +20,9 @@
         public const double fMySendHeartBeatMaxTime = 2.0;
         public const double fReConnectMaxCdTime = 3.0;
     }
+
+    internal static class CommonUdpLayerConfig
+    {
+        public const int nUdpPackageFixedSize = 1400;
+    }
 }

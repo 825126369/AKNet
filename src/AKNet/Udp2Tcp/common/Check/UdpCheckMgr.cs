@@ -44,9 +44,9 @@ namespace AKNet.Udp2Tcp.Common
             MainThreadCheck.Check();
             if (this.mClientPeer.GetSocketState() != SOCKET_PEER_STATE.CONNECTED) return;
 #if DEBUG
-            if (buffer.Length > Config.nMaxDataLength)
+            if (buffer.Length > CommonTcpLayerConfig.nDataMaxLength)
             {
-                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
+                NetLog.LogError("超出允许的最大包尺寸：" + CommonTcpLayerConfig.nDataMaxLength);
             }
 #endif
             mSendStreamList.WriteFrom(buffer);

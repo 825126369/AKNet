@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace AKNet.Udp3Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
         public void Update(double elapsed)
         {

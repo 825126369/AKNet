@@ -42,9 +42,9 @@ namespace AKNet.Udp2Tcp.Common
             mPackage.nRequestOrderId = EndianBitConverter.ToUInt16(mBuff.Slice(4));
             ushort nBodyLength = EndianBitConverter.ToUInt16(mBuff.Slice(6));
 
-            if (Config.nUdpPackageFixedHeadSize + nBodyLength > Config.nUdpPackageFixedSize)
+            if (Config.nUdpPackageFixedHeadSize + nBodyLength > CommonUdpLayerConfig.nUdpPackageFixedSize)
             {
-                NetLog.LogError($"解码失败 4: {nBodyLength} | {Config.nUdpPackageFixedSize}");
+                NetLog.LogError($"解码失败 4: {nBodyLength} | {CommonUdpLayerConfig.nUdpPackageFixedSize}");
                 return false;
             }
 

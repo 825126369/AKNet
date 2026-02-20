@@ -15,7 +15,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp3Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
         public void ConnectServer(string ip, int nPort)
         {

@@ -18,7 +18,7 @@ namespace AKNet.Udp5Tcp.Server
 	{
         private SOCKET_PEER_STATE mSocketPeerState;
         private SOCKET_PEER_STATE mLastSocketPeerState;
-        private ServerMgr mServerMgr;
+        private NetServerMain mServerMgr;
 
         private string Name = string.Empty;
         private uint ID = 0;
@@ -33,7 +33,7 @@ namespace AKNet.Udp5Tcp.Server
         private readonly Memory<byte> SendArgs = new byte[Config.nUdpPackageFixedSize];
         private bool bSendIOContexUsed = false;
 
-        public ClientPeer(ServerMgr mNetServer)
+        public ClientPeer(NetServerMain mNetServer)
         {
             this.mServerMgr = mNetServer;
             bSendIOContexUsed = false;

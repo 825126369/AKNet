@@ -15,7 +15,7 @@ namespace AKNet.Udp4Tcp.Server
     internal class ClientPeerPool
     {
         readonly Stack<ClientPeer> mObjectPool = new Stack<ClientPeer>();
-        ServerMgr mServer = null;
+        NetServerMain mServer = null;
         private int nMaxCapacity = 0;
         private ClientPeer GenerateObject()
         {
@@ -23,7 +23,7 @@ namespace AKNet.Udp4Tcp.Server
             return clientPeer;
         }
 
-        public ClientPeerPool(ServerMgr mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
+        public ClientPeerPool(NetServerMain mTcpServer, int initCapacity = 0, int nMaxCapacity = 0)
         {
             this.mServer = mTcpServer;
             SetMaxCapacity(nMaxCapacity);

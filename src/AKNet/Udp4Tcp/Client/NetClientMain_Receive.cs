@@ -8,12 +8,12 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Udp5Tcp.Common;
+using AKNet.Udp4Tcp.Common;
 using System;
 
-namespace AKNet.Udp5Tcp.Client
+namespace AKNet.Udp4Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
         private void MultiThreadingReceiveStream(ReadOnlySpan<byte> e)
         {

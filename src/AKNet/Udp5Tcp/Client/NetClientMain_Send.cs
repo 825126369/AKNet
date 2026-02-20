@@ -12,7 +12,7 @@ using System;
 
 namespace AKNet.Udp5Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
 		public void SendNetData(NetPackage mNetPackage)
 		{

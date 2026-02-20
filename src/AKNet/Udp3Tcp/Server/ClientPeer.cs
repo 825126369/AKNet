@@ -21,7 +21,7 @@ namespace AKNet.Udp3Tcp.Server
         internal UdpCheckMgr mUdpCheckPool = null;
         private SOCKET_PEER_STATE mSocketPeerState;
         private SOCKET_PEER_STATE mLastSocketPeerState;
-        private ServerMgr mServerMgr;
+        private NetServerMain mServerMgr;
 
         private string Name = string.Empty;
         private uint ID = 0;
@@ -36,7 +36,7 @@ namespace AKNet.Udp3Tcp.Server
         private bool bSendIOContexUsed = false;
         private int nLastSendBytesCount = 0;
 
-        public ClientPeer(ServerMgr mNetServer)
+        public ClientPeer(NetServerMain mNetServer)
         {
             this.mServerMgr = mNetServer;
             mUdpCheckPool = new UdpCheckMgr(this);

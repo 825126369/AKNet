@@ -13,7 +13,7 @@ using System;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
     {
 		public void SendInnerNetData(UInt16 id)
 		{

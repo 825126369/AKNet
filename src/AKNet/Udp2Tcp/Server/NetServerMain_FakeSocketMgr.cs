@@ -14,7 +14,7 @@ using System.Net.Sockets;
 
 namespace AKNet.Udp2Tcp.Server
 {
-    internal partial class ServerMgr
+    internal partial class NetServerMain
     {
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
         {
@@ -29,7 +29,7 @@ namespace AKNet.Udp2Tcp.Server
 
             if (mFakeSocket == null)
             {
-                if (mAcceptSocketDic.Count >= Config.MaxPlayerCount)
+                if (mAcceptSocketDic.Count >= mConfigInstance.MaxPlayerCount)
                 {
 #if DEBUG
                     NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");

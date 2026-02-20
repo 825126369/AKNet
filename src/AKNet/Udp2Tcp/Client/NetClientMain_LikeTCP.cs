@@ -12,7 +12,7 @@ using AKNet.Udp2Tcp.Common;
 
 namespace AKNet.Udp2Tcp.Client
 {
-    internal partial class ClientPeer
+    internal partial class NetClientMain
 	{
 		private void SendHeartBeat()
 		{
