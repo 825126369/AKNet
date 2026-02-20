@@ -116,7 +116,14 @@ namespace AKNet.Udp3Tcp.Client
 #if DEBUG
                             NetLog.Log("Client 接收服务器心跳 超时 ");
 #endif
-                            SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                            if (mConfigInstance.bAutoReConnect)
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                            }
+                            else
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                            }
                         }
                         break;
                     }
@@ -129,8 +136,6 @@ namespace AKNet.Udp3Tcp.Client
                         }
                         break;
                     }
-                case SOCKET_PEER_STATE.DISCONNECTED:
-                    break;
                 case SOCKET_PEER_STATE.RECONNECTING:
                     {
                         fReConnectServerCdTime += elapsed;

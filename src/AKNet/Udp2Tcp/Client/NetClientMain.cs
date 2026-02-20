@@ -124,7 +124,14 @@ namespace AKNet.Udp2Tcp.Client
 #if DEBUG
                             NetLog.Log("Client 接收服务器心跳 超时 ");
 #endif
-                            SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                            if (mConfigInstance.bAutoReConnect)
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                            }
+                            else
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                            }
                         }
                         break;
                     }

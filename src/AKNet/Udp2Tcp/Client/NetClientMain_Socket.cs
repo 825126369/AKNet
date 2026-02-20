@@ -215,7 +215,14 @@ namespace AKNet.Udp2Tcp.Client
             }
             else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED || mSocketPeerState == SOCKET_PEER_STATE.CONNECTING)
             {
-                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                if (mConfigInstance.bAutoReConnect)
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                }
+                else
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                }
             }
         }
 

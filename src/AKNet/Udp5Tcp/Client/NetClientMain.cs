@@ -85,7 +85,15 @@ namespace AKNet.Udp5Tcp.Client
                         {
                             fReceiveHeartBeatTime = 0.0;
                             fReConnectServerCdTime = 0.0;
-                            mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+
+                            if (mConfigInstance.bAutoReConnect)
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                            }
+                            else
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                            }
 #if DEBUG
                             NetLog.Log($"{GetName()} 心跳超时");
 #endif

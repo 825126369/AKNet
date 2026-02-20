@@ -58,9 +58,17 @@ namespace AKNet.Udp5Tcp.Client
                 NetLog.Log($"{NetType.Udp5Tcp.ToString()} 客户端 连接服务器 成功");
                 StartReceiveEventArg();
             }
-            catch
+            catch(Exception e)
             {
-                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                if (mConfigInstance.bAutoReConnect)
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                }
+                else
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                }
+                NetLog.LogError($"{NetType.Udp5Tcp.ToString()} 客户端 连接服务器 失败: {e.ToString()}");
             }
         }
 
@@ -204,7 +212,14 @@ namespace AKNet.Udp5Tcp.Client
             }
             else if (mConnectionPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
-                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                if (mConfigInstance.bAutoReConnect)
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                }
+                else
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                }
             }
         }
 
