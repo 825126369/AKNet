@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -49,14 +48,18 @@ namespace AKNet.Tcp.Client
         private readonly SocketAsyncEventArgs mSendIOContex = new SocketAsyncEventArgs();
         private readonly SocketAsyncEventArgs mReceiveIOContex = new SocketAsyncEventArgs();
 
-        public NetClientMain()
+        private readonly ConfigInstance mConfigInstance;
+
+        public NetClientMain(ConfigInstance mConfigInstance = null)
         {
+            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+
             mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             
-            mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            mReceiveIOContex.SetBuffer(new byte[CommonTcpLayerConfig.nIOContexBufferLength], 0, CommonTcpLayerConfig.nIOContexBufferLength);
+            mSendIOContex.SetBuffer(new byte[CommonTcpLayerConfig.nIOContexBufferLength], 0, CommonTcpLayerConfig.nIOContexBufferLength);
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             mConnectIOContex.Completed += OnIOCompleted;
@@ -88,7 +91,7 @@ namespace AKNet.Tcp.Client
                         }
                         
                         fSendHeartBeatTime += elapsed;
-                        if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+                        if (fSendHeartBeatTime >= CommonTcpLayerConfig.fMySendHeartBeatMaxTime)
                         {
                             fSendHeartBeatTime = 0.0;
                             SendHeartBeat();
@@ -96,11 +99,19 @@ namespace AKNet.Tcp.Client
 
                         double fHeatTime = Math.Min(0.3, elapsed);
                         fReceiveHeartBeatTime += fHeatTime;
-                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        if (fReceiveHeartBeatTime >= CommonTcpLayerConfig.fReceiveHeartBeatTimeOut)
                         {
                             fReceiveHeartBeatTime = 0.0;
                             fReConnectServerCdTime = 0.0;
-                            mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+
+                            if (mConfigInstance.bAutoReConnect)
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                            }
+                            else
+                            {
+                                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                            }
 #if DEBUG
                             NetLog.Log("心跳超时");
 #endif
@@ -110,7 +121,7 @@ namespace AKNet.Tcp.Client
 				case SOCKET_PEER_STATE.RECONNECTING:
                     {
                         fReConnectServerCdTime += elapsed;
-                        if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
+                        if (fReConnectServerCdTime >= CommonTcpLayerConfig.fReConnectMaxCdTime)
                         {
                             fReConnectServerCdTime = 0.0;
                             mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;

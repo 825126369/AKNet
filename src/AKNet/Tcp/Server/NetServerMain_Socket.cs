@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -67,7 +66,7 @@ namespace AKNet.Tcp.Server
 				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, int.MaxValue);
 				this.mListenSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, int.MaxValue);
 				this.mListenSocket.Bind(localEndPoint);
-				this.mListenSocket.Listen(Config.MaxPlayerCount);
+				this.mListenSocket.Listen(this.mConfigInstance.MaxPlayerCount);
 
 				NetLog.Log($"{NetType.TCP.ToString()} 服务器 初始化成功: {localEndPoint}");
 				StartAcceptEventArg();

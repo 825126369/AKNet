@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using System;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -37,8 +36,8 @@ namespace AKNet.Tcp.Server
 		{
 			this.mServerMgr = mServerMgr;
 
-            mReceiveIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
-            mSendIOContex.SetBuffer(new byte[Config.nIOContexBufferLength], 0, Config.nIOContexBufferLength);
+            mReceiveIOContex.SetBuffer(new byte[CommonTcpLayerConfig.nIOContexBufferLength], 0, CommonTcpLayerConfig.nIOContexBufferLength);
+            mSendIOContex.SetBuffer(new byte[CommonTcpLayerConfig.nIOContexBufferLength], 0, CommonTcpLayerConfig.nIOContexBufferLength);
             mSendIOContex.Completed += OnIOCompleted;
             mReceiveIOContex.Completed += OnIOCompleted;
             bSendIOContextUsed = false;
@@ -63,7 +62,7 @@ namespace AKNet.Tcp.Server
                     }
 
                     fSendHeartBeatTime += elapsed;
-                    if (fSendHeartBeatTime >= Config.fMySendHeartBeatMaxTime)
+                    if (fSendHeartBeatTime >= CommonTcpLayerConfig.fMySendHeartBeatMaxTime)
                     {
                         SendHeartBeat();
                         fSendHeartBeatTime = 0.0;
@@ -71,7 +70,7 @@ namespace AKNet.Tcp.Server
 
                     double fHeatTime = Math.Min(0.3, elapsed);
                     fReceiveHeartBeatTime += fHeatTime;
-                    if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                    if (fReceiveHeartBeatTime >= CommonTcpLayerConfig.fReceiveHeartBeatTimeOut)
                     {
                         fReceiveHeartBeatTime = 0.0;
                         SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);

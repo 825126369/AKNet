@@ -11,11 +11,11 @@ namespace AKNet.Common
 {
     public class NetClientMain : NetClientMainBase
     {
-        public NetClientMain(NetType nNetType)
+        public NetClientMain(NetType nNetType, ConfigInstance mConfigInstance = null)
         {
             if (nNetType == NetType.TCP)
             {
-                mInterface = new AKNet.Tcp.Client.NetClientMain();
+                mInterface = new AKNet.Tcp.Client.NetClientMain(mConfigInstance);
             }
             else if (nNetType == NetType.Udp1Tcp)
             {

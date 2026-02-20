@@ -1,40 +1,23 @@
-﻿using System.Collections.Generic;
-
-namespace AKNet.Common
+﻿namespace AKNet.Common
 {
-    //不一定有用，先放这吧
-    public static class AKNetConfigMgr
+    public class ConfigInstance
     {
-        private static bool bInit = false;
-        private static readonly Dictionary<string, ConfigInstance> mConfigDic = new Dictionary<string, ConfigInstance>();
-        private static TextParser mTextParser = null;
+        public int MaxPlayerCount = 10000;
+        public bool bAutoReConnect = true;
 
-        public static void Init(string path = "AKNet.Config.text")
+        public ConfigInstance() 
         {
-            if (bInit) return;
-            bInit = true;
-            mTextParser = new TextParser(path);
-        }
-
-        internal static ConfigInstance FindConfig(string configId)
-        {
-            if (!mConfigDic.TryGetValue(configId, out ConfigInstance mInstance))
-            {
-                mInstance = new ConfigInstance();
-                mInstance.Init(mTextParser, configId);
-                mConfigDic[configId] = mInstance;
-            }
-            return mInstance;
+            bAutoReConnect = true;
+            MaxPlayerCount = 10000;
         }
     }
 
-    internal class ConfigInstance
+    internal static class CommonTcpLayerConfig
     {
-        public bool bAutoReConnect = false;
-
-        public void Init(TextParser mTextParser, string configId)
-        {
-            bAutoReConnect = mTextParser.ReadBoolean(configId, "bAutoReConnect", false);
-        }
+        public const int nIOContexBufferLength = 1024;
+        public const int nDataMaxLength = ushort.MaxValue;
+        public const double fReceiveHeartBeatTimeOut = 5.0;
+        public const double fMySendHeartBeatMaxTime = 2.0;
+        public const double fReConnectMaxCdTime = 3.0;
     }
 }

@@ -8,7 +8,6 @@
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
 using AKNet.Common;
-using AKNet.Tcp.Common;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
@@ -30,10 +29,12 @@ namespace AKNet.Tcp.Server
         private Socket mListenSocket = null;
         private readonly SocketAsyncEventArgs mAcceptIOContex = new SocketAsyncEventArgs();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
+        private readonly ConfigInstance mConfigInstance;
 
-        public NetServerMain()
+        public NetServerMain(ConfigInstance mConfigInstance = null)
         {
-            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            mClientPeerPool = new ClientPeerPool(this, 0, this.mConfigInstance.MaxPlayerCount);
             mAcceptIOContex.Completed += OnIOCompleted;
             mAcceptIOContex.AcceptSocket = null;
         }
