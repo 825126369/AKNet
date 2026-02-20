@@ -27,8 +27,8 @@ namespace AKNet.Udp1Tcp.Server
         public FakeSocketMgr3(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
-            mFakeSocketPool = new FakeSocketPool(mNetServer, Config.MaxPlayerCount, Config.MaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
+            mFakeSocketPool = new FakeSocketPool(mNetServer, mNetServer.mConfigInstance.MaxPlayerCount, mNetServer.mConfigInstance.MaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(mNetServer.mConfigInstance.MaxPlayerCount);
             mDisConnectSendMgr = new InnerCommandSendMgr(mNetServer);
         }
 
@@ -119,7 +119,7 @@ namespace AKNet.Udp1Tcp.Server
                     var mCommandSpan = SelectConnectCommandStream(e);
                     if (mCommandSpan != Span<byte>.Empty)
                     {
-                        if (mAcceptSocketDic.Count >= Config.MaxPlayerCount)
+                        if (mAcceptSocketDic.Count >= mNetServer.mConfigInstance.MaxPlayerCount)
                         {
 #if DEBUG
                             NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");

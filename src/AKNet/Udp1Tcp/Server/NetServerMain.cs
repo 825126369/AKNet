@@ -35,11 +35,11 @@ namespace AKNet.Udp1Tcp.Server
         private readonly object lock_mSocket_object = new object();
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.IPv6Any, 0);
-        private readonly ConfigInstance mConfigInstance;
+        internal readonly ConfigInstance mConfigInstance;
 
-        public NetServerMain(ConfigInstance mConfigInstance = null)
+        public NetServerMain(ConfigInstance mConfig = null)
         {
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
 
             MainThreadCheck.Check();
             mCryptoMgr = new CryptoMgr();
@@ -47,7 +47,7 @@ namespace AKNet.Udp1Tcp.Server
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
             mInnerCommandSendMgr = new InnerCommandSendMgr(this);
-            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, this.mConfigInstance.MaxPlayerCount);
 
             if (Config.nUseFakeSocketMgrType == 1)
             {

@@ -73,7 +73,7 @@ namespace AKNet.Udp5Tcp.Client
                         }
                         
                         fSendHeartBeatTime += elapsed;
-                        if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTime)
+                        if (fSendHeartBeatTime >= CommonTcpLayerConfig.fSendHeartBeatMaxTime)
                         {
                             fSendHeartBeatTime = 0.0;
                             SendHeartBeat();
@@ -81,7 +81,7 @@ namespace AKNet.Udp5Tcp.Client
 
                         double fHeatTime = Math.Min(0.3, elapsed);
                         fReceiveHeartBeatTime += fHeatTime;
-                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        if (fReceiveHeartBeatTime >= CommonTcpLayerConfig.fReceiveHeartBeatTimeOut)
                         {
                             fReceiveHeartBeatTime = 0.0;
                             fReConnectServerCdTime = 0.0;
@@ -103,7 +103,7 @@ namespace AKNet.Udp5Tcp.Client
                 case SOCKET_PEER_STATE.RECONNECTING:
                     {
                         fReConnectServerCdTime += elapsed;
-                        if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
+                        if (fReConnectServerCdTime >= CommonTcpLayerConfig.fReConnectMaxCdTime)
                         {
                             fReConnectServerCdTime = 0.0;
                             mSocketPeerState = SOCKET_PEER_STATE.CONNECTING;

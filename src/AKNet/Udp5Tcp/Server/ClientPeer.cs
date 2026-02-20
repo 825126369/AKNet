@@ -57,7 +57,7 @@ namespace AKNet.Udp5Tcp.Server
                         }
 
                         fSendHeartBeatTime += elapsed;
-                        if (fSendHeartBeatTime >= Config.fSendHeartBeatMaxTime)
+                        if (fSendHeartBeatTime >= CommonTcpLayerConfig.fSendHeartBeatMaxTime)
                         {
                             fSendHeartBeatTime = 0.0;
                             SendHeartBeat();
@@ -66,7 +66,7 @@ namespace AKNet.Udp5Tcp.Server
                         // 有可能网络流量大的时候，会while循环卡住
                         double fHeatTime = Math.Min(0.3, elapsed);
                         fReceiveHeartBeatTime += fHeatTime;
-                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        if (fReceiveHeartBeatTime >= CommonTcpLayerConfig.fReceiveHeartBeatTimeOut)
                         {
                             fReceiveHeartBeatTime = 0.0;
 #if DEBUG

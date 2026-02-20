@@ -47,7 +47,7 @@ namespace AKNet.Udp4Tcp.Server
         public bool MultiThreadingHandleConnectedSocket(Connection mSocket)
         {
             int nNowConnectCount = mClientList.Count + mConnectSocketQueue.Count;
-            if (nNowConnectCount >= Config.MaxPlayerCount)
+            if (nNowConnectCount >= mConfigInstance.MaxPlayerCount)
             {
 #if DEBUG
                 NetLog.Log($"服务器爆满, 客户端总数: {nNowConnectCount}");

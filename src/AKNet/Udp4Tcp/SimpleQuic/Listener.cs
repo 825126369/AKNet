@@ -19,7 +19,7 @@ namespace AKNet.Udp4Tcp.Common
 {
     internal partial class Listener:IDisposable
     {
-        private SocketMgr.Config mConfig;
+        private SocketMgr.Config mSocketConfig;
         private readonly SocketMgr mSocketMgr = new SocketMgr();
         private readonly Dictionary<IPEndPoint, Connection> mConnectionPeerDic = new Dictionary<IPEndPoint, Connection>();
         private readonly Queue<Connection> mNewConnectionQueue = new Queue<Connection>();
@@ -47,12 +47,12 @@ namespace AKNet.Udp4Tcp.Common
         {
             Init();
 
-            SocketMgr.Config mConfig = new SocketMgr.Config();
-            mConfig.bServer = true;
-            mConfig.mEndPoint = mEndPoint;
-            mConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
-            this.mConfig = mConfig;
-            mSocketMgr.InitNet(mConfig);
+            SocketMgr.Config mSocketConfig = new SocketMgr.Config();
+            mSocketConfig.bServer = true;
+            mSocketConfig.mEndPoint = mEndPoint;
+            mSocketConfig.mReceiveFunc = MultiThreadingReceiveNetPackage;
+            this.mSocketConfig = mSocketConfig;
+            mSocketMgr.InitNet(mSocketConfig);
             for (int i = 0; i < mLogicWorkerList.Count; i++)
             {
                 mLogicWorkerList[i].SetSocketItem(mSocketMgr.GetSocketItem(i));

@@ -30,27 +30,18 @@ namespace AKNet.Udp4Tcp.Common
 
             if (mConnectionPeer == null)
             {
-                if (mConnectionPeerDic.Count >= Config.MaxPlayerCount)
+                mConnectionPeer = new Connection();
+                mConnectionPeer.RemoteEndPoint = nPeerId;
+                mSocketItem.mLogicWorker.AddConnection(mConnectionPeer);
+                mConnectionPeer.Init(E_CONNECTION_TYPE.Server);
+                mConnectionPeer.OwnerListener = this;
+                lock (mConnectionPeerDic)
                 {
-#if DEBUG
-                    NetLog.Log($"服务器爆满, FakeSocket 总数: {mConnectionPeerDic.Count}");
-#endif
+                    mConnectionPeerDic.Add(nPeerId, mConnectionPeer);
                 }
-                else
-                {
-                    mConnectionPeer = new Connection();
-                    mConnectionPeer.RemoteEndPoint = nPeerId;
-                    mSocketItem.mLogicWorker.AddConnection(mConnectionPeer);
-                    mConnectionPeer.Init(E_CONNECTION_TYPE.Server);
-                    mConnectionPeer.OwnerListener = this;
-                    lock (mConnectionPeerDic)
-                    {
-                        mConnectionPeerDic.Add(nPeerId, mConnectionPeer);
-                    }
 
-                    HandleNewConntion(mConnectionPeer);
-                    PrintAddFakeSocketMsg(mConnectionPeer);
-                }
+                HandleNewConntion(mConnectionPeer);
+                PrintAddFakeSocketMsg(mConnectionPeer);
             }
 
             if (mConnectionPeer != null)

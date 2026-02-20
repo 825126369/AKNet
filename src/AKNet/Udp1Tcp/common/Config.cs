@@ -7,6 +7,8 @@
 *        ModifyTime:2026/2/1 20:26:48
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+using AKNet.Common;
+
 namespace AKNet.Udp1Tcp.Common
 {
     internal static class Config
@@ -22,13 +24,8 @@ namespace AKNet.Udp1Tcp.Common
 
         public const ushort nUdpMinOrderId = 1;
 		public const ushort nUdpMaxOrderId = ushort.MaxValue;
-		public const int nUdpPackageFixedSize = 1400;
+		public const int nUdpPackageFixedSize = CommonUdpLayerConfig.nUdpPackageFixedSize;
 		public const int nUdpPackageFixedHeadSize = 14;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
-
-		public const double fReceiveHeartBeatTimeOut = 5.0;
-		public const double fMySendHeartBeatMaxTime = 2.0;
-        public const double fReConnectMaxCdTime = 3.0;
-        public const int MaxPlayerCount = 10000;
 	}
 }

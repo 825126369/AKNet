@@ -37,7 +37,7 @@ namespace AKNet.Udp5Tcp.Server
             mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();
             mListenClientPeerStateMgr = new ListenClientPeerStateMgr();
-            mClientPeerPool = new ClientPeerPool(this, 0, Config.MaxPlayerCount);
+            mClientPeerPool = new ClientPeerPool(this, 0, mConfigInstance.MaxPlayerCount);
             mListener = new Listener();
         }
 

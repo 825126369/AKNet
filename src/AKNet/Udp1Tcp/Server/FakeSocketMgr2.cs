@@ -25,8 +25,8 @@ namespace AKNet.Udp1Tcp.Server
         public FakeSocketMgr2(NetServerMain mNetServer)
         {
             this.mNetServer = mNetServer;
-            mFakeSocketPool = new FakeSocketPool(mNetServer, 0, Config.MaxPlayerCount);
-            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(Config.MaxPlayerCount);
+            mFakeSocketPool = new FakeSocketPool(mNetServer, 0, mNetServer.mConfigInstance.MaxPlayerCount);
+            mAcceptSocketDic = new Dictionary<IPEndPoint, FakeSocket>(mNetServer.mConfigInstance.MaxPlayerCount);
         }
 
         public void MultiThreadingReceiveNetPackage(SocketAsyncEventArgs e)
@@ -42,7 +42,7 @@ namespace AKNet.Udp1Tcp.Server
 
             if (mFakeSocket == null)
             {
-                if (mAcceptSocketDic.Count >= Config.MaxPlayerCount)
+                if (mAcceptSocketDic.Count >= mNetServer.mConfigInstance.MaxPlayerCount)
                 {
 #if DEBUG
                     NetLog.Log($"服务器爆满, 客户端总数: {mAcceptSocketDic.Count}");

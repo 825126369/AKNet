@@ -122,7 +122,7 @@ namespace AKNet.Udp1Tcp.Client
                 case SOCKET_PEER_STATE.CONNECTED:
                     {
                         fMySendHeartBeatCdTime += elapsed;
-                        if (fMySendHeartBeatCdTime >= Config.fMySendHeartBeatMaxTime)
+                        if (fMySendHeartBeatCdTime >= CommonTcpLayerConfig.fSendHeartBeatMaxTime)
                         {
                             SendHeartBeat();
                             fMySendHeartBeatCdTime = 0.0;
@@ -130,7 +130,7 @@ namespace AKNet.Udp1Tcp.Client
 
                         double fHeatTime = Math.Min(0.3, elapsed);
                         fReceiveHeartBeatTime += fHeatTime;
-                        if (fReceiveHeartBeatTime >= Config.fReceiveHeartBeatTimeOut)
+                        if (fReceiveHeartBeatTime >= CommonTcpLayerConfig.fReceiveHeartBeatTimeOut)
                         {
                             fReceiveHeartBeatTime = 0.0;
                             fReConnectServerCdTime = 0.0;
@@ -160,7 +160,7 @@ namespace AKNet.Udp1Tcp.Client
                 case SOCKET_PEER_STATE.RECONNECTING:
                     {
                         fReConnectServerCdTime += elapsed;
-                        if (fReConnectServerCdTime >= Config.fReConnectMaxCdTime)
+                        if (fReConnectServerCdTime >= CommonTcpLayerConfig.fReConnectMaxCdTime)
                         {
                             fReConnectServerCdTime = 0.0;
                             ReConnectServer();
