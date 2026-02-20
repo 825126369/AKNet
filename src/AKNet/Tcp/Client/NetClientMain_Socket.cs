@@ -403,7 +403,14 @@ namespace AKNet.Tcp.Client
             }
             else if (mSocketPeerState == SOCKET_PEER_STATE.CONNECTED)
             {
-                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
+                if (mConfigInstance.bAutoReConnect)
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                }
+                else
+                {
+                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                }
             }
         }
 
