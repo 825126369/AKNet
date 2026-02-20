@@ -25,7 +25,6 @@ namespace AKNet.Udp1Tcp.Common
 		public const int nUdpPackageFixedSize = 1400;
 		public const int nUdpPackageFixedHeadSize = 14;
         public const int nUdpPackageFixedBodySize = nUdpPackageFixedSize - nUdpPackageFixedHeadSize;
-        public const int nMaxDataLength = ushort.MaxValue;
 
 		public const double fReceiveHeartBeatTimeOut = 5.0;
 		public const double fMySendHeartBeatMaxTime = 2.0;

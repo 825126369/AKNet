@@ -52,9 +52,9 @@ namespace AKNet.Udp1Tcp.Common
 
 #if DEBUG
             NetLog.Assert(UdpNetCommand.orNeedCheck(id));
-            if (buffer.Length > Config.nMaxDataLength)
+            if (buffer.Length > CommonTcpLayerConfig.nDataMaxLength)
             {
-                NetLog.LogError("超出允许的最大包尺寸：" + Config.nMaxDataLength);
+                NetLog.LogError("超出允许的最大包尺寸：" + CommonTcpLayerConfig.nDataMaxLength);
             }
 #endif
             if (!buffer.IsEmpty)
