@@ -31,19 +31,19 @@ namespace AKNet.Common
         {
             Init();
 
-            Action<string> LogFunc = (string message) =>
+            Action<string> LogFunc = static (string message) =>
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine(message);
             };
 
-            Action<string> LogErrorFunc = (string message) =>
+            Action<string> LogErrorFunc = static (string message) =>
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(message);
             };
 
-            Action<string> LogWarningFunc = (string message) =>
+            Action<string> LogWarningFunc = static (string message) =>
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(message);

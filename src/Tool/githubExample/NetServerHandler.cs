@@ -11,7 +11,10 @@ namespace githubExample
         const int COMMAND_TESTCHAT = 1000;
         public void Init()
         {
-            mNetServer = new NetServerMain(NetType.Udp3Tcp);
+            ConfigInstance mConfig = new ConfigInstance();
+            mConfig.bAutoReConnect = false;
+            mConfig.MaxPlayerCount = 10;
+            mNetServer = new NetServerMain(NetType.Udp3Tcp, mConfig);
             mNetServer.addNetListenFunc(COMMAND_TESTCHAT, receive_csChat);
             mNetServer.InitNet(6000);
         }

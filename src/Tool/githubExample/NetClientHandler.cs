@@ -11,7 +11,11 @@ namespace githubExample
 
         public void Init()
         {
-            mNetClient = new NetClientMain(NetType.Udp3Tcp);
+            ConfigInstance mConfig = new ConfigInstance();
+            mConfig.bAutoReConnect = false;
+            mConfig.MaxPlayerCount = 10;
+
+            mNetClient = new NetClientMain(NetType.Udp3Tcp, mConfig);
             mNetClient.addListenClientPeerStateFunc(OnSocketStateChanged);
             mNetClient.addNetListenFunc(COMMAND_TESTCHAT, ReceiveMessage);
             mNetClient.ConnectServer("127.0.0.1", 6000);
