@@ -1,5 +1,4 @@
 using AKNet.Common;
-using AKNet.Extentions.Protobuf;
 using Google.Protobuf;
 using TestProtocol;
 
