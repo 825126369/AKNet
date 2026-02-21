@@ -62,11 +62,11 @@ namespace AKNet.Udp4Tcp.Client
             {
                 if (mConfigInstance.bAutoReConnect)
                 {
-                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                    SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
                 else
                 {
-                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 }
                 NetLog.LogError($"{NetType.Udp4Tcp.ToString()} 客户端 连接服务器 失败: {e.ToString()}");
             }
@@ -214,11 +214,11 @@ namespace AKNet.Udp4Tcp.Client
             {
                 if (mConfigInstance.bAutoReConnect)
                 {
-                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                    SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
                 else
                 {
-                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 }
             }
         }
