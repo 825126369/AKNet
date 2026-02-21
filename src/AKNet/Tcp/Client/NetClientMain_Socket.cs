@@ -242,14 +242,14 @@ namespace AKNet.Tcp.Client
 			}
 			else
 			{
-				if (mConfigInstance.bAutoReConnect)
-				{
+                if (mConfigInstance.bAutoReConnect)
+                {
                     SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
-				else
-				{
-					SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
-				}
+                else
+                {
+                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
+                }
                 NetLog.Log($"{NetType.TCP.ToString()} 客户端 连接服务器: {mIPEndPoint} 失败：{e.SocketError}");
 			}
 
@@ -405,11 +405,11 @@ namespace AKNet.Tcp.Client
             {
                 if (mConfigInstance.bAutoReConnect)
                 {
-                    mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                    SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                 }
                 else
                 {
-                    mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                    SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 }
             }
         }

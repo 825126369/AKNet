@@ -106,11 +106,11 @@ namespace AKNet.Tcp.Client
 
                             if (mConfigInstance.bAutoReConnect)
                             {
-                                mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                             }
                             else
                             {
-                                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                             }
 #if DEBUG
                             NetLog.Log("心跳超时");

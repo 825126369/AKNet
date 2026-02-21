@@ -59,8 +59,9 @@ namespace AKNet.Udp1Tcp.Client
 
         public NetClientMain(ConfigInstance mConfigInstance = null)
         {
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
             MainThreadCheck.Check();
+            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();;
             mUdpCheckPool = new UdpCheckMgr(this);
@@ -139,11 +140,11 @@ namespace AKNet.Udp1Tcp.Client
 #endif
                             if (mConfigInstance.bAutoReConnect)
                             {
-                                mSocketPeerState = SOCKET_PEER_STATE.RECONNECTING;
+                                SetSocketState(SOCKET_PEER_STATE.RECONNECTING);
                             }
                             else
                             {
-                                mSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;
+                                SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                             }
                         }
                         break;

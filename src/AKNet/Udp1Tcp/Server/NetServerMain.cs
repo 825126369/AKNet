@@ -39,9 +39,9 @@ namespace AKNet.Udp1Tcp.Server
 
         public NetServerMain(ConfigInstance mConfig = null)
         {
+            MainThreadCheck.Check();
             this.mConfigInstance = mConfig ?? new ConfigInstance();
 
-            MainThreadCheck.Check();
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();
             mPackageManager = new ListenNetPackageMgr();
