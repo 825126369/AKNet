@@ -10,6 +10,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace AKNet.Common
 {
@@ -72,19 +73,18 @@ namespace AKNet.Common
             if (bInit) return; bInit = true;
 
             System.AppDomain.CurrentDomain.UnhandledException += _OnUncaughtExceptionHandler;
-
+#if DEBUG
             if (bPrintAllLogToFile)
             {
-                LogFunc += LogErrorToFile;
-                LogWarningFunc += LogErrorToFile;
-                LogErrorFunc += LogErrorToFile;
+                LogFunc += LogToFile;
+                LogWarningFunc += LogToFile;
+                LogErrorFunc += LogToFile;
             }
             else
             {
-                LogErrorFunc += LogErrorToFile;
+                LogErrorFunc += LogToFile;
             }
 
-#if DEBUG
             try
             {
                 // 在使用ProcessStartInfo 的重定向输出输入流 时，这里报错
@@ -94,9 +94,11 @@ namespace AKNet.Common
 #endif
         }
 
-        static void LogErrorToFile(string Message)
+        static void LogToFile(string Message)
         {
+#if NET8_0_OR_GREATER
             LogFileMgr.AddMsg(Message);
+#endif
         }
 
         private static void _OnUncaughtExceptionHandler(object sender, System.UnhandledExceptionEventArgs args)

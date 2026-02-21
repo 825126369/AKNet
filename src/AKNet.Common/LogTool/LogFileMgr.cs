@@ -7,6 +7,7 @@
 *        ModifyTime:2026/2/1 20:26:46
 *        Copyright:MIT软件许可证
 ************************************Copyright*****************************************/
+#if NET8_0_OR_GREATER
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -94,3 +95,4 @@ namespace AKNet.Common
 
     }
 }
+#endif
