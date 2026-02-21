@@ -250,7 +250,7 @@ namespace AKNet.Tcp.Client
                 {
                     SetSocketState(SOCKET_PEER_STATE.DISCONNECTED);
                 }
-                NetLog.Log($"{NetType.TCP.ToString()} 客户端 连接服务器: {mIPEndPoint} 失败：{e.SocketError}");
+                NetLog.LogError($"{NetType.TCP.ToString()} 客户端 连接服务器: {mIPEndPoint} 失败：{e.SocketError}");
 			}
 
 			e.RemoteEndPoint = null;
