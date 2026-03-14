@@ -67,7 +67,7 @@ namespace AKNet.Quic.Client
 
             if (bSuccess)
             {
-                if (TcpNetCommand.orInnerCommand(mClientPeer.mNetPackage.nPackageId))
+                if (CommonTcpLayerNetCommand.orInnerCommand(mClientPeer.mNetPackage.nPackageId))
                 {
 
                 }

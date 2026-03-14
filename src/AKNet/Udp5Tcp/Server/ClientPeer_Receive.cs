@@ -33,7 +33,7 @@ namespace AKNet.Udp5Tcp.Server
 
             if (bSuccess)
             {
-                if (TcpNetCommand.orInnerCommand(mNetStreamPackage.nPackageId))
+                if (CommonTcpLayerNetCommand.orInnerCommand(mNetStreamPackage.nPackageId))
                 {
 
                 }

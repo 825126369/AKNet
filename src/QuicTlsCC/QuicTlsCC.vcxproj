@@ -71,8 +71,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\Me\OpenSource\openssl\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Me\OpenSource\openssl;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Me\OpenSource\quictls\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
     <OutDir>$(Platform)\$(Configuration)\</OutDir>
     <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
     <IntDir>$(Platform)\$(Configuration)\obj\</IntDir>

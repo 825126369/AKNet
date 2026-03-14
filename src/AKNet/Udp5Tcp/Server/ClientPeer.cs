@@ -115,7 +115,7 @@ namespace AKNet.Udp5Tcp.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
         {
-            SendNetData(TcpNetCommand.COMMAND_HEARTBEAT);
+            SendNetData(CommonTcpLayerNetCommand.COMMAND_HEARTBEAT);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

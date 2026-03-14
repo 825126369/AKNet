@@ -33,7 +33,7 @@ namespace AKNet.Tcp.Server
 
 			if (bSuccess)
 			{
-				if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+				if (CommonTcpLayerNetCommand.orInnerCommand(mNetPackage.nPackageId))
 				{
 
 				}

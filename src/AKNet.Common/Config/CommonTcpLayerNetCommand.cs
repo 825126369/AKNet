@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 
 namespace AKNet.Common
 {
-    internal static class TcpNetCommand
+    internal static class CommonTcpLayerNetCommand
     {
         public const ushort COMMAND_HEARTBEAT = 1;
 

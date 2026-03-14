@@ -74,7 +74,7 @@ namespace AKNet.MSQuic.Server
 
             if (bSuccess)
             {
-                if (TcpNetCommand.orInnerCommand(mServerMgr.mNetPackage.nPackageId))
+                if (CommonTcpLayerNetCommand.orInnerCommand(mServerMgr.mNetPackage.nPackageId))
                 {
 
                 }

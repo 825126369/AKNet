@@ -34,7 +34,7 @@ namespace AKNet.Udp4Tcp.Client
 
             if (bSuccess)
             {
-                if (TcpNetCommand.orInnerCommand(mNetPackage.nPackageId))
+                if (CommonTcpLayerNetCommand.orInnerCommand(mNetPackage.nPackageId))
                 {
 
                 }

@@ -96,7 +96,7 @@ namespace AKNet.MSQuic.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SendHeartBeat()
 		{
-			SendNetData(0, TcpNetCommand.COMMAND_HEARTBEAT);
+			SendNetData(0, CommonTcpLayerNetCommand.COMMAND_HEARTBEAT);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
