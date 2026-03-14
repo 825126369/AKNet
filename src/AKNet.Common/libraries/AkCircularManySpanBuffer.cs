@@ -81,7 +81,7 @@ namespace AKNet.Common
 		private int nSpanCount;
         private int nSumByteCount;
 
-        public AkCircularManySpanBuffer(int nMaxBlockSize = 1024, int nInitBlockCount = 1, int nMaxBlockCount = -1)
+        public AkCircularManySpanBuffer(int nMaxBlockSize = 1400, int nInitBlockCount = 1, int nMaxBlockCount = -1)
         {
             this.nMaxBlockSize = nMaxBlockSize;
             this.nInitBlockCount = nInitBlockCount;

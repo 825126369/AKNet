@@ -218,9 +218,9 @@ namespace AKNet.Common
                 {
                     LogErrorFunc(msg);
                 }
-
-                //Debug.Assert 会终止整个应用程序，错误日志就不能输出到文件里了
+                //System.Diagnostics.Debug.Assert 会终止整个应用程序，错误日志就不能输出到文件里了
             }
         }
+
     }
 }
