@@ -50,9 +50,9 @@ namespace AKNet.Tcp.Client
 
         private readonly ConfigInstance mConfigInstance;
 
-        public NetClientMain(ConfigInstance mConfigInstance = null)
+        public NetClientMain(ConfigInstance mConfig = null)
         {
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
 
             mCryptoMgr = new CryptoMgr();
             mPackageManager = new ListenNetPackageMgr();

@@ -56,9 +56,9 @@ namespace AKNet.Udp2Tcp.Client
         private bool bSendIOContexUsed = false;
         private readonly ConfigInstance mConfigInstance;
 
-        public NetClientMain(ConfigInstance mConfigInstance = null)
+        public NetClientMain(ConfigInstance mConfig = null)
         {
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
             MainThreadCheck.Check();
             mUdpCheckPool = new UdpCheckMgr(this);
             mSocketPeerState = mLastSocketPeerState = SOCKET_PEER_STATE.DISCONNECTED;

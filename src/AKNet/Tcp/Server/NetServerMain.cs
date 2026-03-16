@@ -31,12 +31,12 @@ namespace AKNet.Tcp.Server
         private SOCKET_SERVER_STATE mState = SOCKET_SERVER_STATE.NONE;
         private readonly ConfigInstance mConfigInstance;
 
-        public NetServerMain(ConfigInstance mConfigInstance = null)
+        public NetServerMain(ConfigInstance mConfig = null)
         {
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
-            mClientPeerPool = new ClientPeerPool(this, 0, this.mConfigInstance.MaxPlayerCount);
-            mAcceptIOContex.Completed += OnIOCompleted;
-            mAcceptIOContex.AcceptSocket = null;
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
+            this.mClientPeerPool = new ClientPeerPool(this, 0, this.mConfigInstance.MaxPlayerCount);
+            this.mAcceptIOContex.Completed += OnIOCompleted;
+            this.mAcceptIOContex.AcceptSocket = null;
         }
 
         public void OnSocketStateChanged(ClientPeerBase mClientPeer)

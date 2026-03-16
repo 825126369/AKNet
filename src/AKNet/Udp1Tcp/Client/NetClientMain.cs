@@ -57,10 +57,10 @@ namespace AKNet.Udp1Tcp.Client
 
         private readonly ConfigInstance mConfigInstance;
 
-        public NetClientMain(ConfigInstance mConfigInstance = null)
+        public NetClientMain(ConfigInstance mConfig = null)
         {
             MainThreadCheck.Check();
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
 
             mCryptoMgr = new CryptoMgr();
             mObjectPoolManager = new ObjectPoolManager();;

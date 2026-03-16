@@ -35,9 +35,9 @@ namespace AKNet.Udp2Tcp.Server
         private readonly IPEndPoint mEndPointEmpty = new IPEndPoint(IPAddress.IPv6Any, 0);
         private readonly ConfigInstance mConfigInstance;
 
-        public NetServerMain(ConfigInstance mConfigInstance = null)
+        public NetServerMain(ConfigInstance mConfig = null)
         {
-            this.mConfigInstance = mConfigInstance ?? new ConfigInstance();
+            this.mConfigInstance = mConfig ?? new ConfigInstance();
 
             MainThreadCheck.Check();
             mCryptoMgr = new CryptoMgr();
