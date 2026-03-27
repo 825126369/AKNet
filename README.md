@@ -1,3 +1,7 @@
+# 不再维护
+
+由于受到游戏行业多股势力的不公正对待，导致失业5年，没有精力继续下去维护这个项目。
+
 ## License
 
 This repository is licensed with the [MIT](LICENSE) license.
